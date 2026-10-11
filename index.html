@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="es" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // Aplica el tema guardado ANTES del primer pintado (sin destello).
+      // El oscuro es el valor por defecto histórico de Frame.
+      try {
+        var t = localStorage.getItem('frameTheme');
+        var dark = t === 'light' ? false : t === 'system'
+          ? window.matchMedia('(prefers-color-scheme: dark)').matches
+          : true;
+        document.documentElement.classList.toggle('dark', dark);
+      } catch (e) {}
+    </script>
+    <title>Frame</title>
+    <link rel="icon" href="/favicon.ico" />
+    <!-- Poppins vendorizada localmente: la app arranca idéntica sin conexión -->
+    <link href="/fonts/poppins.css" rel="stylesheet" />
+  </head>
+  <body class="font-body antialiased">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

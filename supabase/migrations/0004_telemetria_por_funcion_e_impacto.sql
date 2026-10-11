@@ -1,0 +1,45 @@
+-- =============================================================================
+-- Frame · Telemetría por función de servidor, serie diaria e informe de impacto
+-- =============================================================================
+-- APLICADA el 18-sep-2026 al proyecto `egshmkkmvtsrgrfwpzog` en dos migraciones:
+--     · telemetria_reporte_por_funcion_e_historial_semanal
+--     · telemetria_diaria_e_impacto
+-- El SQL exacto de ambas queda en el historial del proyecto:
+--     select name, statements from supabase_migrations.schema_migrations order by version;
+-- Este archivo deja constancia de QUÉ hacen y por qué, para poder reconstruirlas.
+--
+-- POR QUÉ
+--   La app escribía telemetry_users / telemetry_weekly con upsert directo. Con
+--   RLS, «INSERT … ON CONFLICT DO UPDATE» exige además pasar la política de
+--   LECTURA, que es solo del responsable: TODOS los envíos fallaban en silencio
+--   desde el primer día (solo entraban los eventos sueltos, que son INSERT puro).
+--
+-- QUÉ HAY AHORA
+--   1. `public.telemetry_report(p jsonb)` — SECURITY DEFINER, ejecutable por anon
+--      y authenticated. Valida tamaños y rangos (`private.tint`) y escribe:
+--        · telemetry_users   (totales, versión, país, `classroom`, `is_guest`)
+--        · telemetry_weekly  (+ active_days, focus_avg, tasks_high, tasks_on_time,
+--                             tasks_with_due, habits_rate)
+--        · telemetry_daily   (NUEVA: una fila por usuario y día con actividad:
+--                             minutes, sessions, focus_avg, tasks, tasks_high,
+--                             tasks_on_time, tasks_with_due, habits_done/possible)
+--      Las políticas de INSERT/UPDATE directo de users/weekly se ELIMINARON (su
+--      UPDATE `using (true)` permitía a cualquiera pisar la fila de cualquiera).
+--   2. `telemetry_daily` con RLS: solo lectura para `is_frame_owner()`.
+--   3. `public.impact_overview()` — SECURITY INVOKER, solo el responsable. Cohortes
+--      por SEMANA DE USO (semana 1 = primeros 7 días de cada estudiante desde su
+--      primera actividad; solo entran quienes ya completaron ese tramo):
+--      titulares, evolución por semana, semana 1 frente a 2 y frente a 4 (suma,
+--      media, mediana del cambio individual, cuántos mejoraron), por salón y por
+--      semana del calendario. Lo pinta «Uso → Impacto» y su informe descargable.
+--   4. `public.delete_current_user()` purga también telemetry_daily. Las tablas
+--      `school_*` caen por clave foránea a auth.users.
+--
+-- La app (src/lib/telemetry.ts) recalcula la serie desde los datos LOCALES
+-- (16 semanas / 140 días) en cada envío: el historial llega completo aunque el
+-- equipo haya estado sin conexión o el estudiante usara Frame desde antes.
+-- =============================================================================
+
+-- Comprobación rápida tras reconstruir (debe devolver 3 funciones y 1 tabla):
+--   select proname from pg_proc where proname in ('telemetry_report','impact_overview','delete_current_user');
+--   select to_regclass('public.telemetry_daily');

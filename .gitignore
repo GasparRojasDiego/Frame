@@ -1,0 +1,37 @@
+# Dependencias y builds
+node_modules/
+dist/
+
+# Tauri (Rust)
+src-tauri/target/
+src-tauri/gen/
+
+# Entorno
+.env
+.env.local
+
+# Sistema
+.DS_Store
+Thumbs.db
+*.log
+
+# Mapas de fuente de cada versión (los guarda scripts/guardar-mapas.mjs)
+sourcemaps/
+
+# Copias de cuentas borradas: datos personales, nunca a un repositorio
+supabase/respaldos/
+respaldos-codigo/
+
+# Secretos: clave de firma de actualizaciones (nunca a un repositorio)
+keys/
+*.key
+*.jks
+keystore.properties
+
+# La web vive en su propio repositorio (frame-app)
+website/
+
+# Binarios de terceros de versiones antiguas y configuración local
+src-tauri/bin/
+.claude/
+supabase/.temp/

@@ -1,0 +1,444 @@
+import TimerDisplay from '@/components/temporizador/timer-display';
+import { useTodayKey } from '@/hooks/use-today';
+import React, { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { getStudyVideoPlayer } from '@/lib/study-video-player';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import type { StudySession, DailyPerformance, StudyGoals } from '@/types';
+import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
+import GradesCalendar from '@/components/temporizador/GradesCalendar';
+import StudyVideosPanel from '@/components/temporizador/StudyVideosPanel';
+import EditSessionDialog from '@/components/temporizador/EditSessionDialog';
+import SessionNotesList, { SessionNotesHeading } from '@/components/temporizador/SessionNotesList';
+import AcademicAnalytics from '@/components/habits/AcademicAnalytics';
+import { Button } from '@/components/ui/button';
+import { ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
+import { YoutubeLogo } from '@/components/integrations/YoutubeIcon';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import MarqueeText from '@/components/ui/marquee-text';
+import { useCourse } from '@/context/CourseContext';
+import { sessionSeconds, formatDurationLabel, formatHMS } from '@/lib/duration';
+import { addDays, isBefore, parseISO, startOfToday, format, isSameDay, isToday } from 'date-fns';
+
+
+const getGradeForScore = (score: number): DailyPerformance['grade'] => {
+    if (score >= 18) return 'AD';
+    if (score >= 14) return 'A';
+    if (score >= 11) return 'B';
+    return 'C';
+}
+
+const dayKeys: (keyof StudyGoals)[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+/** Última altura medida de la pila de la derecha: si se vuelve a Enfoque con un
+ *  vídeo puesto, el recuadro de vídeos nace ya con la medida correcta. */
+let lastStackHeight: number | null = null;
+
+
+export default function TimerPage() {
+  const {
+    userProfile,
+    studySessions,
+    addStudySession,
+    deleteStudySession,
+    applySessionProgressToTasks,
+    dailyPerformances,
+    updateDailyPerformance,
+    studyGoals,
+    selectionMode,
+    sessionNotes,
+    deleteSessionNote,
+    courses,
+    spaces,
+  } = useCourse();
+
+  /**
+   * Colección o colecciones a las que pertenecen las asignaturas de una
+   * sesión. Las sesiones antiguas no guardan el id de la asignatura, solo su
+   * nombre: se resuelve por nombre en ese caso.
+   */
+  const collectionsOf = useCallback(
+    (session: StudySession): string[] => {
+      const ids = new Set(session.subjectIds ?? []);
+      if (ids.size === 0) {
+        for (const name of session.subjects ?? []) {
+          const match = courses.find((course) => course.name === name);
+          if (match) ids.add(match.id);
+        }
+      }
+      return spaces
+        .filter((space) => space.courseIds.some((id) => ids.has(id)))
+        .map((space) => space.name);
+    },
+    [courses, spaces]
+  );
+
+  const [dailyStudySeconds, setDailyStudySeconds] = useState(0);
+  const [recentSessions, setRecentSessions] = useState<StudySession[]>([]);
+  const [todayPerformance, setTodayPerformance] = useState<DailyPerformance | null>(null);
+  /** Cara visible de la tarjeta: las métricas del día o los vídeos de estudio.
+   *  Son dos, así que ambas flechas alternan. */
+  // Si al volver a Enfoque hay un vídeo puesto, se entra directamente a él.
+  const [cardFace, setCardFace] = useState<'metricas' | 'videos'>(() =>
+    getStudyVideoPlayer().video ? 'videos' : 'metricas'
+  );
+  /** Alto de la pila «Tiempo de estudio» + «Métricas de hoy»: el recuadro de
+   *  vídeos lo hereda al píxel. Se mide mientras la pila está a la vista. */
+  const stackRef = useRef<HTMLDivElement>(null);
+  const [stackHeight, setStackHeight] = useState<number | null>(lastStackHeight);
+  useLayoutEffect(() => {
+    const stack = stackRef.current;
+    if (!stack) return;
+    const measure = () => {
+      lastStackHeight = Math.round(stack.getBoundingClientRect().height);
+      setStackHeight(lastStackHeight);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(stack);
+    return () => observer.disconnect();
+  }, [cardFace]);
+  const toggleFace = () => setCardFace((face) => (face === 'metricas' ? 'videos' : 'metricas'));
+  const faceArrows = (
+    <div className="flex shrink-0 items-center">
+      {[ChevronLeft, ChevronRight].map((Icon, index) => (
+        <Button
+          key={index}
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground hover:text-primary"
+          onClick={toggleFace}
+          title={cardFace === 'metricas' ? 'Vídeos de estudio' : 'Tiempo de estudio y métricas de hoy'}
+          data-tour={index === 1 ? 'enfoque-videos' : undefined}
+          aria-label={cardFace === 'metricas' ? 'Ver los vídeos de estudio' : 'Volver a las métricas de hoy'}
+        >
+          <Icon className="h-4 w-4" />
+        </Button>
+      ))}
+    </div>
+  );
+  /** Ventana de búsqueda de YouTube, abierta desde la cabecera. */
+  const [videoPickerOpen, setVideoPickerOpen] = useState(false);
+  /** Sesión que se está corrigiendo. Solo puede ser una de HOY: esta lista
+   *  no muestra ninguna otra. */
+  const [editingSession, setEditingSession] = useState<StudySession | null>(null);
+
+  // Día vivo: con la app abierta de noche, la barra seguía sumando a la meta de
+  // ayer y la nota en vivo se publicaba con la fecha anterior.
+  const today = useTodayKey();
+  const dayOfWeek = new Date().getDay(); // 0:Sun, 1:Mon, ..., 6:Sat
+
+  const totalGoalMinutes = useMemo(() => {
+    const todayKey = dayKeys[dayOfWeek];
+    return studyGoals[todayKey] || 0;
+  }, [dayOfWeek, studyGoals]);
+
+
+  const calculateAndSaveDailyPerformance = useCallback(async () => {
+    if (selectionMode !== 'rendimiento' || !userProfile || !studySessions || studySessions.length === 0 || !dailyPerformances) return;
+
+    // Find the earliest date a study session was recorded to set a sensible floor.
+    const sortedSessions = [...studySessions].sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+
+    // Se recorre desde la PRIMERA sesión (no desde el último registro) para
+    // rellenar también los huecos: al eliminar una sesión se invalida la
+    // calificación de ese día y hay que recalcularla aunque sea antigua.
+    // Los días que ya tienen registro se saltan, así que es idempotente.
+    let dayToCalculate = parseISO(sortedSessions[0].startTime);
+
+    // Loop through each day from the start date up to yesterday.
+    while (isBefore(dayToCalculate, startOfToday())) {
+      const dateStr = format(dayToCalculate, 'yyyy-MM-dd');
+
+      // Check if performance for this day is already calculated (safety check)
+      const perfExists = dailyPerformances.find(p => p.id === dateStr);
+      if (perfExists) {
+        dayToCalculate = addDays(dayToCalculate, 1);
+        continue;
+      }
+
+      // Filter sessions for the current day in the loop
+      const sessionsForDay = studySessions.filter(s => {
+        // Solo las sesiones con enfoque puntúan, igual que en el cálculo de hoy:
+        // las del modo «tiempo» guardan enfoque 0 y hundían la nota del día.
+        if (s.mode === 'tiempo' || !(s.perception > 0)) return false;
+        try {
+            return isSameDay(parseISO(s.startTime), dayToCalculate);
+        } catch {
+            return false;
+        }
+      });
+
+      if (sessionsForDay.length > 0) {
+        let totalMinutes = 0;
+        let totalPerception = 0;
+        const uniqueSubjects = new Set<string>();
+
+        sessionsForDay.forEach(session => {
+           totalMinutes += sessionSeconds(session) / 60;
+           totalPerception += session.perception;
+           session.subjects?.forEach(sub => uniqueSubjects.add(sub));
+        });
+
+        const pAvg = totalPerception / sessionsForDay.length;
+
+        const dayOfWeek = dayToCalculate.getDay();
+        const dayKey = dayKeys[dayOfWeek];
+        const tObj = studyGoals[dayKey] || 0;
+
+        if (tObj > 0) { // Only calculate if a goal was set for that day
+            const rDiarioRaw = pAvg * (totalMinutes / tObj);
+            const rDiario = Math.min(20, rDiarioRaw);
+            const grade = getGradeForScore(rDiario);
+
+            const performanceData: DailyPerformance = {
+              id: dateStr,
+              date: dateStr,
+              score: rDiario,
+              grade,
+              subjects: Array.from(uniqueSubjects),
+            };
+
+            updateDailyPerformance(performanceData);
+        }
+      }
+      dayToCalculate = addDays(dayToCalculate, 1);
+    }
+  }, [userProfile, studySessions, dailyPerformances, updateDailyPerformance, studyGoals, selectionMode]);
+
+  useEffect(() => {
+    // Run once on mount to check if past performance needs calculation
+    calculateAndSaveDailyPerformance();
+  }, [calculateAndSaveDailyPerformance]);
+
+
+  useEffect(() => {
+    if (!userProfile || !studySessions) return;
+
+    const todaysSessionsAll = studySessions
+      .filter(s => {
+          try {
+              return isToday(parseISO(s.startTime));
+          } catch {
+              return false;
+          }
+      })
+      .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+
+    // If in 'rendimiento' mode, only show sessions created in that mode.
+    const sessionsForDisplay = selectionMode === 'rendimiento'
+        ? todaysSessionsAll.filter(s => s.mode === 'rendimiento')
+        : todaysSessionsAll;
+
+    setRecentSessions(sessionsForDisplay);
+    setDailyStudySeconds(sessionsForDisplay.reduce((acc, session) => acc + sessionSeconds(session), 0));
+
+  }, [userProfile, studySessions, today, selectionMode]);
+
+  // La calificación de HOY se calcula en vivo: el registro persistido solo
+  // cubre días ya cerrados (updateDailyPerformance ignora el día en curso).
+  useEffect(() => {
+    if (selectionMode !== 'rendimiento' || recentSessions.length === 0 || totalGoalMinutes === 0) {
+      setTodayPerformance(null);
+      return;
+    }
+    const totalMinutes = recentSessions.reduce((acc, s) => acc + sessionSeconds(s) / 60, 0);
+    const pAvg = recentSessions.reduce((acc, s) => acc + s.perception, 0) / recentSessions.length;
+    const score = Math.min(20, pAvg * (totalMinutes / totalGoalMinutes));
+    setTodayPerformance({
+      id: today,
+      date: today,
+      score,
+      grade: getGradeForScore(score),
+      subjects: [...new Set(recentSessions.flatMap(s => s.subjects ?? []))],
+    });
+  }, [recentSessions, totalGoalMinutes, today, selectionMode]);
+
+  const allPerformances = useMemo(() => {
+    const map = new Map<string, DailyPerformance>();
+    (dailyPerformances ?? []).forEach(p => map.set(p.id, p));
+    if (todayPerformance) map.set(todayPerformance.id, todayPerformance);
+    return Array.from(map.values());
+  }, [dailyPerformances, todayPerformance]);
+
+
+  const handleSessionComplete = async (
+    sessionData: Omit<StudySession, 'id' | 'startTime' | 'endTime' | 'duration' | 'durationSec'> & { durationSec: number }
+  ) => {
+    if (!userProfile || sessionData.durationSec <= 0) return;
+    addStudySession(sessionData);
+    // El avance de las tareas seleccionadas sube en proporción directa
+    // duración de la sesión / tiempo estimado de cada tarea.
+    applySessionProgressToTasks(sessionData.taskIds ?? [], sessionData.durationSec / 60);
+  };
+
+  const totalGoalSeconds = totalGoalMinutes * 60;
+  const minutesProgress = totalGoalSeconds > 0 ? Math.min(100, (dailyStudySeconds / totalGoalSeconds) * 100) : 0;
+
+
+  return (
+    <div className="flex flex-col gap-8 p-6 md:p-8">
+      <div className="grid grid-cols-1 lg:grid-cols-5 lg:items-stretch gap-8">
+        <div className="lg:col-span-2 flex flex-col items-center">
+          <TimerDisplay onSessionComplete={handleSessionComplete} disabled={!userProfile} />
+        </div>
+        {cardFace === 'videos' ? (
+        <div className="lg:col-span-3">
+          {/* Un único recuadro, EXACTAMENTE tan alto como la pila que sustituye
+              (de la cabecera de «Tiempo de estudio» al pie de «Métricas de hoy»). */}
+          <Card className="flex w-full flex-col" style={{ height: stackHeight ?? 440 }}>
+            <CardHeader className="pb-3 pt-4">
+              <div className="flex items-center justify-between gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 shrink-0 gap-1.5 border-primary/60 px-2.5 text-[11px] text-primary hover:bg-primary/10 hover:text-primary"
+                  onClick={() => setVideoPickerOpen(true)}
+                  title="Buscar en YouTube sin salir de Estudio"
+                >
+                  <YoutubeLogo className="h-3.5 w-auto" />
+                  Añadir
+                </Button>
+                <CardTitle className="text-center font-headline text-sm tracking-wider text-muted-foreground">
+                  Vídeos de estudio
+                </CardTitle>
+                {faceArrows}
+              </div>
+            </CardHeader>
+            <CardContent className="flex min-h-0 flex-1 flex-col">
+              <StudyVideosPanel pickerOpen={videoPickerOpen} onPickerOpenChange={setVideoPickerOpen} />
+            </CardContent>
+          </Card>
+        </div>
+        ) : (
+        <div ref={stackRef} className="lg:col-span-3 flex flex-col gap-6 self-start">
+          <Card className="w-full">
+            <CardHeader className="relative pt-4 pb-0">
+              <CardTitle className="text-center font-headline tracking-wider text-muted-foreground text-sm">
+                Tiempo de estudio
+              </CardTitle>
+              <div className="absolute right-3 top-2.5">{faceArrows}</div>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-4">
+              <div className="p-4 rounded-lg border-2 border-primary/50 bg-primary/10">
+                <div className="space-y-2">
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-lg font-bold font-headline text-primary">{formatHMS(dailyStudySeconds)} / {formatHMS(totalGoalSeconds)}</span>
+                      <span className="text-xs text-primary">Tiempo</span>
+                    </div>
+                    <Progress value={minutesProgress} className="h-2" indicatorClassName="bg-primary" />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Avances anotados mientras la sesión corre. Aparece solo cuando
+              hay alguno: en una sesión sin anotar no ocupa sitio. */}
+          {sessionNotes.length > 0 && (
+            <Card className="w-full">
+              <CardContent className="space-y-2 p-4">
+                <SessionNotesHeading count={sessionNotes.length} />
+                <SessionNotesList notes={sessionNotes} onDelete={deleteSessionNote} />
+              </CardContent>
+            </Card>
+          )}
+
+          <Card className="w-full flex flex-col h-[280px]" data-tour="enfoque-metricas">
+            <CardHeader>
+              <CardTitle className="text-center text-sm font-headline text-muted-foreground">
+                Métricas de hoy
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col min-h-0">
+              {recentSessions.length > 0 ? (
+                <ScrollArea className="flex-1 pr-4">
+                  <ul className="space-y-3 text-xs text-muted-foreground">
+                    {recentSessions.map((session, index) => (
+                      <React.Fragment key={session.id}>
+                        <li className="flex items-center gap-2">
+                          <div className="flex min-w-0 flex-1 items-center gap-3">
+                            {/* Rendimiento y tiempo, juntos: son la misma
+                                lectura (cuánto y cómo). */}
+                            <div className="flex shrink-0 items-center gap-2.5">
+                              {selectionMode === 'rendimiento' && (
+                                <div className="w-14 text-center">
+                                  <span className="text-sm font-bold text-primary">{session.perception}</span>
+                                  <p className="text-[10px]">Rendimiento</p>
+                                </div>
+                              )}
+                              <span className="w-16 text-center font-semibold text-foreground">
+                                {formatDurationLabel(sessionSeconds(session))}
+                              </span>
+                            </div>
+                            {/* Asignaturas y, debajo, su colección. Si no
+                                caben, se desplazan de derecha a izquierda. */}
+                            <div className="min-w-0 flex-1 text-center leading-tight">
+                              <MarqueeText
+                                text={session.subjects?.join(', ') || 'Sin asignatura'}
+                                className="text-xs font-medium text-foreground"
+                              />
+                              {(() => {
+                                const collections = collectionsOf(session);
+                                return collections.length > 0 ? (
+                                  <MarqueeText
+                                    text={collections.join(' · ')}
+                                    className="text-[10px] text-muted-foreground"
+                                  />
+                                ) : null;
+                              })()}
+                            </div>
+                          </div>
+
+                          {/* Corregir la sesión. Solo aparece aquí porque esta
+                              lista es la de HOY: pasada la medianoche el
+                              registro queda cerrado. */}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 shrink-0 text-muted-foreground hover:text-primary"
+                            onClick={() => setEditingSession(session)}
+                            title="Corregir esta sesión"
+                            aria-label="Corregir esta sesión"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        </li>
+                        {index < recentSessions.length - 1 && <Separator />}
+                      </React.Fragment>
+                    ))}
+                  </ul>
+                </ScrollArea>
+              ) : (
+                <p className="text-xs text-muted-foreground text-center pt-2">Hoy todavía no registras sesiones.</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+        )}
+      </div>
+
+      <Separator className="my-4" />
+
+      {/* Calificación diaria: este calendario es exclusivo de Enfoque
+          (el de la interfaz Calendario muestra tareas y eventos).
+          Cada casilla abre las sesiones de estudio de ese día. */}
+      <div data-tour="enfoque-calendario">
+        <GradesCalendar
+          performances={allPerformances}
+          studySessions={studySessions}
+          selectionMode={selectionMode}
+          onDeleteSession={deleteStudySession}
+          onEditSession={setEditingSession}
+        />
+      </div>
+
+      {/* Analítica académica: vive aquí, bajo el calendario, porque habla de
+          estudio y no de hábitos. Es autónoma (tiene su propio periodo). */}
+      <div data-tour="progreso-academico"><AcademicAnalytics /></div>
+
+      <EditSessionDialog session={editingSession} onClose={() => setEditingSession(null)} />
+    </div>
+  );
+}

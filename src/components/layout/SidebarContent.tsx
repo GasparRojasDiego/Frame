@@ -1,0 +1,367 @@
+import React, { useState, useEffect } from 'react';
+import Image from '@/lib/image';
+import {
+  BookOpen,
+  Home,
+  PlusCircle,
+  Timer,
+  User,
+  Clock3,
+  Music,
+  ChevronsLeft,
+  GraduationCap,
+  Repeat,
+} from 'lucide-react';
+import Link from '@/lib/navigation';
+import { usePathname } from '@/lib/navigation';
+import { Button } from '@/components/ui/button';
+import { useCourse } from '@/context/CourseContext';
+
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
+import { EchoHeader } from '@/components/shared/EchoWord';
+import { Label } from '../ui/label';
+import { Input } from '../ui/input';
+import { Separator } from '../ui/separator';
+import { cn } from '@/lib/utils';
+import type { UserProfile } from '@/types';
+import { PlaylistList } from './PlaylistList';
+import SongPickerGrid from '@/components/music/SongPickerGrid';
+import PreviewMiniPlayer from '@/components/music/PreviewMiniPlayer';
+import FrameLogo from '@/components/layout/FrameLogo';
+import UpdateBadge, { useUpdateAvailable } from '@/components/layout/UpdateBadge';
+import GuestLinkBadge from '@/components/layout/GuestLinkBadge';
+import { useStoredImage } from '@/hooks/use-stored-image';
+import { GmailNavIcon } from '@/components/integrations/GmailPanel';
+import { CalendarNavIcon } from '@/components/integrations/GoogleCalendarIcon';
+import { ClassroomNavIcon } from '@/components/integrations/ClassroomIcon';
+import { YoutubeNavIcon } from '@/components/integrations/YoutubeIcon';
+
+interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  /** Rutas hijas que también deben marcar esta interfaz como activa
+   *  (p. ej. /cursos pertenece a Asignaturas, /playlists a Música). */
+  activeFor?: string[];
+  /** Herramienta de Google: va entre dos líneas finas, separada de las de Frame. */
+  digital?: boolean;
+}
+
+const navItems: NavItem[] = [
+  { href: '/', label: 'Inicio', icon: Home },
+  { href: '/temporizador', label: 'Estudio', icon: Timer },
+  { href: '/tareas', label: 'Tareas', icon: BookOpen },
+  { href: '/habitos', label: 'Hábitos', icon: Repeat },
+  { href: '/knowledge', label: 'Asignaturas', icon: GraduationCap, activeFor: ['/cursos'] },
+  { href: '/calendario', label: 'Calendario', icon: CalendarNavIcon, digital: true },
+  { href: '/gmail', label: 'Gmail', icon: GmailNavIcon, digital: true },
+  { href: '/classroom', label: 'Classroom', icon: ClassroomNavIcon, digital: true },
+  // YouTube vuelve a la barra (1.5.8): el YouTube real integrado, como Gmail y Classroom.
+  { href: '/youtube', label: 'YouTube', icon: YoutubeNavIcon, digital: true },
+  { href: '/music', label: 'Música', icon: Music, activeFor: ['/playlists'] },
+];
+
+/**
+ * Testigo de sesión de estudio en el sidebar. Gira mientras el cronómetro
+ * corre y se queda quieto en pausa: de un vistazo se sabe si el tiempo está
+ * contando, sin necesidad de entrar en Estudio. Antes había un triángulo de
+ * alerta rojo, que daba a entender un error y no una sesión viva.
+ */
+function SessionClock({ className, spinning }: { className?: string; spinning: boolean }) {
+  return (
+    <Clock3
+      className={cn(
+        'text-primary dark:text-white',
+        // Vuelta completa lenta: presencia sin llamar la atención.
+        spinning && 'animate-spin [animation-duration:3s]',
+        className
+      )}
+      aria-label={spinning ? 'Sesión de estudio en curso' : 'Sesión de estudio en pausa'}
+    />
+  );
+}
+
+export function SidebarContent({
+  userProfile,
+  onLinkClick,
+  showCloseButton = false,
+  collapsed = false,
+  hostDialogs = true,
+}: {
+  userProfile: UserProfile | null;
+  onLinkClick?: () => void;
+  showCloseButton?: boolean;
+  collapsed?: boolean;
+  /** La barra está montada dos veces (fija y desplegable) y el recuadro
+   *  «Nueva playlist» se abre con un estado compartido: solo una de las dos
+   *  debe pintarlo, o salen dos recuadros apilados con doble velo. */
+  hostDialogs?: boolean;
+}) {
+  const pathname = usePathname();
+  const {
+    showAlert,
+    isTimerActive,
+    toggleSidebarCollapsed,
+    // Playlist state
+
+    isCreatePlaylistOpen,
+    setCreatePlaylistOpen,
+    newPlaylistName: newPlName,
+    setNewPlaylistName: setNewPlName,
+    mergePlaylistSongs,
+  } = useCourse();
+
+  // State for the new playlist dialog
+  const [selectedSongIds, setSelectedSongIds] = useState<string[]>([]);
+  const [playlistSongSearch, setPlaylistSongSearch] = useState('');
+
+  // Se relee sola: también cuando la foto llega de otro dispositivo.
+  const [profileAvatar] = useStoredImage(userProfile ? `profileAvatar_${userProfile.id}` : null);
+
+  /**
+   * Añade la canción a la playlist EN EL ACTO. `mergePlaylistSongs` crea la
+   * playlist si aún no existe y fusiona si ya existe, así que la primera
+   * pulsación del "+" ya deja la playlist guardada: si el usuario cierra el
+   * diálogo a medias, no pierde lo que llevaba añadido.
+   */
+  const handleAddSongToNewPlaylist = (songId: string) => {
+    const name = newPlName.trim();
+    if (!name || selectedSongIds.includes(songId)) return;
+    mergePlaylistSongs(name, [songId]);
+    setSelectedSongIds((prev) => [...prev, songId]);
+  };
+
+  // Reset playlist form state when dialog closes
+  useEffect(() => {
+    if (!isCreatePlaylistOpen) {
+      setNewPlName('');
+      setSelectedSongIds([]);
+      setPlaylistSongSearch('');
+    }
+  }, [isCreatePlaylistOpen, setNewPlName]);
+
+  const isSettingsActive = pathname === '/settings';
+  const updateAvailable = useUpdateAvailable();
+
+  return (
+    <>
+      <div className={cn('flex flex-col flex-1 min-h-0 bg-card h-full', collapsed ? 'p-2' : 'p-4')}>
+        {/* Marca: siempre fija arriba, nunca se desplaza.
+            `pt-2` al contraerse: el carril pasa de p-4 a p-2 y el logo se
+            quedaba pegado al borde superior mientras abajo respiraba el doble.
+            Con esto vuelve a haber el mismo aire arriba que hasta la línea. */}
+        <div className="flex-shrink-0">
+          <div
+            className={cn(
+              'relative flex items-center justify-center pb-4 mb-4 border-b',
+              collapsed && 'pt-2'
+            )}
+          >
+            <div className={cn('flex items-center', !collapsed && 'gap-5')}>
+              {/* El logo contrae/expande el sidebar */}
+              <button
+                type="button"
+                onClick={toggleSidebarCollapsed}
+                title={collapsed ? 'Expandir menú' : 'Contraer menú'} data-tour="menu-plegar"
+                className="h-8 w-8 rounded-full flex items-center justify-center overflow-hidden transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <FrameLogo className="h-8 w-8" />
+              </button>
+              {!collapsed && <h1 className="select-none text-xl font-bold text-foreground">FRAME</h1>}
+            </div>
+            {!collapsed && showCloseButton && onLinkClick && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onLinkClick}
+                className="absolute right-0 h-8 w-8"
+              >
+                <ChevronsLeft className="h-5 w-5" />
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* ------------------------------------------------------------------
+            Carril desplazable: navegación + playlists. Antes todo esto era
+            `flex-shrink-0`, así que al crear varias playlists la columna
+            crecía más que la ventana y el desbordamiento salía por la app
+            entera —de ahí la barra gigante en el borde derecho—. Ahora el
+            scroll vive AQUÍ dentro y la barra se oculta (`hide-scrollbar`):
+            la rueda del ratón desplaza el menú sin que se vea nada.
+            ------------------------------------------------------------------ */}
+        <div className="hide-scrollbar min-h-0 flex-1 overflow-y-auto">
+          <nav className="flex flex-col gap-1" data-tour="menu">
+            {navItems.map((item, itemIndex) => {
+              const firstDigital = item.digital && !navItems[itemIndex - 1]?.digital;
+              const lastDigital = item.digital && !navItems[itemIndex + 1]?.digital;
+              // Normalizamos ambas rutas para ignorar la barra diagonal final (trailing slash)
+              // Esto garantiza que /tareas coincida con /tareas/
+              const normalizedPath = pathname === '/' ? '/' : pathname.replace(/\/$/, '');
+              const normalizedHref = item.href === '/' ? '/' : item.href.replace(/\/$/, '');
+              // Una interfaz está activa en su ruta propia Y en sus rutas hijas:
+              // así el sidebar siempre refleja la rama en la que está el usuario.
+              const matchesRoute = (route: string) =>
+                route === '/'
+                  ? normalizedPath === '/'
+                  : normalizedPath === route || normalizedPath.startsWith(`${route}/`);
+              const isActive =
+                matchesRoute(normalizedHref) || (item.activeFor ?? []).some(matchesRoute);
+
+              const Icon = item.icon;
+              const showTimerAlert = item.href === '/temporizador' && showAlert;
+
+              return (
+                <React.Fragment key={item.href}>
+                  {/* Línea fina entre las interfaces de Frame y las de Google. */}
+                  {firstDigital && <Separator className="my-2" />}
+                  <Button
+                    variant={isActive ? 'default' : 'ghost'}
+                    className={cn('text-xs', collapsed ? 'justify-center px-0' : 'justify-start gap-3')}
+                    asChild
+                  >
+                    <Link href={item.href} onClick={onLinkClick} title={collapsed ? item.label : undefined} data-tour={`nav${item.href === '/' ? '-inicio' : item.href.replace(/\//g, '-')}`}>
+                      <Icon className={cn('h-4 w-4', !isActive && 'text-primary')} />
+                      {!collapsed && (
+                        <>
+                          <span>{item.label}</span>
+                          <div className="flex-grow" />
+                          {showTimerAlert && <SessionClock className="h-4 w-4" spinning={isTimerActive} />}
+                        </>
+                      )}
+                      {collapsed && showTimerAlert && (
+                        <SessionClock
+                          className="absolute right-1 top-1 h-3 w-3"
+                          spinning={isTimerActive}
+                        />
+                      )}
+                    </Link>
+                  </Button>
+                  {lastDigital && <Separator className="my-2" />}
+                </React.Fragment>
+              );
+            })}
+          </nav>
+
+          {/* Las playlists también existen con el carril contraído: son parte
+              de la navegación, no un adorno del modo ancho. Contraídas se
+              muestran como iconos, igual que el resto de interfaces. */}
+          <Button
+            variant="ghost"
+            className={cn(
+              'text-xs mt-2 w-full text-muted-foreground',
+              collapsed ? 'justify-center px-0' : 'justify-start gap-3'
+            )}
+            onClick={() => setCreatePlaylistOpen(true)}
+            title={collapsed ? 'Añadir playlist' : undefined} data-tour="playlist-anadir"
+          >
+            <PlusCircle className="h-4 w-4 text-primary" />
+            {!collapsed && <span>Añadir playlist</span>}
+          </Button>
+          <PlaylistList collapsed={collapsed} />
+        </div>
+
+        {/* Footer */}
+        <div className="flex-shrink-0 pt-4">
+          <Separator className="my-2" />
+          {/* El testigo va FUERA del <Link>, no dentro: un botón anidado en un
+              enlace obliga a cancelar el evento para no navegar, y esa
+              cancelación hacía que Radix descartara la apertura del popover
+              (además de ser HTML inválido). Ahora son hermanos. */}
+          <div className="relative">
+            <Button
+              variant={isSettingsActive ? 'secondary' : 'ghost'}
+              className={cn('w-full h-auto p-2', collapsed ? 'justify-center' : 'justify-start')}
+              asChild
+            >
+              <Link href="/settings" onClick={onLinkClick} title={collapsed ? (userProfile?.username ?? 'Perfil') : undefined} data-tour="perfil">
+                <div className={cn('flex w-full items-center', !collapsed && 'gap-3')}>
+                  {profileAvatar ? (
+                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-secondary overflow-hidden">
+                      <Image src={profileAvatar} alt="Profile Avatar" width={20} height={20} className="h-full w-full object-cover" />
+                    </div>
+                  ) : (
+                    <User className="h-5 w-5 text-primary" />
+                  )}
+                  {!collapsed && (
+                    <span className="text-xs font-medium text-foreground">{userProfile?.username ?? 'Invitado'}</span>
+                  )}
+                </div>
+              </Link>
+            </Button>
+
+            <div
+              className={cn(
+                'absolute',
+                collapsed ? 'right-0.5 top-0.5' : 'right-2 top-1/2 -translate-y-1/2'
+              )}
+            >
+              {/* Con una versión nueva, manda el testigo de actualizar; si no,
+                  el invitado ve aquí la «G» para vincular su cuenta. */}
+              {updateAvailable ? (
+                <UpdateBadge collapsed={collapsed} />
+              ) : (
+                userProfile && <GuestLinkBadge userProfile={userProfile} collapsed={collapsed} />
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ------------------------------------------------------------------
+          Nueva playlist. Rejilla de dos columnas con portadas: la portada es
+          el botón de escucha (para reconocer la canción) y el "+" la añade en
+          el acto, sin esperar a pulsar "Crear" al final.
+          ------------------------------------------------------------------ */}
+      <Dialog open={hostDialogs && isCreatePlaylistOpen} onOpenChange={setCreatePlaylistOpen}>
+        <DialogContent className="max-w-2xl">
+          <EchoHeader word="Playlist">
+            <DialogHeader>
+              <DialogTitle className="text-xl text-primary font-bold text-center">Nueva playlist</DialogTitle>
+            </DialogHeader>
+          </EchoHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="playlistName" className="text-xs">Nombre de la playlist</Label>
+              <Input
+                id="playlistName"
+                value={newPlName}
+                onChange={(e) => setNewPlName(e.target.value)}
+                placeholder="Ej: Mi mezcla de entrenamiento" data-tour="playlist-nombre"
+                className="border-primary focus-visible:ring-primary"
+              />
+            </div>
+
+            <SongPickerGrid
+              selectedIds={selectedSongIds}
+              onAdd={handleAddSongToNewPlaylist}
+              search={playlistSongSearch}
+              onSearchChange={setPlaylistSongSearch}
+              disabledReason={
+                newPlName.trim()
+                  ? undefined
+                  : "Ponle nombre a la playlist para empezar a añadir canciones."
+              }
+            />
+          </div>
+
+          <DialogFooter className="items-center gap-3 sm:justify-between sm:space-x-0">
+            {/* Lo que suena en la escucha previa: portada, barra para moverse y pausa. */}
+            <PreviewMiniPlayer className="w-full sm:w-auto sm:flex-1" />
+            <div className="flex shrink-0 items-center gap-3">
+              <p className="text-[11px] text-muted-foreground">
+                {selectedSongIds.length === 0
+                  ? 'Ninguna canción añadida todavía'
+                  : `${selectedSongIds.length} ${selectedSongIds.length === 1 ? 'canción añadida' : 'canciones añadidas'}`}
+              </p>
+              <Button onClick={() => setCreatePlaylistOpen(false)} disabled={selectedSongIds.length === 0} data-tour="playlist-crear">
+                Listo
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}

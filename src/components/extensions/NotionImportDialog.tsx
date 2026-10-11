@@ -1,0 +1,348 @@
+import { useMemo, useRef, useState } from 'react';
+import { format, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { CalendarDays, CheckSquare, FileUp, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
+import { ExtensionIcon } from '@/components/extensions/ExtensionIcons';
+import { useCourse } from '@/context/CourseContext';
+import { useToast } from '@/hooks/use-toast';
+import {
+  dueIso,
+  guessMapping,
+  interpretTable,
+  readNotionFiles,
+  type NotionItem,
+  type NotionMapping,
+  type NotionTable,
+} from '@/lib/extensions/notion-import';
+import { setNotionOpen, useExtensions } from '@/lib/extensions/registry';
+import { DEFAULT_EVENT_COLOR } from '@/lib/calendar-events';
+import { cn } from '@/lib/utils';
+
+// ============================================================
+// Importador de Notion (extensión «Notion»): tareas y fechas.
+// Ver lib/extensions/notion-import.ts para cómo se leen los archivos.
+// ============================================================
+
+type ImportAs = 'tasks' | 'events';
+
+const MAPPING_LABEL: Record<keyof NotionMapping, string> = {
+  title: 'Título',
+  date: 'Fecha',
+  status: 'Estado',
+  course: 'Asignatura',
+  priority: 'Prioridad',
+  kind: 'Tipo',
+  description: 'Descripción',
+};
+
+const dayLabel = (date: string) => {
+  try {
+    return format(parseISO(date), "d 'de' MMM yyyy", { locale: es });
+  } catch {
+    return date;
+  }
+};
+
+const plain = (s: string) =>
+  s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .trim();
+
+export default function NotionImportDialog() {
+  const { notionOpen } = useExtensions();
+  const { courses, tasks, addTask, addLocalEvent, userProfile } = useCourse();
+  const { toast } = useToast();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [tables, setTables] = useState<NotionTable[]>([]);
+  const [tableIndex, setTableIndex] = useState(0);
+  const [mapping, setMapping] = useState<NotionMapping | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [includeDone, setIncludeDone] = useState(false);
+  const [importAs, setImportAs] = useState<ImportAs>('tasks');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const table = tables[tableIndex] ?? null;
+  const items = useMemo<NotionItem[]>(
+    () => (table && mapping ? interpretTable(table, mapping, courses ?? []) : []),
+    [table, mapping, courses]
+  );
+  const visibleItems = useMemo(
+    () => items.filter((i) => (includeDone || !i.done) && (importAs === 'tasks' || i.date)),
+    [items, includeDone, importAs]
+  );
+
+  /** Ya existe una tarea con el mismo nombre y la misma fecha: no se duplica. */
+  const isDuplicate = (item: NotionItem) =>
+    (tasks ?? []).some(
+      (t) =>
+        plain(t.name) === plain(item.title) &&
+        (t.dueDate ? format(new Date(t.dueDate), 'yyyy-MM-dd') : null) === item.date
+    );
+
+  const reset = () => {
+    setTables([]);
+    setTableIndex(0);
+    setMapping(null);
+    setSelected(new Set());
+    setError(null);
+  };
+
+  const choose = (list: NotionItem[]) => setSelected(new Set(list.filter((i) => !isDuplicate(i)).map((i) => i.key)));
+
+  const onFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const found = await readNotionFiles([...files]);
+      if (found.length === 0) {
+        setError('No encontré ninguna tabla. Elige el .zip que descarga Notion al exportar con «Markdown y CSV», o el .csv de la base de datos.');
+        return;
+      }
+      setTables(found);
+      setTableIndex(0);
+      const m = guessMapping(found[0]);
+      setMapping(m);
+      const first = interpretTable(found[0], m, courses ?? []);
+      choose(first.filter((i) => !i.done));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo leer el archivo.');
+    } finally {
+      setBusy(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  const switchTable = (index: number) => {
+    setTableIndex(index);
+    const m = guessMapping(tables[index]);
+    setMapping(m);
+    choose(interpretTable(tables[index], m, courses ?? []).filter((i) => !i.done));
+  };
+
+  const runImport = () => {
+    if (!userProfile) return;
+    const chosen = visibleItems.filter((i) => selected.has(i.key));
+    if (chosen.length === 0) return;
+    if (importAs === 'tasks') {
+      const now = Date.now();
+      chosen.forEach((item, n) => {
+        const course = (courses ?? []).find((c) => c.id === item.courseId) ?? null;
+        const notes = [item.description, item.time ? `Hora: ${item.time}` : '', !course && item.courseLabel ? `Notion: ${item.courseLabel}` : '']
+          .filter(Boolean)
+          .join('\n');
+        addTask({
+          name: item.title,
+          description: notes,
+          dueDate: item.date ? dueIso(item.date) : null,
+          priority: item.priority ?? 'Media',
+          ...(item.kind ? { kind: item.kind } : {}),
+          progress: item.done ? 100 : 0,
+          order: -(now + n),
+          courseId: course?.id ?? '',
+          courseName: course?.name ?? '',
+          uid: userProfile.id,
+        });
+      });
+      toast({
+        title: `${chosen.length} ${chosen.length === 1 ? 'tarea importada' : 'tareas importadas'} de Notion`,
+        description: 'Las que no tenían asignatura están al final de Inicio, para colocarlas.',
+      });
+    } else {
+      for (const item of chosen) {
+        if (!item.date) continue;
+        addLocalEvent({
+          title: item.title,
+          date: item.startDate ?? item.date,
+          ...(item.startDate ? { endDate: item.date } : {}),
+          kind: item.kind === 'Examen' ? 'examen' : 'personal',
+          color: DEFAULT_EVENT_COLOR,
+          display: 'actividad',
+          ...(item.description ? { description: item.description } : {}),
+        });
+      }
+      toast({
+        title: `${chosen.length} ${chosen.length === 1 ? 'fecha importada' : 'fechas importadas'} al calendario`,
+        description: 'Las verás en Calendario → «Local».',
+      });
+    }
+    setNotionOpen(false);
+    reset();
+  };
+
+  const allChosen = visibleItems.length > 0 && visibleItems.every((i) => selected.has(i.key) || isDuplicate(i));
+
+  return (
+    <Dialog
+      open={notionOpen}
+      onOpenChange={(open) => {
+        setNotionOpen(open);
+        if (!open) reset();
+      }}
+    >
+      <DialogContent className="flex max-h-[88vh] flex-col gap-4 sm:max-w-2xl">
+        <DialogHeader>
+          <div className="flex items-center gap-3">
+            <ExtensionIcon id="notion" />
+            <div className="text-left">
+              <DialogTitle>Importar de Notion</DialogTitle>
+              <DialogDescription>Tus tareas y fechas de una base de datos de Notion, a Frame.</DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+
+        {!table ? (
+          <div className="space-y-4">
+            <ol className="space-y-2 rounded-xl bg-secondary/40 p-4 text-sm text-foreground/90">
+              {[
+                'En Notion, abre la base de datos con tus tareas.',
+                'Pulsa ••• (arriba a la derecha) → «Exportar».',
+                'Formato: «Markdown y CSV». Pulsa «Exportar» y se descargará un .zip.',
+                'Aquí, elige ese .zip (o el .csv de dentro).',
+              ].map((step, i) => (
+                <li key={step} className="flex gap-2.5">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[11px] font-bold text-primary">
+                    {i + 1}
+                  </span>
+                  {step}
+                </li>
+              ))}
+            </ol>
+            <input ref={fileRef} type="file" accept=".zip,.csv" multiple className="hidden" onChange={(e) => void onFiles(e.target.files)} />
+            <Button className="w-full gap-2" onClick={() => fileRef.current?.click()} disabled={busy}>
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" />}
+              Elegir el archivo de Notion
+            </Button>
+            {error && <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+            <p className="text-center text-[11px] text-muted-foreground">Todo ocurre en tu equipo: Frame no se conecta a tu cuenta de Notion.</p>
+          </div>
+        ) : (
+          <>
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              {tables.length > 1 && (
+                <select
+                  value={tableIndex}
+                  onChange={(e) => switchTable(Number(e.target.value))}
+                  className="rounded-md border border-border bg-background px-2 py-1"
+                  aria-label="Base de datos"
+                >
+                  {tables.map((t, i) => (
+                    <option key={t.name} value={i}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <span className="font-semibold text-foreground">{table.name}</span>
+              <span className="text-muted-foreground">· {table.rows.length} filas</span>
+              <div className="ml-auto flex overflow-hidden rounded-full border border-border/70">
+                {(['tasks', 'events'] as ImportAs[]).map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setImportAs(value)}
+                    className={cn(
+                      'flex items-center gap-1.5 px-3 py-1 transition-colors',
+                      importAs === value ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    {value === 'tasks' ? <CheckSquare className="h-3.5 w-3.5" /> : <CalendarDays className="h-3.5 w-3.5" />}
+                    {value === 'tasks' ? 'Como tareas' : 'Como fechas del calendario'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {mapping && (
+              <div className="flex flex-wrap gap-1.5 text-[11px]">
+                {(Object.keys(MAPPING_LABEL) as (keyof NotionMapping)[]).map((key) =>
+                  mapping[key] ? (
+                    <span key={key} className="rounded-full border border-border/70 px-2 py-0.5 text-muted-foreground">
+                      {MAPPING_LABEL[key]}: <span className="text-foreground">{mapping[key]}</span>
+                    </span>
+                  ) : null
+                )}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between gap-3 text-xs">
+              <label className="flex items-center gap-2">
+                <Checkbox checked={allChosen} onCheckedChange={(v) => (v ? choose(visibleItems) : setSelected(new Set()))} />
+                Seleccionar todo
+              </label>
+              {mapping?.status && (
+                <label className="flex items-center gap-2 text-muted-foreground">
+                  Incluir las ya terminadas
+                  <Switch checked={includeDone} onCheckedChange={setIncludeDone} />
+                </label>
+              )}
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-border/70">
+              {visibleItems.length === 0 ? (
+                <p className="p-6 text-center text-sm text-muted-foreground">
+                  {importAs === 'events' ? 'Ninguna fila tiene fecha.' : 'No hay filas para importar.'}
+                </p>
+              ) : (
+                visibleItems.map((item) => {
+                  const dup = isDuplicate(item);
+                  return (
+                    <label
+                      key={item.key}
+                      className={cn(
+                        'flex cursor-pointer items-start gap-3 border-b border-border/50 px-3 py-2 text-sm last:border-0 hover:bg-secondary/30',
+                        dup && 'cursor-default opacity-50'
+                      )}
+                    >
+                      <Checkbox
+                        className="mt-0.5"
+                        disabled={dup}
+                        checked={selected.has(item.key)}
+                        onCheckedChange={(v) =>
+                          setSelected((prev) => {
+                            const next = new Set(prev);
+                            if (v) next.add(item.key);
+                            else next.delete(item.key);
+                            return next;
+                          })
+                        }
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-medium text-foreground">{item.title}</span>
+                        <span className="block truncate text-[11px] text-muted-foreground">
+                          {item.date ? (item.startDate ? `${dayLabel(item.startDate)} → ${dayLabel(item.date)}` : dayLabel(item.date)) : 'Sin fecha'}
+                          {item.time ? ` · ${item.time}` : ''}
+                          {' · '}
+                          {item.courseId ? item.courseLabel : item.courseLabel ? `${item.courseLabel} (sin asignatura igual en Frame)` : 'Sin asignatura'}
+                          {item.done ? ' · terminada' : ''}
+                          {dup ? ' · ya está en Frame' : ''}
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="flex items-center justify-between gap-2">
+              <Button variant="ghost" size="sm" onClick={reset}>
+                Elegir otro archivo
+              </Button>
+              <Button onClick={runImport} disabled={visibleItems.filter((i) => selected.has(i.key)).length === 0}>
+                Importar {visibleItems.filter((i) => selected.has(i.key)).length}{' '}
+                {importAs === 'tasks' ? 'tareas' : 'fechas'}
+              </Button>
+            </div>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
