@@ -214,11 +214,11 @@ export default function ReportCenter({ userProfile }: { userProfile: UserProfile
           data-tour="informe-periodo"
           className="w-32"
         />
-        <Selector value={offset} options={periods} onChange={setOffset} data-tour="informe-cual" className="min-w-0 flex-1" />
+        <Selector value={offset} options={periods} onChange={setOffset} data-tour="informe-cual" className="min-w-[11rem] flex-1" />
       </div>
 
       {/* Resumen: las cifras que contará el documento. */}
-      <div className="grid grid-cols-4 gap-2 rounded-lg border border-primary bg-primary/10 p-3 text-center" data-tour="informe-resumen">
+      <div className="grid grid-cols-2 gap-2 rounded-lg border border-primary bg-primary/10 p-3 text-center sm:grid-cols-4" data-tour="informe-resumen">
         {performance ? (
           <>
             <Stat label="Estudio" value={hm(performance.totalMinutes)} strong />
