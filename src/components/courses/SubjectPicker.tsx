@@ -30,7 +30,7 @@ const LOOSE = '__loose__';
  * tiene, las olas animadas de siempre. Las colecciones guardan la suya en
  * `spaceImage_<id>` y las asignaturas en `courseImage_<id>`.
  */
-function SubjectCover({ imageKeys, className }: { imageKeys: string[]; className?: string }) {
+export function SubjectCover({ imageKeys, className }: { imageKeys: string[]; className?: string }) {
   const [image, setImage] = useState<string | null>(null);
   const signature = imageKeys.join('|');
 
@@ -61,7 +61,7 @@ function SubjectCover({ imageKeys, className }: { imageKeys: string[]; className
 }
 
 /** Tarjeta común a colecciones y asignaturas: portada arriba, nombre debajo. */
-function PickCard({
+export function PickCard({
   title,
   subtitle,
   imageKeys,
@@ -119,6 +119,41 @@ function PickCard({
   );
 }
 
+/** Colección de las tarjetas: id, nombre y asignaturas en su orden. */
+export type SubjectGroup = { id: string; name: string; courses: Course[] };
+
+/**
+ * Grupos en el orden que el usuario eligió en Asignaturas, más un cajón
+ * final («Sin colección») con las que no pertenecen a ninguna colección.
+ */
+export function useSubjectGroups(): SubjectGroup[] {
+  const { courses, spaces } = useCourse();
+  return useMemo(() => {
+    const inSpaces = new Set((spaces ?? []).flatMap((space) => space.courseIds));
+    const out: SubjectGroup[] = [];
+
+    for (const space of spaces ?? []) {
+      const list = space.courseIds
+        .map((id) => (courses ?? []).find((course) => course.id === id))
+        .filter((course): course is Course => Boolean(course));
+      if (list.length > 0) out.push({ id: space.id, name: space.name, courses: list });
+    }
+
+    const loose = (courses ?? []).filter((course) => !inSpaces.has(course.id));
+    if (loose.length > 0) out.push({ id: LOOSE, name: 'Sin colección', courses: loose });
+
+    return out;
+  }, [courses, spaces]);
+}
+
+/** Portadas a probar para una colección: la suya y, si no, las de sus asignaturas. */
+export function groupImageKeys(group: SubjectGroup): string[] {
+  return [
+    ...(group.id === LOOSE ? [] : [`spaceImage_${group.id}`]),
+    ...group.courses.map((course) => `courseImage_${course.id}`),
+  ];
+}
+
 export default function SubjectPicker({
   value,
   onChange,
@@ -135,29 +170,12 @@ export default function SubjectPicker({
   noneHint?: string;
   className?: string;
 }) {
-  const { courses, spaces } = useCourse();
+  const { courses } = useCourse();
   const [search, setSearch] = useState('');
   /** Colección abierta; `null` = paso 1 (las colecciones). */
   const [openSpace, setOpenSpace] = useState<string | null>(null);
 
-  // Grupos en el orden que el usuario eligió en Asignaturas, más un cajón
-  // final con las que no pertenecen a ninguna colección.
-  const groups = useMemo(() => {
-    const inSpaces = new Set((spaces ?? []).flatMap((space) => space.courseIds));
-    const out: { id: string; name: string; courses: Course[] }[] = [];
-
-    for (const space of spaces ?? []) {
-      const list = space.courseIds
-        .map((id) => (courses ?? []).find((course) => course.id === id))
-        .filter((course): course is Course => Boolean(course));
-      if (list.length > 0) out.push({ id: space.id, name: space.name, courses: list });
-    }
-
-    const loose = (courses ?? []).filter((course) => !inSpaces.has(course.id));
-    if (loose.length > 0) out.push({ id: LOOSE, name: 'Sin colección', courses: loose });
-
-    return out;
-  }, [courses, spaces]);
+  const groups = useSubjectGroups();
 
   // Con búsqueda escrita se saltan los dos pasos: buscar es justamente lo que
   // se hace cuando ya se sabe el nombre y no se quiere navegar.
@@ -295,6 +313,133 @@ export default function SubjectPicker({
               })}
             </div>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// Elegir VARIAS asignaturas con las mismas tarjetas.
+//
+// Mismo recorrido que el selector de una sola (colección → asignaturas,
+// o búsqueda directa), pero cada tarjeta se marca y desmarca. La colección
+// muestra cuántas de las suyas van marcadas, para no perder la cuenta al
+// volver al paso 1.
+// ============================================================
+export function SubjectMultiPicker({
+  values,
+  onChange,
+  title = '¿De qué asignaturas?',
+  className,
+  searchClassName,
+}: {
+  values: string[];
+  onChange: (courseIds: string[]) => void;
+  title?: string;
+  className?: string;
+  /** Clases extra para la barra de búsqueda (p. ej. ancho o borde). */
+  searchClassName?: string;
+}) {
+  const { courses } = useCourse();
+  const groups = useSubjectGroups();
+  const [search, setSearch] = useState('');
+  const [openSpace, setOpenSpace] = useState<string | null>(null);
+
+  const needle = search.trim().toLowerCase();
+  const searchResults = useMemo(
+    () => (needle === '' ? [] : (courses ?? []).filter((c) => c.name.toLowerCase().includes(needle))),
+    [courses, needle]
+  );
+  const current = groups.find((group) => group.id === openSpace) ?? null;
+  const hasCourses = (courses?.length ?? 0) > 0;
+  const chosen = new Set(values);
+
+  const toggle = (id: string) =>
+    onChange(chosen.has(id) ? values.filter((value) => value !== id) : [...values, id]);
+
+  const grid = 'grid grid-cols-2 items-start gap-2 sm:grid-cols-3';
+  const courseCard = (course: Course) => (
+    <PickCard
+      key={course.id}
+      title={course.name}
+      imageKeys={[`courseImage_${course.id}`]}
+      selected={chosen.has(course.id)}
+      onSelect={() => toggle(course.id)}
+    />
+  );
+
+  return (
+    <div className={cn('space-y-3', className)}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          {current && needle === '' && (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-6 w-6 text-muted-foreground hover:text-primary"
+              onClick={() => setOpenSpace(null)}
+              title="Volver a las colecciones"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          )}
+          {current && needle === '' ? current.name : title}
+          {values.length > 0 && (
+            <span className="text-xs font-normal text-primary">
+              · {values.length} {values.length === 1 ? 'marcada' : 'marcadas'}
+            </span>
+          )}
+        </p>
+        {hasCourses && (
+          <div className={cn('relative w-full sm:w-48', searchClassName)}>
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Buscar…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-8 border-primary bg-card pl-8 text-xs"
+            />
+          </div>
+        )}
+      </div>
+
+      {!hasCourses ? (
+        <p className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
+          Todavía no tienes asignaturas. Créalas en «Asignaturas».
+        </p>
+      ) : needle !== '' ? (
+        searchResults.length === 0 ? (
+          <p className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
+            Ninguna asignatura coincide con la búsqueda.
+          </p>
+        ) : (
+          <div className={grid}>{searchResults.map(courseCard)}</div>
+        )
+      ) : current ? (
+        <div className={grid}>{current.courses.map(courseCard)}</div>
+      ) : (
+        <div className={grid}>
+          {groups.map((group) => {
+            const marked = group.courses.filter((course) => chosen.has(course.id)).length;
+            return (
+              <div key={group.id} className="relative">
+                <PickCard
+                  title={group.name}
+                  imageKeys={groupImageKeys(group)}
+                  subtitle={
+                    marked > 0
+                      ? `${marked} de ${group.courses.length} marcadas`
+                      : `${group.courses.length} ${group.courses.length === 1 ? 'asignatura' : 'asignaturas'}`
+                  }
+                  onSelect={() => setOpenSpace(group.id)}
+                />
+                <span className="pointer-events-none absolute left-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-background/70 backdrop-blur">
+                  <Layers className={cn('h-3 w-3', marked > 0 ? 'text-primary' : 'text-muted-foreground')} />
+                </span>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
