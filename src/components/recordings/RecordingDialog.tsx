@@ -827,7 +827,7 @@ export default function RecordingDialog({
               </p>
             </div>
             <DialogFooter className="sm:justify-center gap-2">
-              <Button variant="fantasmaRojo" onClick={() => handleOpenChange(false)}>
+              <Button variant="gris" onClick={() => handleOpenChange(false)}>
                 Cancelar
               </Button>
               {/* autoFocus: con Ctrl+Shift+F basta presionar Enter para empezar */}
@@ -1042,7 +1042,7 @@ export default function RecordingDialog({
             <DialogFooter className="gap-2 sm:justify-center">
               <Button
                 type="button"
-                variant="fantasmaRojo"
+                variant="gris"
                 onClick={() => setConfirmDiscard(true)}
                 disabled={phase === 'saving'}
               >

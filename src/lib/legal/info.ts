@@ -12,7 +12,7 @@
 
 import { TERMS_VERSION } from './terms';
 
-export const INFO_VERSION = '4.4';
+export const INFO_VERSION = '4.5';
 
 export function infoDocument({
   appVersion,
@@ -41,7 +41,7 @@ Frame reúne en una sola aplicación lo que normalmente exige cinco: gestión de
 
 **Recursos.** 4 GB de memoria y 300 MB de espacio libre, más el espacio que ocupen tu biblioteca de música y tus grabaciones, que crece sin límite fijado por la aplicación.
 
-**Conexión a internet.** No es necesaria para el núcleo académico —asignaturas, tareas, sesiones de estudio, hábitos, calendario local, tu música, grabaciones y la ayuda—. Sí lo es para crear tu cuenta e iniciar sesión —una vez dentro, lo anterior sigue funcionando sin ella—, para la sincronización en la nube, las interfaces de Gmail, Google Calendar, Classroom y YouTube, los vídeos de estudio, la tarjeta de clima y la comprobación de actualizaciones.
+**Conexión a internet.** No es necesaria para el núcleo académico —asignaturas, tareas, sesiones de estudio, hábitos, calendario local, tu música, grabaciones y la ayuda—. Sí lo es para crear tu cuenta e iniciar sesión —una vez dentro, lo anterior sigue funcionando sin ella—, para la sincronización en la nube, las interfaces de YouTube, Gmail y Classroom, los vídeos de estudio, la tarjeta de clima y la comprobación de actualizaciones.
 
 **Permisos del sistema.** Frame solicita acceso al micrófono para la grabación de voz, al sistema de archivos para adjuntos, portadas, informes y la biblioteca musical, y permiso para mostrar notificaciones nativas y una ventana siempre visible sobre las demás aplicaciones (la vista flotante del reloj). Estos permisos se emplean únicamente para las funciones descritas.
 
@@ -101,11 +101,11 @@ Cada sesión es una tarjeta con su asignatura, su tiempo y su rendimiento, y se 
 
 ### 4.4 Análisis e informes
 
-La barra superior muestra frases con tus datos recientes que cambian solas. Inicio resume tu día: clima, horario, nota de ayer, racha, promedio semanal, próxima tarea, «Tu semana en datos» y la matriz de competencias (carga pendiente por asignatura, no una medida de conocimiento). Hábitos con fases del día, anillos, semana tipo y mapa de constancia. **Cuatro informes** en PDF y Word —general, rendimiento, pendientes y hábitos—, en el **Centro de informes** de la barra superior.
+La barra superior muestra frases con tus datos recientes que cambian solas. Inicio resume tu día: clima, horario, nota de ayer, racha, promedio semanal, próxima tarea, «Tu semana en datos» y la matriz de competencias (carga pendiente por asignatura, no una medida de conocimiento). Hábitos con fases del día, anillos, semana tipo y mapa de constancia. **Informes** de rendimiento y de pendientes en PDF y Word —semanales, mensuales o anuales—, en Ajustes, con un resumen y la vista previa real del documento.
 
 ### 4.5 Calendario, Google y música
 
-Calendario local sin conexión: eventos de uno o varios días, recordatorios con aviso, colores en las casillas y selección de varios días a la vez arrastrando; **Gmail, Google Calendar, Classroom y YouTube** integrados en la barra lateral. Biblioteca con **tu propia música**: «Importar» trae canciones sueltas o carpetas enteras de tu equipo, con su portada y su letra (etiquetas del archivo o un .lrc con el mismo nombre), y se reproduce con letras sincronizadas, playlists y favoritas; al pulsar el nombre de la playlist en el reproductor se ubica la canción que suena. Grabación de voz desde cualquier pantalla (\`Ctrl+Shift+F\`), con el límite que elijas, hasta 4 horas. Las actualizaciones muestran su peso, el tiempo estimado y el avance real antes y durante la instalación.
+Calendario local sin conexión: eventos de uno o varios días, recordatorios con aviso, colores en las casillas y selección de varios días a la vez arrastrando; **YouTube, Gmail y Classroom** integrados en la barra lateral. Biblioteca con **tu propia música**: «Importar» trae canciones sueltas o carpetas enteras de tu equipo, con su portada y su letra (etiquetas del archivo o un .lrc con el mismo nombre), y se reproduce con letras sincronizadas, playlists y favoritas; al pulsar el nombre de la playlist en el reproductor se ubica la canción que suena. Grabación de voz desde cualquier pantalla (\`Ctrl+Shift+F\`), con el límite que elijas, hasta 4 horas. Las actualizaciones muestran su peso, el tiempo estimado y el avance real antes y durante la instalación.
 
 ---
 
@@ -133,7 +133,7 @@ Las interfaces de Google requieren conexión y sesión iniciada en Google, y su 
 
 Frame está construida sobre software de terceros distribuido bajo licencias abiertas, cuya relación completa figura en la sección **Avisos de terceros** de los Términos y Condiciones.
 
-Los servicios de Google —Gmail, YouTube, Calendar y Classroom— son operados por Google LLC; su disponibilidad, contenido y condiciones dependen de Google. La copia en la nube y la autenticación se ejecutan sobre la infraestructura de **Supabase**.
+Los servicios de Google —Gmail, YouTube y Classroom— son operados por Google LLC; su disponibilidad, contenido y condiciones dependen de Google. La copia en la nube y la autenticación se ejecutan sobre la infraestructura de **Supabase**.
 
 El pronóstico del clima procede de **Open-Meteo**.
 
@@ -154,6 +154,8 @@ Se ofrece soporte para la versión estable vigente y para la inmediatamente ante
 ## 8 · Historial de versiones
 
 **${appVersion} — ${releaseDate}**
+
+*1.6.3:* **Centro de ayuda renovado**: una conversación como en un chat, temas en tarjetas en lugar de adivinar la pregunta, «Mostrar cómo» y «Nueva conversación», con su botón en la barra superior · **Informes en Ajustes**: rendimiento y pendientes, semanal, mensual o anual, con resumen y **vista previa real** del documento · **menú lateral** en tres bloques · **Calendario** solo local y con la cuadrícula del calendario de Estudio: Frame deja de conectarse con Google Calendar · botones de cancelar y descartar en gris; el rojo, solo para confirmar un borrado · el temporizador de Estudio, centrado · «Crear» respeta el tema oscuro.
 
 *1.6.2:* **la barra superior habla de ti**: frases con tus datos recientes que cambian solas · **Centro de informes** en la barra superior · **anotaciones sin asignatura** en Inicio · **Estudio**: tarjetas de sesión con su detalle, editor de texto tipo Word, asignaturas y tareas elegidas con tarjetas · **calendario local rediseñado**: varios días a la vez, recordatorios y colores de casilla · grabaciones con el límite que elijas (hasta 4 h) · **actualizar** muestra peso, tiempo estimado y avance real · Ajustes con un menú de cuenta pequeño e «Importar de Notion» · la Ayuda guarda una conversación por cada vez que abres Frame · **corregido**: «Importar» de Música no abría el explorador («current webview is not a WebviewWindow»).
 

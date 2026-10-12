@@ -308,7 +308,7 @@ export default function InterruptedSessionManager({ session, onDone }: Interrupt
               <Button variant={canResume ? 'fantasma' : 'default'} onClick={() => setView('registering')}>
                 {canResume ? 'Finalizarla y registrarla' : 'Registrar esta sesión'}
               </Button>
-              <Button variant="fantasmaRojo" onClick={() => setShowConfirmDiscard(true)}>
+              <Button variant="gris" onClick={() => setShowConfirmDiscard(true)}>
                 <Trash2 className="h-4 w-4" />
                 Descartarla
               </Button>
@@ -332,7 +332,7 @@ export default function InterruptedSessionManager({ session, onDone }: Interrupt
               <div className="flex shrink-0 items-center justify-between gap-3 px-6 py-3">
                 <Button
                   type="button"
-                  variant="fantasmaRojo"
+                  variant="gris"
                   size="sm"
                   className="text-xs"
                   onClick={() => setShowConfirmDiscard(true)}
@@ -386,7 +386,7 @@ export default function InterruptedSessionManager({ session, onDone }: Interrupt
           <AlertDialogFooter>
             <AlertDialogCancel>Volver</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={handleConfirmDiscard}
             >
               Descartar

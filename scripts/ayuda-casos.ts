@@ -235,7 +235,6 @@ export const CASOS: [string, string | string[] | null][] = [
   ['quiero un reporte para mi tutor', 'informes-centro'],
   ['guardar el informe en pdf', 'informe-pdf'],
   ['descargar el informe en word', ['informe-pdf', 'informe-no-abre']],
-  ['informe con todo resumido', 'informe-general'],
   ['informe de mis notas', 'informe-rendimiento'],
   ['lista de tareas pendientes para imprimir', 'informe-pendientes'],
   ['donde quedo el informe que descargue', 'informe-no-abre'],

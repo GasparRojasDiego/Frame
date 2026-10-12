@@ -11,6 +11,7 @@ import {
   ChevronsLeft,
   GraduationCap,
   Repeat,
+  CalendarDays,
 } from 'lucide-react';
 import Link from '@/lib/navigation';
 import { usePathname } from '@/lib/navigation';
@@ -32,7 +33,6 @@ import UpdateBadge, { useUpdateAvailable } from '@/components/layout/UpdateBadge
 import GuestLinkBadge from '@/components/layout/GuestLinkBadge';
 import { useStoredImage } from '@/hooks/use-stored-image';
 import { GmailNavIcon } from '@/components/integrations/GmailPanel';
-import { CalendarNavIcon } from '@/components/integrations/GoogleCalendarIcon';
 import { ClassroomNavIcon } from '@/components/integrations/ClassroomIcon';
 import { YoutubeNavIcon } from '@/components/integrations/YoutubeIcon';
 
@@ -43,22 +43,24 @@ interface NavItem {
   /** Rutas hijas que también deben marcar esta interfaz como activa
    *  (p. ej. /cursos pertenece a Asignaturas, /playlists a Música). */
   activeFor?: string[];
-  /** Herramienta de Google: va entre dos líneas finas, separada de las de Frame. */
-  digital?: boolean;
+  /** Bloque al que pertenece: entre un bloque y el siguiente va una línea fina. */
+  group: number;
 }
 
 const navItems: NavItem[] = [
-  { href: '/', label: 'Inicio', icon: Home },
-  { href: '/temporizador', label: 'Estudio', icon: Timer },
-  { href: '/tareas', label: 'Tareas', icon: BookOpen },
-  { href: '/habitos', label: 'Hábitos', icon: Repeat },
-  { href: '/knowledge', label: 'Asignaturas', icon: GraduationCap, activeFor: ['/cursos'] },
-  { href: '/calendario', label: 'Calendario', icon: CalendarNavIcon, digital: true },
-  { href: '/gmail', label: 'Gmail', icon: GmailNavIcon, digital: true },
-  { href: '/classroom', label: 'Classroom', icon: ClassroomNavIcon, digital: true },
-  // YouTube vuelve a la barra (1.5.8): el YouTube real integrado, como Gmail y Classroom.
-  { href: '/youtube', label: 'YouTube', icon: YoutubeNavIcon, digital: true },
-  { href: '/music', label: 'Música', icon: Music, activeFor: ['/playlists'] },
+  // Lo de cada día.
+  { href: '/', label: 'Inicio', icon: Home, group: 0 },
+  { href: '/temporizador', label: 'Estudio', icon: Timer, group: 0 },
+  { href: '/habitos', label: 'Hábitos', icon: Repeat, group: 0 },
+  // Lo académico.
+  { href: '/knowledge', label: 'Asignaturas', icon: GraduationCap, activeFor: ['/cursos'], group: 1 },
+  { href: '/tareas', label: 'Tareas', icon: BookOpen, group: 1 },
+  { href: '/calendario', label: 'Calendario', icon: CalendarDays, group: 1 },
+  // Las herramientas de Google integradas.
+  { href: '/youtube', label: 'YouTube', icon: YoutubeNavIcon, group: 2 },
+  { href: '/gmail', label: 'Gmail', icon: GmailNavIcon, group: 2 },
+  { href: '/classroom', label: 'Classroom', icon: ClassroomNavIcon, group: 2 },
+  { href: '/music', label: 'Música', icon: Music, activeFor: ['/playlists'], group: 3 },
 ];
 
 /**
@@ -193,8 +195,7 @@ export function SidebarContent({
         <div className="hide-scrollbar min-h-0 flex-1 overflow-y-auto">
           <nav className="flex flex-col gap-1" data-tour="menu">
             {navItems.map((item, itemIndex) => {
-              const firstDigital = item.digital && !navItems[itemIndex - 1]?.digital;
-              const lastDigital = item.digital && !navItems[itemIndex + 1]?.digital;
+              const newGroup = itemIndex > 0 && navItems[itemIndex - 1].group !== item.group;
               // Normalizamos ambas rutas para ignorar la barra diagonal final (trailing slash)
               // Esto garantiza que /tareas coincida con /tareas/
               const normalizedPath = pathname === '/' ? '/' : pathname.replace(/\/$/, '');
@@ -213,8 +214,8 @@ export function SidebarContent({
 
               return (
                 <React.Fragment key={item.href}>
-                  {/* Línea fina entre las interfaces de Frame y las de Google. */}
-                  {firstDigital && <Separator className="my-2" />}
+                  {/* Línea fina entre un bloque y el siguiente. */}
+                  {newGroup && <Separator className="my-2" />}
                   <Button
                     variant={isActive ? 'default' : 'ghost'}
                     className={cn('text-xs', collapsed ? 'justify-center px-0' : 'justify-start gap-3')}
@@ -237,7 +238,6 @@ export function SidebarContent({
                       )}
                     </Link>
                   </Button>
-                  {lastDigital && <Separator className="my-2" />}
                 </React.Fragment>
               );
             })}

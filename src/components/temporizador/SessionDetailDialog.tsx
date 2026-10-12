@@ -279,7 +279,7 @@ export function SessionDetailView({
           <div className="mx-6 h-px shrink-0 bg-border" />
           <div className={cn('flex shrink-0 items-center gap-3 px-6 py-3', canDelete ? 'justify-between' : 'justify-end')}>
             {canDelete && (
-              <Button type="button" variant="fantasmaRojo" size="sm" className="gap-1.5" onClick={() => setConfirmDelete(true)}>
+              <Button type="button" variant="gris" size="sm" className="gap-1.5" onClick={() => setConfirmDelete(true)}>
                 <Trash2 className="h-3.5 w-3.5" />
                 Eliminar
               </Button>
@@ -307,7 +307,7 @@ export function SessionDetailView({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
                 setConfirmDelete(false);
                 onDelete?.(session.id);

@@ -3,22 +3,37 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUp,
+  BookOpen,
+  CalendarDays,
   ChevronDown,
+  Cloud,
+  Compass,
   CornerDownLeft,
+  FileText,
+  Globe,
+  GraduationCap,
+  Home,
   Lightbulb,
-  MessageCircle,
   MessagesSquare,
-  PanelRightClose,
-  Sparkles,
+  Mic,
+  Music,
+  PanelTop,
+  Puzzle,
+  Repeat,
+  Settings,
+  SquarePen,
+  Timer,
   Trash2,
+  Wrench,
   X,
 } from 'lucide-react';
 import { format, formatDistanceToNowStrict, isToday } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
+import PolySphere from '@/components/help/PolySphere';
 import { useCourse } from '@/context/CourseContext';
 import { HELP_ENTRIES, STARTER_QUESTIONS, helpIndex } from '@/lib/help/kb';
-import { HELP_AREAS, relatedTo, suggest, type HelpEntry } from '@/lib/help/search';
+import { HELP_AREAS, relatedTo, suggest, type HelpAreaId, type HelpEntry } from '@/lib/help/search';
 import { entryFor, resolveQuestion, resolvedId, type Resolved } from '@/lib/help/resolve';
 import {
   HELP_RUN,
@@ -26,9 +41,8 @@ import {
   turnFromResolved,
   useHelpConversations,
   type HelpConversation,
-  type HelpTurn,
 } from '@/lib/help/history';
-import { startTour, type MascotPose } from '@/lib/help/tour';
+import { startTour } from '@/lib/help/tour';
 import { tourFor } from '@/lib/help/tours';
 import { setNotionOpen, type ExtensionId } from '@/lib/extensions/registry';
 import { usePathname, useRouter } from '@/lib/navigation';
@@ -36,33 +50,58 @@ import { trackEvent } from '@/lib/telemetry';
 import { cn } from '@/lib/utils';
 
 // ============================================================
-// La interfaz «Ayuda» (botón redondo de abajo a la derecha, ruta /ayuda).
+// El Centro de ayuda (botón de la barra superior, ruta /ayuda).
 //
-// Se parece a la barra de una IA, pero no lo es: responde cómo usar Frame
-// buscando en el banco de respuestas (lib/help), sin internet. Quién responde
-// a cada pregunta lo decide lib/help/resolve.ts.
+// Una conversación al estilo de un chat: lo que escribe el usuario, a la
+// derecha en un globo; lo que responde Frame, a la izquierda, como texto.
+// Responde buscando en el banco de respuestas (lib/help), sin internet; quién
+// responde a cada pregunta lo decide lib/help/resolve.ts.
 //
-// Antes de preguntar, Apex saluda junto a la barra, en el centro. Al
-// preguntar, la barra y Apex pasan a la izquierda y la conversación ocupa los
-// 3/5 de la derecha: las preguntas en orden, la última abierta y las
-// anteriores plegadas (un clic las abre). Tras la respuesta, «Descubrir»
-// lanza el recorrido guiado de esa función (lib/help/tours.ts).
+// No se intenta adivinar cada forma de preguntar: si la pregunta no encaja,
+// se ofrecen los TEMAS en tarjetas y, dentro de cada tema, sus preguntas.
+// Tras una respuesta, «Mostrar cómo» lanza el recorrido guiado
+// (lib/help/tours.ts).
 //
-// Una conversación dura lo que una apertura de Frame (lib/help/history.ts):
-// salir de la Ayuda y volver la deja donde estaba; al cerrar Frame queda en
-// «Conversaciones» como una sola entrada y la siguiente apertura empieza otra.
-//
-// La espera de ~0,5 s antes de responder deja ver a Apex «pensar» y marca el
-// cambio entre escribir y leer.
+// Antes de la primera pregunta se ve la esfera de polígonos; desaparece al
+// preguntar y vuelve con una conversación nueva.
 // ============================================================
 
-const THINK_MS = 520;
+const THINK_MS = 420;
 
-/**
- * El importador de Notion ya no es una extensión que haya que añadir con un
- * «+»: es un botón de Ajustes. El atajo /notion lo abre siempre.
- */
+/** La última pregunta ocupa al menos el alto visible: así sube hasta arriba
+ *  aunque su respuesta aún se esté escribiendo. */
+const LAST_TURN = 'min-h-[calc(100vh-14rem)]';
+
+/** El importador de Notion es un botón de Ajustes; /notion lo abre siempre. */
 const ALWAYS_ON: ExtensionId[] = ['notion'];
+
+/** Los temas de las tarjetas, en el orden del menú lateral (16: cuatro filas de cuatro). */
+const TOPICS: { area: HelpAreaId; icon: typeof Home; short?: string }[] = [
+  { area: 'basico', icon: Compass },
+  { area: 'inicio', icon: Home },
+  { area: 'enfoque', icon: Timer },
+  { area: 'habitos', icon: Repeat },
+  { area: 'asignaturas', icon: GraduationCap },
+  { area: 'tareas', icon: BookOpen },
+  { area: 'calendario', icon: CalendarDays },
+  { area: 'google', icon: Globe, short: 'Google' },
+  { area: 'musica', icon: Music },
+  { area: 'grabaciones', icon: Mic },
+  { area: 'barra', icon: PanelTop },
+  { area: 'informes', icon: FileText },
+  { area: 'ajustes', icon: Settings },
+  { area: 'cuenta', icon: Cloud },
+  { area: 'extensiones', icon: Puzzle },
+  { area: 'problemas', icon: Wrench },
+];
+
+/** Las respuestas de un tema: primero las principales. */
+function entriesOf(area: HelpAreaId): HelpEntry[] {
+  return HELP_ENTRIES.filter((entry) => entry.area === area).sort((a, b) => (b.prior ?? 0) - (a.prior ?? 0));
+}
+
+const TOPIC_COUNTS = new Map(TOPICS.map(({ area }) => [area, entriesOf(area).length]));
+const VISIBLE_TOPICS = TOPICS.filter(({ area }) => (TOPIC_COUNTS.get(area) ?? 0) > 0);
 
 function pickStarters(count: number): HelpEntry[] {
   const pool = [...STARTER_QUESTIONS];
@@ -77,11 +116,11 @@ function pickStarters(count: number): HelpEntry[] {
 }
 
 /** Letras por segundo al «escribir» la respuesta. */
-const TYPE_RATE = 190;
+const TYPE_RATE = 220;
 
 /**
- * Escribe el texto de a poco, como lo haría una IA. Va por TIEMPO, no por
- * fotogramas: con el equipo cargado (menos fotogramas) termina igual de rápido.
+ * Escribe el texto de a poco. Va por TIEMPO, no por fotogramas: con el equipo
+ * cargado (menos fotogramas) termina igual de rápido.
  */
 function useTyped(text: string, key: string, instant: boolean): string {
   const [shown, setShown] = useState(instant ? text : '');
@@ -111,36 +150,84 @@ function whenLabel(at: number): string {
 
 const questionsLabel = (n: number) => `${n} ${n === 1 ? 'pregunta' : 'preguntas'}`;
 
-function Chips({ items, label }: { items: { key: string; text: string; onClick: () => void }[]; label?: string }) {
-  if (items.length === 0) return null;
+/** Las tarjetas de temas. */
+function TopicCards({ onPick, compact = false }: { onPick: (area: HelpAreaId) => void; compact?: boolean }) {
   return (
-    <div className="mx-1 mt-6 flex animate-in fade-in-0 flex-wrap items-center gap-2 border-t border-border/60 pt-4">
-      {label && <span className="text-xs text-muted-foreground">{label}</span>}
-      {items.map((m) => (
+    <div className={cn('grid gap-2', compact ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4')}>
+      {VISIBLE_TOPICS.map(({ area, icon: Icon, short }) => (
         <button
-          key={m.key}
+          key={area}
           type="button"
-          onClick={m.onClick}
-          className="rounded-full border border-border/70 px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
+          onClick={() => onPick(area)}
+          className="group/topic flex items-center gap-2.5 rounded-lg border border-border/70 bg-card/70 px-3 py-2.5 text-left transition-colors hover:border-primary hover:bg-primary/5"
         >
-          {m.text}
+          <Icon className="h-4 w-4 shrink-0 text-primary" />
+          <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">{short ?? HELP_AREAS[area].label}</span>
+          <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">{TOPIC_COUNTS.get(area)}</span>
         </button>
       ))}
     </div>
   );
 }
 
-/** Una respuesta completa de la conversación. */
+/** Preguntas para elegir, como tarjetas. */
+function QuestionCards({ entries, onPick, limit = 8 }: { entries: HelpEntry[]; onPick: (entry: HelpEntry) => void; limit?: number }) {
+  const [all, setAll] = useState(false);
+  const shown = all ? entries : entries.slice(0, limit);
+  return (
+    <div className="space-y-2">
+      <div className="grid gap-2 sm:grid-cols-2">
+        {shown.map((entry) => (
+          <button
+            key={entry.id}
+            type="button"
+            onClick={() => onPick(entry)}
+            className="group/q flex items-center gap-2 rounded-lg border border-border/70 bg-card/70 px-3 py-2 text-left transition-colors hover:border-primary hover:bg-primary/5"
+          >
+            <span className="min-w-0 flex-1 text-[13px] leading-snug text-foreground/90">{entry.title}</span>
+            <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-colors group-hover/q:text-primary" />
+          </button>
+        ))}
+      </div>
+      {entries.length > limit && (
+        <button
+          type="button"
+          onClick={() => setAll((v) => !v)}
+          className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+        >
+          <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', all && 'rotate-180')} />
+          {all ? 'Ver menos' : `Ver las ${entries.length}`}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** Lo que escribió el usuario: un globo a la derecha. */
+function UserBubble({ text, at }: { text: string; at?: number }) {
+  return (
+    <div className="flex justify-end">
+      <div className="max-w-[80%] rounded-2xl rounded-br-md border border-primary/25 bg-primary/10 px-4 py-2.5">
+        <p className="whitespace-pre-wrap break-words text-sm text-foreground">{text}</p>
+        {at !== undefined && <p className="mt-1 text-right text-[10px] tabular-nums text-muted-foreground">{format(at, 'HH:mm')}</p>}
+      </div>
+    </div>
+  );
+}
+
+/** Lo que responde Frame: texto a la izquierda, sin globo. */
 function Answer({
   shown,
   instant,
   onPick,
-  onDiscover,
+  onTopic,
+  onShowHow,
 }: {
   shown: Resolved;
   instant: boolean;
   onPick: (entry: HelpEntry) => void;
-  onDiscover: (entry: HelpEntry) => void;
+  onTopic: (area: HelpAreaId) => void;
+  onShowHow: (entry: HelpEntry) => void;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -148,43 +235,40 @@ function Answer({
   const lead = shown.kind === 'entry' ? shown.entry.a : shown.text;
   const typed = useTyped(lead, shown.question + lead, instant);
   const done = typed.length >= lead.length;
-  const more = useMemo(() => {
-    if (shown.kind === 'text') return shown.options;
+  const related = useMemo(() => {
     if (!entry || shown.kind !== 'entry') return [];
-    const related = relatedTo(helpIndex(), entry, 3);
     const seen = new Set<string>([entry.id]);
-    return [...shown.alternatives, ...related].filter((e) => (seen.has(e.id) ? false : (seen.add(e.id), true))).slice(0, 4);
+    return [...shown.alternatives, ...relatedTo(helpIndex(), entry, 3)]
+      .filter((e) => (seen.has(e.id) ? false : (seen.add(e.id), true)))
+      .slice(0, 4);
   }, [entry, shown]);
+  const options = shown.kind === 'text' ? shown.options : [];
+  const topics = shown.kind === 'text' && shown.topics;
   const goTo = entry?.go && entry.go !== pathname ? entry.go : null;
   const goLabel = goTo ? (Object.values(HELP_AREAS).find((a) => a.route === goTo)?.label ?? 'la interfaz') : null;
   const hasTour = !!entry && !!tourFor(entry.id);
 
   return (
-    <article className={cn(!instant && 'animate-in fade-in-0 slide-in-from-right-3 duration-300')}>
-      <p className="mb-4 text-sm text-muted-foreground">
-        <span className="font-medium text-foreground/80">«{shown.question}»</span>
-      </p>
+    <article className={cn('max-w-[46rem]', !instant && 'animate-in fade-in-0 duration-300')}>
       {entry && (
-        <div className="mb-3 flex flex-wrap items-center gap-2.5">
-          <span className="rounded-full bg-primary/15 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-primary">
-            {HELP_AREAS[entry.area].label}
-          </span>
-          <h3 className="font-headline text-2xl font-bold leading-tight text-foreground">{entry.title}</h3>
-        </div>
+        <p className="mb-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <span className="text-[15px] font-semibold text-foreground">{entry.title}</span>
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-primary/80">{HELP_AREAS[entry.area].label}</span>
+        </p>
       )}
-      <p className="text-base leading-relaxed text-foreground/90">
+      <p className="text-sm leading-relaxed text-foreground/90">
         {typed}
-        {!done && <span className="ml-0.5 inline-block h-4 w-1.5 translate-y-0.5 animate-pulse rounded-sm bg-primary" />}
+        {!done && <span className="ml-0.5 inline-block h-3.5 w-1.5 translate-y-0.5 animate-pulse rounded-sm bg-primary" />}
       </p>
       {done && entry?.steps && entry.steps.length > 0 && (
-        <ol className="mt-5 space-y-2.5">
+        <ol className="mt-3 space-y-2">
           {entry.steps.map((step, i) => (
             <li
               key={step}
-              className="flex animate-in fade-in-0 slide-in-from-left-1 gap-3 text-[15px] text-foreground/90 fill-mode-both"
-              style={{ animationDelay: `${i * 70}ms` }}
+              className="flex animate-in fade-in-0 gap-2.5 text-sm text-foreground/90 fill-mode-both"
+              style={{ animationDelay: `${i * 60}ms` }}
             >
-              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-bold text-primary">
+              <span className="mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[11px] font-bold text-primary">
                 {i + 1}
               </span>
               <span className="leading-relaxed">{step}</span>
@@ -193,65 +277,46 @@ function Answer({
         </ol>
       )}
       {done && entry?.tip && (
-        <p className="mt-5 flex animate-in fade-in-0 gap-2.5 rounded-xl bg-secondary/50 p-3.5 text-sm leading-relaxed text-muted-foreground">
-          <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+        <p className="mt-3 flex animate-in fade-in-0 gap-2 rounded-lg border border-border/60 bg-muted/40 px-3 py-2.5 text-[13px] leading-relaxed text-muted-foreground">
+          <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
           {entry.tip}
         </p>
       )}
-      {done && (hasTour || goTo) && entry && (
-        <div className="mt-6 flex animate-in fade-in-0 flex-wrap items-center gap-2.5">
+      {done && entry && (hasTour || goTo) && (
+        <div className="mt-4 flex animate-in fade-in-0 flex-wrap items-center gap-2">
           {hasTour && (
-            <Button className="h-10 gap-2 rounded-full px-5 text-sm font-semibold" onClick={() => onDiscover(entry)}>
-              <Sparkles className="h-4 w-4" />
-              Descubrir
+            <Button size="sm" className="h-8 gap-1.5 px-3 text-xs" onClick={() => onShowHow(entry)} data-tour="ayuda-mostrar">
+              Mostrar cómo
             </Button>
           )}
           {goTo && (
-            <Button
-              variant={hasTour ? 'fantasma' : 'default'}
-              className="h-10 gap-1.5 rounded-full px-4 text-sm"
-              onClick={() => router.push(goTo)}
-            >
-              Ir a {goLabel} <ArrowRight className="h-4 w-4" />
+            <Button size="sm" variant="fantasma" className="h-8 gap-1.5 px-3 text-xs" onClick={() => router.push(goTo)}>
+              Ir a {goLabel} <ArrowRight className="h-3.5 w-3.5" />
             </Button>
           )}
-          {hasTour && <span className="text-xs text-muted-foreground">Te muestro paso a paso dónde pulsar.</span>}
         </div>
       )}
-      {done && (
-        <Chips
-          label={entry ? 'También:' : undefined}
-          items={more.map((m) => ({ key: m.id, text: m.title, onClick: () => onPick(m) }))}
-        />
+      {done && options.length > 0 && (
+        <div className="mt-4 animate-in fade-in-0">
+          <QuestionCards entries={options} onPick={onPick} />
+        </div>
+      )}
+      {done && topics && (
+        <div className="mt-4 animate-in fade-in-0">
+          <TopicCards onPick={onTopic} compact />
+        </div>
+      )}
+      {done && related.length > 0 && (
+        <div className="mt-5 animate-in fade-in-0">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Relacionado</p>
+          <QuestionCards entries={related} onPick={onPick} />
+        </div>
       )}
     </article>
   );
 }
 
-/** Una pregunta anterior de la conversación, plegada: un clic la abre. */
-function FoldedTurn({ turn, shown, onOpen }: { turn: HelpTurn; shown: Resolved | null; onOpen: () => void }) {
-  const entry = shown?.kind === 'entry' ? shown.entry : null;
-  const answerText = entry ? entry.title : shown?.kind === 'text' || shown?.kind === 'action' ? shown.text : 'Esta respuesta ya no está en la Ayuda.';
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      disabled={!shown}
-      className="group/fold flex w-full items-center gap-3 rounded-xl border border-border/60 bg-card/60 px-4 py-2.5 text-left transition-colors hover:border-primary/50 hover:bg-primary/5 disabled:cursor-default disabled:opacity-60"
-    >
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium text-foreground">«{turn.q}»</span>
-        <span className="mt-0.5 flex items-center gap-2 truncate text-xs text-muted-foreground">
-          {entry && <span className="shrink-0 font-semibold uppercase tracking-wider text-primary/80">{HELP_AREAS[entry.area].label}</span>}
-          <span className="truncate">{answerText}</span>
-        </span>
-      </span>
-      {shown && <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover/fold:text-primary" />}
-    </button>
-  );
-}
-
-/** Las conversaciones guardadas (solo en este equipo): una por apertura de Frame. */
+/** Las conversaciones guardadas (solo en este equipo). */
 function History({
   conversations,
   onOpen,
@@ -265,26 +330,21 @@ function History({
 }) {
   if (conversations.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-2 py-10 text-center text-sm text-muted-foreground animate-in fade-in-0">
-        <MessagesSquare className="h-8 w-8 text-primary/70" />
+      <div className="flex flex-col items-center justify-center gap-2 py-16 text-center text-sm text-muted-foreground animate-in fade-in-0">
+        <MessagesSquare className="h-7 w-7 text-primary/70" />
         <p>Aún no hay conversaciones guardadas.</p>
-        <p className="text-xs">Cada vez que abres Frame empieza una nueva.</p>
       </div>
     );
   }
   return (
-    <div className="animate-in fade-in-0 slide-in-from-right-3 duration-300">
+    <div className="animate-in fade-in-0">
       <div className="mb-3 flex items-center justify-between gap-3">
         <p className="text-xs text-muted-foreground">
-          {conversations.length} {conversations.length === 1 ? 'conversación guardada' : 'conversaciones guardadas'} en este equipo
+          {conversations.length} {conversations.length === 1 ? 'conversación' : 'conversaciones'} en este equipo
         </p>
-        <button
-          type="button"
-          onClick={onClear}
-          className="flex items-center gap-1 rounded-full px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-        >
+        <Button size="sm" variant="gris" className="h-7 gap-1 px-2.5 text-xs" onClick={onClear}>
           <Trash2 className="h-3.5 w-3.5" /> Borrar todas
-        </button>
+        </Button>
       </div>
       <ul className="space-y-2">
         {conversations.map((conversation) => {
@@ -295,26 +355,24 @@ function History({
               <button
                 type="button"
                 onClick={() => onOpen(conversation)}
-                className="w-full rounded-xl border border-border/60 bg-card/60 px-4 py-3 pr-10 text-left transition-colors hover:border-primary/50 hover:bg-primary/5"
+                className="w-full rounded-lg border border-border/70 bg-card/70 px-4 py-3 pr-10 text-left transition-colors hover:border-primary hover:bg-primary/5"
               >
                 <span className="flex items-center gap-2">
-                  <span className="truncate text-sm font-medium text-foreground">«{first.q}»</span>
+                  <span className="truncate text-sm font-medium text-foreground">{first.q}</span>
                   {live && (
                     <span className="shrink-0 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">En curso</span>
                   )}
                 </span>
-                {/* Las demás preguntas de la conversación, dentro de su entrada. */}
                 {rest.length > 0 && (
-                  <span className="mt-1 block space-y-0.5">
-                    {rest.slice(0, 3).map((turn) => (
-                      <span key={turn.id} className="block truncate text-xs text-foreground/70">
-                        «{turn.q}»
-                      </span>
-                    ))}
-                    {rest.length > 3 && <span className="block text-xs text-muted-foreground">y {rest.length - 3} más</span>}
+                  <span className="mt-1 block truncate text-xs text-foreground/65">
+                    {rest
+                      .slice(0, 3)
+                      .map((turn) => turn.q)
+                      .join(' · ')}
+                    {rest.length > 3 && ` · y ${rest.length - 3} más`}
                   </span>
                 )}
-                <span className="mt-1.5 flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="mt-1.5 flex items-center gap-2 text-[11px] text-muted-foreground">
                   <span>{questionsLabel(conversation.turns.length)}</span>
                   <span aria-hidden>·</span>
                   <span>{whenLabel(conversation.startedAt)}</span>
@@ -326,7 +384,7 @@ function History({
               <button
                 type="button"
                 onClick={() => onRemove(conversation.id)}
-                className="absolute right-2 top-3 rounded-full p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 group-hover/conv:opacity-100"
+                className="absolute right-2 top-3 rounded-full p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground focus-visible:opacity-100 group-hover/conv:opacity-100"
                 title="Borrar esta conversación"
                 aria-label="Borrar esta conversación"
               >
@@ -336,24 +394,6 @@ function History({
           );
         })}
       </ul>
-    </div>
-  );
-}
-
-/** Apex junto a la barra: cambia de pose según lo que está pasando. */
-function Apex({ pose, size }: { pose: MascotPose; size: number }) {
-  return (
-    <div className="tour-bob pointer-events-none select-none" style={{ height: size }} aria-hidden="true">
-      <img
-        key={pose}
-        src={`/mascota/apex-${pose}.webp`}
-        alt=""
-        draggable={false}
-        decoding="async"
-        className="tour-mascot h-full w-auto animate-in fade-in-0 zoom-in-95 duration-300"
-        // «apunta» señala a su izquierda: aquí la respuesta queda a su derecha.
-        style={pose === 'apunta' ? { transform: 'scaleX(-1)' } : undefined}
-      />
     </div>
   );
 }
@@ -369,21 +409,16 @@ export default function HelpAsk({ onExit }: { onExit: () => void }) {
   const [pendingId, setPendingId] = useState<string | null>(null);
   /** La recién respondida: la única que se «escribe» letra a letra. */
   const [freshId, setFreshId] = useState<string | null>(null);
-  // Con una conversación en curso, la Ayuda se abre donde se dejó.
-  const [open, setOpen] = useState(() => history.current !== null);
   const [view, setView] = useState<'thread' | 'history'>('thread');
-  /** Conversación anterior abierta desde la lista; null = la de esta apertura. */
+  /** Conversación anterior abierta desde la lista; null = la de ahora. */
   const [viewingId, setViewingId] = useState<string | null>(null);
-  /** Preguntas anteriores desplegadas a mano. */
-  const [unfolded, setUnfolded] = useState<Set<string>>(() => new Set());
   const [highlight, setHighlight] = useState(-1);
   const starters = useMemo(() => pickStarters(3), []);
   const timers = useRef<number[]>([]);
   const thinking = pendingId !== null;
 
   useEffect(() => () => timers.current.forEach((id) => window.clearTimeout(id)), []);
-  // El índice de la ayuda (~0,2 s) se prepara cuando el equipo está libre,
-  // no al pulsar la primera tecla.
+  // El índice (~0,2 s) se prepara cuando el equipo está libre, no al teclear.
   useEffect(() => {
     if (typeof window.requestIdleCallback === 'function') {
       const id = window.requestIdleCallback(() => helpIndex());
@@ -400,7 +435,7 @@ export default function HelpAsk({ onExit }: { onExit: () => void }) {
   );
   useEffect(() => setHighlight(-1), [query]);
 
-  // El cuadro crece con el texto (hasta 4 líneas), como el de una IA.
+  // El cuadro crece con el texto (hasta 4 líneas).
   useEffect(() => {
     const el = inputRef.current;
     if (!el) return;
@@ -408,43 +443,39 @@ export default function HelpAsk({ onExit }: { onExit: () => void }) {
     el.style.height = `${Math.min(el.scrollHeight, 112)}px`;
   }, [query]);
 
-  // La barra recibe el foco al entrar: se viene a preguntar.
-  useEffect(() => inputRef.current?.focus(), []);
+  useEffect(() => inputRef.current?.focus(), [view]);
 
-  // La conversación que se ve: una anterior elegida en la lista o la de ahora.
   const viewing = (viewingId ? history.conversations.find((c) => c.id === viewingId) : null) ?? history.current;
   const viewingOld = !!viewing && viewing.run !== HELP_RUN;
   const turns = useMemo(() => (viewing?.turns ?? []).filter((t) => t.id !== pendingId), [viewing, pendingId]);
   const resolved = useMemo(() => new Map(turns.map((t) => [t.id, resolvedFromTurn(t)])), [turns]);
   const pendingTurn = pendingId ? (history.current?.turns.find((t) => t.id === pendingId) ?? null) : null;
-  const lastId = turns[turns.length - 1]?.id ?? null;
+  const lastId = pendingTurn?.id ?? turns[turns.length - 1]?.id ?? null;
+  const empty = turns.length === 0 && !pendingTurn;
 
-  // Cada pregunta nueva (y la conversación al volver) se ve desde su
-  // principio: la última queda arriba del todo, sin tener que buscarla.
-  const scrollKey = `${open}:${view}:${viewing?.id ?? ''}:${lastId ?? ''}:${pendingId ?? ''}`;
+  // Cada pregunta nueva se ve desde su principio: queda arriba del todo.
+  const scrollKey = `${view}:${viewing?.id ?? ''}:${lastId ?? ''}:${pendingId ?? ''}`;
   const firstScroll = useRef(true);
   useLayoutEffect(() => {
     const box = threadRef.current;
     if (!box || view !== 'thread') return;
     const target = box.querySelector<HTMLElement>('[data-turn-last]');
     if (!target) return;
-    // Al entrar en la Ayuda se llega de golpe; después, con suavidad.
     const smooth = !firstScroll.current && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     firstScroll.current = false;
-    box.scrollTo({ top: Math.max(0, target.offsetTop - 8), behavior: smooth ? 'smooth' : 'auto' });
+    box.scrollTo({ top: Math.max(0, target.offsetTop - 12), behavior: smooth ? 'smooth' : 'auto' });
   }, [scrollKey, view]);
 
   const begin = (make: () => Resolved) => {
     if (thinking) return;
     const started = performance.now();
     const result = make();
-    // Se guarda en el acto (si se sale de la Ayuda durante la espera, la
-    // pregunta no se pierde) y se muestra al acabar de «pensar».
+    // Se guarda en el acto (si se sale durante la espera, no se pierde) y se
+    // muestra al acabar de «pensar».
     const turn = turnFromResolved(result);
     history.add(turn);
     trackEvent('help_asked', { ...resolvedId(result), length: result.question.length });
     setQuery('');
-    setOpen(true);
     setView('thread');
     setViewingId(null);
     setPendingId(turn.id);
@@ -464,25 +495,28 @@ export default function HelpAsk({ onExit }: { onExit: () => void }) {
   const showEntry = (entry: HelpEntry, question = entry.title) =>
     begin(() => ({ kind: 'entry', question, entry, alternatives: [] }));
 
+  const showTopic = (area: HelpAreaId) =>
+    begin(() => ({
+      kind: 'text',
+      question: HELP_AREAS[area].label,
+      text: `Esto es lo que puedo explicarte sobre ${HELP_AREAS[area].label}. Elige una pregunta:`,
+      options: entriesOf(area),
+    }));
+
+  const newConversation = () => {
+    if (thinking) return;
+    history.startNew();
+    setViewingId(null);
+    setFreshId(null);
+    setView('thread');
+    setQuery('');
+  };
+
   const openConversation = (conversation: HelpConversation) => {
     if (thinking) return;
     setViewingId(conversation.run === HELP_RUN ? null : conversation.id);
-    setUnfolded(new Set());
     setFreshId(null);
     setView('thread');
-  };
-
-  const openHistory = () => {
-    if (thinking) return;
-    setOpen(true);
-    setView('history');
-  };
-
-  /** Pliega el panel y vuelve a la barra centrada (la conversación sigue). */
-  const close = () => {
-    setOpen(false);
-    setView('thread');
-    setViewingId(null);
   };
 
   const removeConversation = (id: string) => {
@@ -490,25 +524,28 @@ export default function HelpAsk({ onExit }: { onExit: () => void }) {
     history.remove(id);
   };
 
-  const discover = (entry: HelpEntry) => {
+  const showHow = (entry: HelpEntry) => {
     const tour = tourFor(entry.id);
     if (!tour) return;
-    // Se sale de la ayuda (la conversación sigue ahí al volver) y el
-    // recorrido toma la pantalla. Temporizador suelto, no `later`: la ayuda
-    // se desmonta al salir y cancelaría los suyos.
+    // Se sale de la ayuda (la conversación sigue al volver) y el recorrido
+    // toma la pantalla. Temporizador suelto: la ayuda se desmonta al salir.
     onExit();
     window.setTimeout(() => startTour(tour), 380);
   };
 
-  // Escape: pliega el panel y, sin panel, sale de la ayuda (si no se está
-  // escribiendo nada).
+  /** Atrás: de «Conversaciones» a la conversación; si no, fuera de la ayuda. */
+  const back = () => {
+    if (view === 'history') setView('thread');
+    else if (viewingOld) setViewingId(null);
+    else onExit();
+  };
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || event.defaultPrevented) return;
       const target = event.target as HTMLElement | null;
       if (target === inputRef.current && query) return;
-      if (open) close();
-      else onExit();
+      back();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -532,279 +569,194 @@ export default function HelpAsk({ onExit }: { onExit: () => void }) {
   };
 
   const canSend = query.trim().length > 0 && !thinking;
-  const hasThread = turns.length > 0 || thinking;
-  const pose: MascotPose = thinking ? 'mira' : !open ? 'saluda' : view === 'history' ? 'frente' : hasThread ? 'apunta' : 'frente';
 
-  const tabs = (
-    <div className="flex shrink-0 items-center gap-1 border-b border-border/60 pb-2">
-      <button
-        type="button"
-        onClick={() => {
-          setViewingId(null);
-          setView('thread');
-        }}
-        disabled={!history.current && !thinking && !viewingOld}
+  const composer = (
+    <div className="relative w-full">
+      <div
         className={cn(
-          'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors disabled:opacity-40',
-          view === 'thread' ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:text-foreground'
+          'rounded-2xl border bg-card py-2 pl-4 pr-2 shadow-sm transition-colors',
+          focused ? 'border-primary/60' : 'border-border'
         )}
       >
-        <MessageCircle className="h-3.5 w-3.5" />
-        Conversación
-      </button>
-      <button
-        type="button"
-        onClick={() => setView('history')}
-        className={cn(
-          'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors',
-          view === 'history' ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:text-foreground'
-        )}
-      >
-        <MessagesSquare className="h-3.5 w-3.5" />
-        Conversaciones
-        {history.conversations.length > 0 && <span className="tabular-nums opacity-70">{history.conversations.length}</span>}
-      </button>
-      <div className="flex-1" />
-      <button
-        type="button"
-        onClick={close}
-        className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-        title="Plegar el panel (Esc): la conversación sigue"
-        aria-label="Plegar el panel"
-      >
-        <PanelRightClose className="h-4 w-4" />
-      </button>
-    </div>
-  );
-
-  const thread = (
-    <div className="space-y-5">
-      {viewing && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          {viewingOld && (
-            <button
-              type="button"
-              onClick={() => setView('history')}
-              className="-ml-1.5 rounded-full p-1 transition-colors hover:bg-secondary hover:text-foreground"
-              title="Volver a «Conversaciones»"
-              aria-label="Volver a «Conversaciones»"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </button>
-          )}
-          <span>
-            {viewingOld ? whenLabel(viewing.startedAt) : `En curso, desde las ${format(viewing.startedAt, 'HH:mm')}`}
-            {' · '}
-            {questionsLabel(viewing.turns.length)}
-          </span>
-        </div>
-      )}
-      {turns.map((turn) => {
-        const shown = resolved.get(turn.id) ?? null;
-        // Mientras se piensa la siguiente, la última ya no es la última: se pliega.
-        const last = turn.id === lastId && !pendingTurn;
-        return (
-          <div key={turn.id} data-turn-last={last ? '' : undefined}>
-            {shown && (last || unfolded.has(turn.id)) ? (
-              <>
-                <Answer
-                  shown={shown}
-                  instant={turn.id !== freshId || !last}
-                  onPick={(e) => showEntry(e)}
-                  onDiscover={discover}
-                />
-                {!last && <div className="mx-8 mt-6 border-t border-border/50" />}
-              </>
-            ) : (
-              <FoldedTurn
-                turn={turn}
-                shown={shown}
-                onOpen={() => setUnfolded((prev) => new Set(prev).add(turn.id))}
-              />
+        <div className="flex items-end gap-2">
+          <textarea
+            ref={inputRef}
+            rows={1}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={onKeyDown}
+            onFocus={() => setFocused(true)}
+            onBlur={() => window.setTimeout(() => setFocused(false), 120)}
+            placeholder={empty ? 'Escribe tu duda sobre Frame…' : 'Responder…'}
+            aria-label="Pregunta cómo usar Frame"
+            className="max-h-28 min-h-[24px] flex-1 resize-none bg-transparent py-1.5 text-sm leading-6 text-foreground outline-none placeholder:text-muted-foreground/70"
+          />
+          <button
+            type="button"
+            onClick={() => ask(query)}
+            disabled={!canSend}
+            title="Enviar (Enter)"
+            aria-label="Enviar"
+            className={cn(
+              'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors',
+              canSend ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'bg-muted text-muted-foreground'
             )}
-          </div>
-        );
-      })}
-      {pendingTurn && (
-        <div data-turn-last="" className="animate-in fade-in-0" aria-live="polite">
-          <p className="mb-3 text-sm text-muted-foreground">
-            <span className="font-medium text-foreground/80">«{pendingTurn.q}»</span>
-          </p>
-          <div className="flex items-center gap-3 py-2 text-sm text-muted-foreground">
-            <span className="flex gap-1">
-              {[0, 1, 2].map((i) => (
-                <span key={i} className="h-2 w-2 animate-bounce rounded-full bg-primary/80" style={{ animationDelay: `${i * 120}ms` }} />
-              ))}
-            </span>
-            Pensando…
-          </div>
+          >
+            <ArrowUp className="h-4 w-4" />
+          </button>
         </div>
-      )}
-      {!viewing && !pendingTurn && (
-        <p className="py-10 text-center text-sm text-muted-foreground">Aún no hay preguntas en esta conversación.</p>
+      </div>
+
+      {suggestions.length > 0 && (
+        <ul
+          role="listbox"
+          className={cn(
+            'absolute left-2 right-2 z-20 overflow-hidden rounded-lg border border-border/70 bg-popover py-1 shadow-xl animate-in fade-in-0',
+            empty ? 'top-full mt-1.5' : 'bottom-full mb-1.5'
+          )}
+        >
+          {suggestions.map((s, i) => (
+            <li key={s.id} role="option" aria-selected={i === highlight}>
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => showEntry(s, query.trim() || s.title)}
+                onMouseEnter={() => setHighlight(i)}
+                className={cn(
+                  'flex w-full items-center gap-3 px-3.5 py-2 text-left text-sm transition-colors',
+                  i === highlight ? 'bg-primary/10 text-foreground' : 'text-foreground/85'
+                )}
+              >
+                <span className="flex-1 truncate">{s.title}</span>
+                <span className="shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground">{HELP_AREAS[s.area].label}</span>
+                {i === highlight && <CornerDownLeft className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );
 
   return (
-    <section data-tour="ayuda" aria-label="Ayuda de Frame" className="relative flex h-full min-h-0 flex-col px-6 pb-6 pt-4 md:px-10">
-      <div className="flex shrink-0 items-center justify-end gap-1">
-        {!open && history.current && (
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(true);
-              setViewingId(null);
-              setView('thread');
-            }}
-            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-          >
-            <MessageCircle className="h-3.5 w-3.5" />
-            Seguir la conversación
-          </button>
-        )}
-        {!open && history.conversations.length > 0 && (
-          <button
-            type="button"
-            onClick={openHistory}
-            data-tour="ayuda-conversaciones"
-            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-          >
-            <MessagesSquare className="h-3.5 w-3.5" />
-            Conversaciones <span className="tabular-nums opacity-70">{history.conversations.length}</span>
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={onExit}
-          className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-          title="Salir de la ayuda (Esc)"
-          aria-label="Salir de la ayuda"
+    <section data-tour="ayuda" aria-label="Centro de ayuda" className="relative flex h-full min-h-0 flex-col">
+      {/* Barra: Atrás a la izquierda; conversaciones a la derecha. */}
+      <div className="flex shrink-0 items-center gap-2 px-4 pb-2 pt-3 md:px-6">
+        <Button variant="ghost" size="icon" className="h-9 w-9" onClick={back} title="Atrás (Esc)" aria-label="Atrás">
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <p className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
+          {view === 'history'
+            ? 'Conversaciones'
+            : viewingOld && viewing
+              ? `Conversación del ${whenLabel(viewing.startedAt)}`
+              : 'Centro de ayuda'}
+        </p>
+        <Button
+          size="sm"
+          variant={view === 'history' ? 'default' : 'fantasma'}
+          className="h-8 gap-1.5 px-3 text-xs"
+          onClick={() => setView(view === 'history' ? 'thread' : 'history')}
+          data-tour="ayuda-conversaciones"
         >
-          <X className="h-5 w-5" />
-        </button>
+          <MessagesSquare className="h-3.5 w-3.5" />
+          Conversaciones
+          {history.conversations.length > 0 && <span className="tabular-nums opacity-70">{history.conversations.length}</span>}
+        </Button>
+        <Button
+          size="sm"
+          variant="fantasma"
+          className="h-8 gap-1.5 px-3 text-xs"
+          onClick={newConversation}
+          disabled={!history.current && !viewingOld && view === 'thread'}
+          title="Empezar una conversación nueva"
+          data-tour="ayuda-nueva"
+        >
+          <SquarePen className="h-3.5 w-3.5" />
+          Nueva
+        </Button>
       </div>
 
-      <div
-        className={cn(
-          'grid min-h-0 flex-1 transition-[grid-template-columns,gap] duration-500 ease-out',
-          open ? 'grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-10' : 'grid-cols-[minmax(0,1fr)_minmax(0,0fr)] gap-0'
-        )}
-      >
-        {/* Izquierda (o centro, sin conversación): Apex y la barra. */}
-        <div className="flex min-w-0 flex-col items-center justify-center gap-6 pb-[6vh]">
-          <Apex pose={pose} size={open ? 150 : 170} />
-          {!open && (
-            <h2 className="-mt-2 text-center font-headline text-2xl font-bold text-foreground animate-in fade-in-0">
-              ¿En qué te ayudo?
-            </h2>
-          )}
-          <div className="relative w-full max-w-2xl">
-            <div
-              className={cn(
-                'rounded-[26px] border bg-card/90 py-2 pl-5 pr-2 shadow-lg backdrop-blur-sm transition-colors',
-                focused ? 'border-primary/60' : 'border-border/80'
-              )}
-            >
-              <div className="flex items-end gap-2">
-                <textarea
-                  ref={inputRef}
-                  rows={1}
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={onKeyDown}
-                  onFocus={() => setFocused(true)}
-                  onBlur={() => window.setTimeout(() => setFocused(false), 120)}
-                  placeholder={open || history.current ? 'Pregúntame otra cosa…' : 'Pregúntame cómo usar Frame…'}
-                  aria-label="Pregunta cómo usar Frame"
-                  className="max-h-28 min-h-[24px] flex-1 resize-none bg-transparent py-1.5 text-sm leading-6 text-foreground outline-none placeholder:text-muted-foreground/70"
-                />
-                <button
-                  type="button"
-                  onClick={() => ask(query)}
-                  disabled={!canSend}
-                  title="Preguntar (Enter)"
-                  aria-label="Preguntar"
-                  className={cn(
-                    'flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all',
-                    canSend ? 'bg-primary text-primary-foreground hover:scale-105' : 'bg-secondary text-muted-foreground'
-                  )}
-                >
-                  <ArrowUp className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-
-            {suggestions.length > 0 && (
-              <ul
-                role="listbox"
-                className="absolute left-3 right-3 top-full z-20 mt-1.5 overflow-hidden rounded-xl border border-border/70 bg-popover py-1 shadow-xl animate-in fade-in-0 slide-in-from-top-1"
-              >
-                {suggestions.map((s, i) => (
-                  <li key={s.id} role="option" aria-selected={i === highlight}>
-                    <button
-                      type="button"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => showEntry(s, query.trim() || s.title)}
-                      onMouseEnter={() => setHighlight(i)}
-                      className={cn(
-                        'flex w-full items-center gap-3 px-3.5 py-2 text-left text-sm transition-colors',
-                        i === highlight ? 'bg-primary/10 text-foreground' : 'text-foreground/85'
-                      )}
-                    >
-                      <span className="flex-1 truncate">{s.title}</span>
-                      <span className="shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground">{HELP_AREAS[s.area].label}</span>
-                      {i === highlight && <CornerDownLeft className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
+      {view === 'history' ? (
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-2 md:px-6">
+          <div className="mx-auto w-full max-w-3xl">
+            <History
+              conversations={history.conversations}
+              onOpen={openConversation}
+              onRemove={removeConversation}
+              onClear={history.clear}
+            />
           </div>
-
-          {!open && (
-            <div className="flex max-w-2xl flex-wrap justify-center gap-2 animate-in fade-in-0">
-              {starters.map((entry) => (
-                <button
-                  key={entry.id}
-                  type="button"
-                  onClick={() => showEntry(entry)}
-                  className="rounded-full border border-border/70 px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
-                >
-                  {entry.title}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <p className="text-center text-[11px] text-muted-foreground/70">
-            {open
-              ? 'Esc pliega el panel · la conversación sigue hasta que cierres Frame'
-              : `Responde dudas sobre cómo usar Frame · ${HELP_ENTRIES.length} respuestas · funciona sin internet`}
-          </p>
         </div>
-
-        {/* Derecha: la conversación (o la lista de conversaciones guardadas). */}
-        <div className={cn('relative min-h-0 min-w-0 overflow-hidden', !open && 'pointer-events-none')} aria-hidden={!open}>
-          {open && (
-            <div className="flex h-full flex-col animate-in fade-in-0 duration-500">
-              {tabs}
-              <div ref={threadRef} className="relative min-h-0 flex-1 overflow-y-auto pb-6 pr-3 pt-5">
-                {view === 'history' ? (
-                  <History
-                    conversations={history.conversations}
-                    onOpen={openConversation}
-                    onRemove={removeConversation}
-                    onClear={history.clear}
-                  />
-                ) : (
-                  thread
-                )}
+      ) : empty ? (
+        // Sin preguntas: la esfera, la barra y los temas.
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-8 md:px-6">
+          <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col items-center justify-center gap-6 py-6">
+            <PolySphere size={150} className="animate-in fade-in-0 zoom-in-95 duration-500" />
+            <h2 className="text-center font-headline text-2xl font-semibold text-foreground">¿En qué te ayudo?</h2>
+            {composer}
+            <div className="w-full">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Temas</p>
+              <TopicCards onPick={showTopic} />
+            </div>
+            {starters.length > 0 && (
+              <div className="flex w-full flex-wrap justify-center gap-2">
+                {starters.map((entry) => (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    onClick={() => showEntry(entry)}
+                    className="rounded-full border border-border/70 px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
+                  >
+                    {entry.title}
+                  </button>
+                ))}
               </div>
-            </div>
-          )}
+            )}
+            <p className="text-center text-[11px] text-muted-foreground/70">{HELP_ENTRIES.length} respuestas · funciona sin internet</p>
+          </div>
         </div>
-      </div>
+      ) : (
+        <>
+          <div ref={threadRef} className="relative min-h-0 flex-1 overflow-y-auto px-4 md:px-6">
+            <div className="mx-auto w-full max-w-3xl space-y-6 pb-10 pt-4">
+              {turns.map((turn) => {
+                const shown = resolved.get(turn.id) ?? null;
+                const last = turn.id === lastId;
+                return (
+                  <div key={turn.id} data-turn-last={last ? '' : undefined} className={cn('space-y-3', last && LAST_TURN)}>
+                    <UserBubble text={turn.q} at={turn.at} />
+                    {shown ? (
+                      <Answer
+                        shown={shown}
+                        instant={turn.id !== freshId}
+                        onPick={(e) => showEntry(e)}
+                        onTopic={showTopic}
+                        onShowHow={showHow}
+                      />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Esta respuesta ya no está en la ayuda.</p>
+                    )}
+                  </div>
+                );
+              })}
+              {pendingTurn && (
+                <div data-turn-last="" className={cn('space-y-3 animate-in fade-in-0', LAST_TURN)} aria-live="polite">
+                  <UserBubble text={pendingTurn.q} at={pendingTurn.at} />
+                  <span className="flex gap-1 py-2" aria-label="Escribiendo">
+                    {[0, 1, 2].map((i) => (
+                      <span key={i} className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary/80" style={{ animationDelay: `${i * 120}ms` }} />
+                    ))}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="shrink-0 px-4 pb-4 pt-2 md:px-6">
+            <div className="mx-auto w-full max-w-3xl">{composer}</div>
+          </div>
+        </>
+      )}
     </section>
   );
 }

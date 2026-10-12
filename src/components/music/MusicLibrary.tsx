@@ -294,7 +294,7 @@ export default function MusicLibrary() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-destructive hover:text-destructive/80"
+                  className="h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground"
                   onClick={(e) => {
                     e.stopPropagation();
                     setSongToDelete(song);
@@ -370,7 +370,7 @@ export default function MusicLibrary() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
                 if (songToDelete) {
                   deleteSong(songToDelete.id);

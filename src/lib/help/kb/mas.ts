@@ -113,7 +113,7 @@ const INFORMES_MAS: Entry[] = [
   {
     id: 'informe-no-abre',
     title: 'Dónde queda el informe (o no se abre)',
-    q: ['dónde se guardó mi informe', 'no encuentro el informe que descargué', 'el informe no se abre', 'no se descarga el pdf', 'dónde está el word del informe'],
+    q: ['dónde se guardó mi informe', 'dónde quedó mi informe', 'no encuentro el informe que descargué', 'el informe no se abre', 'no se descarga el pdf', 'dónde está el word del informe'],
     k: ['informe', 'pdf', 'word', 'descargas', 'guardar', 'abrir'],
     a: 'El de Word se guarda en tu carpeta Descargas y el aviso de «informe listo» lo abre con un clic. El PDF no se descarga: se abre el diálogo de impresión, y ahí eliges «Guardar como PDF» (o «Microsoft Print to PDF») y la carpeta.',
     tip: 'Si el Word no abre, necesitas un programa que lea .docx (Word, LibreOffice o Google Docs).',

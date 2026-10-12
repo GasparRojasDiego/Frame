@@ -84,9 +84,8 @@ export const HELP_AREAS: Record<HelpAreaId, { label: string; route?: string }> =
   musica: { label: 'Música', route: '/music' },
   grabaciones: { label: 'Grabaciones' },
   ajustes: { label: 'Ajustes', route: '/settings' },
-  // 1.6.2: los informes se abren desde la barra superior (sin ruta propia) y
-  // Notion, la única extensión, desde Ajustes.
-  informes: { label: 'Informes' },
+  // 1.6.3: los informes vuelven a Ajustes; Notion, la única extensión, también.
+  informes: { label: 'Informes', route: '/settings' },
   cuenta: { label: 'Cuenta y nube' },
   problemas: { label: 'Problemas' },
   extensiones: { label: 'Extensiones' },

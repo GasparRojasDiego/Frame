@@ -279,7 +279,7 @@ export const VARIANTES: Record<string, string[]> = {
     'tareas vencidas', 'aviso de tareas atrasadas', 'tareas que pasaron su fecha', 'reprogramar una tarea vencida',
   ],
   'tareas-google-calendar': [
-    'tareas en google calendar', 'pasar mis tareas al calendario de google', 'ver mis entregas en google calendar',
+    'tareas en google calendar', 'las tareas se copian a google', 'pasar mis tareas al calendario de google', 'ver mis entregas en google calendar',
   ],
 
   // ---------------- Hábitos ----------------
@@ -516,25 +516,18 @@ export const VARIANTES: Record<string, string[]> = {
   // ---------------- Informes ----------------
   'informes-centro': [
     'centro de informes', 'generar un informe', 'informes de frame', 'reporte de estudio', 'documento con mis estadísticas',
-    'dónde quedaron los informes', 'botón de informes de arriba',
+    'informes en ajustes', 'recuadro de informes',
   ],
   'informe-pdf': [
-    'informe en pdf', 'informe en word', 'imprimir un informe', 'guardar el reporte', 'exportar informe',
-  ],
-  'informe-general': [
-    'informe general', 'informe completo', 'informe denso o síntesis', 'todo en un documento',
-    'informe resumido', 'resumen en un informe', 'informe síntesis',
+    'informe en pdf', 'informe en word', 'descargar el informe', 'bajar el informe en word', 'imprimir un informe', 'guardar el reporte', 'exportar informe',
   ],
   'informe-rendimiento': [
     'informe de rendimiento', 'reporte de mis calificaciones', 'informe de mi semana', 'informe de mi mes de estudio',
     'reporte de notas', 'informe con mis calificaciones', 'mis notas en un informe',
   ],
   'informe-pendientes': [
-    'informe de pendientes', 'reporte de tareas pendientes', 'imprimir mis pendientes',
+    'informe de pendientes', 'informe de mis pendientes', 'pendientes del mes en un informe', 'reporte de tareas pendientes', 'imprimir mis pendientes',
     'imprimir la lista de pendientes', 'lista de pendientes en pdf', 'pendientes para imprimir',
-  ],
-  'informe-habitos': [
-    'informe de hábitos', 'reporte de hábitos', 'imprimir mis hábitos',
   ],
 
   // ---------------- Cuenta ----------------

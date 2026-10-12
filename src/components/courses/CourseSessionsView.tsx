@@ -179,7 +179,7 @@ function SessionCard({
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-6 w-6 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+                  className="h-6 w-6 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
                   onClick={onDelete}
                   title="Quitar esta clase"
                 >

@@ -252,7 +252,7 @@ export default function FinishSessionForm({
           <div className="flex shrink-0 items-center justify-between gap-3 px-6 py-3">
             <Button
               type="button"
-              variant="fantasmaRojo"
+              variant="gris"
               size="sm"
               className="text-xs"
               onClick={() => setConfirmDiscard(true)}
@@ -310,7 +310,7 @@ export default function FinishSessionForm({
           <AlertDialogFooter>
             <AlertDialogCancel>Volver</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
                 setConfirmDiscard(false);
                 onDiscard();

@@ -7,7 +7,6 @@ import AuthForm from '@/components/auth/AuthForm';
 import type { UserProfile, InterruptedSession } from '@/types';
 import CompleteProfileForm from '@/components/auth/CompleteProfileForm';
 import PageLoader from '@/components/layout/PageLoader';
-import HelpButton from '@/components/help/HelpButton';
 import { Toaster } from '@/components/ui/toaster';
 import MusicPlayer from '@/components/music/MusicPlayer';
 import { SidebarContent } from '@/components/layout/SidebarContent';
@@ -245,7 +244,6 @@ function AppLayout({ children, userProfile }: { children: ReactNode; userProfile
                             </InterfaceErrorBoundary>
                         </main>
                     </div>
-                    <HelpButton />
                     </div>
                     {currentSong && <MusicPlayer />}
                 </div>

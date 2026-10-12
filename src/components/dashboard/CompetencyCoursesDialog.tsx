@@ -128,7 +128,7 @@ export default function CompetencyCoursesDialog({
             </span>
           </p>
           <div className="flex gap-2">
-            <Button variant="fantasmaRojo" onClick={() => onOpenChange(false)}>
+            <Button variant="gris" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
             <Button disabled={!canSave} onClick={() => onSave(draft)}>

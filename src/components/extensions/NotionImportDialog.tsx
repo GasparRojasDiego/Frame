@@ -370,7 +370,7 @@ export default function NotionImportDialog({
             </div>
 
             <div className="flex items-center justify-end gap-2">
-              <Button variant="fantasmaRojo" onClick={close}>
+              <Button variant="gris" onClick={close}>
                 Cancelar
               </Button>
               <Button onClick={runImport} disabled={chosenCount === 0}>

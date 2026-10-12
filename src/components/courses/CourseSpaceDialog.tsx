@@ -197,7 +197,7 @@ export default function CourseSpaceDialog() {
           </div>
         )}
         <DialogFooter>
-          <Button variant="fantasmaRojo" onClick={() => setCreateCourseOpen(false)}>Cancelar</Button>
+          <Button variant="gris" onClick={() => setCreateCourseOpen(false)}>Cancelar</Button>
           <Button
             onClick={addDialogView === 'course' ? handleCreateCourse : handleCreateSpace}
             data-tour="asig-crear"

@@ -13,7 +13,7 @@ export const EXTENSIONES: Entry[] = [
     q: ['qué son las extensiones', 'dónde quedó el más de la barra de la ayuda', 'cómo añado una extensión', 'extensiones de frame'],
     k: ['extensiones', 'extension', 'notion', 'mas'],
     a: 'Ya no hay extensiones que añadir: la única, Notion, viene incluida. Su importador se abre desde Ajustes → rueda → «Importar de Notion», o escribiendo /notion en la barra de la Ayuda.',
-    tip: 'El «+» que tenía la barra de la Ayuda (la del botón redondo de abajo a la derecha) para añadirlas ya no existe.',
+    tip: 'El «+» que tenía antes la barra de la ayuda para añadirlas ya no existe.',
     go: '/settings',
     rel: ['ext-notion', 'ayuda-barra'],
   },

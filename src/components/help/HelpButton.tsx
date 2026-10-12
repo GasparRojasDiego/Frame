@@ -1,13 +1,15 @@
 import { useEffect } from 'react';
-import { MessageCircleQuestion, X } from 'lucide-react';
+import { MessageCircleQuestion } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { usePathname, useRouter } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 
 // ============================================================
-// Botón redondo de la ayuda, abajo a la derecha de la app.
+// Botón del Centro de ayuda, en la barra superior (a la derecha de «Crear»).
 //
-// Abre la interfaz «Ayuda» (/ayuda), que ocupa todo el espacio entre el
-// menú lateral y la cabecera. Dentro de ella, el mismo botón la cierra y
+// Abre la interfaz /ayuda, que ocupa todo el espacio entre el menú lateral
+// y la cabecera. Como todos los botones de la barra es «fantasma» y pasa a
+// sólido mientras su interfaz está abierta; pulsarlo dentro de la ayuda
 // devuelve a la interfaz de la que se vino.
 // ============================================================
 
@@ -19,7 +21,7 @@ export function exitHelp(router: { push: (href: string) => void }) {
   router.push(cameFrom);
 }
 
-export default function HelpButton() {
+export default function HelpButton({ className }: { className?: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const inHelp = pathname === HELP_PATH;
@@ -29,18 +31,16 @@ export default function HelpButton() {
   }, [inHelp, pathname]);
 
   return (
-    <button
-      type="button"
+    <Button
+      size="icon"
+      variant={inHelp ? 'default' : 'fantasma'}
+      className={cn(className)}
       data-tour="ayuda-boton"
       onClick={() => (inHelp ? exitHelp(router) : router.push(HELP_PATH))}
-      title={inHelp ? 'Cerrar la ayuda' : 'Ayuda: pregúntame cómo usar Frame'}
-      aria-label={inHelp ? 'Cerrar la ayuda' : 'Abrir la ayuda'}
-      className={cn(
-        'absolute bottom-4 right-4 z-30 flex h-11 w-11 items-center justify-center rounded-full shadow-lg ring-1 ring-black/5 transition-[transform,background-color] duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-        inHelp ? 'bg-card text-primary ring-primary/50' : 'bg-primary text-primary-foreground'
-      )}
+      title={inHelp ? 'Cerrar el Centro de ayuda' : 'Centro de ayuda'}
+      aria-label={inHelp ? 'Cerrar el Centro de ayuda' : 'Abrir el Centro de ayuda'}
     >
-      {inHelp ? <X className="h-5 w-5" /> : <MessageCircleQuestion className="h-5 w-5" />}
-    </button>
+      <MessageCircleQuestion className="h-5 w-5" />
+    </Button>
   );
 }

@@ -33,6 +33,46 @@ export interface PendingReportInput {
   spaces: Space[];
   /** Referencia temporal del informe; se inyecta para poder probarlo. */
   now?: Date;
+  /**
+   * Periodo elegido en «Informes» (semana, mes o año). Entran las pendientes
+   * cuya fecha de entrega cae dentro; si el periodo es el actual, también las
+   * vencidas y las que no tienen fecha, porque siguen por hacer «ahora».
+   * Sin periodo: todas las pendientes.
+   */
+  range?: { start: Date; end: Date; label: string };
+}
+
+/** Lo que entra en el informe para ese periodo (ver `range`). */
+function inRange(due: Date | null, range: NonNullable<PendingReportInput['range']>, today: Date): boolean {
+  const current = today >= startOfDay(range.start) && today <= range.end;
+  if (!due) return current;
+  if (due >= range.start && due <= range.end) return true;
+  return current && startOfDay(due) < today;
+}
+
+export interface PendingSummary {
+  pending: number;
+  overdue: number;
+  subjects: number;
+  estimatedMinutes: number;
+}
+
+/** Las cifras del recuadro azul de «Informes»: lo mismo que contará el documento. */
+export function pendingSummary(input: PendingReportInput): PendingSummary {
+  const today = startOfDay(input.now ?? new Date());
+  const rows = (input.tasks ?? []).filter((task) => {
+    if ((task.progress ?? 0) >= 100) return false;
+    return input.range ? inRange(safeParse(task.dueDate), input.range, today) : true;
+  });
+  return {
+    pending: rows.length,
+    overdue: rows.filter((task) => {
+      const due = safeParse(task.dueDate);
+      return due !== null && startOfDay(due) < today;
+    }).length,
+    subjects: new Set(rows.map((task) => task.courseName || UNASSIGNED)).size,
+    estimatedMinutes: rows.reduce((acc, task) => acc + (task.estimatedMinutes ?? 0), 0),
+  };
 }
 
 interface PendingRow {
@@ -130,8 +170,8 @@ function monthRow(row: PendingRow): DocCell[] {
   ];
 }
 
-export function pendingReportFileBase(now: Date = new Date()): string {
-  return `Frame-Pendientes-${format(now, 'yyyy-MM-dd')}`;
+export function pendingReportFileBase(now: Date = new Date(), stamp?: string): string {
+  return `Frame-Pendientes-${stamp ?? format(now, 'yyyy-MM-dd')}`;
 }
 
 export interface PendingDocOptions {
@@ -173,6 +213,7 @@ export function buildPendingReport(
   // creadas deprisa: sin esto, una sola tarea sin prioridad tumbaba el informe.
   const rows: PendingRow[] = (input.tasks ?? [])
     .filter((task) => (task.progress ?? 0) < 100)
+    .filter((task) => !input.range || inRange(safeParse(task.dueDate), input.range, today))
     .map((original) => {
     const task = {
       ...original,
@@ -220,6 +261,7 @@ export function buildPendingReport(
             }`,
       meta: [
         { label: 'Estudiante', value: input.studentName },
+        ...(input.range ? [{ label: 'Periodo', value: input.range.label }] : []),
         { label: 'Pendientes', value: String(rows.length) },
         { label: 'Vencidas', value: String(overdueCount) },
         { label: 'Generado', value: generatedAt },

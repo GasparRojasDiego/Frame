@@ -377,7 +377,7 @@ export default function MiniTimerCard() {
               dense
             />
             <div className="flex justify-end gap-1.5">
-              <Button variant="fantasmaRojo" className="h-7 px-2.5 py-0 text-[11px] font-semibold" onClick={closeNote}>
+              <Button variant="gris" className="h-7 px-2.5 py-0 text-[11px] font-semibold" onClick={closeNote}>
                 Cancelar
               </Button>
               <Button

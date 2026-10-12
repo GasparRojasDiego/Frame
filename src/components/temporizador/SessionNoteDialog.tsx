@@ -217,7 +217,7 @@ export default function SessionNoteDialog({
 
         <div aria-hidden className="mx-6 h-px shrink-0 bg-border" />
         <div className="flex shrink-0 justify-end gap-2 px-6 py-3">
-          <Button variant="fantasmaRojo" size="sm" onClick={() => onOpenChange(false)}>
+          <Button variant="gris" size="sm" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
           <Button size="sm" onClick={save} disabled={empty}>

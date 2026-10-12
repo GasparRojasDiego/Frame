@@ -38,7 +38,7 @@ Tres comprobaciones resuelven una parte considerable de los casos:
 
 - Confirma que usas la **última versión** disponible, ya que el fallo puede estar corregido.
 - Comprueba si el problema persiste **tras cerrar y volver a abrir la aplicación**.
-- Si el fallo afecta a Gmail, YouTube, Calendar o Classroom, comprueba si el mismo servicio funciona en tu navegador: si tampoco funciona allí, el problema es de Google y no de Frame.
+- Si el fallo afecta a Gmail, YouTube o Classroom, comprueba si el mismo servicio funciona en tu navegador: si tampoco funciona allí, el problema es de Google y no de Frame.
 
 ## 3. Cómo redactar un reporte que se pueda resolver
 

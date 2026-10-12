@@ -3,7 +3,7 @@ import { LoaderCircle, WifiOff } from 'lucide-react';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 
 // ============================================================
-// Recuadro anfitrión de un servicio de Google REAL (Gmail / Calendar)
+// Recuadro anfitrión de un servicio de Google REAL (Gmail, YouTube, Classroom)
 // incrustado vía webview hijo de Tauri.
 //
 // - Se recorta contra el contenedor con scroll de la app: nunca se
@@ -31,13 +31,12 @@ export function useOnline(): boolean {
 
 const SERVICE_LABEL: Record<GoogleEmbedProps['kind'], string> = {
   gmail: 'Gmail',
-  calendar: 'Google Calendar',
   youtube: 'YouTube',
   classroom: 'Google Classroom',
 };
 
 interface GoogleEmbedProps {
-  kind: 'gmail' | 'calendar' | 'youtube' | 'classroom';
+  kind: 'gmail' | 'youtube' | 'classroom';
   /** alto del recuadro (clase Tailwind), p. ej. "h-[620px]" */
   heightClass: string;
   /** contenido a mostrar dentro del recuadro cuando no hay internet */

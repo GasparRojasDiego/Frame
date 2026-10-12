@@ -170,11 +170,11 @@ export const TAREAS: Entry[] = [
   },
   {
     id: 'tareas-google-calendar',
-    title: 'Tareas en Google Calendar',
-    q: ['mis tareas aparecen en google calendar', 'cómo paso mis tareas a google calendar', 'sincronizar tareas con google'],
-    k: ['google calendar', 'sincronizar', 'evento'],
-    a: 'Si vinculaste Google Calendar en la interfaz Calendario, cada tarea con fecha se refleja como un evento en tu calendario de Google. Al culminarla o eliminarla, el evento se actualiza o desaparece.',
+    title: 'Tareas y Google Calendar',
+    q: ['mis tareas aparecen en google calendar', 'cómo paso mis tareas a google calendar', 'sincronizar tareas con google', 'por qué mis tareas ya no salen en google calendar'],
+    k: ['google calendar', 'sincronizar', 'evento', 'tareas', 'entregas'],
+    a: 'Desde la 1.6.3 las tareas ya no se copian a Google Calendar. Cada tarea con fecha aparece sola en el Calendario de Frame, en su día.',
     go: '/calendario',
-    rel: ['gcal-vincular'],
+    rel: ['cal-tareas', 'gcal-vincular'],
   },
 ];

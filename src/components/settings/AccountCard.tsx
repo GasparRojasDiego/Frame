@@ -262,7 +262,7 @@ export default function AccountMenu({ userProfile }: { userProfile: UserProfile 
             </Button>
 
             <Button
-              variant="fantasmaRojo"
+              variant="gris"
               size="sm"
               className="w-full justify-start"
               onClick={pick(openDeleteDialog)}

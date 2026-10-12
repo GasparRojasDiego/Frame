@@ -138,8 +138,8 @@ export const BARRA: Entry[] = [
     title: 'La barra superior',
     q: ['qué hay en la barra de arriba', 'para qué son los botones de arriba', 'qué es el botón más', 'para qué sirve el micrófono de arriba'],
     k: ['barra superior', 'botones', 'arriba'],
-    a: 'Arriba tienes, a la izquierda, el «+» para crear tareas o anotaciones y el botón del Centro de informes; en el centro, frases con tus datos recientes; y a la derecha, el micrófono para grabar y la campana de notificaciones. Cada botón se pone sólido mientras su recuadro está abierto.',
-    rel: ['tarea-crear-rapida', 'informes-centro', 'frase-personal', 'grabar-nota'],
+    a: 'Arriba tienes, a la izquierda, el «+» para crear tareas o anotaciones y el botón del Centro de ayuda; en el centro, frases con tus datos recientes; y a la derecha, el micrófono para grabar y la campana de notificaciones. Cada botón se pone sólido mientras su recuadro está abierto.',
+    rel: ['tarea-crear-rapida', 'ayuda-barra', 'frase-personal', 'grabar-nota'],
   },
   {
     // 1.6.2: ya no se escribe una frase propia; salen solas de los datos.

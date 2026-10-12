@@ -207,14 +207,14 @@ export default function MusicImportButton({ variant = 'button' }: { variant?: 'b
           <DialogFooter>
             {stage === 'confirm' && (
               <>
-                <Button variant="fantasmaRojo" onClick={finish}>
+                <Button variant="gris" onClick={finish}>
                   Cancelar
                 </Button>
                 <Button onClick={() => void run()}>Importar</Button>
               </>
             )}
             {stage === 'importing' && (
-              <Button variant="fantasmaRojo" onClick={() => (stopRef.current = true)}>
+              <Button variant="gris" onClick={() => (stopRef.current = true)}>
                 Detener
               </Button>
             )}

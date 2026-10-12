@@ -221,7 +221,7 @@ export default function EditSessionDialog({
         {/* ---------- Pie fijo ---------- */}
         <div className="mx-5 h-px shrink-0 bg-border" />
         <div className="flex shrink-0 items-center justify-between gap-3 px-5 py-3">
-          <Button type="button" variant="fantasmaRojo" size="sm" className="text-xs" onClick={onClose}>
+          <Button type="button" variant="gris" size="sm" className="text-xs" onClick={onClose}>
             Cancelar
           </Button>
 

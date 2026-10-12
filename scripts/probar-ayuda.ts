@@ -130,7 +130,7 @@ const cases: [string, string | string[] | null][] = [
   ['como escucho mas rapido una grabacion', 'grabacion-detalles'],
   ['donde cambio mi nombre', 'perfil-nombre'],
   ['que significa la racha', 'racha-que-es'],
-  ['como saco un reporte de mis habitos', 'informe-habitos'],
+  ['como saco un informe de mis pendientes del mes', 'informe-pendientes'],
   ['como uso frame en mi celular', 'instalar-frame'],
   ['olvide mi contrasena', 'contrasena-olvidada'],
   // 1.5.8

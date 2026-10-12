@@ -1,79 +1,260 @@
-import { useState, type ReactNode } from 'react';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import GeneralReportCard from '@/components/settings/GeneralReportCard';
-import PerformanceReportCard from '@/components/settings/PerformanceReportCard';
-import { HabitsReportCard, PendingReportCard } from '@/components/settings/QuickReportCards';
+import { useMemo, useState } from 'react';
+import {
+  addMonths,
+  addWeeks,
+  addYears,
+  format,
+  isSameMonth,
+  isSameYear,
+  isSameISOWeek,
+} from 'date-fns';
+import { es } from 'date-fns/locale';
+import { Check, ChevronDown, FileText, LoaderCircle, Printer } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import ReportPreview from '@/components/settings/ReportPreview';
+import { useCourse } from '@/context/CourseContext';
+import { useReportExport } from '@/hooks/use-report-export';
+import {
+  buildPerformanceDoc,
+  buildReport,
+  hm,
+  rangeLabel,
+  reportRange,
+  type ReportScope,
+} from '@/lib/performance-report';
+import { buildPendingReport, pendingReportFileBase, pendingSummary } from '@/lib/pending-report';
+import type { ReportFormat } from '@/lib/report-export';
 import { cn } from '@/lib/utils';
 import type { UserProfile } from '@/types';
 
 // ============================================================
-// Centro de informes (recuadro del botón de informes de la barra superior).
+// Informes (Ajustes).
 //
-// Hasta la 1.6.1 vivía en Ajustes, abajo a la derecha; desde la 1.6.2 se
-// abre desde la barra superior, a la derecha de «Crear», en cualquier
-// interfaz. Este componente es solo el CUERPO del recuadro: el título y el
-// marco los pone la barra (src/components/layout/header.tsx), que además lo
-// carga bajo demanda para no sumar los generadores de documentos al arranque.
-//
-// Los cuatro informes de Frame, de uno en uno y a todo el ancho: los cuatro
-// juntos no caben sin que se monten sus textos. Quedan montados en la misma
-// celda y solo se ve el elegido. Así el recuadro mide siempre lo que el más
-// alto —no salta al cambiar de pestaña— y cada informe conserva lo que se
-// eligió en él (periodo, modo).
-//
-// Cada informe trae su propia tarjeta; aquí se le quitan borde, fondo y
-// sombra para que no quede un recuadro dentro de otro.
+// Dos informes —rendimiento y pendientes— con la misma forma: tres selectores
+// en fila (qué informe, de qué tamaño de periodo y cuál de esos periodos), un
+// resumen de cuatro cifras, la vista previa REAL del documento y los dos
+// formatos. Lo que se ve en la vista previa es exactamente lo que sale.
 // ============================================================
 
-type ReportKey = 'general' | 'performance' | 'pending' | 'habits';
+type ReportKind = 'performance' | 'pending';
 
-const TABS: { key: ReportKey; label: string }[] = [
-  { key: 'general', label: 'General' },
+const KINDS: { key: ReportKind; label: string }[] = [
   { key: 'performance', label: 'Rendimiento' },
   { key: 'pending', label: 'Pendientes' },
-  { key: 'habits', label: 'Hábitos' },
 ];
 
-export default function ReportCenter({ userProfile }: { userProfile: UserProfile | null }) {
-  const [active, setActive] = useState<ReportKey>('general');
+const SCOPES: { key: ReportScope; label: string }[] = [
+  { key: 'semana', label: 'Semanal' },
+  { key: 'mes', label: 'Mensual' },
+  { key: 'anio', label: 'Anual' },
+];
 
-  const panels: Record<ReportKey, ReactNode> = {
-    general: <GeneralReportCard userProfile={userProfile} />,
-    performance: <PerformanceReportCard userProfile={userProfile} />,
-    pending: <PendingReportCard />,
-    habits: <HabitsReportCard />,
-  };
+const STEP: Record<ReportScope, (date: Date, amount: number) => Date> = {
+  semana: addWeeks,
+  mes: addMonths,
+  anio: addYears,
+};
+
+/** Cuántos periodos se ofrecen hacia atrás. Pendientes mira también hacia
+ *  delante: lo que vence la semana o el mes que viene. */
+const BACK: Record<ReportScope, number> = { semana: 26, mes: 12, anio: 3 };
+const AHEAD: Record<ReportScope, number> = { semana: 8, mes: 6, anio: 1 };
+
+const FORMATS: { format: ReportFormat; label: string; icon: typeof FileText; title: string }[] = [
+  { format: 'pdf', label: 'PDF', icon: Printer, title: 'Imprimir o guardar como PDF' },
+  { format: 'docx', label: 'Word', icon: FileText, title: 'Documento de Word, editable' },
+];
+
+/** Botón rectangular «fantasma» que despliega sus opciones. */
+function Selector<T extends string | number>({
+  value,
+  options,
+  onChange,
+  'data-tour': tour,
+  className,
+}: {
+  value: T;
+  options: { key: T; label: string }[];
+  onChange: (key: T) => void;
+  'data-tour'?: string;
+  className?: string;
+}) {
+  const current = options.find((option) => option.key === value);
+  return (
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <Button variant="fantasma" className={cn('h-9 justify-between gap-2 px-3 text-xs', className)} data-tour={tour}>
+          <span className="truncate first-letter:uppercase">{current?.label}</span>
+          <ChevronDown className="h-3.5 w-3.5 shrink-0" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="max-h-72 overflow-y-auto">
+        {options.map((option) => (
+          <DropdownMenuItem key={String(option.key)} onSelect={() => onChange(option.key)} className="gap-2 text-xs">
+            <Check className={cn('h-3.5 w-3.5', option.key === value ? 'text-primary' : 'invisible')} />
+            <span className="first-letter:uppercase">{option.label}</span>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function Stat({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className="min-w-0">
+      <p className="truncate text-[9px] uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className={cn('truncate text-sm font-bold tabular-nums', strong ? 'text-primary' : 'text-foreground')}>{value}</p>
+    </div>
+  );
+}
+
+export default function ReportCenter({ userProfile }: { userProfile: UserProfile | null }) {
+  const { studySessions, tasks, archivedTasks, courses, spaces, dailyPerformances, studyGoals } = useCourse();
+  const { run, busy } = useReportExport();
+
+  const [kind, setKind] = useState<ReportKind>('performance');
+  const [scope, setScope] = useState<ReportScope>('mes');
+  /** Desplazamiento respecto del periodo actual (negativo = pasado). */
+  const [offset, setOffset] = useState(0);
+
+  const studentName = userProfile?.username || 'Estudiante';
+  const reference = useMemo(() => STEP[scope](new Date(), offset), [scope, offset]);
+  const { start, end } = reportRange(scope, reference);
+  const label = rangeLabel(scope, start, end);
+
+  // Los periodos del tercer selector, del más reciente al más antiguo.
+  const periods = useMemo(() => {
+    const now = new Date();
+    const ahead = kind === 'pending' ? AHEAD[scope] : 0;
+    const list: { key: number; label: string }[] = [];
+    for (let step = ahead; step >= -BACK[scope]; step--) {
+      const date = STEP[scope](now, step);
+      const range = reportRange(scope, date);
+      const same =
+        scope === 'semana' ? isSameISOWeek(date, now) : scope === 'mes' ? isSameMonth(date, now) : isSameYear(date, now);
+      const text =
+        scope === 'semana'
+          ? `${format(range.start, 'd MMM', { locale: es })} – ${format(range.end, 'd MMM yyyy', { locale: es })}`
+          : rangeLabel(scope, range.start, range.end);
+      list.push({ key: step, label: same ? `${text} (actual)` : text });
+    }
+    return list;
+  }, [kind, scope]);
+
+  const performance = useMemo(
+    () =>
+      kind === 'performance'
+        ? buildReport({
+            scope,
+            reference,
+            studentName,
+            sessions: studySessions ?? [],
+            tasks: tasks ?? [],
+            archivedTasks: archivedTasks ?? [],
+            courses: courses ?? [],
+            spaces: spaces ?? [],
+            performances: dailyPerformances ?? [],
+            studyGoals,
+          })
+        : null,
+    [kind, scope, reference, studentName, studySessions, tasks, archivedTasks, courses, spaces, dailyPerformances, studyGoals]
+  );
+
+  const pendingInput = useMemo(
+    () => ({
+      studentName,
+      tasks: tasks ?? [],
+      courses: courses ?? [],
+      spaces: spaces ?? [],
+      range: { start, end, label },
+    }),
+    // `start`/`end` cambian con `reference`; `label` con ellos.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [studentName, tasks, courses, spaces, reference, scope]
+  );
+  const pending = useMemo(() => (kind === 'pending' ? pendingSummary(pendingInput) : null), [kind, pendingInput]);
+
+  const doc = useMemo(
+    () => (performance ? buildPerformanceDoc(performance) : kind === 'pending' ? buildPendingReport(pendingInput) : null),
+    [performance, kind, pendingInput]
+  );
+
+  const stamp = scope === 'anio' ? format(start, 'yyyy') : scope === 'mes' ? format(start, 'yyyy-MM') : format(start, "RRRR-'S'II");
+  const fileBase =
+    kind === 'performance' ? `Frame-Rendimiento-${scope}-${stamp}` : pendingReportFileBase(new Date(), `${scope}-${stamp}`);
 
   return (
-    <div className="flex flex-col" data-tour="informes">
-      <Tabs value={active} onValueChange={(value) => setActive(value as ReportKey)} className="mb-1 w-full">
-        <TabsList className="grid w-full grid-cols-4" data-tour="informes-tipos">
-          {TABS.map((tab, index) => (
-            <TabsTrigger key={tab.key} value={tab.key} className={cn(index < TABS.length - 1 && 'border-r')}>
-              {tab.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+    <div className="flex flex-col gap-3" data-tour="informes">
+      {/* Qué informe · tamaño del periodo · cuál. */}
+      <div className="flex flex-wrap items-center gap-2" data-tour="informes-tipos">
+        <Selector
+          value={kind}
+          options={KINDS}
+          onChange={(next) => {
+            setKind(next);
+            if (next === 'performance' && offset > 0) setOffset(0);
+          }}
+          data-tour="informe-tipo"
+          className="w-36"
+        />
+        <Selector
+          value={scope}
+          options={SCOPES}
+          onChange={(next) => {
+            setScope(next);
+            setOffset(0);
+          }}
+          data-tour="informe-periodo"
+          className="w-32"
+        />
+        <Selector value={offset} options={periods} onChange={setOffset} data-tour="informe-cual" className="min-w-0 flex-1" />
+      </div>
 
-      {/* `-mx-4`: el relleno de cada tarjeta queda alineado con las pestañas. */}
-      <div className="-mx-4 grid">
-        {TABS.map(({ key }) => {
-          const shown = key === active;
-          return (
-            <div
-              key={key}
-              className={cn(
-                'col-start-1 row-start-1 flex flex-col [&>*]:flex-1 [&>*]:border-0 [&>*]:bg-transparent [&>*]:shadow-none',
-                !shown && 'invisible'
-              )}
-              inert={!shown}
-              aria-hidden={!shown}
-            >
-              {panels[key]}
-            </div>
-          );
-        })}
+      {/* Resumen: las cifras que contará el documento. */}
+      <div className="grid grid-cols-4 gap-2 rounded-lg border border-primary bg-primary/10 p-3 text-center" data-tour="informe-resumen">
+        {performance ? (
+          <>
+            <Stat label="Estudio" value={hm(performance.totalMinutes)} strong />
+            <Stat label="Sesiones" value={String(performance.sessionCount)} />
+            <Stat label="Tareas culminadas" value={String(performance.tasksDone)} />
+            <Stat
+              label="Calificación media"
+              value={performance.gradeAverage !== null ? performance.gradeAverage.toFixed(1) : '—'}
+            />
+          </>
+        ) : pending ? (
+          <>
+            <Stat label="Pendientes" value={String(pending.pending)} strong />
+            <Stat label="Vencidas" value={String(pending.overdue)} />
+            <Stat label="Asignaturas" value={String(pending.subjects)} />
+            <Stat label="Tiempo estimado" value={pending.estimatedMinutes > 0 ? hm(pending.estimatedMinutes) : '—'} />
+          </>
+        ) : null}
+      </div>
+
+      <ReportPreview doc={doc} />
+
+      <div className="grid grid-cols-2 gap-2">
+        {FORMATS.map(({ format: fmt, label: name, icon: Icon, title }) => (
+          <Button
+            key={fmt}
+            data-tour={`informe-${fmt}`}
+            variant={fmt === 'docx' ? 'default' : 'fantasma'}
+            disabled={busy !== null || !doc}
+            onClick={() => doc && void run(() => doc, fileBase, fmt)}
+            title={title}
+          >
+            {busy === fmt ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Icon className="mr-2 h-4 w-4" />}
+            {name}
+          </Button>
+        ))}
       </div>
     </div>
   );

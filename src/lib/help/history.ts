@@ -5,7 +5,8 @@ import type { Resolved } from '@/lib/help/resolve';
 // ============================================================
 // Las conversaciones con la Ayuda (desde la 1.6.0; por apertura desde la 1.6.2).
 //
-// Una conversación es UNA apertura de Frame: de abrir la app a cerrarla.
+// Una conversación es UNA apertura de Frame: de abrir la app a cerrarla
+// (o hasta pulsar «Nueva conversación», desde la 1.6.3).
 // Mientras sigue abierta, salir de la Ayuda y volver conserva la conversación
 // en curso con todas sus preguntas; al cerrar Frame y volver a abrirla empieza
 // otra, y la anterior queda en «Conversaciones» como una sola entrada.
@@ -31,6 +32,8 @@ export interface HelpTurn {
   text?: string;
   /** Respuestas sugeridas junto al texto. */
   options?: string[];
+  /** Tras el texto se ofrecen los temas en tarjetas. */
+  topics?: boolean;
 }
 
 export interface HelpConversation {
@@ -158,7 +161,8 @@ export function turnFromResolved(result: Resolved): HelpTurn {
     const alts = result.alternatives.map((e) => e.id);
     return { ...base, entryId: result.entry.id, ...(alts.length > 0 ? { alts } : {}) };
   }
-  if (result.kind === 'text') return { ...base, text: result.text, options: result.options.map((o) => o.id) };
+  if (result.kind === 'text')
+    return { ...base, text: result.text, options: result.options.map((o) => o.id), ...(result.topics ? { topics: true } : {}) };
   return { ...base, text: result.text };
 }
 
@@ -172,7 +176,7 @@ export function resolvedFromTurn(turn: HelpTurn): Resolved | null {
     return entry ? { kind: 'entry', question: turn.q, entry, alternatives: pick(turn.alts) } : null;
   }
   if (turn.text) {
-    return { kind: 'text', question: turn.q, text: turn.text, options: pick(turn.options) };
+    return { kind: 'text', question: turn.q, text: turn.text, options: pick(turn.options), topics: turn.topics };
   }
   return null;
 }
@@ -217,10 +221,24 @@ export function useHelpConversations(uid: string | null | undefined) {
     [uid]
   );
 
+  /**
+   * «Nueva conversación»: la de ahora se cierra (pasa a «Conversaciones») y
+   * la siguiente pregunta empieza otra, aunque Frame siga abierta.
+   */
+  const startNew = useCallback(() => {
+    const prev = read(uid);
+    if (!prev.some((c) => c.run === HELP_RUN)) return;
+    write(
+      uid,
+      prev.map((c) => (c.run === HELP_RUN ? { ...c, run: `${HELP_RUN}:${c.id}` } : c))
+    );
+    setConversations(read(uid));
+  }, [uid]);
+
   const clear = useCallback(() => {
     write(uid, []);
     setConversations(read(uid));
   }, [uid]);
 
-  return { conversations, current, add, remove, clear };
+  return { conversations, current, add, remove, clear, startNew };
 }

@@ -57,7 +57,7 @@ export const AJUSTES: Entry[] = [
     q: ['dónde están los ajustes', 'cómo abro la configuración', 'dónde está mi perfil', 'configuración de frame'],
     k: ['ajustes', 'configuracion', 'perfil'],
     a: 'Pulsa tu nombre al pie del menú lateral. Ajustes reúne tu perfil, el tema, tus metas, tu racha y tu expediente. La rueda de arriba a la derecha abre el menú de tu cuenta.',
-    tip: 'Los informes ya no están aquí: los abre el botón de informes de la barra superior.',
+    tip: 'Al final de Ajustes están los informes en PDF o Word.',
     go: '/settings',
     rel: ['ajustes-cuenta-rueda', 'ajustes-metas'],
   },
@@ -146,18 +146,18 @@ export const AJUSTES: Entry[] = [
   },
 ];
 
-// Informes PDF y Word. Desde la 1.6.2 los abre un botón de la barra superior
-// (antes estaban en Ajustes), así que no llevan `go`: se llega desde cualquier
-// interfaz.
+// Informes PDF y Word. Desde la 1.6.3 vuelven a Ajustes (recuadro «Informes»):
+// rendimiento y pendientes, semanal, mensual o anual, con vista previa real.
 export const INFORMES: Entry[] = [
   {
     id: 'informes-centro',
-    title: 'El centro de informes',
-    q: ['cómo saco un informe', 'cómo genero un reporte', 'cómo descargo mi rendimiento en pdf', 'qué informes hay', 'informe para el colegio', 'un documento con mis horas para mi tutor', 'algo para entregar a mi profesor con lo que estudié', 'exportar mis estadísticas', 'dónde está el botón de informes'],
-    k: ['informe', 'reporte', 'pdf', 'word', 'documento', 'tutor', 'profesor', 'entregar', 'horas', 'estadisticas', 'barra superior'],
-    a: 'En la barra superior, el botón de informes (a la derecha del «+») abre el «Centro de informes». Genera cuatro documentos en PDF o Word: General, Rendimiento, Pendientes y Hábitos. Elige uno, ajusta su periodo y pulsa el formato.',
-    tip: 'Antes estaba en Ajustes; ahora se abre desde cualquier interfaz.',
-    rel: ['informe-pdf', 'informe-general', 'informe-rendimiento'],
+    title: 'Los informes',
+    q: ['cómo saco un informe', 'cómo genero un reporte', 'cómo descargo mi rendimiento en pdf', 'qué informes hay', 'informe para el colegio', 'un documento con mis horas para mi tutor', 'algo para entregar a mi profesor con lo que estudié', 'exportar mis estadísticas', 'informes en ajustes'],
+    k: ['informe', 'reporte', 'pdf', 'word', 'documento', 'tutor', 'profesor', 'entregar', 'horas', 'estadisticas', 'ajustes', 'vista previa'],
+    a: 'En Ajustes, el recuadro «Informes»: elige Rendimiento o Pendientes, el periodo (semanal, mensual o anual) y cuál. Verás un resumen con sus cifras y la vista previa real del documento; luego pulsa PDF o Word.',
+    tip: 'Lo que muestra la vista previa es exactamente lo que se guarda.',
+    go: '/settings',
+    rel: ['informe-pdf', 'informe-rendimiento', 'informe-pendientes'],
   },
   {
     id: 'informe-pdf',
@@ -168,34 +168,21 @@ export const INFORMES: Entry[] = [
     rel: ['informes-centro'],
   },
   {
-    id: 'informe-general',
-    title: 'Informe general (denso o síntesis)',
-    q: ['qué es el informe general', 'informe completo', 'diferencia entre denso y síntesis'],
-    k: ['general', 'denso', 'sintesis'],
-    a: 'Reúne rendimiento, hábitos y pendientes con las métricas de hoy, la semana, el mes y el mes anterior. «Denso» lo incluye todo (cada sesión, pendiente y hábito); «Síntesis» se queda con el cuadro de mando y las figuras. Está en el Centro de informes (botón de informes de la barra superior), pestaña «General».',
-    rel: ['informes-centro'],
-  },
-  {
     id: 'informe-rendimiento',
     title: 'Informe de rendimiento',
     q: ['informe de rendimiento', 'informe de mis horas de estudio', 'informe semanal', 'informe del mes', 'informe anual'],
-    k: ['rendimiento', 'dia', 'semana', 'mes', 'ano'],
-    a: 'Un documento formal con tu estudio y tus tareas de un día, una semana, un mes o un año: tiempo por asignatura, sesiones, metas, calificaciones y tareas culminadas, pendientes o vencidas. En el Centro de informes, pestaña «Rendimiento», usa las flechas para elegir el periodo.',
+    k: ['rendimiento', 'semana', 'mes', 'ano'],
+    a: 'Un documento formal con tu estudio y tus tareas de una semana, un mes o un año: tiempo por asignatura, sesiones, metas, calificaciones y tareas culminadas, pendientes o vencidas. En Ajustes → «Informes», elige «Rendimiento», el periodo y cuál.',
+    go: '/settings',
     rel: ['informes-centro'],
   },
   {
     id: 'informe-pendientes',
     title: 'Informe de tareas pendientes',
-    q: ['informe de pendientes', 'lista de lo que tengo por entregar en pdf', 'imprimir mis tareas'],
+    q: ['informe de pendientes', 'lista de lo que tengo por entregar en pdf', 'imprimir mis tareas', 'cómo saco un informe de pendientes', 'mis entregas del mes en pdf'],
     k: ['pendientes', 'urgencia', 'entregas'],
-    a: 'Todo lo que tienes por entregar, ordenado por urgencia y por asignatura, con su carga estimada. Está en el Centro de informes (botón de informes de la barra superior), pestaña «Pendientes».',
-  },
-  {
-    id: 'informe-habitos',
-    title: 'Informe de hábitos',
-    q: ['informe de hábitos', 'reporte de mis rutinas', 'constancia de mis hábitos en pdf', 'cómo saco un reporte de mis hábitos', 'imprimir mis hábitos'],
-    k: ['habitos', 'constancia', 'informe', 'reporte'],
-    a: 'La constancia de cada hábito en el periodo que elijas (semana, mes, trimestre o año): rachas, días cumplidos y evolución. Está en el Centro de informes (botón de informes de la barra superior), pestaña «Hábitos». Necesita al menos un hábito.',
+    a: 'Lo que tienes por entregar en la semana, el mes o el año que elijas, ordenado por urgencia y por asignatura, con su carga estimada. En el periodo actual incluye también lo vencido y lo que no tiene fecha. En Ajustes → «Informes», elige «Pendientes».',
+    go: '/settings',
   },
 ];
 

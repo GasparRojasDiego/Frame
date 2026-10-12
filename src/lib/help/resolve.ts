@@ -7,12 +7,13 @@ import type { ExtensionId } from '@/lib/extensions/registry';
 //   1. «/notion» → abre el importador de Notion (viene incluido: desde la
 //      1.6.2 no hay extensiones que añadir).
 //   2. La guía de Frame (banco de respuestas).
-//   3. Si no, «solo respondo dudas sobre Frame».
+//   3. Si no, no se adivina más: se ofrecen los temas en tarjetas y el
+//      usuario elige (1.6.3). Así no hace falta acertar con la frase.
 // ============================================================
 
 export type Resolved =
   | { kind: 'entry'; question: string; entry: HelpEntry; alternatives: HelpEntry[] }
-  | { kind: 'text'; question: string; text: string; options: HelpEntry[] }
+  | { kind: 'text'; question: string; text: string; options: HelpEntry[]; topics?: boolean }
   | { kind: 'action'; question: string; action: 'open-notion'; text: string };
 
 export interface ResolveContext {
@@ -34,24 +35,32 @@ export function resolveQuestion(question: string, ctx: ResolveContext): Resolved
     return {
       kind: 'text',
       question,
-      text: '¡Hola! Pregúntame lo que quieras sobre cómo usar Frame: Estudio, tareas, hábitos, asignaturas, música, informes, tu cuenta…',
-      options: ctx.starters,
+      text: 'Hola. Puedo explicarte cómo usar cualquier parte de Frame. Escribe tu duda o elige un tema.',
+      options: [],
+      topics: true,
     };
   }
   if (reply.kind === 'thanks') {
-    return { kind: 'text', question, text: '¡De nada! Si te surge otra duda sobre Frame, aquí estoy.', options: [] };
+    return { kind: 'text', question, text: 'Con gusto. Si surge otra duda sobre Frame, aquí estaré.', options: [] };
   }
   if (reply.kind === 'unknown' && reply.suggestions.length > 0) {
-    return { kind: 'text', question, text: 'No encontré una respuesta exacta. ¿Te refieres a alguna de estas?', options: reply.suggestions.slice(0, 4) };
+    return {
+      kind: 'text',
+      question,
+      text: 'No encontré una respuesta exacta. Quizá buscas alguna de estas; si no, elige un tema.',
+      options: reply.suggestions.slice(0, 4),
+      topics: true,
+    };
   }
   return {
     kind: 'text',
     question,
     text:
       reply.kind === 'offtopic'
-        ? 'Solo respondo dudas sobre cómo usar Frame, y esa pregunta no es sobre la app.'
-        : 'No tengo una respuesta para eso. Pregúntame sobre una función de Frame, con tus palabras.',
-    options: ctx.starters,
+        ? 'Solo puedo ayudarte con el uso de Frame. Elige un tema y te muestro lo que sé.'
+        : 'No tengo una respuesta para eso. Elige un tema y te muestro lo que sé.',
+    options: [],
+    topics: true,
   };
 }
 

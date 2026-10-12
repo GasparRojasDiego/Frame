@@ -32,6 +32,7 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from 
 import AvatarCropper from '@/components/auth/AvatarCropper';
 import AccountMenu from '@/components/settings/AccountCard';
 import ProfileStats from '@/components/settings/ProfileStats';
+import ReportCenter from '@/components/settings/ReportCenter';
 import { APP_VERSION, BUILD_DATE } from '@/lib/version';
 import LegalDocument from '@/components/settings/LegalDocument';
 import { INFO_VERSION, infoDocument } from '@/lib/legal/info';
@@ -571,6 +572,17 @@ export default function SettingsPage() {
 
                 <div data-tour="racha" className="flex flex-col [&>*]:flex-1"><StreakStatusCard /></div>
             </div>
+
+            {/* Informes: rendimiento y pendientes, con vista previa real. A todo
+                el ancho porque la vista previa enseña dos hojas A4 lado a lado. */}
+            <Card className="mt-6">
+                <CardHeader className="p-4 pb-2">
+                    <CardTitle className="text-center text-lg font-bold text-primary">Informes</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 pt-2">
+                    <ReportCenter userProfile={userProfile} />
+                </CardContent>
+            </Card>
         </div>
 
         <p className="pt-12 text-xs text-center text-muted-foreground">

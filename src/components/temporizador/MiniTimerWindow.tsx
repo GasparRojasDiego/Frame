@@ -367,7 +367,7 @@ export default function MiniTimerWindow() {
             />
             <div className="flex justify-end gap-1.5">
               <Button
-                variant="fantasmaRojo"
+                variant="gris"
                 onClick={() => setNoteOpen(false)}
                 className="h-6 px-2.5 py-0 text-[10.5px] font-semibold"
               >

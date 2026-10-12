@@ -337,14 +337,14 @@ export default function MonthGrid({
       className={cn('flex min-h-0 flex-1 select-none flex-col', className)}
     >
       {/* Días de la semana */}
-      <div role="row" className="grid shrink-0 grid-cols-7 border-b border-border/70">
+      <div role="row" className="grid shrink-0 grid-cols-7">
         {WEEKDAYS.map((weekday, index) => (
           <div
             key={weekday.long}
             role="columnheader"
             aria-label={weekday.long}
             className={cn(
-              'px-2 py-2 text-[11px] font-semibold uppercase tracking-wider',
+              'border-b-2 border-r-2 border-border bg-card/80 p-2 text-center text-xs font-bold',
               index >= 5 ? 'text-muted-foreground/70' : 'text-muted-foreground'
             )}
           >
@@ -374,7 +374,7 @@ export default function MonthGrid({
               ref={(el) => {
                 weekRefs.current[w] = el;
               }}
-              className={cn('relative flex min-h-[6.5rem] flex-1', w < weeks.length - 1 && 'border-b border-border/60')}
+              className="relative flex min-h-[6.5rem] flex-1"
             >
               {week.map((day, c) => {
                 const inMonth = day.startsWith(monthPrefix);
@@ -401,8 +401,7 @@ export default function MonthGrid({
                     aria-label={label}
                     onFocus={() => setFocusDay(day)}
                     className={cn(
-                      'group relative min-w-0 flex-1 basis-0 cursor-pointer outline-none',
-                      c < 6 && 'border-r border-border/60',
+                      'group relative min-w-0 flex-1 basis-0 cursor-pointer border-b-2 border-r-2 border-border bg-background outline-none',
                       !fill && !inMonth && 'bg-muted/30',
                       fill && PAINT_TINT,
                       'focus-visible:z-[2] focus-visible:shadow-[inset_0_0_0_2px_hsl(var(--primary))]'
@@ -428,7 +427,7 @@ export default function MonthGrid({
                     )}
                     <span
                       className={cn(
-                        'absolute left-1.5 top-1.5 z-[2] flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-xs font-semibold tabular-nums',
+                        'absolute right-1.5 top-1.5 z-[2] flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-xs font-semibold tabular-nums',
                         isToday
                           ? 'bg-primary text-primary-foreground shadow-sm'
                           : inMonth
@@ -482,8 +481,9 @@ function Bar({ segment }: { segment: Segment }) {
       title={item.hint ?? item.label}
       className={cn(
         'flex min-w-0 items-center gap-1 overflow-hidden whitespace-nowrap px-1.5 text-[11px] font-semibold leading-none',
-        continuesLeft ? 'rounded-l-none' : 'ml-[3px] rounded-l-[5px]',
-        continuesRight ? 'rounded-r-none' : 'mr-[3px] rounded-r-[5px]',
+        'rounded-none',
+        !continuesLeft && 'ml-[3px]',
+        !continuesRight && 'mr-[3px]',
         isEvent && EVENT_TINT,
         isEvent && item.color && eventInk(item.color),
         // En oscuro, el filo de color marca dónde EMPIEZA el evento.
@@ -503,7 +503,7 @@ function Bar({ segment }: { segment: Segment }) {
       {item.variant === 'task' && <ClipboardList className="h-3 w-3 shrink-0 text-primary" />}
       {item.variant === 'external' && (
         <span
-          className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
+          className="h-1.5 w-1.5 shrink-0 bg-primary"
           style={item.color ? { backgroundColor: item.color } : undefined}
         />
       )}

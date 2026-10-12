@@ -9,7 +9,7 @@
 // crearse se cae al navegador: mejor un rodeo que quedarse fuera.
 //
 // Soporta VARIAS cuentas de Google a la vez: cada integración
-// (Calendar, Classroom, Gmail) puede vincularse a una cuenta distinta
+// (Classroom, Gmail) puede vincularse a una cuenta distinta
 // (p. ej. Classroom con la cuenta institucional). Los tokens se guardan
 // por cuenta y el refresh es automático → la sincronización es duradera:
 // solo se vuelve a pedir autorización si Google revoca el refresh token.
@@ -32,9 +32,6 @@ export const isGoogleConfigured = Boolean(CLIENT_ID);
 // archivar, marcar leído/no leído, destacar y enviar a la papelera.
 export const SCOPES = {
   identity: ['openid', 'email', 'profile'],
-  // Lectura Y escritura de eventos: las tareas de Frame se sincronizan como
-  // eventos de Google Calendar (bidireccional).
-  calendar: ['https://www.googleapis.com/auth/calendar.events'],
   classroom: [
     'https://www.googleapis.com/auth/classroom.courses.readonly',
     'https://www.googleapis.com/auth/classroom.coursework.me.readonly',

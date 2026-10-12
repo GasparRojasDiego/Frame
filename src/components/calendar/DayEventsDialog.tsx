@@ -183,7 +183,7 @@ function DayView({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                          className="h-8 w-8 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"
                           aria-label={`Eliminar «${event.title}»`}
                           title="Eliminar"
                           onClick={() => setConfirming(event.id)}

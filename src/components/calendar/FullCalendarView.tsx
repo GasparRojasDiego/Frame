@@ -332,7 +332,7 @@ export default function FullCalendarView({
         </Button>
       </MonthBar>
 
-      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card/40 shadow-sm">
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-none border-l-2 border-t-2 border-border bg-background">
         <MonthGrid
           weeks={weeks}
           cursor={cursor}

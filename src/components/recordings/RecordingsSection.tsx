@@ -241,7 +241,7 @@ function RecordingDetailsDialog({
               </>
             )}
             <DropdownMenuItem
-              className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+              className=""
               onSelect={() => setConfirmDelete(true)}
             >
               <Trash2 className="mr-2 h-4 w-4" />
@@ -429,7 +429,7 @@ function RecordingDetailsDialog({
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel className={buttonVariants({ variant: 'fantasmaRojo' })}>Cancelar</AlertDialogCancel>
+              <AlertDialogCancel className={buttonVariants({ variant: 'gris' })}>Cancelar</AlertDialogCancel>
               <AlertDialogAction
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 onClick={handleDelete}

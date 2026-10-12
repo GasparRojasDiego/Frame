@@ -190,7 +190,7 @@ function HabitRowCells({ habit, isEditing, index, weekDates, weekOffset, isStrea
             <Archive className="h-4 w-4" />
           </Button>
         ) : isEditing ? (
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteHabit(habit.id)}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground" onClick={() => deleteHabit(habit.id)}>
             <Trash2 className="h-4 w-4" />
           </Button>
         ) : (

@@ -85,7 +85,7 @@ export const HABITOS: Entry[] = [
     a: 'Debajo de la tabla, Hábitos muestra tu ritmo del periodo, los días perfectos (todo cumplido), la racha perfecta, los días activos, tu semana tipo (qué día cumples más y cuál menos) y un mapa de constancia de las últimas 12 semanas. Puedes verlo por semana o por mes.',
     tip: 'El cumplimiento solo cuenta los días ya vividos, no los que faltan del periodo.',
     go: '/habitos',
-    rel: ['habito-anillos', 'informe-habitos'],
+    rel: ['habito-anillos'],
   },
   {
     id: 'habito-anillos',

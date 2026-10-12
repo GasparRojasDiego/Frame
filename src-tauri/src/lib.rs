@@ -295,8 +295,8 @@ async fn http_get_data_url(url: String) -> Result<String, String> {
     Ok(format!("data:{};base64,{}", mime, base64::engine::general_purpose::STANDARD.encode(&bytes)))
 }
 
-/// Servicios de Google REALES incrustados en la interfaz (Gmail en Inicio,
-/// Calendar en Calendario): un webview hijo superpuesto exactamente sobre el
+/// Servicios de Google REALES incrustados en la interfaz (Gmail, YouTube,
+/// Classroom): un webview hijo superpuesto exactamente sobre el
 /// recuadro que dibuja la app. El frontend reporta posición/tamaño del
 /// recuadro (px CSS = lógicos) en cada scroll/resize; con visible=false el
 /// webview se aparta fuera de vista (sigue vivo, así la página no se recarga
@@ -386,7 +386,6 @@ async fn google_embed_update(
 
     let (label, url) = match kind.as_str() {
         "gmail" => ("gmail-embed", "https://mail.google.com/"),
-        "calendar" => ("gcal-embed", "https://calendar.google.com/"),
         "youtube" => ("youtube-embed", "https://www.youtube.com/"),
         "classroom" => ("classroom-embed", "https://classroom.google.com/"),
         _ => return Err("Servicio no permitido.".into()),

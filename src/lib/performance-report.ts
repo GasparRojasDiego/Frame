@@ -41,10 +41,9 @@ import { sessionSeconds } from '@/lib/duration';
 import { richNoteToLine } from '@/lib/rich-note';
 import type { DocBlock, DocModel, DocTone } from '@/lib/report-doc';
 
-export type ReportScope = 'dia' | 'semana' | 'mes' | 'anio';
+export type ReportScope = 'semana' | 'mes' | 'anio';
 
 export const SCOPE_LABEL: Record<ReportScope, string> = {
-  dia: 'Informe diario',
   semana: 'Informe semanal',
   mes: 'Informe mensual',
   anio: 'Informe anual',
@@ -60,14 +59,12 @@ const LOOSE_SPACE = 'Sin colección';
 
 /** Rango del periodo: del primer día al último, ambos incluidos. */
 export function reportRange(scope: ReportScope, reference: Date): { start: Date; end: Date } {
-  if (scope === 'dia') return { start: startOfDay(reference), end: endOfDay(reference) };
   if (scope === 'semana') return { start: startOfISOWeek(reference), end: endOfISOWeek(reference) };
   if (scope === 'mes') return { start: startOfMonth(reference), end: endOfMonth(reference) };
   return { start: startOfYear(reference), end: endOfYear(reference) };
 }
 
 export function rangeLabel(scope: ReportScope, start: Date, end: Date): string {
-  if (scope === 'dia') return format(start, "EEEE d 'de' MMMM 'de' yyyy", { locale: es });
   if (scope === 'anio') return format(start, 'yyyy');
   if (scope === 'mes') return format(start, "MMMM 'de' yyyy", { locale: es });
   return `${format(start, "d 'de' MMMM", { locale: es })} — ${format(end, "d 'de' MMMM 'de' yyyy", { locale: es })}`;
@@ -192,32 +189,7 @@ export function buildReport(input: BuildInput): ReportData {
   let goalDaysMet = 0;
   let goalDaysSet = 0;
 
-  if (scope === 'dia') {
-    // Un solo día no tiene "serie de días": lo que informa es CUÁNDO se
-    // estudió. Se reparte en tres franjas por el punto medio de cada sesión,
-    // el mismo criterio que usa la tarjeta de Inicio.
-    const franjas = [
-      { label: 'Mañana (5–12 h)', minutes: 0 },
-      { label: 'Tarde (12–19 h)', minutes: 0 },
-      { label: 'Noche (19–5 h)', minutes: 0 },
-    ];
-    for (const session of periodSessions) {
-      const endMs = safeParse(session.endTime)?.getTime() ?? safeParse(session.startTime)?.getTime();
-      if (!endMs) continue;
-      const seconds = sessionSeconds(session);
-      const hour = new Date(endMs - (seconds * 1000) / 2).getHours();
-      const index = hour >= 5 && hour < 12 ? 0 : hour >= 12 && hour < 19 ? 1 : 2;
-      franjas[index].minutes += seconds / 60;
-    }
-    byPeriod = franjas;
-
-    const goal = input.studyGoals?.[GOAL_KEYS[start.getDay()]] ?? 0;
-    if (goal > 0) {
-      goalMinutes = goal;
-      goalDaysSet = 1;
-      if (totalMinutes >= goal) goalDaysMet = 1;
-    }
-  } else if (scope === 'anio') {
+  if (scope === 'anio') {
     byPeriod = eachMonthOfInterval({ start, end }).map((month) => {
       const prefix = format(month, 'yyyy-MM');
       let minutes = 0;
@@ -540,7 +512,7 @@ function rhythmBars(data: ReportData): DocBlock {
   const max = Math.max(1, ...data.byPeriod.map((b) => Math.max(b.minutes, b.goal ?? 0)));
   return {
     kind: 'bars',
-    caption: data.scope === 'dia' ? 'Reparto por franja horaria' : 'Minutos por día frente a la meta',
+    caption: 'Minutos por día frente a la meta',
     items: data.byPeriod.map((b) => ({
       label: capitalize(b.label),
       value: b.minutes > 0 ? hm(b.minutes) : '—',
@@ -549,10 +521,7 @@ function rhythmBars(data: ReportData): DocBlock {
       note: b.goal && b.goal > 0 ? `meta ${hm(b.goal)}` : undefined,
       tone: b.goal && b.goal > 0 && b.minutes >= b.goal ? ('ok' as DocTone) : ('accent' as DocTone),
     })),
-    legend:
-      data.scope === 'dia'
-        ? undefined
-        : 'La línea vertical sobre cada barra marca la meta de ese día; en verde, los días que la alcanzaron.',
+    legend: 'La línea vertical sobre cada barra marca la meta de ese día; en verde, los días que la alcanzaron.',
   };
 }
 
@@ -685,7 +654,7 @@ export function performanceBlocks(data: ReportData, options: PerformanceDocOptio
   blocks.push({
     kind: 'section',
     index: num(),
-    title: data.scope === 'dia' ? 'Distribución de la jornada' : 'Ritmo de estudio',
+    title: 'Ritmo de estudio',
   });
   blocks.push(rhythmBars(data));
 

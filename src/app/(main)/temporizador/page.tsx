@@ -264,7 +264,9 @@ export default function TimerPage() {
   return (
     <div className="flex flex-col gap-8 p-6 md:p-8">
       <div className="grid grid-cols-1 lg:grid-cols-5 lg:items-stretch gap-8">
-        <div className="lg:col-span-2 flex flex-col items-center">
+        {/* Centrado en vertical sobre la altura de la columna derecha (de la
+            cabecera de «Tiempo de estudio» al pie de «Métricas de hoy»). */}
+        <div className="lg:col-span-2 flex flex-col items-center lg:justify-center">
           <TimerDisplay onSessionComplete={handleSessionComplete} disabled={!userProfile} />
         </div>
         {cardFace === 'videos' ? (

@@ -42,7 +42,6 @@ import { timerClock, useTimerTime } from '@/lib/timer-clock';
 import { COVER_HEAVY_CHARS, idle, shrinkCover } from '@/lib/cover-shrink';
 import { notify } from '@/lib/notify';
 import { useLocalEventReminders } from '@/components/calendar/useEventReminders';
-import { syncTasksToCalendar } from '@/lib/google/calendarSync';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { deleteAttachment } from '@/lib/file-handles';
 import { resolveClassKey } from '@/lib/class-link';
@@ -967,24 +966,6 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     window.addEventListener('beforeunload', commitOnExit);
     return () => window.removeEventListener('beforeunload', commitOnExit);
   }, [lastUndoableAction]);
-
-  // --- Sincronización Frame → Google Calendar ---
-  // Cualquier cambio en las tareas (crear, editar, completar, borrar) se
-  // refleja en Google Calendar con un pequeño debounce; además se reconcilia
-  // al volver la conexión y cada 15 minutos por si algo quedó pendiente.
-  useEffect(() => {
-    const uid = userProfile?.id;
-    const timer = setTimeout(() => void syncTasksToCalendar(tasks, uid), 2500);
-    const interval = setInterval(() => void syncTasksToCalendar(tasks, uid), 15 * 60 * 1000);
-    const onOnline = () => void syncTasksToCalendar(tasks, uid);
-    window.addEventListener('online', onOnline);
-    return () => {
-      clearTimeout(timer);
-      clearInterval(interval);
-      window.removeEventListener('online', onOnline);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tasks, userProfile?.id]);
 
   // --- Telemetría profesional (Supabase): desde el registro, cada usuario
   // reporta indicadores agregados y anónimos (ID, país, sesiones/tareas

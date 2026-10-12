@@ -256,7 +256,7 @@ export default function UpdateDialog() {
         <div className="flex justify-end gap-2 px-6 py-4">
           {!started ? (
             <>
-              <Button variant="fantasmaRojo" onClick={closeUpdateDialog}>
+              <Button variant="gris" onClick={closeUpdateDialog}>
                 Cancelar
               </Button>
               <Button onClick={() => void startUpdateInstall()} disabled={blocked} data-tour="actualizar-confirmar">

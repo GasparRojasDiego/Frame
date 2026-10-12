@@ -400,7 +400,7 @@ export default function LocalEventForm({
               type="button"
               variant="ghost"
               size="sm"
-              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+              className="text-muted-foreground hover:bg-muted hover:text-foreground"
               onClick={() => setConfirmDelete(true)}
             >
               <Trash2 />
@@ -409,7 +409,7 @@ export default function LocalEventForm({
           )
         )}
         <div className="ml-auto flex gap-2">
-          <Button type="button" variant="fantasmaRojo" onClick={onCancel}>
+          <Button type="button" variant="gris" onClick={onCancel}>
             Cancelar
           </Button>
           <Button type="submit">

@@ -1,28 +1,17 @@
-import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { LoaderCircle, Mic, ScrollText } from 'lucide-react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Mic } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import EchoWord from '@/components/shared/EchoWord';
 import NotificationCenter from '@/components/layout/NotificationCenter';
 import RecordingDialog from '@/components/recordings/RecordingDialog';
 import QuickCreateButton from '@/components/layout/QuickCreateButton';
+import HelpButton from '@/components/help/HelpButton';
 import { useCourse } from '@/context/CourseContext';
 import { useTodayKey } from '@/hooks/use-today';
 import { buildHeaderPhrases, type HeaderPhrase } from '@/lib/header-phrases';
 import { startQuickRecording } from '@/lib/quick-recording';
 import type { RecorderState } from '@/components/recordings/RecordingDialog';
 import type { UserProfile } from '@/types';
-
-// Los informes arrastran los generadores de PDF y Word: se cargan al abrir
-// su recuadro, no al arrancar la app.
-const ReportCenter = lazy(() => import('@/components/settings/ReportCenter'));
 
 // La frase propia (clave `headerQuote`) se retiró en la 1.6.2: la barra ya no
 // muestra un texto escrito a mano sino frases con los datos del usuario. Se
@@ -260,7 +249,6 @@ export default function Header({ userProfile }: HeaderProps) {
   const [isRecordingOpen, setRecordingOpen] = useState(false);
   /** Lo que hace la grabadora aunque su recuadro esté cerrado. */
   const [recorderState, setRecorderState] = useState<RecorderState>('idle');
-  const [isReportsOpen, setReportsOpen] = useState(false);
 
   // Atajo global de grabación: Ctrl+Shift+F abre la grabadora Y empieza a
   // grabar en el acto, sin pasos intermedios.
@@ -288,17 +276,8 @@ export default function Header({ userProfile }: HeaderProps) {
         {/* Crear una tarea o una anotación sin salir de donde estés. */}
         <QuickCreateButton />
 
-        {/* Centro de informes (antes en Ajustes): los cuatro informes en un recuadro. */}
-        <Button
-          size="icon"
-          variant={isReportsOpen ? 'default' : 'fantasma'}
-          className={barButton}
-          onClick={() => setReportsOpen(true)}
-          title="Centro de informes"
-          data-tour="informes-boton"
-        >
-          <ScrollText className="h-5 w-5" />
-        </Button>
+        {/* Centro de ayuda (antes, un botón redondo abajo a la derecha). */}
+        <HelpButton className={barButton} />
       </div>
 
       <HeaderPhrases name={greetName} />
@@ -336,32 +315,6 @@ export default function Header({ userProfile }: HeaderProps) {
         onStateChange={setRecorderState}
       />
 
-      <Dialog open={isReportsOpen} onOpenChange={setReportsOpen}>
-        <DialogContent className="flex max-h-[88vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
-          {/* `pt-[15px]`: el título en la misma línea que la X, como en «Crear». */}
-          <DialogHeader className="relative shrink-0 overflow-hidden px-6 pb-4 pt-[15px]">
-            {/* «INFORMES», repetido y a la deriva detrás del título. */}
-            <EchoWord word="Informes" />
-            <DialogTitle className="relative text-center text-lg font-bold text-primary">Centro de informes</DialogTitle>
-            <DialogDescription className="relative text-center text-xs">
-              General, rendimiento, pendientes y hábitos, en PDF o Word.
-            </DialogDescription>
-          </DialogHeader>
-          {/* Divisoria con margen a ambos lados, no de borde a borde. */}
-          <div aria-hidden className="mx-6 h-px shrink-0 bg-border" />
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-            <Suspense
-              fallback={
-                <div className="flex h-72 items-center justify-center">
-                  <LoaderCircle className="h-5 w-5 animate-spin text-primary" />
-                </div>
-              }
-            >
-              <ReportCenter userProfile={userProfile} />
-            </Suspense>
-          </div>
-        </DialogContent>
-      </Dialog>
     </header>
   );
 }

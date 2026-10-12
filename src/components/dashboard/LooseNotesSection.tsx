@@ -147,7 +147,7 @@ function LooseNoteDialog({ note, onClose }: { note: LooseNote | null; onClose: (
             </>
           ) : (
             <>
-              <Button size="sm" variant="fantasmaRojo" onClick={remove}>
+              <Button size="sm" variant={confirmDelete ? 'destructive' : 'gris'} onClick={remove}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 {confirmDelete ? 'Pulsa otra vez para borrar' : 'Borrar'}
               </Button>

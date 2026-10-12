@@ -1,7 +1,7 @@
 import type { Tour, TourStep } from '@/lib/help/tour';
 
 // ============================================================
-// Recorridos «Descubrir», uno por respuesta de la ayuda (la clave es el id
+// Recorridos «Mostrar cómo», uno por respuesta de la ayuda (la clave es el id
 // de la respuesta en kb/). Cada paso señala un elemento por su `data-tour`.
 //
 // REGLA: al cambiar un botón de sitio o de interfaz, corregir aquí su paso
@@ -16,10 +16,8 @@ const toSettings: TourStep = { el: 'perfil', say: 'Entra a tu perfil: el botón 
 // 1.6.2: la rueda abre un menú pequeño (no un recuadro): sus botones se
 // señalan con el menú abierto.
 const toAccount: TourStep = { el: 'cuenta-rueda', go: '/settings', say: 'Abre el menú de tu cuenta con esta rueda.' };
-// 1.6.2: el Centro de informes pasó de Ajustes a un botón de la barra superior.
-const toReports: TourStep = { el: 'informes-boton', say: 'Pulsa el botón de informes de la barra superior, a la derecha del «+».' };
-// Primero, el calendario «Local» (se salta si ya está a la vista).
-const toLocalCalendar: TourStep = { el: 'cal-local', go: '/calendario', say: 'Primero, el calendario «Local».', optional: true };
+// 1.6.3: los informes vuelven a Ajustes, en su propio recuadro.
+const toReports: TourStep = { el: 'informes', go: '/settings', say: 'En Ajustes, el recuadro «Informes».', next: true };
 const quickTask: TourStep[] = [
   { el: 'crear-rapido', say: 'Pulsa el «+» de la barra superior: funciona desde cualquier interfaz.' },
   { el: 'crear-tarea', say: 'Elige «Tarea».' },
@@ -30,7 +28,7 @@ const openFirstSubject: TourStep = {
   say: 'Abre una asignatura pulsando su tarjeta.',
 };
 const NEEDS_SUBJECT = 'Primero crea una asignatura en «Asignaturas» → «Añadir».';
-const NEEDS_TASK = 'Primero crea una tarea: pregúntame «cómo creo una tarea» y pulsa «Descubrir».';
+const NEEDS_TASK = 'Primero crea una tarea: pregúntame «cómo creo una tarea» y pulsa «Mostrar cómo».';
 const NEEDS_SONG = 'Primero reproduce una canción en «Música».';
 
 const TOURS: Record<string, Def> = {
@@ -45,7 +43,7 @@ const TOURS: Record<string, Def> = {
       { el: 'enfoque-iniciar', go: '/temporizador', say: 'Pulsas «Iniciar» para estudiar y «Finalizar» para registrar la sesión.', next: true },
       { el: 'crear-rapido', say: 'Y con este «+» apuntas una tarea desde cualquier sitio.', next: true },
     ],
-    done: '¡Ya conoces lo esencial! Pregúntame lo que quieras con el botón redondo de abajo a la derecha.',
+    done: '¡Ya conoces lo esencial! Si te surge una duda, abre el Centro de ayuda desde la barra superior.',
   },
   'menu-lateral': {
     title: 'El menú lateral',
@@ -61,7 +59,7 @@ const TOURS: Record<string, Def> = {
   },
   'ayuda-barra': {
     title: 'La ayuda',
-    steps: [{ el: 'ayuda-boton', say: 'Este botón redondo abre la Ayuda: escribe tu duda con tus palabras y te respondo al instante, sin internet.', next: true }],
+    steps: [{ el: 'ayuda-boton', say: 'Este botón abre el Centro de ayuda: escribe tu duda o elige un tema. Funciona sin internet.', next: true }],
   },
 
   // --- Inicio ---
@@ -149,7 +147,7 @@ const TOURS: Record<string, Def> = {
   // --- Barra superior ---
   'barra-superior': {
     title: 'La barra superior',
-    steps: [{ el: 'barra-superior', say: 'A la izquierda, crear (+) e informes; al centro, frases con tus datos; a la derecha, grabar y las notificaciones.', next: true }],
+    steps: [{ el: 'barra-superior', say: 'A la izquierda, crear (+) y el Centro de ayuda; al centro, frases con tus datos; a la derecha, grabar y las notificaciones.', next: true }],
   },
   'frase-personal': {
     title: 'Las frases de la barra',
@@ -449,12 +447,11 @@ const TOURS: Record<string, Def> = {
   },
   'cal-local': {
     title: 'El calendario de la app',
-    steps: [{ el: 'cal-local', go: '/calendario', say: 'Pulsa «Local»: el calendario propio de Frame, que funciona sin internet.' }],
+    steps: [{ el: 'nav-calendario', say: 'Entra en «Calendario»: el calendario propio de Frame, que funciona sin internet.' }],
   },
   'cal-evento-crear': {
     title: 'Crear un evento',
     steps: [
-      toLocalCalendar,
       { el: 'cal-crear', go: '/calendario', say: 'Pulsa «Evento».' },
       { say: 'Escribe el título, elige el tipo, las fechas y el color, y pulsa «Crear evento».', next: true },
     ],
@@ -463,14 +460,12 @@ const TOURS: Record<string, Def> = {
   'cal-editar': {
     title: 'Editar un evento',
     steps: [
-      toLocalCalendar,
       { el: 'cal-editar', go: '/calendario', say: 'Pulsa el evento en el calendario para editarlo o borrarlo (o pulsa su día: ahí están todos).' },
     ],
   },
   'cal-varios-dias': {
     title: 'Elegir varios días',
     steps: [
-      toLocalCalendar,
       {
         el: 'cal-editar',
         go: '/calendario',
@@ -482,7 +477,6 @@ const TOURS: Record<string, Def> = {
   'cal-recordatorio': {
     title: 'Un recordatorio',
     steps: [
-      toLocalCalendar,
       { el: 'cal-editar', go: '/calendario', say: 'Pulsa el día del recordatorio.' },
       { say: 'Pulsa «Recordatorio», elige la hora con las ruedas y el aviso, y pulsa «Crear recordatorio».', next: true },
     ],
@@ -490,14 +484,9 @@ const TOURS: Record<string, Def> = {
   'cal-color': {
     title: 'Dar color a una casilla',
     steps: [
-      toLocalCalendar,
       { el: 'cal-editar', go: '/calendario', say: 'Pulsa el día que quieres pintar.' },
       { say: 'En «Color de la casilla», elige el color. El círculo tachado lo quita.', next: true },
     ],
-  },
-  'gcal-vincular': {
-    title: 'Vincular Google Calendar',
-    steps: [{ el: 'cal-google', go: '/calendario', say: 'Pulsa «Vincular cuenta» y entra con tu cuenta de Google.' }],
   },
   'gmail-usar': { title: 'Gmail', steps: [{ el: 'nav-gmail', say: 'Pulsa «Gmail»: tu correo, dentro de Frame.' }] },
   'classroom-usar': { title: 'Classroom', steps: [{ el: 'nav-classroom', say: 'Pulsa «Classroom»: tus clases, dentro de Frame.' }] },
@@ -654,41 +643,44 @@ const TOURS: Record<string, Def> = {
     title: 'Información de la app',
     steps: [toSettings, { el: 'doc-info', go: '/settings', say: 'Al final: información, términos y cómo reportar un error.', next: true }],
   },
-  // Informes: desde la 1.6.2, en un recuadro que abre la barra superior (sin
-  // `go`: el botón está en todas las interfaces). Sus marcas solo existen con
-  // el recuadro abierto.
+  // Informes: desde la 1.6.3, en Ajustes (recuadro «Informes»).
   'informes-centro': {
-    title: 'El centro de informes',
-    steps: [toReports, { el: 'informes', say: 'Aquí generas tus informes: general, rendimiento, pendientes y hábitos.', next: true }],
+    title: 'Los informes',
+    steps: [
+      toReports,
+      { el: 'informes-tipos', say: 'Elige el informe, el periodo y cuál.', next: true },
+      { el: 'informe-vista', say: 'Así saldrá, página por página.', next: true },
+    ],
   },
   'informe-pdf': {
     title: 'Guardar un informe',
     steps: [
       toReports,
-      { el: 'informes-tipos', say: 'Elige el informe.', next: true },
       { el: 'informe-pdf', say: '«PDF» lo imprime o guarda como PDF; «Word» lo deja editable.', next: true },
     ],
   },
-  'informe-general': {
-    title: 'Informe general',
-    steps: [toReports, { el: 'informes', say: 'Pestaña «General»: elige denso o síntesis y pulsa PDF o Word.', next: true }],
-  },
   'informe-rendimiento': {
     title: 'Informe de rendimiento',
-    steps: [toReports, { el: 'informes-tipos', say: 'Elige «Rendimiento», el periodo, y pulsa PDF o Word.', next: true }],
+    steps: [
+      toReports,
+      { el: 'informe-tipo', say: 'Elige «Rendimiento».', next: true },
+      { el: 'informe-periodo', say: 'Semanal, mensual o anual.', next: true },
+      { el: 'informe-cual', say: 'Y cuál: esta semana, la anterior…', next: true },
+      { el: 'informe-resumen', say: 'Sus cifras principales; debajo, la vista previa.', next: true },
+    ],
   },
   'informe-pendientes': {
     title: 'Informe de pendientes',
-    steps: [toReports, { el: 'informes-tipos', say: 'Elige «Pendientes» y pulsa PDF o Word.', next: true }],
-  },
-  'informe-habitos': {
-    title: 'Informe de hábitos',
-    steps: [toReports, { el: 'informes-tipos', say: 'Elige «Hábitos», el periodo, y pulsa PDF o Word.', next: true }],
+    steps: [
+      toReports,
+      { el: 'informe-tipo', say: 'Elige «Pendientes».', next: true },
+      { el: 'informe-cual', say: 'El periodo: también puedes mirar lo que vence más adelante.', next: true },
+    ],
   },
 
   'informe-no-abre': {
     title: 'Dónde queda el informe',
-    steps: [toReports, { el: 'informes', say: 'El Word va a Descargas; el PDF se guarda desde el diálogo de impresión, donde eliges la carpeta.', next: true }],
+    steps: [toReports, { el: 'informe-pdf', say: 'El Word va a Descargas; el PDF se guarda desde el diálogo de impresión, donde eliges la carpeta.', next: true }],
   },
   'clima-no-carga': {
     title: 'Si el clima no carga',

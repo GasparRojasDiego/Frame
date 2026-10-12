@@ -120,12 +120,13 @@ export default function QuickCreateButton() {
     setOpen(false);
   };
 
-  // Cada opción es su foto entera. Un velo blanco la funde hacia el lado del
-  // texto —abajo en «Tarea», arriba en «Anotación»— con un desenfoque que
-  // crece a la par, de modo que la letra se lee siempre sobre blanco y la
-  // imagen asoma limpia en el otro extremo.
+  // Cada opción es su foto entera. Un velo del color del fondo (arena en claro,
+  // grafito en oscuro) la funde hacia el lado del texto —abajo en «Tarea»,
+  // arriba en «Anotación»— con un desenfoque que crece a la par: la letra, en
+  // el color de texto del tema, se lee siempre sobre el velo y la imagen asoma
+  // limpia en el otro extremo.
   //
-  // Sin borde: el gris del borde se veía justo en el extremo blanco. La
+  // Sin borde: el gris del borde se veía justo en el extremo del velo. La
   // tarjeta se define con la sombra, y el contorno azul solo aparece al pasar
   // el ratón (capa `choiceRing`, por encima de la foto).
   const choiceCard =
@@ -210,7 +211,7 @@ export default function QuickCreateButton() {
                 <button type="button" className={choiceCard} onClick={() => setMode('task')} data-tour="crear-tarea">
                   <span aria-hidden className={choiceMedia}>
                     <img src="/quick-create/tarea.webp" alt="" className={choicePhoto} />
-                    <span className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-white via-white/85 to-transparent backdrop-blur-[3px] [mask-image:linear-gradient(to_top,black_45%,transparent)]" />
+                    <span className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-background via-background/85 to-transparent backdrop-blur-[3px] [mask-image:linear-gradient(to_top,black_45%,transparent)]" />
                   </span>
                   {/* El texto, a la derecha del icono y centrado con él. */}
                   <span className="relative mt-auto flex w-full items-center gap-3 p-4">
@@ -218,8 +219,8 @@ export default function QuickCreateButton() {
                       <ClipboardList className="h-5 w-5" />
                     </span>
                     <span className="min-w-0">
-                      <span className="block text-base font-bold leading-tight text-neutral-900">Tarea</span>
-                      <span className="block text-[11px] font-medium leading-tight text-neutral-600">
+                      <span className="block text-base font-bold leading-tight text-foreground">Tarea</span>
+                      <span className="block text-[11px] font-medium leading-tight text-muted-foreground">
                         Con fecha y asignatura
                       </span>
                     </span>
@@ -231,15 +232,15 @@ export default function QuickCreateButton() {
                 <button type="button" className={choiceCard} onClick={() => setMode('note')} data-tour="crear-anotacion">
                   <span aria-hidden className={choiceMedia}>
                     <img src="/quick-create/anotacion.webp" alt="" className={choicePhoto} />
-                    <span className="absolute inset-x-0 top-0 h-3/4 bg-gradient-to-b from-white via-white/85 to-transparent backdrop-blur-[3px] [mask-image:linear-gradient(to_bottom,black_45%,transparent)]" />
+                    <span className="absolute inset-x-0 top-0 h-3/4 bg-gradient-to-b from-background via-background/85 to-transparent backdrop-blur-[3px] [mask-image:linear-gradient(to_bottom,black_45%,transparent)]" />
                   </span>
                   <span className="relative flex w-full items-center gap-3 self-start p-4">
                     <span className={choiceIcon}>
                       <NotebookPen className="h-5 w-5" />
                     </span>
                     <span className="min-w-0">
-                      <span className="block text-base font-bold leading-tight text-neutral-900">Anotación</span>
-                      <span className="block text-[11px] font-medium leading-tight text-neutral-600">
+                      <span className="block text-base font-bold leading-tight text-foreground">Anotación</span>
+                      <span className="block text-[11px] font-medium leading-tight text-muted-foreground">
                         Texto suelto que recordar
                       </span>
                     </span>
