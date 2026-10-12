@@ -97,6 +97,7 @@ export default function CompetencyCoursesDialog({
             values={draft}
             onChange={handleChange}
             title="Colecciones"
+            max={MAX_COMPETENCY_COURSES}
             searchClassName="sm:w-56"
           />
         </div>

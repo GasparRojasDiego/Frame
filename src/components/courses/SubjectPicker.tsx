@@ -73,18 +73,22 @@ export function PickCard({
   /** Claves de imagen a probar en orden; sin ninguna válida, olas. */
   imageKeys: string[];
   selected?: boolean;
+  /** Atenuada y sin respuesta (p. ej. al llegar al máximo de marcadas). */
+  disabled?: boolean;
   onSelect: () => void;
 }) {
   return (
     <button
       type="button"
       onClick={onSelect}
+      disabled={disabled}
       aria-pressed={selected}
       className={cn(
         'relative block w-full overflow-hidden rounded-lg border text-left transition-all',
         selected
           ? 'border-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.35)]'
-          : 'border-border/70 hover:border-primary/40'
+          : 'border-border/70 hover:border-primary/40',
+        disabled && 'cursor-not-allowed opacity-45 hover:border-border/70'
       )}
     >
       <span className="relative block h-16">
@@ -331,12 +335,15 @@ export function SubjectMultiPicker({
   values,
   onChange,
   title = '¿De qué asignaturas?',
+  max,
   className,
   searchClassName,
 }: {
   values: string[];
   onChange: (courseIds: string[]) => void;
   title?: string;
+  /** Tope de marcadas: al alcanzarlo, las demás tarjetas se atenúan. */
+  max?: number;
   className?: string;
   /** Clases extra para la barra de búsqueda (p. ej. ancho o borde). */
   searchClassName?: string;
@@ -354,6 +361,7 @@ export function SubjectMultiPicker({
   const current = groups.find((group) => group.id === openSpace) ?? null;
   const hasCourses = (courses?.length ?? 0) > 0;
   const chosen = new Set(values);
+  const full = max !== undefined && values.length >= max;
 
   const toggle = (id: string) =>
     onChange(chosen.has(id) ? values.filter((value) => value !== id) : [...values, id]);
@@ -365,6 +373,7 @@ export function SubjectMultiPicker({
       title={course.name}
       imageKeys={[`courseImage_${course.id}`]}
       selected={chosen.has(course.id)}
+      disabled={full && !chosen.has(course.id)}
       onSelect={() => toggle(course.id)}
     />
   );

@@ -34,48 +34,16 @@ export const IMPORTANCE_LABEL: Record<RecordingImportance, string> = {
 
 /** Desde la 1.4.8 solo existe la grabación continua: un audio, un archivo. */
 export interface RecordingSettings {
-  /** Tope duro de la grabación, en minutos (máx. 120 = 2 h). */
+  /** Tope duro de la grabación, en minutos (de 1 min a 4 h desde la 1.6.2;
+   *  lo acota `clampLimit` de components/recordings/recording-limit.ts). */
   maxMinutes: number;
 }
-
-export const MAX_OPTIONS = [15, 30, 45, 60, 90, 120] as const;
-
-/** Tope inamovible: 2 horas. Acota la memoria retenida en blobs sin guardar. */
-export const MAX_MINUTES_CAP = 120;
 
 export const DEFAULT_RECORDING_SETTINGS: RecordingSettings = {
   maxMinutes: 120,
 };
 
 export const recordingSettingsKey = (uid: string) => `recordingSettings_${uid}`;
-
-/** Nunca confía en lo que haya en localStorage: normaliza y acota. */
-export function sanitizeRecordingSettings(raw: unknown): RecordingSettings {
-  // Lo guardado por versiones anteriores puede traer `mode` y `segmentMinutes`:
-  // se ignoran sin más.
-  const r = (raw ?? {}) as Partial<RecordingSettings>;
-
-  const maxOptions: readonly number[] = MAX_OPTIONS;
-  const max = Math.min(
-    typeof r.maxMinutes === 'number' && maxOptions.includes(r.maxMinutes)
-      ? r.maxMinutes
-      : DEFAULT_RECORDING_SETTINGS.maxMinutes,
-    MAX_MINUTES_CAP
-  );
-
-  return { maxMinutes: max };
-}
-
-export function loadRecordingSettings(uid: string | null | undefined): RecordingSettings {
-  if (typeof window === 'undefined' || !uid) return { ...DEFAULT_RECORDING_SETTINGS };
-  try {
-    return sanitizeRecordingSettings(
-      JSON.parse(window.localStorage.getItem(recordingSettingsKey(uid)) ?? '{}')
-    );
-  } catch {
-    return { ...DEFAULT_RECORDING_SETTINGS };
-  }
-}
 
 /** Sin perfil (invitado) los ajustes viven solo en memoria durante la sesión. */
 export function saveRecordingSettings(uid: string | null | undefined, settings: RecordingSettings) {
