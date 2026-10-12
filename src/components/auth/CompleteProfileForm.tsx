@@ -135,7 +135,7 @@ export default function CompleteProfileForm({ onProfileComplete }: CompleteProfi
       }
     >
       <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-3.5">
+        <CardContent className="space-y-3.5 pt-5">
           {error && (
             <Alert variant="destructive">
               <AlertTitle>Revisa tus datos</AlertTitle>

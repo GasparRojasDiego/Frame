@@ -350,7 +350,7 @@ export default function AuthForm({ linkGuest }: AuthFormProps) {
       inDialog={Boolean(linkGuest)}
     >
         {isSupabaseConfigured ? (
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-5">
             {googleButton}
             {divider}
             <Tabs value={mode} onValueChange={(v) => setMode(v as 'login' | 'register')}>
@@ -414,7 +414,7 @@ export default function AuthForm({ linkGuest }: AuthFormProps) {
             </Tabs>
           </CardContent>
         ) : (
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-5">
             <p className="text-sm text-center text-muted-foreground">
                 Esta aplicación funciona sin conexión. Todos tus datos se almacenan localmente en tu dispositivo.
             </p>
