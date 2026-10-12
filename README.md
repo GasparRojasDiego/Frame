@@ -66,7 +66,7 @@ npm run dist           # instalador NSIS
 
 ## Historia
 
-Frame nació como **Aether OS** (2026), una primera versión hecha con Electron y Next.js. Frame la reescribió desde cero sobre Tauri y Rust para que fuera más ligera, más rápida y más segura, y desde entonces ha crecido versión a versión.
+Frame nació como **[Aether OS](https://github.com/vt-asvent/Aether-OS)** (2026), una primera versión hecha con Electron y Next.js. Frame la reescribió desde cero sobre Tauri y Rust para que fuera más ligera, más rápida y más segura, y desde entonces ha crecido versión a versión.
 
 ## Licencia
 
