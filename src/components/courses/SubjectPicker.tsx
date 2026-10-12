@@ -66,6 +66,7 @@ export function PickCard({
   subtitle,
   imageKeys,
   selected,
+  disabled,
   onSelect,
 }: {
   title: string;
