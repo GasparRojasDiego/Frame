@@ -117,7 +117,6 @@ const INFORMES_MAS: Entry[] = [
     k: ['informe', 'pdf', 'word', 'descargas', 'guardar', 'abrir'],
     a: 'El de Word se guarda en tu carpeta Descargas y el aviso de «informe listo» lo abre con un clic. El PDF no se descarga: se abre el diálogo de impresión, y ahí eliges «Guardar como PDF» (o «Microsoft Print to PDF») y la carpeta.',
     tip: 'Si el Word no abre, necesitas un programa que lea .docx (Word, LibreOffice o Google Docs).',
-    go: '/settings',
     rel: ['informe-pdf', 'informes-centro'],
   },
 ];

@@ -9,7 +9,7 @@ export const GRABACIONES: Entry[] = [
     title: 'Grabar una nota de voz',
     q: ['cómo grabo un audio', 'cómo grabo la clase', 'cómo uso el micrófono', 'grabar voz', 'cómo hago una grabación', 'grabar lo que explica el profesor', 'grabar una exposición', 'grabar una reunión'],
     k: ['grabar', 'microfono', 'audio', 'voz', 'clase', 'profesor', 'explica', 'exposicion', 'reunion', 'clase'],
-    a: 'Pulsa el micrófono de la barra superior y confirma con «Iniciar grabación» (o pulsa Ctrl + Shift + F para empezar al instante). Puedes pausar, reanudar y pulsar «Terminar»; después pones nombre, descripción, importancia y asignatura, y guardas.',
+    a: 'Pulsa el micrófono de la barra superior: se abre «Grabación». Pulsa «Iniciar grabación» (o Ctrl + Shift + F para empezar al instante). Puedes pausar, reanudar y pulsar «Terminar»; después pones nombre, importancia, descripción y, si quieres, la asignatura, y guardas.',
     tip: 'Puedes cerrar el recuadro mientras grabas: la grabación sigue y el micrófono de arriba brilla para recordártelo.',
     rel: ['grabacion-detalles', 'grabacion-donde', 'grabacion-duracion'],
   },
@@ -27,15 +27,16 @@ export const GRABACIONES: Entry[] = [
     title: 'Escuchar, editar o eliminar una grabación',
     q: ['cómo escucho una grabación', 'cómo cambio el nombre de un audio', 'cómo borro una grabación', 'cómo acelero el audio', 'cambiar la asignatura de una grabación', 'cómo escucho más rápido una grabación', 'reproducir un audio grabado', 'cambiar la velocidad del audio'],
     k: ['escuchar', 'velocidad', 'renombrar', 'eliminar grabacion', 'rapido', 'lento', 'x2'],
-    a: 'Pulsa la grabación para abrir sus detalles: tiene reproductor con volumen y velocidad (hasta x2), y ahí cambias nombre, descripción, importancia y asignatura. También puedes abrir el archivo, abrir su carpeta o eliminarla.',
+    a: 'Pulsa la grabación para abrir sus detalles: tiene reproductor con volumen y velocidad (hasta x2), y ahí cambias nombre, descripción, importancia y asignatura (con las mismas tarjetas que al guardarla; sin ninguna, vuelve a Inicio). También puedes abrir el archivo, abrir su carpeta o eliminarla.',
     rel: ['grabacion-donde', 'inicio-grabaciones'],
   },
   {
     id: 'grabacion-duracion',
     title: 'Duración máxima de una grabación',
-    q: ['cuánto puedo grabar', 'la grabación se cortó sola', 'límite de tiempo de grabación', 'grabar dos horas'],
-    k: ['duracion maxima', 'limite', 'ajustes de grabacion'],
-    a: 'En el recuadro de grabación, la rueda «Ajustes de grabación» fija la duración máxima (hasta 2 horas). Al alcanzarla la grabación se detiene sola y pasa al formulario, sin perder nada.',
+    q: ['cuánto puedo grabar', 'la grabación se cortó sola', 'límite de tiempo de grabación', 'grabar dos horas', 'cómo cambio el límite de grabación', 'grabar una clase larga de varias horas'],
+    k: ['duracion maxima', 'limite', 'limite de grabacion', 'horas', 'minutos', 'cuatro horas', '4 horas', 'rueda'],
+    a: 'En el recuadro de grabación, la rueda de arriba a la izquierda («Límite de grabación») fija el tope en horas y minutos, de 1 minuto a 4 horas; escribe el número o usa − y +. Al llegar al límite la grabación se detiene sola y pasa a guardarla, sin perder nada. También puedes alargarlo mientras grabas.',
+    tip: 'Bajo el micrófono ves el límite que tienes («Máximo …»). Lo que elijas queda guardado para las próximas grabaciones.',
     rel: ['grabar-nota'],
   },
   {
@@ -55,7 +56,8 @@ export const AJUSTES: Entry[] = [
     title: 'Abrir Ajustes',
     q: ['dónde están los ajustes', 'cómo abro la configuración', 'dónde está mi perfil', 'configuración de frame'],
     k: ['ajustes', 'configuracion', 'perfil'],
-    a: 'Pulsa tu nombre al pie del menú lateral. Ajustes reúne tu perfil, el tema, tus metas, tu racha, tu expediente y el centro de informes. La rueda de arriba a la derecha abre los ajustes de cuenta.',
+    a: 'Pulsa tu nombre al pie del menú lateral. Ajustes reúne tu perfil, el tema, tus metas, tu racha y tu expediente. La rueda de arriba a la derecha abre el menú de tu cuenta.',
+    tip: 'Los informes ya no están aquí: los abre el botón de informes de la barra superior.',
     go: '/settings',
     rel: ['ajustes-cuenta-rueda', 'ajustes-metas'],
   },
@@ -125,12 +127,13 @@ export const AJUSTES: Entry[] = [
   },
   {
     id: 'ajustes-cuenta-rueda',
-    title: 'Los ajustes de cuenta (la rueda)',
-    q: ['qué hay en la rueda de ajustes', 'dónde cierro sesión', 'ajustes de cuenta'],
-    k: ['rueda', 'engranaje', 'cuenta'],
-    a: 'En Ajustes, la rueda de arriba a la derecha abre «Ajustes de cuenta»: cerrar sesión, eliminar la cuenta o vincularla si eres invitado.',
+    title: 'El menú de la cuenta (la rueda)',
+    q: ['qué hay en la rueda de ajustes', 'dónde cierro sesión', 'menú de mi cuenta', 'opciones de la cuenta'],
+    k: ['rueda', 'engranaje', 'cuenta', 'menu', 'panel de uso'],
+    a: 'En Ajustes, la rueda de arriba a la derecha abre un menú pequeño: «Vincular mi cuenta» (si eres invitado), «Cerrar sesión», «Importar de Notion» y «Eliminar cuenta».',
+    tip: 'Solo la cuenta del responsable de Frame ve además «Panel de uso».',
     go: '/settings',
-    rel: ['cerrar-sesion', 'eliminar-cuenta'],
+    rel: ['cerrar-sesion', 'ext-notion', 'eliminar-cuenta'],
   },
   {
     id: 'docs-info',
@@ -143,15 +146,17 @@ export const AJUSTES: Entry[] = [
   },
 ];
 
-// Informes PDF y Word.
+// Informes PDF y Word. Desde la 1.6.2 los abre un botón de la barra superior
+// (antes estaban en Ajustes), así que no llevan `go`: se llega desde cualquier
+// interfaz.
 export const INFORMES: Entry[] = [
   {
     id: 'informes-centro',
     title: 'El centro de informes',
-    q: ['cómo saco un informe', 'cómo genero un reporte', 'cómo descargo mi rendimiento en pdf', 'qué informes hay', 'informe para el colegio', 'un documento con mis horas para mi tutor', 'algo para entregar a mi profesor con lo que estudié', 'exportar mis estadísticas'],
-    k: ['informe', 'reporte', 'pdf', 'word', 'documento', 'tutor', 'profesor', 'entregar', 'horas', 'estadisticas'],
-    a: 'En Ajustes, el «Centro de informes» genera cuatro documentos en PDF o Word: General, Rendimiento, Pendientes y Hábitos. Elige uno, ajusta su periodo y pulsa el formato.',
-    go: '/settings',
+    q: ['cómo saco un informe', 'cómo genero un reporte', 'cómo descargo mi rendimiento en pdf', 'qué informes hay', 'informe para el colegio', 'un documento con mis horas para mi tutor', 'algo para entregar a mi profesor con lo que estudié', 'exportar mis estadísticas', 'dónde está el botón de informes'],
+    k: ['informe', 'reporte', 'pdf', 'word', 'documento', 'tutor', 'profesor', 'entregar', 'horas', 'estadisticas', 'barra superior'],
+    a: 'En la barra superior, el botón de informes (a la derecha del «+») abre el «Centro de informes». Genera cuatro documentos en PDF o Word: General, Rendimiento, Pendientes y Hábitos. Elige uno, ajusta su periodo y pulsa el formato.',
+    tip: 'Antes estaba en Ajustes; ahora se abre desde cualquier interfaz.',
     rel: ['informe-pdf', 'informe-general', 'informe-rendimiento'],
   },
   {
@@ -160,7 +165,6 @@ export const INFORMES: Entry[] = [
     q: ['cómo guardo el informe en pdf', 'dónde se guarda el informe', 'no encuentro mi informe', 'cómo abro el informe de word'],
     k: ['pdf', 'word', 'descargas', 'imprimir', 'guardar como pdf'],
     a: 'PDF: se abre el diálogo de impresión; elige «Guardar como PDF» como impresora. Word: se guarda en Descargas y el aviso «Informe generado» trae el botón «Abrir».',
-    go: '/settings',
     rel: ['informes-centro'],
   },
   {
@@ -168,8 +172,7 @@ export const INFORMES: Entry[] = [
     title: 'Informe general (denso o síntesis)',
     q: ['qué es el informe general', 'informe completo', 'diferencia entre denso y síntesis'],
     k: ['general', 'denso', 'sintesis'],
-    a: 'Reúne rendimiento, hábitos y pendientes con las métricas de hoy, la semana, el mes y el mes anterior. «Denso» lo incluye todo (cada sesión, pendiente y hábito); «Síntesis» se queda con el cuadro de mando y las figuras.',
-    go: '/settings',
+    a: 'Reúne rendimiento, hábitos y pendientes con las métricas de hoy, la semana, el mes y el mes anterior. «Denso» lo incluye todo (cada sesión, pendiente y hábito); «Síntesis» se queda con el cuadro de mando y las figuras. Está en el Centro de informes (botón de informes de la barra superior), pestaña «General».',
     rel: ['informes-centro'],
   },
   {
@@ -177,8 +180,7 @@ export const INFORMES: Entry[] = [
     title: 'Informe de rendimiento',
     q: ['informe de rendimiento', 'informe de mis horas de estudio', 'informe semanal', 'informe del mes', 'informe anual'],
     k: ['rendimiento', 'dia', 'semana', 'mes', 'ano'],
-    a: 'Un documento formal con tu estudio y tus tareas de un día, una semana, un mes o un año: tiempo por asignatura, sesiones, metas, calificaciones y tareas culminadas, pendientes o vencidas. Usa las flechas para elegir el periodo.',
-    go: '/settings',
+    a: 'Un documento formal con tu estudio y tus tareas de un día, una semana, un mes o un año: tiempo por asignatura, sesiones, metas, calificaciones y tareas culminadas, pendientes o vencidas. En el Centro de informes, pestaña «Rendimiento», usa las flechas para elegir el periodo.',
     rel: ['informes-centro'],
   },
   {
@@ -186,16 +188,14 @@ export const INFORMES: Entry[] = [
     title: 'Informe de tareas pendientes',
     q: ['informe de pendientes', 'lista de lo que tengo por entregar en pdf', 'imprimir mis tareas'],
     k: ['pendientes', 'urgencia', 'entregas'],
-    a: 'Todo lo que tienes por entregar, ordenado por urgencia y por asignatura, con su carga estimada. Está en el Centro de informes, pestaña «Pendientes».',
-    go: '/settings',
+    a: 'Todo lo que tienes por entregar, ordenado por urgencia y por asignatura, con su carga estimada. Está en el Centro de informes (botón de informes de la barra superior), pestaña «Pendientes».',
   },
   {
     id: 'informe-habitos',
     title: 'Informe de hábitos',
     q: ['informe de hábitos', 'reporte de mis rutinas', 'constancia de mis hábitos en pdf', 'cómo saco un reporte de mis hábitos', 'imprimir mis hábitos'],
     k: ['habitos', 'constancia', 'informe', 'reporte'],
-    a: 'La constancia de cada hábito en el periodo que elijas (semana, mes, trimestre o año): rachas, días cumplidos y evolución. Está en el Centro de informes, pestaña «Hábitos». Necesita al menos un hábito.',
-    go: '/settings',
+    a: 'La constancia de cada hábito en el periodo que elijas (semana, mes, trimestre o año): rachas, días cumplidos y evolución. Está en el Centro de informes (botón de informes de la barra superior), pestaña «Hábitos». Necesita al menos un hábito.',
   },
 ];
 
@@ -250,17 +250,17 @@ export const CUENTA: Entry[] = [
     title: 'Eliminar tu cuenta',
     q: ['cómo borro mi cuenta', 'cómo elimino mi cuenta', 'borrar todos mis datos', 'darme de baja'],
     k: ['eliminar cuenta', 'borrar datos', 'baja'],
-    a: 'Ajustes → rueda → «Eliminar cuenta». Escribe ELIMINAR y marca que entiendes que se pierde todo. Se borran de forma definitiva tus datos de este equipo, tu respaldo y tus métricas en la nube.',
+    a: 'Ajustes → rueda → «Eliminar cuenta» (como invitado, «Eliminar mis datos»). Escribe ELIMINAR y marca que entiendes que se pierde todo. Se borran de forma definitiva tus datos de este equipo, tu respaldo y tus métricas en la nube.',
     tip: 'Es irreversible. Lo que hubieras guardado en carpetas del equipo (tus grabaciones, tu música original) sigue donde lo dejaste.',
     go: '/settings',
   },
   {
     id: 'actualizar-frame',
     title: 'Actualizar Frame',
-    q: ['cómo actualizo frame', 'hay una versión nueva', 'cómo instalo la actualización', 'qué es el botón actualizar ahora', 'tengo la última versión'],
-    k: ['actualizar', 'version', 'update'],
-    a: 'Frame busca versiones nuevas sola. Cuando hay una, aparece «Actualizar ahora» junto a tu nombre y un aviso en la campana. Púlsalo: se descarga, se instala y Frame se reinicia sola.',
-    tip: 'Tus datos se conservan. La versión que tienes aparece al pie de Ajustes.',
+    q: ['cómo actualizo frame', 'hay una versión nueva', 'cómo instalo la actualización', 'qué es el botón actualizar ahora', 'tengo la última versión', 'cuánto pesa la actualización', 'no me deja actualizar'],
+    k: ['actualizar', 'version', 'update', 'peso', 'tiempo estimado', 'descargar'],
+    a: 'Cuando hay una versión nueva aparece un botón de descarga junto a tu nombre y un aviso en la campana. Al pulsarlo se abre un recuadro con el peso de la actualización, el tiempo estimado hasta poder usarla y sus pasos (Descargar, Verificar firma, Instalar, Reiniciar). Pulsa «Actualizar ahora» y verás el porcentaje real y el tiempo restante; al terminar, Frame se reinicia sola.',
+    tip: 'Con una sesión de estudio en marcha o música sonando no deja actualizar: termina la sesión o pausa la música. Frame nunca se actualiza sin que lo confirmes, y tus datos se conservan.',
     rel: ['instalar-frame'],
   },
   {

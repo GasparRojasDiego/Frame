@@ -65,8 +65,10 @@ export default function EchoWord({ word, className }: { word: string; className?
 
 /**
  * Cabecera de recuadro con eco: se pone dentro de `DialogContent`, con su
- * `DialogHeader` dentro. Ocupa todo el ancho del recuadro (anula su relleno)
- * y cierra con una línea fina, como las del «+» y «Nuevo hábito».
+ * `DialogHeader` dentro. El eco ocupa todo el ancho del recuadro (anula su
+ * relleno) y la cabecera cierra con una divisoria fina que deja aire a ambos
+ * lados (`mx-6`), no de borde a borde. La línea ocupa el mismo píxel que el
+ * borde inferior de antes: la altura de la cabecera no cambia.
  */
 export function EchoHeader({
   word,
@@ -78,9 +80,12 @@ export function EchoHeader({
   className?: string;
 }) {
   return (
-    <div className={cn('relative -mx-6 -mt-6 mb-2 overflow-hidden border-b px-6 pb-4 pt-6', className)}>
-      <EchoWord word={word} />
-      <div className="relative">{children}</div>
+    <div className={cn('-mx-6 -mt-6 mb-2', className)}>
+      <div className="relative overflow-hidden px-6 pb-4 pt-6">
+        <EchoWord word={word} />
+        <div className="relative">{children}</div>
+      </div>
+      <div aria-hidden className="mx-6 h-px bg-border" />
     </div>
   );
 }

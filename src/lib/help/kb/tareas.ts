@@ -32,10 +32,11 @@ export const TAREAS: Entry[] = [
   {
     id: 'tarea-crear-rapida',
     title: 'El botón «+»: tarea o anotación rápida',
-    q: ['para qué sirve el botón más', 'cómo creo una anotación', 'qué es una anotación', 'apuntar algo rápido', 'crear sin salir de donde estoy'],
-    k: ['mas', 'rapido', 'anotacion', 'quick'],
-    a: 'El «+» de la barra superior crea, desde cualquier pantalla, una «Tarea» (con fecha y asignatura) o una «Anotación» (texto suelto que recordar). La anotación se guarda en la asignatura que elijas, dentro de su clase de hoy o de la última.',
-    rel: ['tarea-crear', 'asig-clases'],
+    q: ['para qué sirve el botón más', 'cómo creo una anotación', 'qué es una anotación', 'apuntar algo rápido', 'crear sin salir de donde estoy', 'cómo vuelvo atrás en crear'],
+    k: ['mas', 'rapido', 'anotacion', 'quick', 'flecha', 'atras'],
+    a: 'El «+» de la barra superior crea, desde cualquier pantalla, una «Tarea» (con fecha y asignatura) o una «Anotación» (texto suelto que recordar). La anotación se guarda en la asignatura que elijas, dentro de su clase de hoy o de la última; sin asignatura, queda como tarjeta al final de Inicio. La flecha de arriba a la izquierda vuelve a elegir entre «Tarea» y «Anotación».',
+    tip: 'Ctrl + Enter guarda la anotación.',
+    rel: ['tarea-crear', 'anotaciones-sueltas', 'asig-clases'],
   },
   {
     id: 'tarea-editar',

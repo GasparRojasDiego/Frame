@@ -1,7 +1,7 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { getSupabase } from '@/lib/supabase/client';
 import { CLOUD_APPLIED_EVENT, pushToCloud } from '@/lib/supabase/sync';
-import { GLOBAL_KEYS, SCOPED_KEYS, isApplyingRemote } from '@/lib/storage-snapshot';
+import { SCOPED_KEYS, isApplyingRemote } from '@/lib/storage-snapshot';
 
 // ============================================================
 // Sincronización en vivo entre dispositivos (laptop ↔ celular ↔ tablet).
@@ -72,7 +72,7 @@ export function startLiveSync(uid: string): () => void {
   };
 
   // --- 1. Cambios locales: se vigila el propio almacenamiento ---
-  const watched = new Set<string>([...SCOPED_KEYS.map((key) => `${key}_${uid}`), ...GLOBAL_KEYS]);
+  const watched = new Set<string>(SCOPED_KEYS.map((key) => `${key}_${uid}`));
   const proto = Storage.prototype;
   const originalSet = proto.setItem;
   const originalRemove = proto.removeItem;

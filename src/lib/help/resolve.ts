@@ -3,8 +3,9 @@ import { answer, type HelpEntry } from '@/lib/help/search';
 import type { ExtensionId } from '@/lib/extensions/registry';
 
 // ============================================================
-// Quién responde a una pregunta de la barra de Inicio:
-//   1. «/notion» → abre el importador (si la extensión está añadida).
+// Quién responde a una pregunta de la barra de la Ayuda:
+//   1. «/notion» → abre el importador de Notion (viene incluido: desde la
+//      1.6.2 no hay extensiones que añadir).
 //   2. La guía de Frame (banco de respuestas).
 //   3. Si no, «solo respondo dudas sobre Frame».
 // ============================================================
@@ -15,20 +16,14 @@ export type Resolved =
   | { kind: 'action'; question: string; action: 'open-notion'; text: string };
 
 export interface ResolveContext {
-  installed: ExtensionId[];
+  /** Ya no decide nada (Notion siempre está); se acepta para no romper a quien aún lo pasa. */
+  installed?: ExtensionId[];
   starters: HelpEntry[];
 }
 
 export function resolveQuestion(question: string, ctx: ResolveContext): Resolved {
   if (/^\s*\/notion\b/i.test(question)) {
-    return ctx.installed.includes('notion')
-      ? { kind: 'action', question, action: 'open-notion', text: 'Importador de Notion abierto.' }
-      : {
-          kind: 'text',
-          question,
-          text: 'Para eso hace falta la extensión «Notion». Añádela con el botón «+» de esta barra y vuelve a preguntar.',
-          options: ctx.starters,
-        };
+    return { kind: 'action', question, action: 'open-notion', text: 'Importador de Notion abierto.' };
   }
 
   const reply = answer(helpIndex(), question);

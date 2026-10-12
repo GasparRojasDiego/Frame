@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { getUpdateState, installPendingUpdate, subscribeUpdate } from '@/lib/updater';
+import { getUpdateState, openUpdateDialog, subscribeUpdate } from '@/lib/updater';
 import { useCourse } from '@/context/CourseContext';
 import { useRouter } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
@@ -97,12 +97,14 @@ export default function NotificationCenter() {
     }
 
     // Versión nueva publicada: va la PRIMERA, por delante de las tareas.
+    // Pulsarla no instala: abre el recuadro de actualización, que es donde se
+    // ve el peso, el tiempo estimado y se confirma.
     if (update.version) {
       items.push({
         id: `actualizacion-${update.version}`,
         kind: 'actualizacion',
         title: `Frame ${update.version} disponible`,
-        detail: 'Pulsa para instalarla; la app se reinicia sola',
+        detail: 'Pulsa para ver el peso y el tiempo estimado',
       });
     }
 
@@ -186,7 +188,7 @@ export default function NotificationCenter() {
         return;
       }
       if (n.kind === 'actualizacion') {
-        void installPendingUpdate();
+        openUpdateDialog();
         return;
       }
       router.push(`/tareas?highlightTaskId=${n.taskId}`, { scroll: false });
@@ -282,7 +284,8 @@ export default function NotificationCenter() {
             </Button>
           </div>
         </div>
-        <Separator />
+        {/* Divisoria con aire a ambos lados, no de borde a borde. */}
+        <Separator className="mx-3 w-auto" />
 
         {notifications.length === 0 ? (
           <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">

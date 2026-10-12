@@ -94,6 +94,7 @@ export const VARIANTES: Record<string, string[]> = {
   ],
   'inicio-proxima-tarea': [
     'qué tarea me toca', 'próxima entrega', 'la tarea más cercana', 'qué tengo que entregar pronto', 'próxima tarea',
+    'cuántos días faltan para mi siguiente entrega', 'casilla de arriba a la derecha en rendimiento',
   ],
   'semana-en-datos': [
     'resumen de mi semana', 'estadísticas de la semana', 'ritmo de estudio', 'constancia de la semana', 'cómo me fue esta semana',
@@ -105,6 +106,7 @@ export const VARIANTES: Record<string, string[]> = {
   ],
   'matriz-elegir': [
     'cambiar las materias del radar', 'qué asignaturas aparecen en la matriz', 'quitar un curso del radar', 'elegir asignaturas del gráfico',
+    'lápiz de nivel por asignatura', 'configurar la matriz de competencias', 'marcar las asignaturas del radar',
   ],
   'inicio-sin-asignatura': [
     'tareas sin asignatura', 'colocar una tarea en una asignatura', 'tareas que no tienen curso', 'qué es sin asignatura en inicio',
@@ -113,14 +115,19 @@ export const VARIANTES: Record<string, string[]> = {
   'inicio-grabaciones': [
     'grabaciones en la pantalla de inicio', 'notas de voz en inicio', 'las grabaciones de abajo de inicio',
   ],
+  'anotaciones-sueltas': [
+    'anotaciones sin asignatura', 'anotaciones al final de inicio', 'colocar una anotación en una asignatura',
+    'la anotación que apunté sin curso', 'borrar una anotación suelta', 'tarjetas de anotaciones en inicio',
+  ],
 
   // ---------------- Barra superior ----------------
   'barra-superior': [
     'qué hay arriba en la barra', 'botones de arriba', 'la barra de la parte superior', 'iconos de arriba a la derecha',
+    'iconos de arriba a la izquierda',
   ],
   'frase-personal': [
-    'cambiar el texto de arriba', 'escribir una frase en la barra', 'poner una frase motivacional', 'editar la frase', 'borrar la frase de arriba',
-    'qué es escribe aquí tu frase',
+    'qué dice el texto de arriba', 'por qué cambia la frase de la barra', 'frases con mis datos', 'el texto del centro cambia solo',
+    'detener la frase de arriba', 'mensaje de la barra superior', 'de dónde sale la frase de arriba',
   ],
   notificaciones: [
     'dónde veo las notificaciones', 'qué es la campana', 'centro de notificaciones', 'mis avisos de frame', 'notificaciones', 'alertas de la app',
@@ -131,12 +138,12 @@ export const VARIANTES: Record<string, string[]> = {
   ],
   'tarea-crear-rapida': [
     'crear rápido', 'botón más de la barra superior', 'apuntar algo rápido', 'anotación rápida', 'crear tarea desde cualquier pantalla',
-    'el más de arriba a la izquierda',
+    'el más de arriba a la izquierda', 'volver a elegir entre tarea y anotación',
   ],
 
   // ---------------- Enfoque ----------------
   'enfoque-intro': [
-    'qué es enfoque', 'para qué sirve enfoque', 'la pantalla de estudio', 'centro de enfoque', 'interfaz de enfoque',
+    'qué es enfoque', 'para qué sirve enfoque', 'la pantalla de estudio', 'pantalla del temporizador', 'interfaz de enfoque',
   ],
   'enfoque-iniciar': [
     'cómo inicio el temporizador', 'quiero ponerme a estudiar', 'iniciar una sesión', 'comenzar el pomodoro', 'cómo estudio con frame',
@@ -171,6 +178,11 @@ export const VARIANTES: Record<string, string[]> = {
   ],
   'enfoque-anotar': [
     'anotar avance', 'tomar notas en la sesión', 'escribir lo que hice durante la sesión', 'notas de la sesión',
+    'enfoque opcional al anotar', 'anotar un avance de una tarea',
+  ],
+  'anotacion-formato': [
+    'poner negrita', 'hacer una lista con viñetas', 'subrayar en la anotación', 'barra de formato de las notas',
+    'escribir en cursiva', 'formato tipo word en estudio',
   ],
   'vista-flotante': [
     'reloj flotante', 'temporizador encima de otras ventanas', 'ver el tiempo mientras uso otro programa', 'mini temporizador',
@@ -179,10 +191,11 @@ export const VARIANTES: Record<string, string[]> = {
   'enfoque-hoy': [
     'tiempo estudiado hoy', 'métricas de hoy', 'cuánto llevo estudiando', 'estudio de hoy por asignatura', 'resumen de hoy',
     'cuántos minutos estudié hoy', 'tiempo de estudio de hoy', 'horas estudiadas hoy',
+    'tarjetas de mis sesiones de hoy', 'ver el detalle de una sesión',
   ],
   'enfoque-corregir': [
     'corregir una sesión', 'cambiar la duración de una sesión', 'borrar una sesión de estudio', 'editar una sesión de otro día',
-    'me equivoqué de asignatura en una sesión',
+    'me equivoqué de asignatura en una sesión', 'lápiz de la tarjeta de la sesión',
   ],
   'nota-diaria': [
     'cómo me ponen la nota', 'qué es la calificación del día', 'cómo saco a', 'por qué saqué c', 'qué significa ad a b c',
@@ -310,7 +323,7 @@ export const VARIANTES: Record<string, string[]> = {
   ],
   'asig-crear': [
     'crear una asignatura', 'añadir un curso', 'nueva materia', 'agregar asignatura', 'poner mis cursos', 'asignaturas del coar',
-    'registrar mis materias',
+    'registrar mis materias', 'áreas del currículo nacional',
   ],
   'asig-coleccion': [
     'crear una colección', 'agrupar asignaturas', 'juntar varias materias', 'colección de cursos', 'organizar mis asignaturas en grupos',
@@ -365,6 +378,17 @@ export const VARIANTES: Record<string, string[]> = {
   'cal-editar': [
     'editar un evento', 'eliminar un evento', 'cambiar un evento', 'mover un evento a otro día',
   ],
+  'cal-varios-dias': [
+    'seleccionar varios días', 'arrastrar sobre el calendario', 'elegir un rango de días', 'vaciar varios días del calendario',
+    'mayús clic en el calendario',
+  ],
+  'cal-recordatorio': [
+    'recordatorio del calendario', 'aviso de un evento', 'evento con hora y aviso', 'que me avise el día antes de un evento',
+  ],
+  'cal-color': [
+    'pintar una casilla', 'color de la casilla', 'quitar el color de una casilla', 'teñir días del calendario',
+    'pintar las vacaciones de un color',
+  ],
   'cal-dia-lleno': [
     'más eventos en un día', 'ver todos los eventos de un día', 'el día dice más',
   ],
@@ -405,7 +429,7 @@ export const VARIANTES: Record<string, string[]> = {
     'canciones favoritas', 'marcar como favorita', 'me gusta en una canción', 'mis favoritos', 'corazón de la canción',
   ],
   'musica-buscar': [
-    'buscar canciones', 'buscador de música', 'encontrar una canción en mi biblioteca',
+    'buscar canciones', 'buscador de música', 'encontrar una canción en mi biblioteca', 'número de canciones de mi biblioteca',
   ],
   'musica-eliminar': [
     'borrar una canción', 'quitar música', 'eliminar canciones de la biblioteca',
@@ -448,7 +472,8 @@ export const VARIANTES: Record<string, string[]> = {
     'escuchar una grabación', 'renombrar una grabación', 'eliminar una grabación', 'velocidad de la grabación', 'editar grabación',
   ],
   'grabacion-duracion': [
-    'duración máxima de la grabación', 'cuánto graba frame', 'límite de tiempo de grabación', 'grabación larga',
+    'duración máxima de la grabación', 'cuánto graba frame', 'grabación larga', 'grabar cuatro horas',
+    'cambiar el máximo de la grabación', 'rueda de la grabación',
   ],
   'grabacion-microfono': [
     'micrófono no disponible', 'no graba el micrófono', 'permiso del micrófono', 'frame no escucha mi voz',
@@ -481,7 +506,7 @@ export const VARIANTES: Record<string, string[]> = {
     'tu expediente', 'estadísticas de mi perfil', 'mi historial de estudio', 'dónde va mi tiempo',
   ],
   'ajustes-cuenta-rueda': [
-    'rueda de cuenta', 'ajustes de la cuenta', 'engranaje de cuenta', 'opciones de mi cuenta',
+    'rueda de cuenta', 'ajustes de la cuenta', 'engranaje de cuenta', 'opciones de mi cuenta', 'menú de la rueda de ajustes',
   ],
   'docs-info': [
     'información de la app', 'qué versión tengo', 'términos de servicio', 'privacidad', 'novedades de la versión', 'reportar un error',
@@ -491,6 +516,7 @@ export const VARIANTES: Record<string, string[]> = {
   // ---------------- Informes ----------------
   'informes-centro': [
     'centro de informes', 'generar un informe', 'informes de frame', 'reporte de estudio', 'documento con mis estadísticas',
+    'dónde quedaron los informes', 'botón de informes de arriba',
   ],
   'informe-pdf': [
     'informe en pdf', 'informe en word', 'imprimir un informe', 'guardar el reporte', 'exportar informe',
@@ -534,6 +560,7 @@ export const VARIANTES: Record<string, string[]> = {
   ],
   'actualizar-frame': [
     'actualizar frame', 'nueva versión', 'cómo instalo la actualización', 'frame está desactualizada', 'buscar actualizaciones',
+    'cuánto tarda la actualización', 'peso de la nueva versión',
   ],
   'instalar-frame': [
     'instalar frame', 'descargar frame', 'frame en el celular', 'frame en otra computadora', 'apk de frame', 'frame para tablet',
@@ -587,16 +614,23 @@ export const VARIANTES: Record<string, string[]> = {
   ],
 
   // ---------------- Extensiones y conversaciones ----------------
+  // (1.6.2) El «+» de la barra de la Ayuda ya no existe: estas formas siguen
+  // aquí porque quien lo busca recibe la respuesta de dónde quedó Notion.
   'ext-que-son': [
-    'para qué son las extensiones', 'botón más de la barra de ayuda', 'añadir extensiones', 'extensiones de frame',
-    'el más de la barra de ayuda', 'botón más junto a la pregunta', 'para qué es el botón más de la ayuda',
+    // «de la Ayuda» con artículo: así «Ayuda» cuenta como la pantalla y no se
+    // pierde como palabra vacía (si no, sería «el más de la barra» a secas).
+    'para qué son las extensiones', 'botón más de la barra de la ayuda', 'añadir extensiones',
+    'para qué es el botón más de la ayuda',
+    'el más que tenía la barra de abajo', 'ya no está el más de la ayuda',
   ],
   'ext-notion': [
     'importar desde notion', 'pasar mis tareas de notion', 'notion a frame', 'traer fechas de notion',
+    'botón importar de notion', 'importar de notion desde ajustes',
   ],
   'ayuda-conversaciones': [
     'conversaciones guardadas', 'ver mis preguntas anteriores', 'historial de preguntas', 'borrar mis conversaciones',
-    'dónde quedan mis respuestas anteriores', 'lo que pregunté antes',
+    'dónde quedan mis respuestas anteriores', 'lo que pregunté antes', 'seguir la conversación con la ayuda',
+    'una conversación por cada vez que abro frame',
   ],
   'sugerencias-enviar': [
     'enviar una sugerencia', 'reportar un error', 'contactar a frame', 'correo de soporte', 'proponer una mejora', 'encontré un fallo',

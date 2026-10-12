@@ -84,10 +84,12 @@ export const HELP_AREAS: Record<HelpAreaId, { label: string; route?: string }> =
   musica: { label: 'Música', route: '/music' },
   grabaciones: { label: 'Grabaciones' },
   ajustes: { label: 'Ajustes', route: '/settings' },
-  informes: { label: 'Informes', route: '/settings' },
+  // 1.6.2: los informes se abren desde la barra superior (sin ruta propia) y
+  // Notion, la única extensión, desde Ajustes.
+  informes: { label: 'Informes' },
   cuenta: { label: 'Cuenta y nube' },
   problemas: { label: 'Problemas' },
-  extensiones: { label: 'Extensiones', route: '/' },
+  extensiones: { label: 'Extensiones' },
   sugerencias: { label: 'Sugerencias' },
 };
 
@@ -214,7 +216,9 @@ const SYNONYM_GROUPS: string[][] = [
   ['evento', 'feriado', 'cumpleanos'],
   ['examen', 'evaluacion', 'prueba', 'practica calificada'],
   ['pantalla', 'interfaz', 'seccion', 'pestana', 'vista'],
-  ['menu', 'barra lateral', 'sidebar', 'lateral'],
+  // Sin «barra lateral»: cada palabra se une por separado, y «barra» sola
+  // (la superior, la de la Ayuda, la de búsqueda) no es el menú (1.6.2).
+  ['menu', 'sidebar', 'lateral'],
 ];
 
 const SYNONYMS = new Map<string, string>();
@@ -239,10 +243,15 @@ const PHRASES: [RegExp, string][] = [
   [/\b(la|esta|pantalla de|interfaz de|boton de|seccion de|abrir|abro|abre|cerrar|cierro|cierra|salir de|salgo de|entrar a|entro a|quitar) (la )?ayuda\b/g, ' $1 pantallaayuda '],
   // «entré sin cuenta»: es el modo invitado.
   [/\bsin (cuenta|registr\w*|iniciar sesion|correo)\b/g, ' invitado '],
+  // «sin asignatura» es un sitio (lo que espera en Inicio), no una asignatura:
+  // sin esto, «sin» se pierde y queda igual que «apuntes de una asignatura» (1.6.2).
+  [/\bsin (asignatura|curso|materia|asignar)s?\b/g, ' sinasignatura '],
   // «el más de la barra», «el botón +»: el botón «+» (el signo se pierde al normalizar).
   [/\b(el|del|al|boton|signo|icono|simbolo) (mas|plus)\b/g, ' $1 botonmas '],
   // «acabo de borrar»: es «recién», no «terminar».
   [/\bacab(o|as|a|amos|an) de\b/g, ' recien '],
+  // «dónde fue a parar»: es «dónde quedó», no «pausar» (1.6.2).
+  [/\b(fue|fueron|va|van|ira|iran|habra) a parar\b/g, ' quedo '],
   // «no es de esa canción», «no coincide»: está equivocada.
   [/\bno (es|son|coincide|coinciden|corresponde|corresponden)\b/g, ' equivocada '],
   // «se salta sola», «se cierran solas las canciones»: una avería.

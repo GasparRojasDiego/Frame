@@ -1,77 +1,37 @@
 import { useSyncExternalStore } from 'react';
 
 // ============================================================
-// Extensiones de Frame: se añaden desde el «+» de la barra de ayuda de Inicio
-// y aparecen como etiqueta dentro de la barra. Hoy hay una, Notion, que abre
-// el importador de tareas y fechas (atajo: /notion). Qué extensiones hay
-// añadidas se recuerda en este dispositivo.
+// Extensiones de Frame. Hoy hay una, Notion: el importador de tareas y fechas.
+// Ya no se añade ni se quita (el «+» de la barra de la Ayuda se retiró en la
+// 1.6.2): lo abren el botón «Importar de Notion» de Ajustes (menú de la
+// rueda, con su propio recuadro) y el atajo /notion de la Ayuda, que es lo
+// único que pasa por aquí. Este módulo guarda solo si el importador global
+// (el que monta el layout) está abierto.
 // ============================================================
 
 export type ExtensionId = 'notion';
 
-export interface ExtensionInfo {
-  id: ExtensionId;
-  name: string;
-  /** Una línea: qué hace. */
-  tagline: string;
-  /** Qué ocurre al añadirla. */
-  detail: string;
-  /** Atajo con barra. */
-  slash: string;
+// Hasta la 1.6.1 se recordaba aquí qué extensiones había «añadidas». Ya no
+// significa nada: se borra lo que quedara guardado. No viaja en los respaldos.
+try {
+  if (typeof window !== 'undefined') window.localStorage.removeItem('frameExtensions');
+} catch {
+  /* almacenamiento vetado: no hay nada que limpiar */
 }
 
-export const EXTENSIONS: ExtensionInfo[] = [
-  {
-    id: 'notion',
-    name: 'Notion',
-    tagline: 'Importa tus tareas y fechas de Notion',
-    detail: 'Elige la exportación de tu base de datos de Notion (el .zip o el .csv) y Frame crea las tareas con sus fechas.',
-    slash: '/notion',
-  },
-];
-
-export const extensionInfo = (id: ExtensionId) => EXTENSIONS.find((e) => e.id === id)!;
-
-const STORAGE_KEY = 'frameExtensions';
 const EVENT = 'frame:extensions';
 
-function read(): ExtensionId[] {
-  try {
-    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]');
-    // Las de la 1.5.8 que ya no existen (calculadora, diccionario, traductor) se descartan.
-    return Array.isArray(raw) ? raw.filter((id): id is ExtensionId => EXTENSIONS.some((e) => e.id === id)) : [];
-  } catch {
-    return [];
-  }
-}
-
 interface Snapshot {
-  installed: ExtensionId[];
   notionOpen: boolean;
 }
 
-let snapshot: Snapshot = { installed: typeof window !== 'undefined' ? read() : [], notionOpen: false };
+let snapshot: Snapshot = { notionOpen: false };
 
-function update(next: Partial<Snapshot>) {
-  snapshot = { ...snapshot, ...next };
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot.installed));
-  } catch {
-    /* sin espacio: se pierde solo la preferencia */
-  }
-  window.dispatchEvent(new Event(EVENT));
-}
-
-export function addExtension(id: ExtensionId) {
-  update({ installed: snapshot.installed.includes(id) ? snapshot.installed : [...snapshot.installed, id], notionOpen: true });
-}
-
-export function removeExtension(id: ExtensionId) {
-  update({ installed: snapshot.installed.filter((x) => x !== id), notionOpen: false });
-}
-
+/** Abre o cierra el importador de Notion global (atajo /notion). */
 export function setNotionOpen(open: boolean) {
-  update({ notionOpen: open });
+  if (snapshot.notionOpen === open) return;
+  snapshot = { ...snapshot, notionOpen: open };
+  window.dispatchEvent(new Event(EVENT));
 }
 
 function subscribe(callback: () => void) {

@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
@@ -40,6 +40,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import SubjectPicker from '@/components/courses/SubjectPicker';
 import { useCourse } from '@/context/CourseContext';
 import { getRecordingAudio } from '@/lib/music-db';
 import { formatDuration } from '@/lib/recordings';
@@ -188,9 +189,15 @@ function RecordingDetailsDialog({
     }
     updateRecording(recording.id, updates);
     setIsSaving(false);
-    toast({ title: 'Grabación actualizada', description: `"${finalName}" se guardó correctamente.` });
+    // Dónde quedó, como al guardarla: sin asignatura no se ve en ninguna y
+    // conviene decir que está en Inicio.
+    const courseName = updates.courseId ? courses.find((c) => c.id === updates.courseId)?.name : null;
+    toast({
+      title: 'Grabación actualizada',
+      description: courseName ? `"${finalName}" quedó en ${courseName}.` : `"${finalName}" quedó en Inicio.`,
+    });
     onOpenChange(false);
-  }, [courseId, description, importance, name, onOpenChange, recording, toast, updateRecording]);
+  }, [courseId, courses, description, importance, name, onOpenChange, recording, toast, updateRecording]);
 
   const handleDelete = useCallback(() => {
     deleteRecording(recording.id);
@@ -244,7 +251,7 @@ function RecordingDetailsDialog({
         </DropdownMenu>
 
         {/* --- Cabecera: qué audio es, de un vistazo --- */}
-        <DialogHeader className="items-center space-y-0 border-b border-border/60 bg-gradient-to-b from-primary/10 via-primary/[0.04] to-transparent px-8 pb-5 pt-10 text-center">
+        <DialogHeader className="items-center space-y-0 bg-gradient-to-b from-primary/10 via-primary/[0.04] to-transparent px-8 pb-5 pt-10 text-center">
           <DialogTitle className="sr-only">Detalles de la grabación</DialogTitle>
           <div
             className={cn(
@@ -272,6 +279,8 @@ function RecordingDetailsDialog({
             <span className="font-semibold tabular-nums text-foreground">{formatDuration(sliderMax)}</span>
           </p>
         </DialogHeader>
+        {/* Divisoria con aire a ambos lados, no de borde a borde. */}
+        <div aria-hidden className="mx-6 h-px bg-border/60" />
 
         <div className="space-y-5 px-6 py-5">
           {/* --- Reproductor --- */}
@@ -367,53 +376,44 @@ function RecordingDetailsDialog({
             />
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Importancia
-              </Label>
-              <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="Importancia">
-                {(['baja', 'media', 'alta'] as const).map((level) => (
-                  <button
-                    key={level}
-                    type="button"
-                    role="radio"
-                    aria-checked={importance === level}
-                    onClick={() => setImportance(level)}
-                    className={cn(
-                      'h-9 rounded-md border text-xs font-semibold transition-colors',
-                      importance === level
-                        ? IMPORTANCE_STYLE[level]
-                        : 'border-border/70 text-muted-foreground hover:border-primary/40 hover:text-foreground'
-                    )}
-                  >
-                    {IMPORTANCE_LABEL[level]}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Asignatura
-              </Label>
-              <Select value={courseId} onValueChange={setCourseId}>
-                <SelectTrigger className="h-9 bg-card text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sin asignatura (Inicio)</SelectItem>
-                  {courses.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="space-y-1.5">
+            <Label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Importancia
+            </Label>
+            <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="Importancia">
+              {(['baja', 'media', 'alta'] as const).map((level) => (
+                <button
+                  key={level}
+                  type="button"
+                  role="radio"
+                  aria-checked={importance === level}
+                  onClick={() => setImportance(level)}
+                  className={cn(
+                    'h-9 rounded-md border text-xs font-semibold transition-colors',
+                    importance === level
+                      ? IMPORTANCE_STYLE[level]
+                      : 'border-border/70 text-muted-foreground hover:border-primary/40 hover:text-foreground'
+                  )}
+                >
+                  {IMPORTANCE_LABEL[level]}
+                </button>
+              ))}
             </div>
           </div>
+
+          {/* Asignatura: las mismas tarjetas (colecciones → asignaturas) y el
+              mismo gesto que al guardarla en RecordingDialog. Sin tarjeta
+              «Sin asignatura»: pulsar otra vez la marcada la desmarca, y sin
+              ninguna la grabación vuelve a Inicio. */}
+          <SubjectPicker
+            value={courseId === 'none' ? null : courseId}
+            onChange={(id) => setCourseId((prev) => (id === null || id === prev ? 'none' : id))}
+          />
         </div>
 
-        <div className="border-t border-border/60 px-6 py-4">
+        {/* Divisoria con aire a ambos lados. */}
+        <div aria-hidden className="mx-6 h-px bg-border/60" />
+        <div className="px-6 py-4">
           <Button className="w-full" onClick={() => void handleSave()} disabled={isSaving}>
             {isSaving ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
             Guardar cambios
@@ -429,7 +429,7 @@ function RecordingDetailsDialog({
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogCancel className={buttonVariants({ variant: 'fantasmaRojo' })}>Cancelar</AlertDialogCancel>
               <AlertDialogAction
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 onClick={handleDelete}

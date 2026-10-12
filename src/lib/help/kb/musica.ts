@@ -18,7 +18,7 @@ export const MUSICA: Entry[] = [
     title: 'Añadir tus canciones («Importar»)',
     q: ['cómo agrego canciones', 'cómo pongo música en frame', 'cómo importo mi música', 'cómo subo mis canciones', 'añadir música', 'cómo agrego una carpeta de música', 'cómo descargo una canción', 'cómo paso mi música de spotify'],
     k: ['importar', 'anadir cancion', 'carpeta', 'archivo', 'mp3', 'descargar'],
-    a: 'En Música, pulsa «Importar» y elige «Canciones…» (una o varias) o «Una carpeta…» (con todas sus subcarpetas). Se abre el explorador de archivos de Windows: elige lo tuyo y confirma. Cada canción se copia dentro de Frame con su título, artista, carátula y letra, si el archivo las trae.',
+    a: 'En Música, pulsa «Importar» y elige «Canciones…» (una o varias, como tus MP3 sueltos) o «Una carpeta…» (con todas sus subcarpetas). Se abre el explorador de archivos de Windows: elige lo tuyo; Frame te dice cuántas canciones nuevas hay y cuánto pesan, y pulsas «Importar». Cada canción se copia dentro de Frame con su título, artista, carátula y letra, si el archivo las trae.',
     tip: 'Frame no descarga música de internet: reproduce la tuya. Acepta MP3, M4A, AAC, OGG, OPUS, FLAC, WAV y WEBM, y un .lrc con el mismo nombre que la canción se usa como su letra sincronizada. Lo que ya tenías no se duplica.',
     go: '/music',
     rel: ['musica-letras', 'musica-celular'],
@@ -53,9 +53,9 @@ export const MUSICA: Entry[] = [
   {
     id: 'musica-buscar',
     title: 'Buscar en tu biblioteca',
-    q: ['cómo busco una canción en mi biblioteca', 'no encuentro una canción', 'buscar por artista'],
-    k: ['buscar', 'biblioteca', 'artista'],
-    a: 'Escribe en el buscador de Música («canciones o artistas…»). Ignora tildes y el orden de las palabras. Con muchas canciones, la biblioteca se reparte en carpetas de 100: usa las flechas para pasar de una a otra. Si vuelves a Música sin cerrar Frame, sigues donde te quedaste; al abrir Frame de nuevo, empieza arriba de la primera.',
+    q: ['cómo busco una canción en mi biblioteca', 'no encuentro una canción', 'buscar por artista', 'cuántas canciones tengo'],
+    k: ['buscar', 'biblioteca', 'artista', 'lupa', 'contador', 'cuantas canciones'],
+    a: 'Escribe en la barra de la lupa de Música («Buscar canciones o artistas…»); dentro, a la derecha, está el número de canciones, que baja al buscar. Ignora tildes y el orden de las palabras. Con muchas canciones, la biblioteca se reparte en carpetas de 100: usa las flechas para pasar de una a otra. Si vuelves a Música sin cerrar Frame, sigues donde te quedaste; al abrir Frame de nuevo, empieza arriba de la primera.',
     go: '/music',
   },
   {

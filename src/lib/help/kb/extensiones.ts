@@ -2,42 +2,30 @@ import type { HelpEntry } from '../search';
 
 type Entry = Omit<HelpEntry, 'area'>;
 
-// Extensiones de la barra de ayuda y sus conversaciones.
+// Extensiones. Desde la 1.6.2 no se añaden con el «+» de la barra de la
+// Ayuda (ya no existe): Notion, la única, viene incluida y se abre desde
+// Ajustes → rueda → «Importar de Notion» o con /notion. Las conversaciones
+// con la Ayuda pasaron a basico.ts, junto a la propia Ayuda.
 export const EXTENSIONES: Entry[] = [
   {
     id: 'ext-que-son',
-    title: 'Qué son las extensiones',
-    q: ['qué son las extensiones', 'para qué sirve el más de la barra', 'cómo añado una extensión', 'cómo quito una extensión', 'extensiones de frame'],
-    k: ['extensiones', 'mas', 'notion'],
-    a: 'Son herramientas que se suman a la barra de la Ayuda (el botón redondo de abajo a la derecha). Hoy hay una: Notion, para importar tus tareas y fechas.',
-    steps: [
-      'Abre la Ayuda con el botón redondo de abajo a la derecha y pulsa el «+» de la barra, a la izquierda del botón de enviar.',
-      'Pulsa «Añadir» en la que quieras.',
-      'Aparece como etiqueta dentro de la barra; para quitarla, vuelve al «+» y pulsa «Añadida».',
-    ],
-    tip: 'Atajo: /notion.',
-    go: '/ayuda',
-    rel: ['ext-notion'],
+    title: 'Las extensiones (Notion)',
+    q: ['qué son las extensiones', 'dónde quedó el más de la barra de la ayuda', 'cómo añado una extensión', 'extensiones de frame'],
+    k: ['extensiones', 'extension', 'notion', 'mas'],
+    a: 'Ya no hay extensiones que añadir: la única, Notion, viene incluida. Su importador se abre desde Ajustes → rueda → «Importar de Notion», o escribiendo /notion en la barra de la Ayuda.',
+    tip: 'El «+» que tenía la barra de la Ayuda (la del botón redondo de abajo a la derecha) para añadirlas ya no existe.',
+    go: '/settings',
+    rel: ['ext-notion', 'ayuda-barra'],
   },
   {
     id: 'ext-notion',
     title: 'Importar tareas y fechas de Notion',
     q: ['cómo importo mis tareas de notion', 'pasar mis tareas de notion a frame', 'importar notion', 'traer fechas de notion'],
-    k: ['notion', 'importar', 'csv', 'zip', 'exportar'],
-    a: 'Añade la extensión Notion y se abre su importador. En Notion, abre tu base de datos de tareas → ••• → Exportar → «Markdown y CSV»; elige en Frame el .zip descargado (o el .csv) y marca qué filas importar, como tareas o como fechas del calendario.',
-    tip: 'Reconoce fechas, estado, prioridad, tipo y la asignatura (si coincide con una tuya). No se conecta a tu cuenta de Notion.',
-    go: '/ayuda',
+    k: ['notion', 'importar', 'csv', 'zip', 'exportar', 'importar de notion'],
+    a: 'En Ajustes, pulsa la rueda de la cuenta y elige «Importar de Notion». En Notion, abre tu base de datos de tareas → ••• → Exportar → «Markdown y CSV»; elige en Frame el .zip descargado (o el .csv) y marca qué filas importar, como tareas o como fechas del calendario.',
+    tip: 'Reconoce fechas, estado, prioridad, tipo y la asignatura (si coincide con una tuya). No se conecta a tu cuenta de Notion. Atajo: escribe /notion en la Ayuda.',
+    go: '/settings',
     rel: ['ext-que-son', 'tarea-crear'],
-  },
-  {
-    id: 'ayuda-conversaciones',
-    title: 'Tus conversaciones con la ayuda',
-    q: ['dónde veo mis preguntas anteriores', 'historial de la ayuda', 'conversaciones anteriores', 'cómo borro mis preguntas', 'volver a ver una respuesta'],
-    k: ['conversaciones', 'historial', 'anteriores', 'preguntas'],
-    a: 'En la Ayuda, «Conversaciones» guarda cada pregunta con su respuesta: está arriba a la derecha antes de preguntar y, con una respuesta abierta, en la pestaña junto a «Respuesta». Pulsa una para volver a verla.',
-    tip: 'Se guardan solo en este equipo, en tu perfil. Puedes borrarlas una a una o todas desde la propia lista.',
-    go: '/ayuda',
-    rel: ['ayuda-barra'],
   },
 ];
 

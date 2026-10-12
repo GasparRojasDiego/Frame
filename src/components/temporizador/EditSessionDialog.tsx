@@ -183,8 +183,10 @@ export default function EditSessionDialog({
           </div>
 
           <div className="space-y-1 pt-3 text-left">
+            {/* El editor es un `contentEditable`: el `htmlFor` no lo enfoca solo. */}
             <Label
               htmlFor="edit-session-notes"
+              onClick={() => document.getElementById('edit-session-notes')?.focus()}
               className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground"
             >
               <NotebookPen className="h-3.5 w-3.5 text-primary" />

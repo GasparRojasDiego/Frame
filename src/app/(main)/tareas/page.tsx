@@ -219,7 +219,7 @@ export default function TasksPage() {
               </h1>
             </div>
             <div className="flex items-center gap-2 justify-end">
-                {/* El informe de pendientes se genera en Ajustes → Centro de informes. */}
+                {/* El informe de pendientes se genera en barra superior → Centro de informes. */}
                 <Button
                     variant={!showArchived ? 'default' : 'outline'}
                     size="icon"

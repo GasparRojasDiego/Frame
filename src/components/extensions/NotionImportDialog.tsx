@@ -25,7 +25,7 @@ import { cn } from '@/lib/utils';
 
 // ============================================================
 // Importador de Notion: tareas y fechas. Se abre desde Ajustes (menú de la
-// rueda de la cuenta, «Importar de Notion»).
+// rueda de la cuenta, «Importar de Notion») y con el atajo /notion de la Ayuda.
 // Ver lib/extensions/notion-import.ts para cómo se leen los archivos.
 // ============================================================
 
@@ -58,9 +58,10 @@ const plain = (s: string) =>
 
 /**
  * Sin props, lo abre el estado global de las extensiones (el que monta el
- * layout para el atajo /notion). Con `open`/`onOpenChange`, es un recuadro
- * propio de quien lo monta: así lo abre «Importar de Notion» del menú de la
- * cuenta en Ajustes sin depender de que la extensión siga en la Ayuda.
+ * layout para el atajo /notion, que vive en la Ayuda). Con `open`/`onOpenChange`,
+ * es un recuadro propio de quien lo monta: así lo abre «Importar de Notion»
+ * del menú de la cuenta en Ajustes. Nunca coinciden los dos: la Ayuda y
+ * Ajustes son interfaces distintas y ambos recuadros son modales.
  */
 export default function NotionImportDialog({
   open: openProp,

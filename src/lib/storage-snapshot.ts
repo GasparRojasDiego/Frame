@@ -62,8 +62,10 @@ export const SCOPED_KEYS = [
   // del archivo descargado en ESTE equipo, que en otro no existe.
 ] as const;
 
-// Claves globales (sin uid).
-export const GLOBAL_KEYS = ['headerQuote'] as const;
+// No hay claves globales (sin uid): la única, 'headerQuote' (la frase propia
+// de la barra superior), se retiró en la 1.6.2. Un respaldo antiguo que aún la
+// traiga no rompe nada: `applyLocalData` solo escribe las de SCOPED_KEYS, así
+// que la ignora.
 
 export type LocalSnapshot = Record<string, unknown>;
 
@@ -93,10 +95,6 @@ export function collectLocalData(uid: string): LocalSnapshot {
   const snapshot: LocalSnapshot = {};
   for (const key of SCOPED_KEYS) {
     const value = read(`${key}_${uid}`);
-    if (value !== undefined) snapshot[key] = value;
-  }
-  for (const key of GLOBAL_KEYS) {
-    const value = read(key);
     if (value !== undefined) snapshot[key] = value;
   }
   return snapshot;
@@ -141,11 +139,10 @@ function applyLocalDataInner(uid: string, snapshot: LocalSnapshot | null | undef
     if (!write(storageKey, value)) ok = false;
   };
 
+  // Lo que no esté en SCOPED_KEYS (p. ej. 'headerQuote' de un respaldo
+  // anterior a la 1.6.2) no se escribe: se ignora.
   for (const key of SCOPED_KEYS) {
     if (key in snapshot) put(`${key}_${uid}`, snapshot[key]);
-  }
-  for (const key of GLOBAL_KEYS) {
-    if (key in snapshot) put(key, snapshot[key]);
   }
   return { ok, changed };
 }

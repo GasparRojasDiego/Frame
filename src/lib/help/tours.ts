@@ -13,7 +13,13 @@ type Def = Omit<Tour, 'id'>;
 
 // Pasos que se repiten.
 const toSettings: TourStep = { el: 'perfil', say: 'Entra a tu perfil: el botón con tu nombre, abajo del menú.' };
-const toAccount: TourStep = { el: 'cuenta-rueda', go: '/settings', say: 'Abre los ajustes de cuenta con esta rueda.' };
+// 1.6.2: la rueda abre un menú pequeño (no un recuadro): sus botones se
+// señalan con el menú abierto.
+const toAccount: TourStep = { el: 'cuenta-rueda', go: '/settings', say: 'Abre el menú de tu cuenta con esta rueda.' };
+// 1.6.2: el Centro de informes pasó de Ajustes a un botón de la barra superior.
+const toReports: TourStep = { el: 'informes-boton', say: 'Pulsa el botón de informes de la barra superior, a la derecha del «+».' };
+// Primero, el calendario «Local» (se salta si ya está a la vista).
+const toLocalCalendar: TourStep = { el: 'cal-local', go: '/calendario', say: 'Primero, el calendario «Local».', optional: true };
 const quickTask: TourStep[] = [
   { el: 'crear-rapido', say: 'Pulsa el «+» de la barra superior: funciona desde cualquier interfaz.' },
   { el: 'crear-tarea', say: 'Elige «Tarea».' },
@@ -34,7 +40,7 @@ const TOURS: Record<string, Def> = {
     steps: [
       { el: 'menu', say: 'Este es el menú: desde aquí llegas a cada interfaz de Frame.', next: true, pose: 'saluda' },
       { el: 'nav-knowledge', say: 'Empieza por tus asignaturas: entra en «Asignaturas».' },
-      { el: 'asig-anadir', go: '/knowledge', say: 'Con «Añadir» creas cada asignatura, o eliges las del CNEB.', next: true },
+      { el: 'asig-anadir', go: '/knowledge', say: 'Con «Añadir» creas cada asignatura (o la eliges entre las áreas del CNEB).', next: true },
       { el: 'nav-temporizador', say: 'Después, «Estudio»: aquí estudias con el temporizador.' },
       { el: 'enfoque-iniciar', go: '/temporizador', say: 'Pulsas «Iniciar» para estudiar y «Finalizar» para registrar la sesión.', next: true },
       { el: 'crear-rapido', say: 'Y con este «+» apuntas una tarea desde cualquier sitio.', next: true },
@@ -64,9 +70,11 @@ const TOURS: Record<string, Def> = {
     steps: [
       { el: 'clima', go: '/', say: 'El clima de tu ciudad, por horas y por días.', next: true, pose: 'saluda' },
       { el: 'horario', go: '/', say: 'Tu horario: sube su foto y lo tienes siempre a mano.', next: true },
-      { el: 'rendimiento', go: '/', say: 'Tu rendimiento: la nota de ayer, el promedio de la semana, la racha y la próxima tarea.', next: true },
+      { el: 'rendimiento', go: '/', say: 'Tu rendimiento: la nota de ayer y el promedio de la semana; a la derecha, la próxima tarea y los días de racha.', next: true },
       { el: 'semana-datos', go: '/', say: '«Tu semana en datos»: ritmo de estudio, constancia y más.', next: true },
-      { el: 'radar', go: '/', say: 'Y la matriz de competencias por asignatura.', next: true },
+      { el: 'radar', go: '/', say: 'La matriz de competencias por asignatura.', next: true },
+      // Solo existe si guardaste alguna anotación sin asignatura: si no, se salta.
+      { el: 'anotaciones-inicio', go: '/', say: 'Y al final, las anotaciones que guardaste sin asignatura.', next: true, optional: true },
     ],
   },
   'clima-ubicacion': {
@@ -86,11 +94,18 @@ const TOURS: Record<string, Def> = {
   },
   'inicio-rendimiento': {
     title: 'Rendimiento académico',
-    steps: [{ el: 'rendimiento', go: '/', say: 'Aquí ves la nota de ayer, el promedio semanal, tus días de racha y la próxima tarea.', next: true }],
+    steps: [{ el: 'rendimiento', go: '/', say: 'A la izquierda, la nota de ayer y el promedio semanal; a la derecha, la próxima tarea arriba y tus días de racha abajo.', next: true }],
   },
   'inicio-proxima-tarea': {
     title: 'La próxima tarea',
-    steps: [{ el: 'rendimiento', go: '/', say: 'Abajo a la derecha está «Próxima tarea»: la entrega más cercana que tienes pendiente.', next: true }],
+    steps: [
+      {
+        el: 'proxima-tarea',
+        go: '/',
+        say: 'Arriba a la derecha está «Próxima tarea»: la entrega más cercana, con su avance, cuánto falta, su importancia y su dificultad. Púlsala para ir a la tarea o a su asignatura.',
+        next: true,
+      },
+    ],
   },
   'semana-en-datos': {
     title: 'Tu semana en datos',
@@ -102,7 +117,11 @@ const TOURS: Record<string, Def> = {
   },
   'matriz-elegir': {
     title: 'Elegir las asignaturas del radar',
-    steps: [{ el: 'radar', go: '/', say: 'Desde aquí eliges qué asignaturas entran en el radar.', next: true }],
+    steps: [
+      // El lápiz siempre está (desactivado con menos de tres asignaturas): lo dice el paso.
+      { el: 'matriz-elegir', go: '/', say: 'Pulsa el lápiz de «Nivel por asignatura» (se activa cuando tienes al menos tres asignaturas).' },
+      { say: 'Abre una colección, marca entre 3 y 10 asignaturas en sus tarjetas y pulsa «Guardar».', next: true },
+    ],
   },
   'inicio-sin-asignatura': {
     title: 'Tareas sin asignatura',
@@ -114,15 +133,27 @@ const TOURS: Record<string, Def> = {
     needs: 'Aparecen cuando grabas una nota de voz sin asignatura.',
     steps: [{ el: 'grabaciones-inicio', go: '/', say: 'Al final de Inicio están tus grabaciones de voz sin asignatura.', next: true }],
   },
+  'anotaciones-sueltas': {
+    title: 'Anotaciones en Inicio',
+    needs: 'Aparecen cuando guardas una anotación sin asignatura con el «+».',
+    steps: [
+      {
+        el: 'anotaciones-inicio',
+        go: '/',
+        say: 'Al final de Inicio están tus anotaciones sin asignatura: pulsa una para leerla, colocarla en una asignatura o borrarla.',
+        next: true,
+      },
+    ],
+  },
 
   // --- Barra superior ---
   'barra-superior': {
     title: 'La barra superior',
-    steps: [{ el: 'barra-superior', say: 'A la izquierda, crear (+); al centro, tu frase; a la derecha, grabar y las notificaciones.', next: true }],
+    steps: [{ el: 'barra-superior', say: 'A la izquierda, crear (+) e informes; al centro, frases con tus datos; a la derecha, grabar y las notificaciones.', next: true }],
   },
   'frase-personal': {
-    title: 'Tu frase personal',
-    steps: [{ el: 'frase', say: 'Pulsa la frase del centro, escribe la tuya y pulsa Enter para guardarla.' }],
+    title: 'Las frases de la barra',
+    steps: [{ el: 'frase', say: 'Estas frases salen de tus datos recientes y cambian solas; pasa el ratón por encima para detener una.', next: true }],
   },
   notificaciones: {
     title: 'Las notificaciones',
@@ -132,6 +163,7 @@ const TOURS: Record<string, Def> = {
     title: 'Crear rápido',
     steps: [
       ...quickTask,
+      { el: 'crear-atras', say: 'Con esta flecha vuelves a elegir entre «Tarea» y «Anotación».', next: true },
       { el: 'tarea-nombre', say: 'Escribe el nombre. Arriba eliges la asignatura (o «Sin asignatura»).', next: true },
       { el: 'tarea-anadir', say: 'Pulsa «Añadir Tarea» y listo.', next: true },
     ],
@@ -174,20 +206,27 @@ const TOURS: Record<string, Def> = {
     title: 'Anotar avances',
     steps: [
       { el: 'vista-flotante', go: '/temporizador', say: 'Con la sesión en marcha, abre este menú…' },
-      { say: '…y elige «Anotar avance». Lo que escribas se une al resumen de la sesión.', next: true },
+      { say: '…y elige «Anotar avance». Escribe; arriba a la derecha está «Enfoque (opcional)» y debajo, la asignatura y la tarea.', next: true },
     ],
   },
   'vista-flotante': {
     title: 'La vista flotante',
-    steps: [{ el: 'vista-flotante', go: '/temporizador', say: 'Desde aquí eliges cómo ver el reloj flotante, encima de otras ventanas.' }],
+    steps: [{ el: 'vista-flotante', go: '/temporizador', say: 'Desde aquí eliges cómo ver el reloj flotante, encima de otras ventanas. «Ocultar» sale cuando ya está abierto.' }],
   },
   'enfoque-hoy': {
     title: 'Métricas de hoy',
-    steps: [{ el: 'enfoque-metricas', go: '/temporizador', say: 'Aquí ves cuánto estudiaste hoy y en qué.', next: true }],
+    steps: [
+      { el: 'enfoque-metricas', go: '/temporizador', say: 'Aquí ves cada sesión de hoy como una tarjeta: su asignatura, el tiempo y el rendimiento.', next: true },
+      { el: 'enfoque-sesion', go: '/temporizador', say: 'Pulsa una tarjeta para ver su detalle: horario, tareas avanzadas, nota del día y anotaciones.', next: true, optional: true },
+    ],
   },
   'enfoque-corregir': {
     title: 'Corregir una sesión',
-    steps: [{ el: 'enfoque-calendario', go: '/temporizador', say: 'Pulsa el día en este calendario: verás sus sesiones para corregirlas o borrarlas.', next: true }],
+    needs: 'Solo las sesiones de hoy se corrigen: registra una sesión y vuelve a intentarlo.',
+    steps: [
+      { el: 'enfoque-sesion-corregir', go: '/temporizador', say: 'Pulsa el lápiz de la sesión de hoy que quieras corregir.' },
+      { say: 'Cambia el enfoque, las asignaturas o lo que hiciste y guarda. Para eliminarla, abre su tarjeta y pulsa «Eliminar».', next: true },
+    ],
   },
   'nota-diaria': {
     title: 'La nota del día',
@@ -195,7 +234,14 @@ const TOURS: Record<string, Def> = {
   },
   'calendario-calificaciones': {
     title: 'El calendario de calificaciones',
-    steps: [{ el: 'enfoque-calendario', go: '/temporizador', say: 'Cada casilla es un día con su nota. Pulsa una para ver sus sesiones.', next: true }],
+    steps: [
+      {
+        el: 'enfoque-calendario',
+        go: '/temporizador',
+        say: 'Cada casilla es un día con su nota. Pulsa una: verás sus sesiones como tarjetas; ábrelas para ver el detalle, corregirlas o borrarlas (solo las de hoy).',
+        next: true,
+      },
+    ],
   },
   'progreso-academico': {
     title: 'Progreso académico',
@@ -352,7 +398,8 @@ const TOURS: Record<string, Def> = {
     title: 'Crear una asignatura',
     steps: [
       { el: 'asig-anadir', go: '/knowledge', say: 'Pulsa «Añadir».' },
-      { el: 'asig-nombre', say: 'Escribe su nombre (o pasa a «Del CNEB» y márcalas).', next: true, optional: true },
+      { el: 'asig-nombre', say: 'Escribe su nombre, o pulsa una del CNEB, aquí debajo.', next: true, optional: true },
+      { el: 'asig-cneb', say: 'Estas son las áreas del CNEB: pulsar una escribe su nombre.', next: true, optional: true },
       { el: 'asig-crear', say: 'Pulsa «Crear».', next: true },
     ],
   },
@@ -362,7 +409,7 @@ const TOURS: Record<string, Def> = {
     steps: [
       { el: 'asig-anadir', go: '/knowledge', say: 'Pulsa «Añadir».' },
       { el: 'asig-vista-coleccion', say: 'Pasa a «Colección» con esta flecha.' },
-      { el: 'coleccion-nombre', say: 'Ponle nombre y marca al menos dos asignaturas.', next: true },
+      { el: 'coleccion-nombre', say: 'Ponle nombre y elige al menos dos asignaturas en las tarjetas.', next: true },
       { el: 'asig-crear', say: 'Pulsa «Crear».', next: true },
     ],
   },
@@ -407,14 +454,46 @@ const TOURS: Record<string, Def> = {
   'cal-evento-crear': {
     title: 'Crear un evento',
     steps: [
-      { el: 'cal-local', go: '/calendario', say: 'Primero, el calendario «Local».', optional: true },
+      toLocalCalendar,
       { el: 'cal-crear', go: '/calendario', say: 'Pulsa «Evento».' },
-      { say: 'Elige el tipo, la fecha y el nombre, y guarda.', next: true },
+      { say: 'Escribe el título, elige el tipo, las fechas y el color, y pulsa «Crear evento».', next: true },
     ],
   },
+  // 1.6.2: el lápiz del modo edición ya no existe; la marca está en la cuadrícula.
   'cal-editar': {
     title: 'Editar un evento',
-    steps: [{ el: 'cal-editar', go: '/calendario', say: 'Pulsa el lápiz y después el día del evento: ahí lo editas o lo borras.' }],
+    steps: [
+      toLocalCalendar,
+      { el: 'cal-editar', go: '/calendario', say: 'Pulsa el evento en el calendario para editarlo o borrarlo (o pulsa su día: ahí están todos).' },
+    ],
+  },
+  'cal-varios-dias': {
+    title: 'Elegir varios días',
+    steps: [
+      toLocalCalendar,
+      {
+        el: 'cal-editar',
+        go: '/calendario',
+        say: 'Arrastra sobre los días (o mayús + clic): abajo aparece una barra para crear un evento o un recordatorio, darles color o vaciarlos. Esc suelta la selección.',
+        next: true,
+      },
+    ],
+  },
+  'cal-recordatorio': {
+    title: 'Un recordatorio',
+    steps: [
+      toLocalCalendar,
+      { el: 'cal-editar', go: '/calendario', say: 'Pulsa el día del recordatorio.' },
+      { say: 'Pulsa «Recordatorio», elige la hora con las ruedas y el aviso, y pulsa «Crear recordatorio».', next: true },
+    ],
+  },
+  'cal-color': {
+    title: 'Dar color a una casilla',
+    steps: [
+      toLocalCalendar,
+      { el: 'cal-editar', go: '/calendario', say: 'Pulsa el día que quieres pintar.' },
+      { say: 'En «Color de la casilla», elige el color. El círculo tachado lo quita.', next: true },
+    ],
   },
   'gcal-vincular': {
     title: 'Vincular Google Calendar',
@@ -509,7 +588,14 @@ const TOURS: Record<string, Def> = {
     title: 'Grabar una nota de voz',
     steps: [
       { el: 'grabar', say: 'Pulsa el micrófono (o Ctrl+Shift+F).' },
-      { el: 'grabar-iniciar', say: 'Elige la asignatura si quieres y pulsa «Iniciar grabación».', next: true },
+      { el: 'grabar-iniciar', say: 'Pulsa «Iniciar grabación». La asignatura se elige después, al guardarla.', next: true },
+    ],
+  },
+  'grabacion-duracion': {
+    title: 'El límite de grabación',
+    steps: [
+      { el: 'grabar', say: 'Pulsa el micrófono.' },
+      { el: 'grabar-limite', say: 'Pulsa la rueda y elige las horas y los minutos del límite (de 1 minuto a 4 horas).' },
     ],
   },
   'grabacion-donde': {
@@ -556,43 +642,53 @@ const TOURS: Record<string, Def> = {
     title: 'Tu expediente',
     steps: [toSettings, { el: 'expediente', go: '/settings', say: 'Tu expediente: tiempo de estudio, tareas, rachas y más.', next: true }],
   },
-  'ajustes-cuenta-rueda': { title: 'Ajustes de cuenta', steps: [toSettings, toAccount] },
+  'ajustes-cuenta-rueda': {
+    title: 'El menú de la cuenta',
+    steps: [
+      toSettings,
+      toAccount,
+      { el: 'cuenta-menu', say: 'Aquí están vincular (si eres invitado), cerrar sesión, importar de Notion y eliminar la cuenta.', next: true },
+    ],
+  },
   'docs-info': {
     title: 'Información de la app',
     steps: [toSettings, { el: 'doc-info', go: '/settings', say: 'Al final: información, términos y cómo reportar un error.', next: true }],
   },
+  // Informes: desde la 1.6.2, en un recuadro que abre la barra superior (sin
+  // `go`: el botón está en todas las interfaces). Sus marcas solo existen con
+  // el recuadro abierto.
   'informes-centro': {
     title: 'El centro de informes',
-    steps: [toSettings, { el: 'informes', go: '/settings', say: 'Aquí generas tus informes: general, rendimiento, pendientes y hábitos.', next: true }],
+    steps: [toReports, { el: 'informes', say: 'Aquí generas tus informes: general, rendimiento, pendientes y hábitos.', next: true }],
   },
   'informe-pdf': {
     title: 'Guardar un informe',
     steps: [
-      toSettings,
-      { el: 'informes-tipos', go: '/settings', say: 'Elige el informe.', next: true },
-      { el: 'informe-pdf', go: '/settings', say: '«PDF» lo imprime o guarda como PDF; «Word» lo deja editable.', next: true },
+      toReports,
+      { el: 'informes-tipos', say: 'Elige el informe.', next: true },
+      { el: 'informe-pdf', say: '«PDF» lo imprime o guarda como PDF; «Word» lo deja editable.', next: true },
     ],
   },
   'informe-general': {
     title: 'Informe general',
-    steps: [toSettings, { el: 'informes', go: '/settings', say: 'Pestaña «General»: elige denso o síntesis y pulsa PDF o Word.', next: true }],
+    steps: [toReports, { el: 'informes', say: 'Pestaña «General»: elige denso o síntesis y pulsa PDF o Word.', next: true }],
   },
   'informe-rendimiento': {
     title: 'Informe de rendimiento',
-    steps: [toSettings, { el: 'informes-tipos', go: '/settings', say: 'Elige «Rendimiento», el periodo, y pulsa PDF o Word.', next: true }],
+    steps: [toReports, { el: 'informes-tipos', say: 'Elige «Rendimiento», el periodo, y pulsa PDF o Word.', next: true }],
   },
   'informe-pendientes': {
     title: 'Informe de pendientes',
-    steps: [toSettings, { el: 'informes-tipos', go: '/settings', say: 'Elige «Pendientes» y pulsa PDF o Word.', next: true }],
+    steps: [toReports, { el: 'informes-tipos', say: 'Elige «Pendientes» y pulsa PDF o Word.', next: true }],
   },
   'informe-habitos': {
     title: 'Informe de hábitos',
-    steps: [toSettings, { el: 'informes-tipos', go: '/settings', say: 'Elige «Hábitos», el periodo, y pulsa PDF o Word.', next: true }],
+    steps: [toReports, { el: 'informes-tipos', say: 'Elige «Hábitos», el periodo, y pulsa PDF o Word.', next: true }],
   },
 
   'informe-no-abre': {
     title: 'Dónde queda el informe',
-    steps: [toSettings, { el: 'informes', go: '/settings', say: 'El Word va a Descargas; el PDF se guarda desde el diálogo de impresión, donde eliges la carpeta.', next: true }],
+    steps: [toReports, { el: 'informes', say: 'El Word va a Descargas; el PDF se guarda desde el diálogo de impresión, donde eliges la carpeta.', next: true }],
   },
   'clima-no-carga': {
     title: 'Si el clima no carga',
@@ -629,20 +725,24 @@ const TOURS: Record<string, Def> = {
   'actualizar-frame': {
     title: 'Actualizar Frame',
     needs: 'El botón aparece junto a tu perfil cuando hay una versión nueva.',
-    steps: [{ el: 'actualizar', say: 'Pulsa el aviso de versión nueva y luego «Actualizar ahora».' }],
+    steps: [
+      { el: 'actualizar', say: 'Pulsa el aviso de versión nueva: se abre un recuadro con el peso y el tiempo estimado.' },
+      { el: 'actualizar-confirmar', say: 'Cuando quieras, pulsa «Actualizar ahora»: verás el porcentaje y el tiempo que falta.', next: true },
+    ],
   },
 
-  // --- Extensiones ---
+  // --- Extensiones (1.6.2: sin el «+» de la Ayuda; Notion está en la rueda de Ajustes) ---
   'ext-que-son': {
-    title: 'Las extensiones',
-    steps: [{ el: 'extensiones', go: '/ayuda', say: 'Pulsa el «+» de la barra de la Ayuda: ahí están las extensiones.' }],
+    title: 'Dónde está Notion',
+    steps: [
+      toSettings,
+      toAccount,
+      { el: 'importar-notion', say: 'Notion, la única extensión, viene incluida: es «Importar de Notion».', next: true },
+    ],
   },
   'ext-notion': {
     title: 'Importar de Notion',
-    steps: [
-      { el: 'extensiones', go: '/ayuda', say: 'Pulsa el «+» de la barra de la Ayuda.' },
-      { el: 'ext-notion', say: 'Añade «Notion» y elige el archivo que exportaste de Notion.', next: true },
-    ],
+    steps: [toSettings, toAccount, { el: 'importar-notion', say: 'Pulsa «Importar de Notion» y elige el archivo que exportaste de Notion.' }],
   },
 };
 
