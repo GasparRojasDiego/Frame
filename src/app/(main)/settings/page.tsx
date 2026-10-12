@@ -16,7 +16,6 @@ import {
   Sun,
   Moon,
   Monitor,
-  Settings,
   CalendarDays,
   Copy,
 } from 'lucide-react';
@@ -31,15 +30,13 @@ import { saveImage } from '@/lib/music-db';
 import { useStoredImage } from '@/hooks/use-stored-image';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import AvatarCropper from '@/components/auth/AvatarCropper';
-import AccountCard from '@/components/settings/AccountCard';
+import AccountMenu from '@/components/settings/AccountCard';
 import ProfileStats from '@/components/settings/ProfileStats';
 import { APP_VERSION, BUILD_DATE } from '@/lib/version';
 import LegalDocument from '@/components/settings/LegalDocument';
 import { INFO_VERSION, infoDocument } from '@/lib/legal/info';
 import { TERMS_VERSION, termsDocument } from '@/lib/legal/terms';
 import { SUPPORT_VERSION, supportDocument } from '@/lib/legal/support';
-import ReportCenter from '@/components/settings/ReportCenter';
-import UsagePanelCard from '@/components/settings/UsagePanelCard';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 import { updateUsername } from '@/lib/supabase/auth';
 import StreakStatusCard from '@/components/settings/StreakStatusCard';
@@ -119,8 +116,6 @@ export default function SettingsPage() {
   
   const [isEditingStreakGoal, setIsEditingStreakGoal] = useState(false);
   const [editedStreakValue, setEditedStreakValue] = useState<string | number>('');
-
-  const [accountOpen, setAccountOpen] = useState(false);
 
   const [cropperOpen, setCropperOpen] = useState(false);
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
@@ -421,7 +416,7 @@ export default function SettingsPage() {
 
             {/* --- Antigüedad de la cuenta --- */}
             <div className="flex flex-1 items-center">
-              <div className="flex flex-col justify-center gap-1 rounded-lg border border-border/60 bg-gradient-to-br from-primary/[0.07] to-transparent px-4 py-3">
+              <div className="flex flex-col justify-center gap-1 rounded-lg border border-border/60 bg-gradient-to-b from-primary/[0.07] to-transparent px-4 py-3">
                 <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                   <CalendarDays className="h-3.5 w-3.5 shrink-0 text-primary" />
                   Miembro desde
@@ -439,20 +434,13 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* --- Ajustes: tema y cuenta, juntos y etiquetados --- */}
+            {/* --- Ajustes: tema y cuenta, juntos y etiquetados. La rueda abre
+                un menú pequeño a su lado (AccountCard), no un recuadro. --- */}
             <div className="flex shrink-0 items-start gap-6 border-t border-border/60 pt-4 xl:border-l xl:border-t-0 xl:pl-6 xl:pt-0">
               <ThemeSelector />
               <div className="flex flex-col items-center gap-2">
                 <p className="text-xs font-bold text-muted-foreground">Cuenta</p>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setAccountOpen(true)}
-                  title="Informe general, cerrar sesión y eliminar cuenta" data-tour="cuenta-rueda"
-                  className="h-9 w-9 rounded-md border border-border bg-transparent text-muted-foreground hover:bg-secondary hover:text-primary"
-                >
-                  <Settings className="h-5 w-5" />
-                </Button>
+                <AccountMenu userProfile={userProfile} />
               </div>
             </div>
           </div>
@@ -520,9 +508,9 @@ export default function SettingsPage() {
                 <ProfileStats userProfile={userProfile} />
             </div>
 
-            {/* Modo de medición + meta de racha a la izquierda; el generador
-                de informes a la derecha. Van juntos porque son las dos caras
-                de lo mismo: cómo se mide el rendimiento y cómo se acredita. */}
+            {/* Modo de medición + meta de racha a la izquierda; a la derecha,
+                si esa meta se está cumpliendo (la racha). El Centro de informes
+                que ocupaba este hueco pasó a la barra superior. */}
             <div className="grid grid-cols-1 gap-6 items-stretch lg:grid-cols-2">
                 <div className="flex flex-col gap-4 h-full">
                     <Tabs value={selectionMode} onValueChange={(value) => setSelectionMode(value as 'rendimiento' | 'tiempo')} className="w-full">
@@ -579,13 +567,9 @@ export default function SettingsPage() {
                             )}
                         </CardContent>
                     </Card>
-
-                    <div data-tour="racha"><StreakStatusCard /></div>
                 </div>
 
-                {/* Centro de informes: los cuatro informes de Frame, aquí
-                    mismo y a la vista (antes, tras la rueda de la cuenta). */}
-                <ReportCenter userProfile={userProfile} />
+                <div data-tour="racha" className="flex flex-col [&>*]:flex-1"><StreakStatusCard /></div>
             </div>
         </div>
 
@@ -632,25 +616,6 @@ export default function SettingsPage() {
           ))}
         </div>
 
-
-        {/* Ajustes de cuenta (cerrar sesión / eliminar cuenta) tras la rueda */}
-        <Dialog open={accountOpen} onOpenChange={setAccountOpen}>
-          <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-center text-xl font-bold text-primary">
-                Ajustes de cuenta
-              </DialogTitle>
-            </DialogHeader>
-            <div className="grid grid-cols-1 gap-4">
-              {/* La cuenta y, debajo, el panel de uso, que solo existe para la
-                  cuenta del responsable (UsagePanelCard). */}
-              <AccountCard userProfile={userProfile} />
-              <UsagePanelCard userProfile={userProfile} />
-            </div>
-
-
-          </DialogContent>
-        </Dialog>
 
         {cropperOpen && imageToCrop && userProfile && (
             <AvatarCropper

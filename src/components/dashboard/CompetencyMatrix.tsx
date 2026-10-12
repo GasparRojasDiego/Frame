@@ -27,7 +27,6 @@ import {
   buildCompetencyData,
   competencyGrade,
   competencyStorageKey,
-  countPendingByCourse,
   legacyCompetencyKeys,
   readCompetencySelection,
   type CompetencyVertex,
@@ -149,7 +148,6 @@ export default function CompetencyMatrix() {
     return () => resizeObserver.disconnect();
   }, []);
 
-  const pendingByCourse = useMemo(() => countPendingByCourse(tasks), [tasks]);
   const data = useMemo(
     () => buildCompetencyData(courses, tasks, selectedIds),
     [courses, tasks, selectedIds]
@@ -211,8 +209,8 @@ export default function CompetencyMatrix() {
       <Target className="h-9 w-9 opacity-60" />
       <p className="text-sm font-semibold text-foreground">Tu matriz está sin configurar</p>
       <p className="text-xs max-w-[240px]">
-        Elige entre {MIN_COMPETENCY_COURSES} y {MAX_COMPETENCY_COURSES} asignaturas. Su nivel se
-        calculará solo, a partir de las tareas pendientes de cada una.
+        Elige entre {MIN_COMPETENCY_COURSES} y {MAX_COMPETENCY_COURSES} asignaturas para dibujar tu
+        radar.
       </p>
       <Button size="sm" className="mt-1" onClick={() => setPickerOpen(true)}>
         Elegir asignaturas
@@ -314,6 +312,7 @@ export default function CompetencyMatrix() {
                 disabled={!canConfigure}
                 aria-label="Elegir asignaturas de la matriz"
                 title="Elegir asignaturas"
+                data-tour="matriz-elegir"
               >
                 <Pencil className="h-4 w-4" />
               </Button>
@@ -398,8 +397,6 @@ export default function CompetencyMatrix() {
       <CompetencyCoursesDialog
         open={pickerOpen}
         onOpenChange={setPickerOpen}
-        courses={courses}
-        pendingByCourse={pendingByCourse}
         selectedIds={selectedIds}
         onSave={handleSave}
       />

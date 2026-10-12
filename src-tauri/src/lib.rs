@@ -967,8 +967,11 @@ fn extension_of(path: &std::path::Path) -> String {
     path.extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase()
 }
 
+/// Niveles de subcarpetas que se recorren (Artista/Álbum/Disco 1/… cabe de sobra).
+const MAX_DEPTH: usize = 16;
+
 fn walk_music(root: &std::path::Path, dir: &std::path::Path, out: &mut Vec<PickedFile>, depth: usize) {
-    if depth > 8 || out.len() >= MAX_PICKED {
+    if depth > MAX_DEPTH || out.len() >= MAX_PICKED {
         return;
     }
     let Ok(entries) = std::fs::read_dir(dir) else { return };
@@ -997,16 +1000,29 @@ fn walk_music(root: &std::path::Path, dir: &std::path::Path, out: &mut Vec<Picke
 
 /// Abre el explorador para elegir canciones (`folder = false`) o una carpeta
 /// entera, con subcarpetas. None si se canceló.
+///
+/// Recibe la VENTANA (`Window`), no `WebviewWindow`: la principal lleva
+/// webviews hijos (Gmail, Calendar, YouTube) y, en cuanto existe uno, Tauri
+/// deja de tratarla como WebviewWindow y el comando fallaba con «current
+/// webview is not a WebviewWindow» antes de abrir nada.
 #[tauri::command]
-async fn music_pick(window: tauri::WebviewWindow, folder: bool) -> Result<Option<PickedSource>, String> {
+async fn music_pick(window: tauri::Window, folder: bool) -> Result<Option<PickedSource>, String> {
     let dialog = rfd::AsyncFileDialog::new().set_parent(&window);
     let (kind, name, files) = if folder {
         let Some(dir) = dialog.set_title("Elige la carpeta con tu música").pick_folder().await else {
             return Ok(None);
         };
         let root = dir.path().to_path_buf();
-        let mut files = Vec::new();
-        walk_music(&root, &root, &mut files, 0);
+        // Recorrer una biblioteca grande toca miles de archivos: fuera del
+        // hilo de los comandos, para no frenar al resto de la app.
+        let walk_root = root.clone();
+        let files = tauri::async_runtime::spawn_blocking(move || {
+            let mut files = Vec::new();
+            walk_music(&walk_root, &walk_root, &mut files, 0);
+            files
+        })
+        .await
+        .map_err(|e| e.to_string())?;
         let name = root.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "Carpeta".into());
         ("folder", name, files)
     } else {

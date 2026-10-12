@@ -1,351 +1,422 @@
-import { useEffect, useState } from 'react';
-import { AlertTriangle, CalendarIcon, LayoutGrid, Tag, X } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { EchoHeader } from '@/components/shared/EchoWord';
+import { useEffect, useState, type FormEvent } from 'react';
+import { CalendarIcon, Clock, PaintBucket, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { WheelColumn } from '@/components/ui/wheel-picker';
 import { cn } from '@/lib/utils';
-import { format, parseISO } from 'date-fns';
-import { es } from 'date-fns/locale';
-import type { LocalCalendarEvent, LocalEventDisplay, LocalEventKind } from '@/types';
+import type { LocalCalendarEvent, LocalEventKind } from '@/types';
 import {
   DEFAULT_EVENT_COLOR,
-  EVENT_COLOR_ROWS,
   EVENT_KINDS,
   EVENT_KIND_META,
   eventDisplay,
-  eventTextClass,
-  findCellClash,
   normalizeKind,
 } from '@/lib/calendar-events';
+import { EVENT_TINT, PanelHeader, SectionLabel, Swatch } from './CalendarBits';
+import {
+  PAINT_COLORS,
+  REMIND_OPTIONS,
+  eventEnd,
+  fromKey,
+  orderRange,
+  shortDayLabel,
+  toKey,
+  type DayRange,
+} from './calendar-model';
 
 // ============================================================
 // Alta y edición de un evento del calendario LOCAL.
 //
-// El mismo formulario sirve para los dos casos: si llega `event`, edita; si
-// no, crea. Así no hay dos pantallas que puedan divergir.
+// Es el contenido del recuadro del calendario (ver DayEventsDialog), no un
+// recuadro aparte: desde el día se entra aquí y la flecha de arriba a la
+// izquierda vuelve al día, sin un recuadro encima de otro.
 //
-// Dos decisiones vertebran el formulario:
-//   · TIPO — qué clase de evento es (diez opciones, de feriado a recordatorio).
-//   · PRESENTACIÓN — casilla (pinta el día entero, máximo uno) o actividad
-//     (etiqueta pequeña dentro de la casilla, sin límite).
+// Cuatro bloques, de lo que más se toca a lo que menos:
+//   · el título y el tipo (pastillas: un clic y listo);
+//   · cuándo: días, hora y aviso (un recordatorio es un evento con hora y aviso);
+//   · aspecto: el color y si pinta las casillas;
+//   · una nota opcional.
+// El título puede quedar vacío: entonces se usa el nombre del tipo
+// («Vacaciones», «Recordatorio»…), que es justo lo que uno escribiría.
 // ============================================================
 
-const toDate = (iso?: string): Date | undefined => {
-  if (!iso) return undefined;
-  try {
-    return parseISO(iso);
-  } catch {
-    return undefined;
-  }
-};
+export type EventPreset = 'evento' | 'recordatorio';
 
-export default function LocalEventDialog({
-  open,
-  onOpenChange,
-  onCreate,
-  onUpdate,
-  event,
-  allEvents,
-  defaultDate,
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
+const MINUTES = Array.from({ length: 12 }, (_, i) => i * 5);
+const two = (n: number) => String(n).padStart(2, '0');
+
+/** Hora inicial: la próxima hora en punto si es para hoy, si no las 8:00. */
+function initialTime(day: string, todayKey: string): string {
+  if (day === todayKey) {
+    const next = new Date().getHours() + 1;
+    if (next <= 23) return `${two(next)}:00`;
+  }
+  return '08:00';
+}
+
+const pill = (active: boolean) =>
+  cn(
+    'inline-flex h-7 items-center gap-1 rounded-full border px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+    active
+      ? 'border-primary bg-primary text-primary-foreground shadow-sm'
+      : 'border-border/80 bg-card text-foreground/80 hover:border-primary/60 hover:text-foreground'
+  );
+
+/** Campo de fecha con su calendario desplegable (se cierra al elegir). */
+function DateField({
+  label,
+  value,
+  empty,
+  onChange,
+  onClear,
 }: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onCreate: (event: Omit<LocalCalendarEvent, 'id'>) => void;
-  onUpdate?: (id: string, updates: Partial<Omit<LocalCalendarEvent, 'id'>>) => void;
+  label: string;
+  value: string;
+  /** Texto en lugar de la fecha (p. ej. «Un solo día»). */
+  empty?: string;
+  onChange: (day: string) => void;
+  onClear?: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="space-y-1">
+      <span className="text-[11px] font-medium text-muted-foreground">{label}</span>
+      <div className="flex items-center gap-1">
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              className={cn('h-9 w-full justify-start px-3 text-xs font-medium', empty && 'text-muted-foreground')}
+            >
+              <CalendarIcon className="h-3.5 w-3.5 text-primary" />
+              {empty ?? `${shortDayLabel(value)} ${fromKey(value).getFullYear()}`}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              selected={fromKey(value)}
+              onSelect={(date) => {
+                onChange(toKey(date));
+                setOpen(false);
+              }}
+            />
+          </PopoverContent>
+        </Popover>
+        {onClear && (
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="h-9 w-9 shrink-0 text-muted-foreground"
+            onClick={onClear}
+            aria-label="Dejar un solo día"
+            title="Dejar un solo día"
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function LocalEventForm({
+  event,
+  range,
+  preset = 'evento',
+  todayKey,
+  onBack,
+  onCancel,
+  onSubmit,
+  onDelete,
+}: {
   /** Evento a editar. Ausente = alta. */
   event?: LocalCalendarEvent | null;
-  /** Todos los eventos, para avisar de choques entre casillas. */
-  allEvents?: LocalCalendarEvent[];
-  /** Fecha preseleccionada al crear desde una casilla concreta. */
-  defaultDate?: Date;
+  /** Días con los que nace el formulario (el día pulsado o la selección). */
+  range: DayRange;
+  preset?: EventPreset;
+  todayKey: string;
+  /** Flecha de «Atrás» (vuelve al día del que se vino). */
+  onBack?: () => void;
+  onCancel: () => void;
+  onSubmit: (payload: Omit<LocalCalendarEvent, 'id'>) => void;
+  onDelete?: () => void;
 }) {
   const isEdit = Boolean(event);
+  const firstKind: LocalEventKind = event
+    ? normalizeKind(event.kind)
+    : preset === 'recordatorio'
+      ? 'recordatorio'
+      : 'personal';
 
-  const [title, setTitle] = useState('');
-  const [kind, setKind] = useState<LocalEventKind>('personal');
-  const [display, setDisplay] = useState<LocalEventDisplay>('actividad');
-  const [date, setDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
-  const [color, setColor] = useState(DEFAULT_EVENT_COLOR);
-  const [description, setDescription] = useState('');
-  /** La presentación deja de seguir al tipo en cuanto el usuario la toca. */
-  const [displayTouched, setDisplayTouched] = useState(false);
+  const [title, setTitle] = useState(event?.title ?? '');
+  const [kind, setKind] = useState<LocalEventKind>(firstKind);
+  const [dates, setDates] = useState<DayRange>(() =>
+    event ? { start: event.date, end: eventEnd(event) } : range
+  );
+  const [timed, setTimed] = useState(event ? !!event.time : preset === 'recordatorio');
+  const [time, setTime] = useState(event?.time ?? initialTime(range.start, todayKey));
+  const [remind, setRemind] = useState<number | undefined>(
+    event ? event.remindBefore : preset === 'recordatorio' ? 0 : undefined
+  );
+  const [color, setColor] = useState(event?.color || DEFAULT_EVENT_COLOR);
+  const [paint, setPaint] = useState(
+    event ? eventDisplay(event) === 'casilla' : EVENT_KIND_META[firstKind].defaultDisplay === 'casilla'
+  );
+  /** «Pintar las casillas» deja de seguir al tipo en cuanto se toca a mano. */
+  const [paintTouched, setPaintTouched] = useState(isEdit);
+  const [description, setDescription] = useState(event?.description ?? '');
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
-  // Cada apertura carga el evento a editar, o deja el formulario limpio.
+  // La confirmación de borrar se arrepiente sola a los pocos segundos.
   useEffect(() => {
-    if (!open) return;
-    if (event) {
-      setTitle(event.title);
-      setKind(normalizeKind(event.kind));
-      setDisplay(eventDisplay(event));
-      setDate(toDate(event.date));
-      setEndDate(toDate(event.endDate));
-      setColor(event.color || DEFAULT_EVENT_COLOR);
-      setDescription(event.description ?? '');
-      setDisplayTouched(true);
-    } else {
-      setTitle('');
-      setKind('personal');
-      setDisplay(EVENT_KIND_META.personal.defaultDisplay);
-      setDate(defaultDate);
-      setEndDate(undefined);
-      setColor(DEFAULT_EVENT_COLOR);
-      setDescription('');
-      setDisplayTouched(false);
-    }
-  }, [open, event, defaultDate]);
-
-  const handleKindChange = (value: string) => {
-    const next = normalizeKind(value);
-    setKind(next);
-    // Mientras el usuario no elija presentación a mano, el tipo la sugiere.
-    if (!displayTouched) setDisplay(EVENT_KIND_META[next].defaultDisplay);
-  };
+    if (!confirmDelete) return;
+    const timer = setTimeout(() => setConfirmDelete(false), 3500);
+    return () => clearTimeout(timer);
+  }, [confirmDelete]);
 
   const meta = EVENT_KIND_META[kind];
-  const canSave = title.trim().length > 0 && !!date;
+  const isReminder = kind === 'recordatorio';
 
-  const startStr = date ? format(date, 'yyyy-MM-dd') : '';
-  const endStr = endDate ? format(endDate, 'yyyy-MM-dd') : undefined;
-  const normalizedEnd = endStr && endStr > startStr ? endStr : undefined;
-
-  // Aviso —no bloqueo— cuando ya hay otra casilla pintada esos días.
-  const clash =
-    display === 'casilla' && startStr
-      ? findCellClash(allEvents, startStr, normalizedEnd, event?.id)
-      : null;
-
-  const handleSave = () => {
-    if (!canSave || !date) return;
-    const payload: Omit<LocalCalendarEvent, 'id'> = {
-      title: title.trim(),
-      kind,
-      display,
-      date: startStr,
-      // Un rango invertido se normaliza en silencio.
-      endDate: normalizedEnd,
-      color,
-      description: description.trim() || undefined,
-    };
-    if (isEdit && event && onUpdate) onUpdate(event.id, payload);
-    else onCreate(payload);
-    onOpenChange(false);
+  const pickKind = (next: LocalEventKind) => {
+    setKind(next);
+    if (!paintTouched) setPaint(EVENT_KIND_META[next].defaultDisplay === 'casilla');
+    // Un recordatorio sin hora no avisa: se le pone hora y aviso de entrada.
+    if (next === 'recordatorio' && !timed) {
+      setTimed(true);
+      if (remind === undefined) setRemind(0);
+    }
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[88vh] max-w-md overflow-y-auto">
-        <EchoHeader word="Evento">
-          <DialogHeader>
-            <DialogTitle className="text-center text-xl font-bold text-primary">
-              {isEdit ? 'Editar evento' : 'Nuevo evento'}
-            </DialogTitle>
-          </DialogHeader>
-        </EchoHeader>
+  const toggleTimed = (on: boolean) => {
+    setTimed(on);
+    if (!on) setRemind(undefined);
+    else if (isReminder && remind === undefined) setRemind(0);
+  };
 
-        <div className="space-y-4 py-2">
-          <div className="space-y-1.5">
-            <Label className="text-xs">Título</Label>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ej: Aniversario del colegio"
-              className="h-9"
-              autoFocus
+  const [hour, minute] = time.split(':').map(Number);
+  const safeHour = Number.isFinite(hour) ? hour : 8;
+  // La rueda va de 5 en 5: una hora heredada como 18:32 se muestra como 18:30.
+  const safeMinute = Number.isFinite(minute) ? Math.min(55, Math.round(minute / 5) * 5) : 0;
+
+  const baseColors = PAINT_COLORS.map((c) => c.hex);
+  // Un color antiguo (las filas translúcidas) se conserva como una muestra más.
+  const colors = baseColors.includes(color)
+    ? PAINT_COLORS
+    : [...PAINT_COLORS, { hex: color, name: 'actual' }];
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    const { start, end } = orderRange(dates.start, dates.end);
+    onSubmit({
+      title: title.trim() || meta.label,
+      kind,
+      display: paint ? 'casilla' : 'actividad',
+      date: start,
+      endDate: end > start ? end : undefined,
+      color,
+      description: description.trim() || undefined,
+      time: timed ? `${two(safeHour)}:${two(safeMinute)}` : undefined,
+      remindBefore: timed ? remind : undefined,
+    });
+  };
+
+  const single = dates.start === dates.end;
+
+  return (
+    <form onSubmit={handleSubmit} className="contents">
+      <PanelHeader
+        word={isReminder ? 'Aviso' : 'Evento'}
+        title={isEdit ? (isReminder ? 'Editar recordatorio' : 'Editar evento') : isReminder ? 'Nuevo recordatorio' : 'Nuevo evento'}
+        onBack={onBack}
+      />
+
+      <div className="space-y-5">
+        {/* ---------- Qué ---------- */}
+        <div className="space-y-3">
+          <label className="sr-only" htmlFor="local-event-title">
+            Título
+          </label>
+          <Input
+            id="local-event-title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder={isReminder ? '¿Qué te recuerdo?' : kind === 'personal' ? 'Título del evento' : meta.label}
+            className="h-11 text-base font-semibold"
+            autoFocus
+            autoComplete="off"
+          />
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Tipo">
+            {EVENT_KINDS.map((k) => (
+              <button
+                key={k}
+                type="button"
+                aria-pressed={kind === k}
+                onClick={() => pickKind(k)}
+                className={pill(kind === k)}
+              >
+                <span aria-hidden className="text-[11px]">
+                  {EVENT_KIND_META[k].glyph}
+                </span>
+                {EVENT_KIND_META[k].label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ---------- Cuándo ---------- */}
+        <div className="space-y-3">
+          <SectionLabel>Cuándo</SectionLabel>
+          <div className="grid grid-cols-2 gap-2">
+            <DateField
+              label="Desde"
+              value={dates.start}
+              onChange={(day) => setDates({ start: day, end: dates.end < day ? day : dates.end })}
+            />
+            <DateField
+              label="Hasta"
+              value={dates.end}
+              empty={single ? 'Un solo día' : undefined}
+              onChange={(day) => setDates(orderRange(dates.start, day))}
+              onClear={single ? undefined : () => setDates({ start: dates.start, end: dates.start })}
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-xs">Tipo</Label>
-            <Select value={kind} onValueChange={handleKindChange}>
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {EVENT_KINDS.map((k) => (
-                  <SelectItem key={k} value={k}>
-                    <span className="mr-1.5">{EVENT_KIND_META[k].glyph}</span>
-                    {EVENT_KIND_META[k].label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-[10px] text-muted-foreground">{meta.hint}</p>
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-border/70 bg-card/60 px-3 py-2">
+            <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
+              <Clock className="h-3.5 w-3.5 text-primary" />
+              {timed ? 'A una hora' : 'Todo el día'}
+            </span>
+            <Switch checked={timed} onCheckedChange={toggleTimed} aria-label="Ponerle hora" />
           </div>
 
-          {/* ---------- Presentación: casilla o actividad ---------- */}
-          <div className="space-y-1.5">
-            <Label className="text-xs">Cómo se ve en el calendario</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {(
-                [
-                  {
-                    value: 'casilla' as const,
-                    icon: LayoutGrid,
-                    label: 'Casilla',
-                    hint: 'Pinta el día entero',
-                  },
-                  {
-                    value: 'actividad' as const,
-                    icon: Tag,
-                    label: 'Actividad',
-                    hint: 'Etiqueta dentro del día',
-                  },
-                ]
-              ).map(({ value, icon: Icon, label, hint }) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => {
-                    setDisplay(value);
-                    setDisplayTouched(true);
-                  }}
-                  aria-pressed={display === value}
-                  className={cn(
-                    'flex flex-col items-center gap-1 rounded-lg border p-2.5 text-center transition-all',
-                    display === value
-                      ? 'border-primary bg-primary/10'
-                      : 'border-border/70 bg-card hover:border-primary/40'
-                  )}
-                >
-                  <Icon
-                    className={cn(
-                      'h-4 w-4',
-                      display === value ? 'text-primary' : 'text-muted-foreground'
-                    )}
-                  />
-                  <span className="text-xs font-semibold text-foreground">{label}</span>
-                  <span className="text-[10px] text-muted-foreground">{hint}</span>
-                </button>
-              ))}
-            </div>
-            <p className="text-[10px] text-muted-foreground">
-              Solo puede haber una casilla pintada por día; actividades, las que quieras.
-            </p>
-            {clash && (
-              <p className="flex items-start gap-1.5 rounded-md border border-amber-500/50 bg-amber-500/10 p-2 text-[10px] text-amber-600 dark:text-amber-400">
-                <AlertTriangle className="mt-px h-3 w-3 shrink-0" />
-                El {format(parseISO(clash), "d 'de' MMMM", { locale: es })} ya tiene una casilla
-                pintada. Si guardas así, este evento se mostrará como actividad ese día.
-              </p>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Fecha</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="h-9 w-full justify-start text-xs font-normal">
-                    <CalendarIcon className="mr-2 h-3.5 w-3.5" />
-                    {date ? format(date, 'd MMM yyyy', { locale: es }) : 'Elegir'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar locale={es} selected={date} onSelect={(d) => setDate(d as Date | undefined)} />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">
-                Hasta {meta.suggestsRange ? '' : '(opcional)'}
-              </Label>
-              <div className="flex items-center gap-1">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="h-9 w-full justify-start text-xs font-normal">
-                      <CalendarIcon className="mr-2 h-3.5 w-3.5" />
-                      {endDate ? format(endDate, 'd MMM yyyy', { locale: es }) : 'Un solo día'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar locale={es} selected={endDate} onSelect={(d) => setEndDate(d as Date | undefined)} />
-                  </PopoverContent>
-                </Popover>
-                {endDate && (
-                  <Button size="icon" variant="ghost" className="h-9 w-9 shrink-0" onClick={() => setEndDate(undefined)}>
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
-                )}
+          {timed && (
+            <div className="space-y-3 duration-200 animate-in fade-in-0 slide-in-from-top-1 motion-reduce:animate-none">
+              <div className="flex items-center justify-center gap-2">
+                <WheelColumn
+                  label="Hora"
+                  values={HOURS}
+                  value={safeHour}
+                  format={two}
+                  onChange={(h) => setTime(`${two(h)}:${two(safeMinute)}`)}
+                />
+                <span className="font-mono text-lg font-bold text-muted-foreground">:</span>
+                <WheelColumn
+                  label="Minutos"
+                  values={MINUTES}
+                  value={safeMinute}
+                  format={two}
+                  onChange={(m) => setTime(`${two(safeHour)}:${two(m)}`)}
+                />
               </div>
-            </div>
-          </div>
-
-          {/* ---------- Paleta: tres filas del mismo tono, cada una más
-                        transparente. Útil para jerarquizar sin inventar
-                        colores nuevos que se pisen entre sí. ---------- */}
-          <div className="space-y-1.5">
-            <Label className="text-xs">Color</Label>
-            <div className="space-y-1.5">
-              {EVENT_COLOR_ROWS.map((row, rowIndex) => (
-                <div key={rowIndex} className="flex flex-wrap gap-2">
-                  {row.map((c) => (
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-medium text-muted-foreground">Aviso</span>
+                <div className="flex flex-wrap gap-1.5" role="group" aria-label="Aviso">
+                  <button
+                    type="button"
+                    aria-pressed={remind === undefined}
+                    onClick={() => setRemind(undefined)}
+                    className={pill(remind === undefined)}
+                  >
+                    Sin aviso
+                  </button>
+                  {REMIND_OPTIONS.map((option) => (
                     <button
-                      key={c}
+                      key={option.minutes}
                       type="button"
-                      onClick={() => setColor(c)}
-                      className={cn(
-                        'h-7 w-7 rounded-full border-2 transition-transform hover:scale-110',
-                        // Cuadro claro/oscuro de fondo: sin él, un tono muy
-                        // transparente parece un botón vacío.
-                        'bg-[linear-gradient(45deg,hsl(var(--muted))_25%,transparent_25%,transparent_75%,hsl(var(--muted))_75%),linear-gradient(45deg,hsl(var(--muted))_25%,transparent_25%,transparent_75%,hsl(var(--muted))_75%)] bg-[length:8px_8px] bg-[position:0_0,4px_4px]',
-                        color === c ? 'border-primary scale-110' : 'border-transparent'
-                      )}
-                      aria-label={`Color ${c}`}
+                      aria-pressed={remind === option.minutes}
+                      onClick={() => setRemind(option.minutes)}
+                      className={pill(remind === option.minutes)}
                     >
-                      <span
-                        className="block h-full w-full rounded-full"
-                        style={{ backgroundColor: c }}
-                      />
+                      {option.label}
                     </button>
                   ))}
                 </div>
-              ))}
-            </div>
-
-            {/* Vista previa con el color y la presentación elegidos. */}
-            <div className="pt-1">
-              <p className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">
-                Vista previa
-              </p>
-              <div
-                className={cn(
-                  'rounded-md p-1 text-center',
-                  display === 'casilla' ? 'h-12 pt-3' : 'w-full'
-                )}
-                style={{ backgroundColor: color }}
-              >
-                <p className={cn('truncate text-[10px] font-bold', eventTextClass(color))}>
-                  {meta.glyph} {title.trim() || 'Título del evento'}
-                </p>
               </div>
             </div>
-          </div>
+          )}
+        </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-xs">Descripción (opcional)</Label>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Detalles del evento..."
-              rows={2}
-              className="resize-none text-xs"
+        {/* ---------- Aspecto ---------- */}
+        <div className="space-y-3">
+          <SectionLabel>Aspecto</SectionLabel>
+          <div className="flex flex-wrap items-center gap-2.5" role="group" aria-label="Color">
+            {colors.map(({ hex, name }) => (
+              <Swatch
+                key={hex}
+                color={hex}
+                name={name}
+                tint={EVENT_TINT}
+                active={color === hex}
+                onClick={() => setColor(hex)}
+              />
+            ))}
+          </div>
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-border/70 bg-card/60 px-3 py-2">
+            <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
+              <PaintBucket className="h-3.5 w-3.5 text-primary" />
+              Pintar las casillas
+            </span>
+            <Switch
+              checked={paint}
+              onCheckedChange={(on) => {
+                setPaint(on);
+                setPaintTouched(true);
+              }}
+              aria-label="Pintar las casillas de estos días con el color del evento"
             />
           </div>
         </div>
 
-        <DialogFooter className="sm:justify-center">
-          <Button onClick={handleSave} disabled={!canSave} className="w-full">
-            {isEdit ? 'Guardar cambios' : 'Crear evento'}
+        {/* ---------- Nota ---------- */}
+        <div className="space-y-2">
+          <SectionLabel>Nota</SectionLabel>
+          <Textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Opcional"
+            rows={2}
+            className="resize-none text-xs"
+            aria-label="Nota"
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 pt-1">
+        {isEdit && onDelete && (
+          confirmDelete ? (
+            <Button type="button" variant="destructive" size="sm" onClick={onDelete}>
+              <Trash2 />
+              Sí, eliminar
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => setConfirmDelete(true)}
+            >
+              <Trash2 />
+              Eliminar
+            </Button>
+          )
+        )}
+        <div className="ml-auto flex gap-2">
+          <Button type="button" variant="fantasmaRojo" onClick={onCancel}>
+            Cancelar
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <Button type="submit">
+            {isEdit ? 'Guardar' : isReminder ? 'Crear recordatorio' : 'Crear evento'}
+          </Button>
+        </div>
+      </div>
+    </form>
   );
 }

@@ -38,6 +38,7 @@ import type {
   Task,
 } from '@/types';
 import { sessionSeconds } from '@/lib/duration';
+import { richNoteToLine } from '@/lib/rich-note';
 import type { DocBlock, DocModel, DocTone } from '@/lib/report-doc';
 
 export type ReportScope = 'dia' | 'semana' | 'mes' | 'anio';
@@ -93,7 +94,7 @@ export interface ReportSessionRow {
   subjects: string;
   type: string;
   focus: number | null;
-  /** Lo que el estudiante anotó al cerrar la sesión. */
+  /** Lo que el estudiante anotó al cerrar la sesión, en texto limpio. */
   notes: string;
 }
 
@@ -411,7 +412,8 @@ export function buildReport(input: BuildInput): ReportData {
             subjects: s.subjects?.join(', ') || UNASSIGNED,
             type: s.sessionType,
             focus: s.mode === 'rendimiento' ? s.perception : null,
-            notes: s.notes?.trim() ?? '',
+            // Sin marcas de formato y en una línea: va como nota bajo la celda.
+            notes: richNoteToLine(s.notes ?? ''),
           };
         });
 

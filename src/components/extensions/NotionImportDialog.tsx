@@ -1,12 +1,13 @@
 import { useMemo, useRef, useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { CalendarDays, CheckSquare, FileUp, Loader2 } from 'lucide-react';
+import { ArrowLeft, CalendarDays, CheckSquare, FileUp, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { ExtensionIcon } from '@/components/extensions/ExtensionIcons';
+import { EchoHeader } from '@/components/shared/EchoWord';
 import { useCourse } from '@/context/CourseContext';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -23,7 +24,8 @@ import { DEFAULT_EVENT_COLOR } from '@/lib/calendar-events';
 import { cn } from '@/lib/utils';
 
 // ============================================================
-// Importador de Notion (extensión «Notion»): tareas y fechas.
+// Importador de Notion: tareas y fechas. Se abre desde Ajustes (menú de la
+// rueda de la cuenta, «Importar de Notion»).
 // Ver lib/extensions/notion-import.ts para cómo se leen los archivos.
 // ============================================================
 
@@ -54,8 +56,23 @@ const plain = (s: string) =>
     .replace(/[̀-ͯ]/g, '')
     .trim();
 
-export default function NotionImportDialog() {
+/**
+ * Sin props, lo abre el estado global de las extensiones (el que monta el
+ * layout para el atajo /notion). Con `open`/`onOpenChange`, es un recuadro
+ * propio de quien lo monta: así lo abre «Importar de Notion» del menú de la
+ * cuenta en Ajustes sin depender de que la extensión siga en la Ayuda.
+ */
+export default function NotionImportDialog({
+  open: openProp,
+  onOpenChange,
+}: {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+} = {}) {
   const { notionOpen } = useExtensions();
+  const controlled = openProp !== undefined;
+  const open = controlled ? openProp : notionOpen;
+  const setOpen = (next: boolean) => (controlled ? onOpenChange?.(next) : setNotionOpen(next));
   const { courses, tasks, addTask, addLocalEvent, userProfile } = useCourse();
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -173,30 +190,50 @@ export default function NotionImportDialog() {
         description: 'Las verás en Calendario → «Local».',
       });
     }
-    setNotionOpen(false);
+    setOpen(false);
     reset();
   };
 
   const allChosen = visibleItems.length > 0 && visibleItems.every((i) => selected.has(i.key) || isDuplicate(i));
+  const chosenCount = visibleItems.filter((i) => selected.has(i.key)).length;
+
+  const close = () => {
+    setOpen(false);
+    reset();
+  };
 
   return (
     <Dialog
-      open={notionOpen}
-      onOpenChange={(open) => {
-        setNotionOpen(open);
-        if (!open) reset();
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) reset();
       }}
     >
       <DialogContent className="flex max-h-[88vh] flex-col gap-4 sm:max-w-2xl">
-        <DialogHeader>
-          <div className="flex items-center gap-3">
-            <ExtensionIcon id="notion" />
-            <div className="text-left">
-              <DialogTitle>Importar de Notion</DialogTitle>
-              <DialogDescription>Tus tareas y fechas de una base de datos de Notion, a Frame.</DialogDescription>
+        {/* «Atrás» (a elegir otro archivo): flecha en la esquina superior
+            izquierda, frente a la X de cerrar. */}
+        {table && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={reset}
+            title="Elegir otro archivo"
+            aria-label="Atrás: elegir otro archivo"
+            className="absolute left-4 top-4 z-10 h-7 w-7 text-muted-foreground hover:bg-primary/10 hover:text-primary"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        )}
+        <EchoHeader word="Notion" className="mb-0">
+          <DialogHeader className="items-center">
+            <div className="flex items-center justify-center gap-2.5">
+              <ExtensionIcon id="notion" className="h-8 w-8" />
+              <DialogTitle className="text-xl font-bold text-primary">Importar de Notion</DialogTitle>
             </div>
-          </div>
-        </DialogHeader>
+            <DialogDescription className="text-center text-xs">Tus tareas y fechas, de una base de datos de Notion a Frame.</DialogDescription>
+          </DialogHeader>
+        </EchoHeader>
 
         {!table ? (
           <div className="space-y-4">
@@ -331,13 +368,13 @@ export default function NotionImportDialog() {
               )}
             </div>
 
-            <div className="flex items-center justify-between gap-2">
-              <Button variant="ghost" size="sm" onClick={reset}>
-                Elegir otro archivo
+            <div className="flex items-center justify-end gap-2">
+              <Button variant="fantasmaRojo" onClick={close}>
+                Cancelar
               </Button>
-              <Button onClick={runImport} disabled={visibleItems.filter((i) => selected.has(i.key)).length === 0}>
-                Importar {visibleItems.filter((i) => selected.has(i.key)).length}{' '}
-                {importAs === 'tasks' ? 'tareas' : 'fechas'}
+              <Button onClick={runImport} disabled={chosenCount === 0}>
+                Importar {chosenCount}{' '}
+                {importAs === 'tasks' ? (chosenCount === 1 ? 'tarea' : 'tareas') : chosenCount === 1 ? 'fecha' : 'fechas'}
               </Button>
             </div>
           </>

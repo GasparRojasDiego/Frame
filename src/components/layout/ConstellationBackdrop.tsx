@@ -341,19 +341,10 @@ export default function ConstellationBackdrop({ spotlight = false, avoidRef }: C
     };
   }, [spotlight, avoidRef]);
 
+  // Sin halos de color en las esquinas (fuera en la 1.6.2): el fondo es el
+  // liso del tema (lo pone <body>) y la constelación va directamente encima.
   return (
     <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden>
-      {/* Halo suave: evita el aspecto de "fondo plano con puntos". */}
-      <div
-        className="absolute inset-0"
-        style={{
-          // Dos halos simétricos, uno en cada esquina en diagonal: la
-          // composición queda equilibrada en lugar de cargada arriba.
-          background:
-            'radial-gradient(70vw 60vh at 18% 8%, hsl(var(--primary) / 0.10), transparent 70%),' +
-            'radial-gradient(70vw 60vh at 92% 96%, hsl(var(--primary) / 0.10), transparent 70%)',
-        }}
-      />
       <canvas ref={canvasRef} className="absolute inset-0 block" />
     </div>
   );

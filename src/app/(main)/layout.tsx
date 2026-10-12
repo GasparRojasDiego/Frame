@@ -38,6 +38,7 @@ import StudyVideoHost from '@/components/temporizador/StudyVideoHost';
 import ConstellationBackdrop from '@/components/layout/ConstellationBackdrop';
 import InterfaceErrorBoundary from '@/components/layout/InterfaceErrorBoundary';
 import NotionImportDialog from '@/components/extensions/NotionImportDialog';
+import UpdateDialog from '@/components/layout/UpdateDialog';
 import TourHost from '@/components/help/TourHost';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 import { getActiveSession, onAuthChange, tidyName, updatePersonNames, updateUsername } from '@/lib/supabase/auth';
@@ -135,7 +136,8 @@ function AppLayout({ children, userProfile }: { children: ReactNode; userProfile
     }, [toast]);
 
     // Nada de reiniciar para actualizar mientras el usuario está estudiando o
-    // escuchando música: el actualizador consulta esto antes de instalar solo.
+    // escuchando música: el actualizador lo consulta antes de instalar (y el
+    // recuadro de actualización no deja confirmar mientras dure).
     useEffect(() => {
         setUpdateBusyGuard(() => isTimerActive || isPlaying);
         return () => setUpdateBusyGuard(null);
@@ -363,8 +365,10 @@ function MainApp({ children, userProfile }: { children: ReactNode; userProfile: 
       <Toaster />
       {/* Alerta diaria de tareas vencidas (reprogramar/culminar/eliminar) */}
       <OverdueTasksAlert />
-      {/* Extensión Notion (se añade desde el «+» de la barra de Inicio). */}
+      {/* Importador de Notion: lo abre su botón en Ajustes (y el atajo /notion de la Ayuda). */}
       <NotionImportDialog />
+      {/* Recuadro de actualización: lo abren el testigo junto al perfil y la campana. */}
+      <UpdateDialog />
       {/* Recorrido «Descubrir» de la ayuda: vive aquí para sobrevivir a los cambios de interfaz. */}
       <TourHost />
       {interruptedSession && (
@@ -381,8 +385,8 @@ function AppController({ children }: { children: React.ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [authStatus, setAuthStatus] = useState<'loading' | 'unauthenticated' | 'needs-completion' | 'authenticated'>('loading');
 
-  // Auto-actualización: al arrancar se instala sola si no hay nada en marcha;
-  // después solo avisa (testigo del sidebar y campana).
+  // Actualizaciones: solo se MIRA si hay versión nueva (testigo del sidebar y
+  // campana). Instalar lo decide el usuario en el recuadro de actualización.
   useEffect(() => startUpdaterLoop(), []);
 
   useEffect(() => {

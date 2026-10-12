@@ -234,19 +234,23 @@ export default function NotificationCenter() {
   return (
     <Popover open={isOpen} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
+        {/* Fantasma como el resto de la barra; sólido mientras el recuadro
+            de notificaciones está abierto. */}
         <Button
           size="icon"
-          variant="ghost"
+          variant={isOpen ? 'default' : 'fantasma'}
           title="Notificaciones" data-tour="campana"
           data-notification-bell
           className={cn(
-            'relative h-9 w-9 rounded-md border border-primary bg-primary/10 text-primary hover:bg-primary/20',
+            'relative h-9 w-9 rounded-md border border-primary',
             ping && 'animate-pulse ring-2 ring-amber-500/60'
           )}
         >
           <Bell className="h-5 w-5" />
+          {/* El aro del color del fondo separa la cifra del botón cuando
+              este se pinta sólido (los dos son del azul primario). */}
           {badgeCount > 0 && (
-            <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground">
+            <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground ring-2 ring-background">
               {badgeCount > 9 ? '9+' : badgeCount}
             </span>
           )}

@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
+import { EchoHeader } from '@/components/shared/EchoWord';
 import { useCourse } from '@/context/CourseContext';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -119,7 +120,7 @@ export default function MusicImportButton({ variant = 'button' }: { variant?: 'b
             <FileAudio className="mr-2 h-4 w-4 text-primary" />
             <span className="flex flex-col">
               Canciones…
-              <span className="text-[11px] text-muted-foreground">Una o varias, con sus letras .lrc</span>
+              <span className="text-[11px] text-muted-foreground">MP3 sueltos (u otros), con sus .lrc</span>
             </span>
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => void choose(true)} data-tour="importar-carpeta">
@@ -134,15 +135,17 @@ export default function MusicImportButton({ variant = 'button' }: { variant?: 'b
 
       <Dialog open={stage !== 'idle'} onOpenChange={(open) => !open && stage !== 'importing' && stage !== 'reading' && finish()}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-center text-xl font-bold text-primary">Importar música</DialogTitle>
-            <DialogDescription className="text-center">
-              {stage === 'reading' && 'Leyendo lo que elegiste…'}
-              {stage === 'confirm' && plan && `Desde «${plan.source.name}».`}
-              {stage === 'importing' && 'Copiando tus canciones dentro de Frame…'}
-              {stage === 'done' && 'Listo.'}
-            </DialogDescription>
-          </DialogHeader>
+          <EchoHeader word="Importar">
+            <DialogHeader>
+              <DialogTitle className="text-center text-xl font-bold text-primary">Importar música</DialogTitle>
+              <DialogDescription className="text-center">
+                {stage === 'reading' && 'Leyendo lo que elegiste…'}
+                {stage === 'confirm' && plan && `Desde «${plan.source.name}».`}
+                {stage === 'importing' && 'Copiando tus canciones dentro de Frame…'}
+                {stage === 'done' && 'Listo.'}
+              </DialogDescription>
+            </DialogHeader>
+          </EchoHeader>
 
           {stage === 'reading' && (
             <div className="flex justify-center py-6">
@@ -204,14 +207,14 @@ export default function MusicImportButton({ variant = 'button' }: { variant?: 'b
           <DialogFooter>
             {stage === 'confirm' && (
               <>
-                <Button variant="outline" onClick={finish}>
+                <Button variant="fantasmaRojo" onClick={finish}>
                   Cancelar
                 </Button>
                 <Button onClick={() => void run()}>Importar</Button>
               </>
             )}
             {stage === 'importing' && (
-              <Button variant="outline" onClick={() => (stopRef.current = true)}>
+              <Button variant="fantasmaRojo" onClick={() => (stopRef.current = true)}>
                 Detener
               </Button>
             )}

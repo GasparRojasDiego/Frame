@@ -2,7 +2,7 @@ import { format, parseISO } from 'date-fns';
 import { Gauge, NotebookPen, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatHMS } from '@/lib/duration';
-import { NoteText } from '@/components/temporizador/NoteEditor';
+import RichNoteView from '@/components/temporizador/RichNoteView';
 import { cn } from '@/lib/utils';
 import type { SessionNote } from '@/types';
 
@@ -56,7 +56,7 @@ export default function SessionNotesList({
           </div>
 
           <div className="min-w-0 flex-1">
-            <NoteText text={note.text} className="text-[11px] leading-snug text-foreground" />
+            <RichNoteView text={note.text} className="text-[11px] leading-snug text-foreground" />
             {(note.courseName || note.taskName || note.focus) && (
               <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[10px] text-muted-foreground">
                 {note.courseName && <span className="text-primary/80">{note.courseName}</span>}

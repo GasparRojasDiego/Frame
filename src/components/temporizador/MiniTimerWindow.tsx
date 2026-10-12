@@ -17,6 +17,8 @@ import {
   ArrowLeftRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { isRichNoteEmpty } from '@/lib/rich-note';
+import { Button } from '@/components/ui/button';
 import { PeruClock, PeruFlag } from './MiniTimerCard';
 import NoteEditor from './NoteEditor';
 
@@ -147,7 +149,7 @@ export default function MiniTimerWindow() {
 
   const submitNote = () => {
     const clean = noteText.trim();
-    if (!clean) return;
+    if (isRichNoteEmpty(clean)) return;
     void emit('mini-timer-cmd', { action: 'note', text: clean });
     setNoteText('');
     setNoteOpen(false);
@@ -341,7 +343,9 @@ export default function MiniTimerWindow() {
         </div>
 
         {noteOpen ? (
-          /* Anotación en caliente: la ventana crece y el reloj queda arriba, pequeño. */
+          /* Anotación en caliente: la ventana crece y el reloj queda arriba,
+             pequeño. El mismo editor que en la app (siempre texto, con su
+             barra de formato), en versión compacta. */
           <div className="flex min-h-0 flex-1 flex-col gap-1.5 p-2.5">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -354,26 +358,27 @@ export default function MiniTimerWindow() {
               onChange={setNoteText}
               onSubmit={submitNote}
               onCancel={() => setNoteOpen(false)}
-              placeholder="¿Qué avanzaste?"
-              rows={5}
+              placeholder="Escribe tu avance…"
+              rows={4}
               autoFocus
               dense
               className="flex-1"
             />
             <div className="flex justify-end gap-1.5">
-              <button
+              <Button
+                variant="fantasmaRojo"
                 onClick={() => setNoteOpen(false)}
-                className="rounded-md px-2.5 py-1 text-[10.5px] font-semibold text-muted-foreground transition-colors hover:bg-secondary"
+                className="h-6 px-2.5 py-0 text-[10.5px] font-semibold"
               >
                 Cancelar
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={submitNote}
-                disabled={!noteText.trim()}
-                className="rounded-md bg-primary px-3 py-1 text-[10.5px] font-semibold text-primary-foreground transition-colors hover:bg-primary/85 disabled:opacity-50"
+                disabled={isRichNoteEmpty(noteText)}
+                className="h-6 px-3 py-0 text-[10.5px] font-semibold"
               >
                 Anotar
-              </button>
+              </Button>
             </div>
           </div>
         ) : (

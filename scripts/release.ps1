@@ -61,10 +61,14 @@ $sums = "$bundle/SHA256SUMS.txt"
 Write-Host "==> SHA-256: $hash" -ForegroundColor Cyan
 
 # --- latest.json (manifiesto del auto-updater) ---
+# `frame` es nuestro (el plugin de Tauri lo ignora): el peso exacto del
+# instalador, para que el recuadro de actualizar diga cuánto pesa y cuánto
+# tardará ANTES de empezar a descargar (src/lib/updater.ts lo lee de rawJson).
 $latest = @{
     version  = $version
     notes    = "Frame $version"
     pub_date = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+    frame    = @{ size = $size }
     platforms = @{
         'windows-x86_64' = @{
             signature = (Get-Content $sig -Raw).Trim()

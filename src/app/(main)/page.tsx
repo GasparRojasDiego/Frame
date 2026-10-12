@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import { useTodayKey } from '@/hooks/use-today';
 import Image from '@/lib/image';
 import { useRouter } from '@/lib/navigation';
-import type { DailyPerformance, Task } from '@/types';
+import type { DailyPerformance, Task, TaskPriority } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -31,6 +31,8 @@ import { GOAL_DAY_KEYS, gradeForScore } from '@/lib/academic-metrics';
 import RecordingsSection from '@/components/recordings/RecordingsSection';
 import InboxTasksSection from '@/components/tasks/InboxTasksSection';
 import AcademicPulse from '@/components/dashboard/AcademicPulse';
+import LooseNotesSection from '@/components/dashboard/LooseNotesSection';
+import { DIFFICULTY_META, DifficultyBars } from '@/components/tasks/task-badges';
 
 // El radar usa la biblioteca de gráficos (la más pesada de la app) y está al
 // final de Inicio: se carga aparte para que Inicio aparezca antes.
@@ -186,41 +188,91 @@ const Sparkline = ({ series, max }: { series: number[]; max: number }) => {
   );
 };
 
-/** Anillo de cuenta atrás: cuanto menos queda, más lleno y más rojo. */
-const CountdownRing = ({ days, urgent }: { days: number; urgent: boolean }) => {
+/**
+ * Cuenta atrás compacta: cuanto menos queda, más lleno el anillo y más rojo.
+ * Cabe en una línea de texto, así el cuerpo de «Próxima tarea» queda casi
+ * entero para la tarea (antes el anillo grande se comía un tercio del ancho).
+ */
+const CountdownChip = ({
+  days,
+  label,
+  urgent,
+  title,
+}: {
+  days: number;
+  label: string;
+  urgent: boolean;
+  title?: string;
+}) => {
   const HORIZON = 7; // más de una semana ya no aprieta
   const filled = 1 - Math.min(1, Math.max(0, days) / HORIZON);
-  const C = 2 * Math.PI * 15.5;
+  const R = 13;
+  const C = 2 * Math.PI * R;
   return (
-    <div className="relative flex h-[52px] w-[52px] shrink-0 items-center justify-center">
-      <svg viewBox="0 0 36 36" className="absolute inset-0 h-full w-full -rotate-90">
-        <circle cx="18" cy="18" r="15.5" fill="none" strokeWidth="3" className="stroke-secondary" />
+    <span
+      title={title}
+      className={cn(
+        'inline-flex shrink-0 items-center gap-1 rounded-full pl-0.5 pr-1.5 text-[10px] font-semibold leading-4 tabular-nums',
+        urgent ? 'bg-red-500/15 text-red-400' : 'bg-primary/15 text-primary'
+      )}
+    >
+      <svg viewBox="0 0 36 36" className="h-3 w-3 -rotate-90" aria-hidden>
+        <circle cx="18" cy="18" r={R} fill="none" strokeWidth="6" className="stroke-current opacity-25" />
         <circle
           cx="18"
           cy="18"
-          r="15.5"
+          r={R}
           fill="none"
-          strokeWidth="3"
-          strokeLinecap="round"
+          strokeWidth="6"
           strokeDasharray={C}
           strokeDashoffset={C * (1 - filled)}
-          className={cn(urgent ? 'stroke-red-400' : 'stroke-primary')}
-          style={{ transition: 'stroke-dashoffset 800ms cubic-bezier(0.22,1,0.36,1)' }}
+          className="stroke-current transition-[stroke-dashoffset] duration-700 ease-out motion-reduce:transition-none"
         />
       </svg>
-      <div className="relative text-center leading-none">
+      {label}
+    </span>
+  );
+};
+
+/** Importancia de la tarea con los mismos colores que su tarjeta en Tareas. */
+const PRIORITY_TONE: Record<TaskPriority, { dot: string; text: string }> = {
+  Baja: { dot: 'bg-emerald-400', text: 'text-emerald-500 dark:text-emerald-400' },
+  Media: { dot: 'bg-amber-400', text: 'text-amber-500 dark:text-amber-400' },
+  Alta: { dot: 'bg-rose-400', text: 'text-rose-500 dark:text-rose-400' },
+};
+
+/**
+ * Texto que ocupa justo el alto que le sobra a la casilla: tantas líneas
+ * enteras como quepan y puntos suspensivos en la última. Va en posición
+ * absoluta para no empujar la casilla: su alto lo deciden las de al lado.
+ */
+const FitText = ({ children, className }: { children: React.ReactNode; className?: string }) => {
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [lines, setLines] = useState(0);
+
+  // Antes de pintar: así no asoma un renglón de más mientras se mide.
+  useLayoutEffect(() => {
+    const box = boxRef.current;
+    if (!box) return;
+    const LINE = 16; // `leading-4`
+    const measure = () => setLines(Math.floor(box.clientHeight / LINE));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={boxRef} className="relative min-h-0 flex-1">
+      {/* Si no cabe ni un renglón entero, mejor nada que medio. */}
+      {lines > 0 && (
         <p
-          className={cn(
-            'font-headline text-lg font-bold tabular-nums',
-            urgent ? 'text-red-400' : 'text-primary'
-          )}
+          className={cn('absolute inset-x-0 top-0 overflow-hidden break-words text-[11px] leading-4', className)}
+          style={{ display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: lines }}
         >
-          {days <= 0 ? '!' : days}
+          {children}
         </p>
-        <p className="text-[8px] uppercase tracking-wide text-muted-foreground">
-          {days <= 0 ? 'hoy' : days === 1 ? 'día' : 'días'}
-        </p>
-      </div>
+      )}
     </div>
   );
 };
@@ -230,6 +282,7 @@ const StatTile = ({
   label,
   accent,
   interactive,
+  className,
   children,
 }: {
   icon: React.ElementType;
@@ -237,17 +290,21 @@ const StatTile = ({
   /** Clase `from-*` del degradado de fondo: identifica el dato de un vistazo. */
   accent: string;
   interactive?: boolean;
+  className?: string;
   children: React.ReactNode;
 }) => (
   <div
     className={cn(
-      'flex flex-1 flex-col gap-2 rounded-xl border border-border/60 bg-gradient-to-br to-transparent p-3.5 transition-all',
+      // Degradado vertical y suave, de abajo hacia arriba: tiñe el pie de la
+      // casilla y se desvanece hacia la cabecera.
+      'flex flex-1 flex-col gap-2 rounded-xl border border-border/60 bg-gradient-to-t to-transparent p-3.5 transition-all',
       accent,
-      interactive && 'hover:border-primary/50 hover:shadow-[0_0_16px_hsl(var(--primary)/0.15)]'
+      interactive && 'hover:border-primary/50 hover:shadow-[0_0_16px_hsl(var(--primary)/0.15)]',
+      className
     )}
   >
     <div className="flex items-center gap-2">
-      <span className="rounded-md bg-background/60 p-1">
+      <span className="shrink-0 rounded-md bg-background/60 p-1">
         <Icon className="h-3.5 w-3.5 text-primary" />
       </span>
       <span className="truncate text-xs font-semibold text-muted-foreground">{label}</span>
@@ -280,19 +337,8 @@ export default function HomePage() {
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayFormatted = format(yesterday, 'd MMM', { locale: es });
-  
-  const courseNameRef = useRef<HTMLParagraphElement>(null);
-  const [showTaskName, setShowTaskName] = useState(true);
 
   const { toast } = useToast();
-
-  useEffect(() => {
-    if (criticalTask && courseNameRef.current) {
-        const singleLineHeightThreshold = 28; 
-        setShowTaskName(courseNameRef.current.offsetHeight <= singleLineHeightThreshold);
-    }
-  }, [criticalTask]);
-
 
   useEffect(() => {
     if (!userProfile) return;
@@ -553,6 +599,30 @@ export default function HomePage() {
     }
   })();
 
+  // Fecha de entrega exacta («vie 17 oct»): la cuenta atrás dice cuánto
+  // falta; esto, qué día es. El año solo si no es el actual.
+  const criticalTaskDue = (() => {
+    if (!criticalTask?.dueDate) return null;
+    try {
+      const due = parseISO(criticalTask.dueDate);
+      const sameYear = due.getFullYear() === new Date().getFullYear();
+      return {
+        short: format(due, sameYear ? 'EEE d MMM' : 'd MMM yy', { locale: es }),
+        long: format(due, "EEEE d 'de' MMMM 'de' yyyy", { locale: es }),
+      };
+    } catch {
+      return null;
+    }
+  })();
+
+  // Descripción en una sola tira: los saltos de línea de la tarea no caben en
+  // una casilla de cuatro renglones.
+  const criticalTaskDescription = criticalTask?.description?.replace(/\s+/g, ' ').trim() ?? '';
+  const criticalTaskProgress = Math.min(100, Math.max(0, Math.round(criticalTask?.progress ?? 0)));
+  // Tareas antiguas sin importancia válida se leen como «Media», igual que en Tareas.
+  const criticalTaskPriority: TaskPriority =
+    criticalTask && PRIORITY_TONE[criticalTask.priority] ? criticalTask.priority : 'Media';
+
 
   return (
     <div className="space-y-6 p-6 md:p-8">
@@ -603,7 +673,7 @@ export default function HomePage() {
                       <StatTile
                         icon={Clock}
                         label={`Ayer, ${yesterdayFormatted}`}
-                        accent="from-primary/15"
+                        accent="from-primary/10"
                       >
                         {/* Aguja sobre 20 (o sobre la meta diaria en modo
                             tiempo): el número solo no dice si 14 es mucho. */}
@@ -639,7 +709,7 @@ export default function HomePage() {
                       <StatTile
                         icon={Calendar}
                         label="Promedio semanal"
-                        accent="from-chart-2/20"
+                        accent="from-chart-2/15"
                       >
                         {/* Silueta de los 7 días: la tendencia importa más que
                             el promedio, que oculta si vas subiendo o cayendo. */}
@@ -671,8 +741,149 @@ export default function HomePage() {
                       </StatTile>
                     </div>
 
+                    {/* Columna derecha: «Próxima tarea» arriba y «Días de racha»
+                        abajo. Los dos huecos miden lo mismo (`flex-1` en ambos);
+                        la tarea va arriba con el cuerpo entero para su ficha. */}
                     <div className="flex flex-col gap-4">
-                      <StatTile icon={Flame} label="Días de racha" accent="from-orange-500/20">
+                      {criticalTask ? (
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              {/* Envoltorio flexible: la casilla llena su hueco
+                                  entero, igual que la de racha. */}
+                              <div
+                                role="button"
+                                tabIndex={0}
+                                aria-label={`Próxima tarea: ${criticalTask.name}`}
+                                onKeyDown={(event) => {
+                                  if (event.key === 'Enter' || event.key === ' ') {
+                                    event.preventDefault();
+                                    event.currentTarget.click();
+                                  }
+                                }}
+                                className="flex flex-1 cursor-pointer rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                data-tour="proxima-tarea"
+                              >
+                                <StatTile
+                                  icon={AlertTriangle}
+                                  label="Próxima tarea"
+                                  accent="from-amber-500/15"
+                                  interactive
+                                  className="min-w-0"
+                                >
+                                  <div className="flex min-h-0 flex-1 flex-col gap-1">
+                                    {/* Nombre de la tarea y su avance. */}
+                                    <div className="flex items-center gap-2">
+                                      <p
+                                        className="min-w-0 flex-1 truncate font-headline text-sm font-bold text-primary"
+                                        title={criticalTask.name}
+                                      >
+                                        {criticalTask.name}
+                                      </p>
+                                      <span
+                                        className="flex shrink-0 items-center gap-1"
+                                        title={`Avance: ${criticalTaskProgress}%`}
+                                      >
+                                        <span className="h-1 w-8 overflow-hidden rounded-full bg-secondary">
+                                          <span
+                                            className="block h-full rounded-full bg-primary transition-[width] duration-500 motion-reduce:transition-none"
+                                            style={{ width: `${criticalTaskProgress}%` }}
+                                          />
+                                        </span>
+                                        <span className="text-[10px] font-semibold tabular-nums text-muted-foreground">
+                                          {criticalTaskProgress}%
+                                        </span>
+                                      </span>
+                                    </div>
+
+                                    {/* Asignatura, cuenta atrás, fecha de entrega,
+                                        importancia y dificultad. Se reparten en
+                                        una o dos líneas según el ancho; lo que
+                                        sobra debajo es para la descripción. */}
+                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] leading-4 text-muted-foreground">
+                                      <span className="max-w-full truncate font-semibold text-foreground/80">
+                                        {criticalTask.courseName}
+                                      </span>
+                                      {criticalTaskCountdown && (
+                                        <CountdownChip
+                                          days={criticalTaskCountdown.days}
+                                          label={criticalTaskCountdown.label}
+                                          urgent={criticalTaskCountdown.urgent}
+                                          title={criticalTaskDue ? `Fecha de entrega: ${criticalTaskDue.long}` : undefined}
+                                        />
+                                      )}
+                                      {criticalTaskDue && (
+                                        <span
+                                          className="shrink-0"
+                                          title={`Fecha de entrega: ${criticalTaskDue.long}`}
+                                        >
+                                          {criticalTaskDue.short}
+                                        </span>
+                                      )}
+                                      <span
+                                        className={cn(
+                                          'inline-flex shrink-0 items-center gap-1 font-medium',
+                                          PRIORITY_TONE[criticalTaskPriority].text
+                                        )}
+                                        title={`Importancia ${criticalTaskPriority.toLowerCase()}`}
+                                      >
+                                        <span
+                                          className={cn('h-1.5 w-1.5 rounded-full', PRIORITY_TONE[criticalTaskPriority].dot)}
+                                        />
+                                        {criticalTaskPriority}
+                                      </span>
+                                      {criticalTask.difficulty && DIFFICULTY_META[criticalTask.difficulty] && (
+                                        <span
+                                          className={cn('flex shrink-0', DIFFICULTY_META[criticalTask.difficulty].text)}
+                                          title={`Dificultad ${criticalTask.difficulty.toLowerCase()}`}
+                                        >
+                                          <DifficultyBars level={criticalTask.difficulty} />
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {/* Inicio de la descripción: ocupa lo que sobra
+                                        de la casilla, sin estirarla. */}
+                                    <FitText
+                                      className={
+                                        criticalTaskDescription
+                                          ? 'text-muted-foreground'
+                                          : 'italic text-muted-foreground/60'
+                                      }
+                                    >
+                                      {criticalTaskDescription || 'Sin descripción.'}
+                                    </FitText>
+                                  </div>
+                                </StatTile>
+                              </div>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle className="text-primary text-xl font-bold text-center">Interfaz</DialogTitle>
+                                </DialogHeader>
+                                <div className="grid grid-cols-2 gap-4 pt-4">
+                                    <Button
+                                      variant="fantasma"
+                                      onClick={() => router.push(`/tareas?highlightTaskId=${criticalTask.id}`, { scroll: false })}>
+                                      Galería de tareas
+                                    </Button>
+                                    <Button
+                                      variant="fantasma"
+                                      onClick={() => router.push(`/cursos/?id=${criticalTask.courseId}&highlightTaskId=${criticalTask.id}`, { scroll: false })}>
+                                      Ver asignatura
+                                    </Button>
+                                </div>
+                            </DialogContent>
+                          </Dialog>
+                        ) : (
+                          <div className="flex flex-1" data-tour="proxima-tarea">
+                            <StatTile icon={AlertTriangle} label="Próxima tarea" accent="from-amber-500/15">
+                              <p className="font-headline text-lg font-bold text-primary">Todo en orden</p>
+                              <p className="text-xs text-muted-foreground">No tienes tareas pendientes con fecha.</p>
+                            </StatTile>
+                          </div>
+                        )}
+
+                      <StatTile icon={Flame} label="Días de racha" accent="from-orange-500/15">
                         {/* La llama crece con la racha y el anillo mide cuánto
                             falta para el siguiente hito de 7 días. */}
                         <div className="flex items-center gap-3">
@@ -721,70 +932,6 @@ export default function HomePage() {
                           </div>
                         </div>
                       </StatTile>
-
-                      {criticalTask ? (
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <div className="flex-1 cursor-pointer">
-                                <StatTile
-                                  icon={AlertTriangle}
-                                  label="Próxima tarea"
-                                  accent="from-amber-500/20"
-                                  interactive
-                                >
-                                  {/* Anillo de cuenta atrás: se llena y se pone
-                                      rojo a medida que la entrega se acerca. */}
-                                  <div className="flex items-center gap-3">
-                                    <CountdownRing
-                                      days={criticalTaskCountdown?.days ?? 7}
-                                      urgent={Boolean(criticalTaskCountdown?.urgent)}
-                                    />
-                                    <div className="min-w-0 flex-1">
-                                      <p ref={courseNameRef} className="truncate font-headline text-base font-bold text-primary">
-                                        {criticalTask.courseName}
-                                      </p>
-                                      {showTaskName && (
-                                        <p className="truncate text-xs text-muted-foreground">{criticalTask.name}</p>
-                                      )}
-                                      {criticalTaskCountdown && (
-                                        <span className={cn(
-                                          'mt-1 inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-semibold',
-                                          criticalTaskCountdown.urgent
-                                            ? 'bg-red-500/15 text-red-400'
-                                            : 'bg-primary/15 text-primary'
-                                        )}>
-                                          {criticalTaskCountdown.label}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                </StatTile>
-                              </div>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle className="text-primary text-xl font-bold text-center">Interfaz</DialogTitle>
-                                </DialogHeader>
-                                <div className="grid grid-cols-2 gap-4 pt-4">
-                                    <Button
-                                      className="bg-primary/20 hover:bg-primary/30 text-primary border border-primary"
-                                      onClick={() => router.push(`/tareas?highlightTaskId=${criticalTask.id}`, { scroll: false })}>
-                                      Galería de tareas
-                                    </Button>
-                                    <Button
-                                      className="bg-primary/20 hover:bg-primary/30 text-primary border border-primary"
-                                      onClick={() => router.push(`/cursos/?id=${criticalTask.courseId}&highlightTaskId=${criticalTask.id}`, { scroll: false })}>
-                                      Ver asignatura
-                                    </Button>
-                                </div>
-                            </DialogContent>
-                          </Dialog>
-                        ) : (
-                          <StatTile icon={AlertTriangle} label="Próxima tarea" accent="from-amber-500/20">
-                            <p className="font-headline text-lg font-bold text-primary">Todo en orden</p>
-                            <p className="text-xs text-muted-foreground">No tienes tareas pendientes con fecha.</p>
-                          </StatTile>
-                        )}
                     </div>
                   </div>
                 </CardContent>
@@ -801,6 +948,10 @@ export default function HomePage() {
 
       {/* Grabaciones de voz sin asignatura: al final de todo, con título centrado */}
       <div data-tour="grabaciones-inicio"><RecordingsSection variant="home" /></div>
+
+      {/* Anotaciones sin asignatura, junto a las grabaciones sueltas: lo
+          apuntado en caliente con el «+» que aún no tiene sitio. */}
+      <div data-tour="anotaciones-inicio"><LooseNotesSection /></div>
     </div>
   );
 }

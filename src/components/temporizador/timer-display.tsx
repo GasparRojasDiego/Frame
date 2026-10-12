@@ -10,6 +10,9 @@ import {
 import { cn } from '@/lib/utils';
 import { Play, Pause, StopCircle, RefreshCcw, PictureInPicture2, Minimize2, EyeOff, NotebookPen } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { invoke, isTauri } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
+import { Window as TauriWindow } from '@tauri-apps/api/window';
 import FinishSessionForm from './finish-session-form';
 import type { StudySession } from '@/types';
 import { useCourse } from '@/context/CourseContext';
@@ -292,9 +295,61 @@ export default function TimerDisplay({ onSessionComplete, disabled = false }: Ti
   const modeButtonsDisabled = sessionStartTime !== 0;
   const finishButtonDisabled = sessionStartTime === 0;
 
+  // ------------------------------------------------------------
+  // ¿Está abierta DE VERDAD la vista flotante?
+  //
+  // En la app de escritorio es una ventana nativa («minitimer»). Su X avisa
+  // al contexto, pero si se cierra por otra vía (Alt+F4, el sistema…) nadie
+  // avisa y el estado seguiría diciendo «abierta»: el menú ofrecería
+  // «Ocultar» para una ventana que ya no existe y elegir de nuevo el mismo
+  // tamaño no la volvería a abrir. Por eso se escucha su cierre y, antes de
+  // abrir el menú, se comprueba que la ventana sigue ahí.
+  // ------------------------------------------------------------
+  const floatingOpen = miniTimerView !== 'hidden';
+  const floatingRef = useRef(miniTimerView);
+  floatingRef.current = miniTimerView;
+  const floatingShown = useCallback(() => floatingRef.current !== 'hidden', []);
+  /** Cuándo se pidió abrirla: la ventana tarda un momento en existir y, en
+   *  ese rato, no encontrarla no significa que se haya cerrado. */
+  const requestedAtRef = useRef(0);
+
+  const syncFloating = useCallback(async () => {
+    if (!isTauri() || !floatingShown()) return;
+    if (Date.now() - requestedAtRef.current < 3000) return;
+    try {
+      const win = await TauriWindow.getByLabel('minitimer');
+      // Se vuelve a mirar: mientras se preguntaba, pudo ocultarse desde aquí.
+      if (!win && floatingShown()) setMiniTimerView('hidden');
+    } catch {
+      /* sin respuesta de Tauri se deja el estado como está */
+    }
+  }, [floatingShown, setMiniTimerView]);
+
+  useEffect(() => {
+    if (!isTauri()) return;
+    void syncFloating();
+    // Tauri emite el cierre con destino «esa ventana»: hay que escuchar con
+    // ese mismo destino (con 'AnyLabel' no llega).
+    const unlisten = listen('tauri://destroyed', () => void syncFloating(), {
+      target: { kind: 'Window', label: 'minitimer' },
+    });
+    return () => {
+      void unlisten.then((off) => off()).catch(() => {});
+    };
+  }, [syncFloating]);
+
+  /** Abre la vista flotante con ese tamaño. Si el estado ya decía ese tamaño
+   *  se pide la ventana igualmente: así reaparece aunque se hubiera perdido. */
+  const showFloating = (view: 'full' | 'compact') => {
+    requestedAtRef.current = Date.now();
+    if (isTauri() && miniTimerView === view) {
+      void invoke('open_mini_timer', { compact: view === 'compact' }).catch(() => {});
+    }
+    setMiniTimerView(view);
+  };
+
   return (
     <div className="flex flex-col items-center gap-8">
-       <h1 className="text-2xl font-bold text-foreground font-headline text-center">Centro de enfoque</h1>
       <div className="flex gap-4">
         <Button
           variant={mode === 'focus' ? 'outline' : 'secondary'}
@@ -323,14 +378,17 @@ export default function TimerDisplay({ onSessionComplete, disabled = false }: Ti
         >
           Cronómetro
         </Button>
-        <DropdownMenu>
+        <DropdownMenu onOpenChange={(open) => open && void syncFloating()}>
           <DropdownMenuTrigger asChild>
             <Button
               variant="secondary"
               size="icon"
               title="Vista flotante" data-tour="vista-flotante"
+              // Al acercar el ratón ya se comprueba la ventana: cuando el menú
+              // se abre, «Ocultar» está o no está, sin parpadeo.
+              onPointerEnter={() => void syncFloating()}
               className={cn(
-                miniTimerView !== 'hidden' &&
+                floatingOpen &&
                   'border border-primary bg-primary/20 text-primary hover:text-primary'
               )}
             >
@@ -343,27 +401,29 @@ export default function TimerDisplay({ onSessionComplete, disabled = false }: Ti
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onSelect={() => setMiniTimerView('full')}
+              onSelect={() => showFloating('full')}
               className={cn(miniTimerView === 'full' && 'font-semibold text-primary')}
             >
               <PictureInPicture2 className="mr-2 h-4 w-4" />
               Mediana
             </DropdownMenuItem>
             <DropdownMenuItem
-              onSelect={() => setMiniTimerView('compact')}
+              onSelect={() => showFloating('compact')}
               className={cn(miniTimerView === 'compact' && 'font-semibold text-primary')}
             >
               <Minimize2 className="mr-2 h-4 w-4" />
               Compacta
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onSelect={() => setMiniTimerView('hidden')}
-              disabled={miniTimerView === 'hidden'}
-            >
-              <EyeOff className="mr-2 h-4 w-4" />
-              Ocultar
-            </DropdownMenuItem>
+            {/* «Ocultar» solo existe si hay algo que ocultar. */}
+            {floatingOpen && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => setMiniTimerView('hidden')}>
+                  <EyeOff className="mr-2 h-4 w-4" />
+                  Ocultar
+                </DropdownMenuItem>
+              </>
+            )}
             <DropdownMenuSeparator />
             {/* Anotar sin cerrar la sesión: el mismo gesto que en la ventana
                 flotante, para quien trabaja con la app delante. */}

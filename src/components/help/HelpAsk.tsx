@@ -1,18 +1,36 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, ArrowUp, CornerDownLeft, Lightbulb, MessagesSquare, SquarePen, Sparkles, Trash2, X } from 'lucide-react';
-import { formatDistanceToNowStrict } from 'date-fns';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  ChevronDown,
+  CornerDownLeft,
+  Lightbulb,
+  MessageCircle,
+  MessagesSquare,
+  PanelRightClose,
+  Sparkles,
+  Trash2,
+  X,
+} from 'lucide-react';
+import { format, formatDistanceToNowStrict, isToday } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
-import ExtensionsMenu from '@/components/extensions/ExtensionsMenu';
-import { ExtensionIcon } from '@/components/extensions/ExtensionIcons';
 import { useCourse } from '@/context/CourseContext';
 import { HELP_ENTRIES, STARTER_QUESTIONS, helpIndex } from '@/lib/help/kb';
 import { HELP_AREAS, relatedTo, suggest, type HelpEntry } from '@/lib/help/search';
 import { entryFor, resolveQuestion, resolvedId, type Resolved } from '@/lib/help/resolve';
-import { resolvedFromTurn, turnFromResolved, useHelpHistory, type HelpTurn } from '@/lib/help/history';
+import {
+  HELP_RUN,
+  resolvedFromTurn,
+  turnFromResolved,
+  useHelpConversations,
+  type HelpConversation,
+  type HelpTurn,
+} from '@/lib/help/history';
 import { startTour, type MascotPose } from '@/lib/help/tour';
 import { tourFor } from '@/lib/help/tours';
-import { extensionInfo, setNotionOpen, useExtensions } from '@/lib/extensions/registry';
+import { setNotionOpen, type ExtensionId } from '@/lib/extensions/registry';
 import { usePathname, useRouter } from '@/lib/navigation';
 import { trackEvent } from '@/lib/telemetry';
 import { cn } from '@/lib/utils';
@@ -25,16 +43,26 @@ import { cn } from '@/lib/utils';
 // a cada pregunta lo decide lib/help/resolve.ts.
 //
 // Antes de preguntar, Apex saluda junto a la barra, en el centro. Al
-// preguntar, la barra y Apex pasan a la izquierda y la respuesta ocupa los
-// 3/5 de la derecha. Cada pregunta queda en «Conversaciones». Tras la
-// respuesta, «Descubrir» lanza el recorrido guiado de esa función
-// (lib/help/tours.ts).
+// preguntar, la barra y Apex pasan a la izquierda y la conversación ocupa los
+// 3/5 de la derecha: las preguntas en orden, la última abierta y las
+// anteriores plegadas (un clic las abre). Tras la respuesta, «Descubrir»
+// lanza el recorrido guiado de esa función (lib/help/tours.ts).
+//
+// Una conversación dura lo que una apertura de Frame (lib/help/history.ts):
+// salir de la Ayuda y volver la deja donde estaba; al cerrar Frame queda en
+// «Conversaciones» como una sola entrada y la siguiente apertura empieza otra.
 //
 // La espera de ~0,5 s antes de responder deja ver a Apex «pensar» y marca el
 // cambio entre escribir y leer.
 // ============================================================
 
 const THINK_MS = 520;
+
+/**
+ * El importador de Notion ya no es una extensión que haya que añadir con un
+ * «+»: es un botón de Ajustes. El atajo /notion lo abre siempre.
+ */
+const ALWAYS_ON: ExtensionId[] = ['notion'];
 
 function pickStarters(count: number): HelpEntry[] {
   const pool = [...STARTER_QUESTIONS];
@@ -76,10 +104,17 @@ function useTyped(text: string, key: string, instant: boolean): string {
   return shown;
 }
 
+/** «hoy, 14:05» o «10 de oct, 18:42». */
+function whenLabel(at: number): string {
+  return isToday(at) ? `hoy, ${format(at, 'HH:mm')}` : format(at, "d 'de' MMM, HH:mm", { locale: es });
+}
+
+const questionsLabel = (n: number) => `${n} ${n === 1 ? 'pregunta' : 'preguntas'}`;
+
 function Chips({ items, label }: { items: { key: string; text: string; onClick: () => void }[]; label?: string }) {
   if (items.length === 0) return null;
   return (
-    <div className="mt-6 flex animate-in fade-in-0 flex-wrap items-center gap-2 border-t border-border/60 pt-4">
+    <div className="mx-1 mt-6 flex animate-in fade-in-0 flex-wrap items-center gap-2 border-t border-border/60 pt-4">
       {label && <span className="text-xs text-muted-foreground">{label}</span>}
       {items.map((m) => (
         <button
@@ -95,7 +130,7 @@ function Chips({ items, label }: { items: { key: string; text: string; onClick: 
   );
 }
 
-/** La respuesta, grande, en la parte derecha de la conversación. */
+/** Una respuesta completa de la conversación. */
 function Answer({
   shown,
   instant,
@@ -125,7 +160,7 @@ function Answer({
   const hasTour = !!entry && !!tourFor(entry.id);
 
   return (
-    <article className="animate-in fade-in-0 slide-in-from-right-3 duration-300">
+    <article className={cn(!instant && 'animate-in fade-in-0 slide-in-from-right-3 duration-300')}>
       <p className="mb-4 text-sm text-muted-foreground">
         <span className="font-medium text-foreground/80">«{shown.question}»</span>
       </p>
@@ -173,7 +208,7 @@ function Answer({
           )}
           {goTo && (
             <Button
-              variant={hasTour ? 'outline' : 'default'}
+              variant={hasTour ? 'fantasma' : 'default'}
               className="h-10 gap-1.5 rounded-full px-4 text-sm"
               onClick={() => router.push(goTo)}
             >
@@ -193,25 +228,47 @@ function Answer({
   );
 }
 
-/** Las conversaciones anteriores (solo en este equipo). */
+/** Una pregunta anterior de la conversación, plegada: un clic la abre. */
+function FoldedTurn({ turn, shown, onOpen }: { turn: HelpTurn; shown: Resolved | null; onOpen: () => void }) {
+  const entry = shown?.kind === 'entry' ? shown.entry : null;
+  const answerText = entry ? entry.title : shown?.kind === 'text' || shown?.kind === 'action' ? shown.text : 'Esta respuesta ya no está en la Ayuda.';
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      disabled={!shown}
+      className="group/fold flex w-full items-center gap-3 rounded-xl border border-border/60 bg-card/60 px-4 py-2.5 text-left transition-colors hover:border-primary/50 hover:bg-primary/5 disabled:cursor-default disabled:opacity-60"
+    >
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium text-foreground">«{turn.q}»</span>
+        <span className="mt-0.5 flex items-center gap-2 truncate text-xs text-muted-foreground">
+          {entry && <span className="shrink-0 font-semibold uppercase tracking-wider text-primary/80">{HELP_AREAS[entry.area].label}</span>}
+          <span className="truncate">{answerText}</span>
+        </span>
+      </span>
+      {shown && <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover/fold:text-primary" />}
+    </button>
+  );
+}
+
+/** Las conversaciones guardadas (solo en este equipo): una por apertura de Frame. */
 function History({
-  turns,
+  conversations,
   onOpen,
   onRemove,
   onClear,
 }: {
-  turns: HelpTurn[];
-  onOpen: (turn: HelpTurn) => void;
+  conversations: HelpConversation[];
+  onOpen: (conversation: HelpConversation) => void;
   onRemove: (id: string) => void;
   onClear: () => void;
 }) {
-  const index = helpIndex();
-  if (turns.length === 0) {
+  if (conversations.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-2 py-10 text-center text-sm text-muted-foreground animate-in fade-in-0">
         <MessagesSquare className="h-8 w-8 text-primary/70" />
         <p>Aún no hay conversaciones guardadas.</p>
-        <p className="text-xs">Cada pregunta que me hagas queda aquí.</p>
+        <p className="text-xs">Cada vez que abres Frame empieza una nueva.</p>
       </div>
     );
   }
@@ -219,7 +276,7 @@ function History({
     <div className="animate-in fade-in-0 slide-in-from-right-3 duration-300">
       <div className="mb-3 flex items-center justify-between gap-3">
         <p className="text-xs text-muted-foreground">
-          {turns.length} {turns.length === 1 ? 'conversación guardada' : 'conversaciones guardadas'} en este equipo
+          {conversations.length} {conversations.length === 1 ? 'conversación guardada' : 'conversaciones guardadas'} en este equipo
         </p>
         <button
           type="button"
@@ -230,27 +287,46 @@ function History({
         </button>
       </div>
       <ul className="space-y-2">
-        {turns.map((turn) => {
-          const entry = turn.entryId ? index.byId.get(turn.entryId) : null;
-          const answerText = entry ? entry.title : (turn.text ?? '');
+        {conversations.map((conversation) => {
+          const [first, ...rest] = conversation.turns;
+          const live = conversation.run === HELP_RUN;
           return (
-            <li key={turn.id} className="group/turn relative">
+            <li key={conversation.id} className="group/conv relative">
               <button
                 type="button"
-                onClick={() => onOpen(turn)}
+                onClick={() => onOpen(conversation)}
                 className="w-full rounded-xl border border-border/60 bg-card/60 px-4 py-3 pr-10 text-left transition-colors hover:border-primary/50 hover:bg-primary/5"
               >
-                <p className="truncate text-sm font-medium text-foreground">«{turn.q}»</p>
-                <p className="mt-0.5 flex items-center gap-2 truncate text-xs text-muted-foreground">
-                  {entry && <span className="shrink-0 font-semibold uppercase tracking-wider text-primary/80">{HELP_AREAS[entry.area].label}</span>}
-                  <span className="truncate">{answerText}</span>
-                  <span className="ml-auto shrink-0">{formatDistanceToNowStrict(turn.at, { locale: es, addSuffix: true })}</span>
-                </p>
+                <span className="flex items-center gap-2">
+                  <span className="truncate text-sm font-medium text-foreground">«{first.q}»</span>
+                  {live && (
+                    <span className="shrink-0 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">En curso</span>
+                  )}
+                </span>
+                {/* Las demás preguntas de la conversación, dentro de su entrada. */}
+                {rest.length > 0 && (
+                  <span className="mt-1 block space-y-0.5">
+                    {rest.slice(0, 3).map((turn) => (
+                      <span key={turn.id} className="block truncate text-xs text-foreground/70">
+                        «{turn.q}»
+                      </span>
+                    ))}
+                    {rest.length > 3 && <span className="block text-xs text-muted-foreground">y {rest.length - 3} más</span>}
+                  </span>
+                )}
+                <span className="mt-1.5 flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>{questionsLabel(conversation.turns.length)}</span>
+                  <span aria-hidden>·</span>
+                  <span>{whenLabel(conversation.startedAt)}</span>
+                  <span className="ml-auto shrink-0">
+                    {formatDistanceToNowStrict(conversation.updatedAt, { locale: es, addSuffix: true })}
+                  </span>
+                </span>
               </button>
               <button
                 type="button"
-                onClick={() => onRemove(turn.id)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover/turn:opacity-100"
+                onClick={() => onRemove(conversation.id)}
+                className="absolute right-2 top-3 rounded-full p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 group-hover/conv:opacity-100"
                 title="Borrar esta conversación"
                 aria-label="Borrar esta conversación"
               >
@@ -285,18 +361,25 @@ function Apex({ pose, size }: { pose: MascotPose; size: number }) {
 export default function HelpAsk({ onExit }: { onExit: () => void }) {
   const { userProfile } = useCourse();
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const { installed } = useExtensions();
-  const history = useHelpHistory(userProfile?.id);
+  const threadRef = useRef<HTMLDivElement>(null);
+  const history = useHelpConversations(userProfile?.id);
   const [query, setQuery] = useState('');
   const [focused, setFocused] = useState(false);
-  const [thinking, setThinking] = useState(false);
-  const [shown, setShown] = useState<Resolved | null>(null);
-  const [instant, setInstant] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [view, setView] = useState<'answer' | 'history'>('answer');
+  /** Pregunta ya guardada que aún «se piensa»: se muestra al acabar la espera. */
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  /** La recién respondida: la única que se «escribe» letra a letra. */
+  const [freshId, setFreshId] = useState<string | null>(null);
+  // Con una conversación en curso, la Ayuda se abre donde se dejó.
+  const [open, setOpen] = useState(() => history.current !== null);
+  const [view, setView] = useState<'thread' | 'history'>('thread');
+  /** Conversación anterior abierta desde la lista; null = la de esta apertura. */
+  const [viewingId, setViewingId] = useState<string | null>(null);
+  /** Preguntas anteriores desplegadas a mano. */
+  const [unfolded, setUnfolded] = useState<Set<string>>(() => new Set());
   const [highlight, setHighlight] = useState(-1);
   const starters = useMemo(() => pickStarters(3), []);
   const timers = useRef<number[]>([]);
+  const thinking = pendingId !== null;
 
   useEffect(() => () => timers.current.forEach((id) => window.clearTimeout(id)), []);
   // El índice de la ayuda (~0,2 s) se prepara cuando el equipo está libre,
@@ -328,47 +411,65 @@ export default function HelpAsk({ onExit }: { onExit: () => void }) {
   // La barra recibe el foco al entrar: se viene a preguntar.
   useEffect(() => inputRef.current?.focus(), []);
 
-  const present = (result: Resolved, started: number, fresh: boolean) => {
-    const wait = Math.max(0, THINK_MS - (performance.now() - started));
-    later(() => {
-      setInstant(!fresh);
-      setShown(result);
-      setThinking(false);
-      setView('answer');
-      if (result.kind === 'action') setNotionOpen(true);
-      if (fresh) {
-        history.add(turnFromResolved(result));
-        trackEvent('help_asked', { ...resolvedId(result), length: result.question.length });
-      }
-    }, wait);
-  };
+  // La conversación que se ve: una anterior elegida en la lista o la de ahora.
+  const viewing = (viewingId ? history.conversations.find((c) => c.id === viewingId) : null) ?? history.current;
+  const viewingOld = !!viewing && viewing.run !== HELP_RUN;
+  const turns = useMemo(() => (viewing?.turns ?? []).filter((t) => t.id !== pendingId), [viewing, pendingId]);
+  const resolved = useMemo(() => new Map(turns.map((t) => [t.id, resolvedFromTurn(t)])), [turns]);
+  const pendingTurn = pendingId ? (history.current?.turns.find((t) => t.id === pendingId) ?? null) : null;
+  const lastId = turns[turns.length - 1]?.id ?? null;
 
-  const begin = (make: () => Resolved, fresh: boolean) => {
+  // Cada pregunta nueva (y la conversación al volver) se ve desde su
+  // principio: la última queda arriba del todo, sin tener que buscarla.
+  const scrollKey = `${open}:${view}:${viewing?.id ?? ''}:${lastId ?? ''}:${pendingId ?? ''}`;
+  const firstScroll = useRef(true);
+  useLayoutEffect(() => {
+    const box = threadRef.current;
+    if (!box || view !== 'thread') return;
+    const target = box.querySelector<HTMLElement>('[data-turn-last]');
+    if (!target) return;
+    // Al entrar en la Ayuda se llega de golpe; después, con suavidad.
+    const smooth = !firstScroll.current && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    firstScroll.current = false;
+    box.scrollTo({ top: Math.max(0, target.offsetTop - 8), behavior: smooth ? 'smooth' : 'auto' });
+  }, [scrollKey, view]);
+
+  const begin = (make: () => Resolved) => {
     if (thinking) return;
+    const started = performance.now();
+    const result = make();
+    // Se guarda en el acto (si se sale de la Ayuda durante la espera, la
+    // pregunta no se pierde) y se muestra al acabar de «pensar».
+    const turn = turnFromResolved(result);
+    history.add(turn);
+    trackEvent('help_asked', { ...resolvedId(result), length: result.question.length });
     setQuery('');
     setOpen(true);
-    setView('answer');
-    setShown(null);
-    setThinking(true);
-    present(make(), performance.now(), fresh);
+    setView('thread');
+    setViewingId(null);
+    setPendingId(turn.id);
+    later(() => {
+      setPendingId(null);
+      setFreshId(turn.id);
+      if (result.kind === 'action') setNotionOpen(true);
+    }, Math.max(0, THINK_MS - (performance.now() - started)));
   };
 
   const ask = (raw: string) => {
     const question = raw.trim();
     if (!question) return;
-    begin(() => resolveQuestion(question, { installed, starters }), true);
+    begin(() => resolveQuestion(question, { installed: ALWAYS_ON, starters }));
   };
 
   const showEntry = (entry: HelpEntry, question = entry.title) =>
-    begin(() => ({ kind: 'entry', question, entry, alternatives: [] }), true);
+    begin(() => ({ kind: 'entry', question, entry, alternatives: [] }));
 
-  const openTurn = (turn: HelpTurn) => {
-    const result = resolvedFromTurn(turn);
-    if (!result) return;
-    setInstant(true);
-    setShown(result);
-    setThinking(false);
-    setView('answer');
+  const openConversation = (conversation: HelpConversation) => {
+    if (thinking) return;
+    setViewingId(conversation.run === HELP_RUN ? null : conversation.id);
+    setUnfolded(new Set());
+    setFreshId(null);
+    setView('thread');
   };
 
   const openHistory = () => {
@@ -377,25 +478,30 @@ export default function HelpAsk({ onExit }: { onExit: () => void }) {
     setView('history');
   };
 
-  /** Vuelve a la barra centrada (la conversación ya quedó guardada). */
+  /** Pliega el panel y vuelve a la barra centrada (la conversación sigue). */
   const close = () => {
-    setShown(null);
     setOpen(false);
-    setView('answer');
+    setView('thread');
+    setViewingId(null);
+  };
+
+  const removeConversation = (id: string) => {
+    if (id === viewingId) setViewingId(null);
+    history.remove(id);
   };
 
   const discover = (entry: HelpEntry) => {
     const tour = tourFor(entry.id);
     if (!tour) return;
-    // Se sale de la ayuda (la respuesta ya quedó en «Conversaciones») y el
+    // Se sale de la ayuda (la conversación sigue ahí al volver) y el
     // recorrido toma la pantalla. Temporizador suelto, no `later`: la ayuda
     // se desmonta al salir y cancelaría los suyos.
     onExit();
     window.setTimeout(() => startTour(tour), 380);
   };
 
-  // Escape: cierra la conversación y, sin conversación, sale de la ayuda
-  // (si no se está escribiendo nada).
+  // Escape: pliega el panel y, sin panel, sale de la ayuda (si no se está
+  // escribiendo nada).
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || event.defaultPrevented) return;
@@ -426,20 +532,25 @@ export default function HelpAsk({ onExit }: { onExit: () => void }) {
   };
 
   const canSend = query.trim().length > 0 && !thinking;
-  const pose: MascotPose = thinking ? 'mira' : !open ? 'saluda' : view === 'history' ? 'frente' : shown ? 'apunta' : 'frente';
+  const hasThread = turns.length > 0 || thinking;
+  const pose: MascotPose = thinking ? 'mira' : !open ? 'saluda' : view === 'history' ? 'frente' : hasThread ? 'apunta' : 'frente';
 
   const tabs = (
     <div className="flex shrink-0 items-center gap-1 border-b border-border/60 pb-2">
       <button
         type="button"
-        onClick={() => setView('answer')}
-        disabled={!shown && !thinking}
+        onClick={() => {
+          setViewingId(null);
+          setView('thread');
+        }}
+        disabled={!history.current && !thinking && !viewingOld}
         className={cn(
-          'rounded-full px-3 py-1 text-xs font-semibold transition-colors disabled:opacity-40',
-          view === 'answer' ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:text-foreground'
+          'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors disabled:opacity-40',
+          view === 'thread' ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:text-foreground'
         )}
       >
-        Respuesta
+        <MessageCircle className="h-3.5 w-3.5" />
+        Conversación
       </button>
       <button
         type="button"
@@ -451,25 +562,108 @@ export default function HelpAsk({ onExit }: { onExit: () => void }) {
       >
         <MessagesSquare className="h-3.5 w-3.5" />
         Conversaciones
-        {history.turns.length > 0 && <span className="tabular-nums opacity-70">{history.turns.length}</span>}
+        {history.conversations.length > 0 && <span className="tabular-nums opacity-70">{history.conversations.length}</span>}
       </button>
       <div className="flex-1" />
       <button
         type="button"
         onClick={close}
-        className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-        title="Nueva pregunta (Esc): esta queda guardada en «Conversaciones»"
+        className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+        title="Plegar el panel (Esc): la conversación sigue"
+        aria-label="Plegar el panel"
       >
-        <SquarePen className="h-3.5 w-3.5" />
-        Nueva pregunta
+        <PanelRightClose className="h-4 w-4" />
       </button>
+    </div>
+  );
+
+  const thread = (
+    <div className="space-y-5">
+      {viewing && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          {viewingOld && (
+            <button
+              type="button"
+              onClick={() => setView('history')}
+              className="-ml-1.5 rounded-full p-1 transition-colors hover:bg-secondary hover:text-foreground"
+              title="Volver a «Conversaciones»"
+              aria-label="Volver a «Conversaciones»"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+          )}
+          <span>
+            {viewingOld ? whenLabel(viewing.startedAt) : `En curso, desde las ${format(viewing.startedAt, 'HH:mm')}`}
+            {' · '}
+            {questionsLabel(viewing.turns.length)}
+          </span>
+        </div>
+      )}
+      {turns.map((turn) => {
+        const shown = resolved.get(turn.id) ?? null;
+        // Mientras se piensa la siguiente, la última ya no es la última: se pliega.
+        const last = turn.id === lastId && !pendingTurn;
+        return (
+          <div key={turn.id} data-turn-last={last ? '' : undefined}>
+            {shown && (last || unfolded.has(turn.id)) ? (
+              <>
+                <Answer
+                  shown={shown}
+                  instant={turn.id !== freshId || !last}
+                  onPick={(e) => showEntry(e)}
+                  onDiscover={discover}
+                />
+                {!last && <div className="mx-8 mt-6 border-t border-border/50" />}
+              </>
+            ) : (
+              <FoldedTurn
+                turn={turn}
+                shown={shown}
+                onOpen={() => setUnfolded((prev) => new Set(prev).add(turn.id))}
+              />
+            )}
+          </div>
+        );
+      })}
+      {pendingTurn && (
+        <div data-turn-last="" className="animate-in fade-in-0" aria-live="polite">
+          <p className="mb-3 text-sm text-muted-foreground">
+            <span className="font-medium text-foreground/80">«{pendingTurn.q}»</span>
+          </p>
+          <div className="flex items-center gap-3 py-2 text-sm text-muted-foreground">
+            <span className="flex gap-1">
+              {[0, 1, 2].map((i) => (
+                <span key={i} className="h-2 w-2 animate-bounce rounded-full bg-primary/80" style={{ animationDelay: `${i * 120}ms` }} />
+              ))}
+            </span>
+            Pensando…
+          </div>
+        </div>
+      )}
+      {!viewing && !pendingTurn && (
+        <p className="py-10 text-center text-sm text-muted-foreground">Aún no hay preguntas en esta conversación.</p>
+      )}
     </div>
   );
 
   return (
     <section data-tour="ayuda" aria-label="Ayuda de Frame" className="relative flex h-full min-h-0 flex-col px-6 pb-6 pt-4 md:px-10">
       <div className="flex shrink-0 items-center justify-end gap-1">
-        {!open && history.turns.length > 0 && (
+        {!open && history.current && (
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(true);
+              setViewingId(null);
+              setView('thread');
+            }}
+            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          >
+            <MessageCircle className="h-3.5 w-3.5" />
+            Seguir la conversación
+          </button>
+        )}
+        {!open && history.conversations.length > 0 && (
           <button
             type="button"
             onClick={openHistory}
@@ -477,7 +671,7 @@ export default function HelpAsk({ onExit }: { onExit: () => void }) {
             className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           >
             <MessagesSquare className="h-3.5 w-3.5" />
-            Conversaciones <span className="tabular-nums opacity-70">{history.turns.length}</span>
+            Conversaciones <span className="tabular-nums opacity-70">{history.conversations.length}</span>
           </button>
         )}
         <button
@@ -521,11 +715,10 @@ export default function HelpAsk({ onExit }: { onExit: () => void }) {
                   onKeyDown={onKeyDown}
                   onFocus={() => setFocused(true)}
                   onBlur={() => window.setTimeout(() => setFocused(false), 120)}
-                  placeholder={open ? 'Pregúntame otra cosa…' : 'Pregúntame cómo usar Frame…'}
+                  placeholder={open || history.current ? 'Pregúntame otra cosa…' : 'Pregúntame cómo usar Frame…'}
                   aria-label="Pregunta cómo usar Frame"
                   className="max-h-28 min-h-[24px] flex-1 resize-none bg-transparent py-1.5 text-sm leading-6 text-foreground outline-none placeholder:text-muted-foreground/70"
                 />
-                <ExtensionsMenu />
                 <button
                   type="button"
                   onClick={() => ask(query)}
@@ -540,22 +733,6 @@ export default function HelpAsk({ onExit }: { onExit: () => void }) {
                   <ArrowUp className="h-4 w-4" />
                 </button>
               </div>
-              {installed.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 pb-0.5 pt-1.5">
-                  {installed.map((id) => (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => setNotionOpen(true)}
-                      title={extensionInfo(id).detail}
-                      className="flex items-center gap-1.5 rounded-full border border-border/70 bg-background/50 py-0.5 pl-1 pr-2.5 text-[11px] text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
-                    >
-                      <ExtensionIcon id={id} small />
-                      {extensionInfo(id).name}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
 
             {suggestions.length > 0 && (
@@ -602,32 +779,27 @@ export default function HelpAsk({ onExit }: { onExit: () => void }) {
 
           <p className="text-center text-[11px] text-muted-foreground/70">
             {open
-              ? 'Esc cierra la respuesta · tus preguntas quedan en «Conversaciones»'
+              ? 'Esc pliega el panel · la conversación sigue hasta que cierres Frame'
               : `Responde dudas sobre cómo usar Frame · ${HELP_ENTRIES.length} respuestas · funciona sin internet`}
           </p>
         </div>
 
-        {/* Derecha: la respuesta (o las conversaciones guardadas). */}
+        {/* Derecha: la conversación (o la lista de conversaciones guardadas). */}
         <div className={cn('relative min-h-0 min-w-0 overflow-hidden', !open && 'pointer-events-none')} aria-hidden={!open}>
           {open && (
             <div className="flex h-full flex-col animate-in fade-in-0 duration-500">
               {tabs}
-              <div className="relative min-h-0 flex-1 overflow-y-auto pb-6 pr-3 pt-5">
+              <div ref={threadRef} className="relative min-h-0 flex-1 overflow-y-auto pb-6 pr-3 pt-5">
                 {view === 'history' ? (
-                  <History turns={history.turns} onOpen={openTurn} onRemove={history.remove} onClear={history.clear} />
-                ) : thinking ? (
-                  <div className="flex items-center gap-3 py-6 text-sm text-muted-foreground" aria-live="polite">
-                    <span className="flex gap-1">
-                      {[0, 1, 2].map((i) => (
-                        <span key={i} className="h-2 w-2 animate-bounce rounded-full bg-primary/80" style={{ animationDelay: `${i * 120}ms` }} />
-                      ))}
-                    </span>
-                    Pensando…
-                  </div>
-                ) : shown ? (
-                  <Answer key={shown.question + (shown.kind === 'entry' ? shown.entry.id : '')} shown={shown} instant={instant} onPick={(e) => showEntry(e)} onDiscover={discover} />
-                ) : null}
-
+                  <History
+                    conversations={history.conversations}
+                    onOpen={openConversation}
+                    onRemove={removeConversation}
+                    onClear={history.clear}
+                  />
+                ) : (
+                  thread
+                )}
               </div>
             </div>
           )}

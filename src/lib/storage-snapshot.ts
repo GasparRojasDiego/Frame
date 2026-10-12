@@ -24,6 +24,8 @@ export const SCOPED_KEYS = [
   'incompleteTasks',
   'archivedNotes',
   'localEvents',
+  // Color propio de cada casilla del calendario local (1.6.2).
+  'dayColors',
   'habits',
   'studySessions',
   'dailyPerformances',
@@ -54,6 +56,8 @@ export const SCOPED_KEYS = [
   // horario, portadas de playlists, asignaturas y colecciones). Los archivos
   // van a Supabase Storage; aquí solo qué versión tiene cada una (image-sync.ts).
   'syncedImages',
+  // Anotaciones sin asignatura del «+» de la barra (src/lib/loose-notes.ts).
+  'looseNotes',
   // 'studyVideos' queda FUERA a propósito: cada ficha puede llevar la ruta
   // del archivo descargado en ESTE equipo, que en otro no existe.
 ] as const;

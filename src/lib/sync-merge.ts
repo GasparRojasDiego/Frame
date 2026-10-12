@@ -30,6 +30,8 @@ const COLLECTION_KEYS = [
   'incompleteTasks',
   'archivedNotes',
   'localEvents',
+  // Un registro por casilla pintada (id = el día "YYYY-MM-DD").
+  'dayColors',
   'habits',
   'studySessions',
   'dailyPerformances',
@@ -41,6 +43,8 @@ const COLLECTION_KEYS = [
   // Índice de imágenes sincronizadas (id = clave de la imagen): cada imagen
   // se fusiona por separado, así cambiar dos en dos equipos no choca.
   'syncedImages',
+  // Anotaciones sin asignatura (id propio, como las notas).
+  'looseNotes',
 ] as const;
 
 /** Bitácora que solo crece: se fusiona por unión, no por marca de tiempo. */

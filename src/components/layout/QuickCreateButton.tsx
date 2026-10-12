@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ClipboardList, NotebookPen, Plus } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowLeft, ClipboardList, NotebookPen, Plus } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -9,13 +9,13 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import SubjectPicker from '@/components/courses/SubjectPicker';
 import EchoWord from '@/components/shared/EchoWord';
 import TaskComposer, { type TaskDraft } from '@/components/tasks/TaskComposer';
 import { useCourse } from '@/context/CourseContext';
 import { useToast } from '@/hooks/use-toast';
+import { addLooseNote } from '@/lib/loose-notes';
 import { cn } from '@/lib/utils';
 
 // ============================================================
@@ -30,9 +30,10 @@ import { cn } from '@/lib/utils';
 // debajo la tarjeta de creación EXACTA de la interfaz de la asignatura (es el
 // mismo componente, `TaskComposer`, no una copia parecida).
 //
-// La tarea puede quedarse SIN asignatura: entonces aterriza al final de
-// Inicio, donde se edita y se coloca con calma. Obligar a decidir la
-// asignatura en caliente es justo lo que hace que la tarea no se apunte.
+// La tarea y la anotación pueden quedarse SIN asignatura: la tarea aterriza
+// al final de Inicio, donde se edita y se coloca con calma; la anotación,
+// como tarjeta en Inicio (src/lib/loose-notes.ts). Obligar a decidir la
+// asignatura en caliente es justo lo que hace que no se apunte.
 // ============================================================
 
 type Mode = 'menu' | 'task' | 'note';
@@ -45,6 +46,7 @@ export default function QuickCreateButton() {
   const [mode, setMode] = useState<Mode>('menu');
   const [courseId, setCourseId] = useState<string | null>(null);
   const [noteText, setNoteText] = useState('');
+  const noteRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (open) return;
@@ -53,7 +55,22 @@ export default function QuickCreateButton() {
     setNoteText('');
   }, [open]);
 
+  // La anotación crece con lo escrito, como la descripción de la tarea: un
+  // recuadro con scroll interno esconde justo lo que se acaba de teclear.
+  useEffect(() => {
+    const textarea = noteRef.current;
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, [noteText, mode]);
+
   const course = useMemo(() => courses.find((c) => c.id === courseId), [courses, courseId]);
+
+  /** Volver al recuadro anterior: la elección de asignatura no se arrastra. */
+  const goBack = () => {
+    setMode('menu');
+    setCourseId(null);
+  };
 
   const saveTask = (draft: TaskDraft) => {
     if (!userProfile) return;
@@ -77,12 +94,29 @@ export default function QuickCreateButton() {
   };
 
   const saveNote = () => {
-    if (!course || !noteText.trim()) return;
-    addNote(course.id, noteText.trim(), { kind: 'text' });
-    toast({
-      title: 'Anotación guardada',
-      description: `Queda en ${course.name}, dentro de su clase de hoy (o de la última).`,
-    });
+    const text = noteText.trim();
+    if (!text) return;
+    if (course) {
+      addNote(course.id, text, { kind: 'text' });
+      toast({
+        title: 'Anotación guardada',
+        description: `Queda en ${course.name}, dentro de su clase de hoy (o de la última).`,
+      });
+    } else {
+      // Sin asignatura: tarjeta en Inicio hasta que se coloque o se borre.
+      if (!userProfile || !addLooseNote(userProfile.id, text)) {
+        toast({
+          variant: 'destructive',
+          title: 'No se pudo guardar',
+          description: 'El almacenamiento del equipo está lleno o no responde.',
+        });
+        return;
+      }
+      toast({
+        title: 'Anotación guardada',
+        description: 'Sin asignatura: la tienes en Inicio.',
+      });
+    }
     setOpen(false);
   };
 
@@ -90,16 +124,35 @@ export default function QuickCreateButton() {
   // texto —abajo en «Tarea», arriba en «Anotación»— con un desenfoque que
   // crece a la par, de modo que la letra se lee siempre sobre blanco y la
   // imagen asoma limpia en el otro extremo.
+  //
+  // Sin borde: el gris del borde se veía justo en el extremo blanco. La
+  // tarjeta se define con la sombra, y el contorno azul solo aparece al pasar
+  // el ratón (capa `choiceRing`, por encima de la foto).
   const choiceCard =
-    'group relative flex aspect-[4/5] overflow-hidden rounded-xl border border-border/70 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+    'group relative flex aspect-[4/5] rounded-xl text-left shadow-sm transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none motion-reduce:hover:translate-y-0';
+  // Foto y velo van dentro de UNA capa recortada con el mismo radio. El
+  // `clip-path` hace dos cosas que `overflow-hidden` no garantiza en WebView2:
+  // recorta también el desenfoque (que asomaba con esquinas rectas y grises)
+  // y lo convierte en raíz del desenfoque, así el velo solo mezcla la foto y
+  // no el fondo del recuadro que hay alrededor de la tarjeta.
+  const choiceMedia =
+    'pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit] [clip-path:inset(0_round_0.75rem)]';
+  const choicePhoto =
+    'absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100';
+  const choiceRing =
+    'pointer-events-none absolute inset-0 rounded-[inherit] ring-inset ring-primary/60 transition-shadow group-hover:ring-2';
+  const choiceIcon =
+    'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-md';
+
+  const title = mode === 'menu' ? 'Crear' : mode === 'task' ? 'Tarea nueva' : 'Anotación nueva';
 
   return (
     <>
-      {/* Misma estética que los botones del extremo derecho de la barra. */}
+      {/* Fantasma como el resto de la barra; sólido mientras su recuadro está abierto. */}
       <Button
         size="icon"
-        variant="ghost"
-        className="h-9 w-9 rounded-md border border-primary bg-primary/10 text-primary hover:bg-primary/20"
+        variant={open ? 'default' : 'fantasma'}
+        className="h-9 w-9 rounded-md border border-primary"
         onClick={() => setOpen(true)}
         title="Crear una tarea o una anotación" data-tour="crear-rapido"
       >
@@ -113,74 +166,93 @@ export default function QuickCreateButton() {
             mode === 'menu' ? 'sm:max-w-lg' : 'sm:max-w-3xl'
           )}
         >
-          <DialogHeader className="relative shrink-0 overflow-hidden border-b px-6 pb-4 pt-6">
+          {/* `pt-[15px]`: el título queda centrado a 24 px del borde, la misma
+              línea que la X de cierre (top-4 + 8) y que la flecha de atrás. */}
+          <DialogHeader className="relative shrink-0 overflow-hidden px-6 pb-4 pt-[15px]">
             {/* «CREAR», repetido y a la deriva detrás del título. */}
             <EchoWord word="Crear" />
-            <DialogTitle className="relative text-center text-lg font-bold text-primary">
-              {mode === 'menu' ? 'Crear' : mode === 'task' ? 'Tarea nueva' : 'Anotación nueva'}
-            </DialogTitle>
-            <DialogDescription className="relative text-center text-xs">
+            <div className="relative flex items-center justify-center">
+              {/* Atrás: flecha en la esquina superior izquierda, a la altura
+                  del título (sustituye a la barra inferior con «Atrás»). */}
+              {mode !== 'menu' && (
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  onClick={goBack}
+                  title="Volver a Crear"
+                  aria-label="Volver a Crear"
+                  data-tour="crear-atras"
+                  // `-left-4`: el icono queda a 16 px del borde, simétrico a la X.
+                  className="absolute -left-4 top-1/2 h-8 w-8 -translate-y-1/2 rounded-md text-muted-foreground hover:bg-primary/10 hover:text-primary"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              )}
+              <DialogTitle className="text-center text-lg font-bold text-primary">{title}</DialogTitle>
+            </div>
+            {/* Fuera del menú, la descripción solo existe para el lector de pantalla. */}
+            <DialogDescription className={cn('text-center text-xs', mode === 'menu' ? 'relative' : 'sr-only')}>
               {mode === 'menu'
                 ? 'Sin ir hasta la asignatura.'
                 : mode === 'task'
-                  ? 'Elige la asignatura arriba y rellena la tarea abajo.'
-                  : 'Elige la asignatura arriba y escribe la anotación abajo.'}
+                  ? 'Elige la asignatura y rellena la tarea.'
+                  : 'Elige la asignatura (o ninguna) y escribe la anotación.'}
             </DialogDescription>
           </DialogHeader>
+          {/* Divisoria con margen a ambos lados, no de borde a borde. */}
+          <div aria-hidden className="mx-6 h-px shrink-0 bg-border" />
 
           <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
             {mode === 'menu' ? (
               <div className="grid grid-cols-2 gap-4">
                 {/* Tarea: el velo sube desde abajo y el texto va abajo. */}
                 <button type="button" className={choiceCard} onClick={() => setMode('task')} data-tour="crear-tarea">
-                  <img
-                    src="/quick-create/tarea.webp"
-                    alt=""
-                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                  <span
-                    aria-hidden
-                    className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-white via-white/85 to-transparent backdrop-blur-[3px] [mask-image:linear-gradient(to_top,black_45%,transparent)]"
-                  />
-                  <span className="relative mt-auto flex w-full flex-col gap-1 p-4">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-md">
+                  <span aria-hidden className={choiceMedia}>
+                    <img src="/quick-create/tarea.webp" alt="" className={choicePhoto} />
+                    <span className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-white via-white/85 to-transparent backdrop-blur-[3px] [mask-image:linear-gradient(to_top,black_45%,transparent)]" />
+                  </span>
+                  {/* El texto, a la derecha del icono y centrado con él. */}
+                  <span className="relative mt-auto flex w-full items-center gap-3 p-4">
+                    <span className={choiceIcon}>
                       <ClipboardList className="h-5 w-5" />
                     </span>
-                    <span className="text-base font-bold text-neutral-900">Tarea</span>
-                    <span className="text-[11px] font-medium text-neutral-600">Con fecha y asignatura</span>
+                    <span className="min-w-0">
+                      <span className="block text-base font-bold leading-tight text-neutral-900">Tarea</span>
+                      <span className="block text-[11px] font-medium leading-tight text-neutral-600">
+                        Con fecha y asignatura
+                      </span>
+                    </span>
                   </span>
+                  <span aria-hidden className={choiceRing} />
                 </button>
 
                 {/* Anotación: al revés, el velo baja desde arriba y el texto va arriba. */}
                 <button type="button" className={choiceCard} onClick={() => setMode('note')} data-tour="crear-anotacion">
-                  <img
-                    src="/quick-create/anotacion.webp"
-                    alt=""
-                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                  <span
-                    aria-hidden
-                    className="absolute inset-x-0 top-0 h-3/4 bg-gradient-to-b from-white via-white/85 to-transparent backdrop-blur-[3px] [mask-image:linear-gradient(to_bottom,black_45%,transparent)]"
-                  />
-                  <span className="relative flex w-full flex-col gap-1 p-4">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-md">
+                  <span aria-hidden className={choiceMedia}>
+                    <img src="/quick-create/anotacion.webp" alt="" className={choicePhoto} />
+                    <span className="absolute inset-x-0 top-0 h-3/4 bg-gradient-to-b from-white via-white/85 to-transparent backdrop-blur-[3px] [mask-image:linear-gradient(to_bottom,black_45%,transparent)]" />
+                  </span>
+                  <span className="relative flex w-full items-center gap-3 self-start p-4">
+                    <span className={choiceIcon}>
                       <NotebookPen className="h-5 w-5" />
                     </span>
-                    <span className="text-base font-bold text-neutral-900">Anotación</span>
-                    <span className="text-[11px] font-medium text-neutral-600">Texto suelto que recordar</span>
+                    <span className="min-w-0">
+                      <span className="block text-base font-bold leading-tight text-neutral-900">Anotación</span>
+                      <span className="block text-[11px] font-medium leading-tight text-neutral-600">
+                        Texto suelto que recordar
+                      </span>
+                    </span>
                   </span>
+                  <span aria-hidden className={choiceRing} />
                 </button>
               </div>
             ) : (
               <div className="space-y-5">
-                {/* Bloque 1 — la asignatura */}
-                <SubjectPicker
-                  value={courseId}
-                  onChange={setCourseId}
-                  allowNone={mode === 'task'}
-                />
+                {/* Bloque 1 — la asignatura (o ninguna: va a Inicio) */}
+                <SubjectPicker value={courseId} onChange={setCourseId} allowNone />
 
-                {/* Bloque 2 — la tarjeta de creación, la misma de siempre */}
+                {/* Bloque 2 — la tarjeta de creación */}
                 {mode === 'task' ? (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
@@ -199,26 +271,45 @@ export default function QuickCreateButton() {
                       </span>
                       <span className="h-px flex-1 bg-border" />
                     </div>
-                    <Card>
-                      <CardContent className="space-y-3 pt-4">
-                        <Label htmlFor="quick-note" className="text-xs">
-                          Texto
-                        </Label>
+                    {/* Un solo recuadro, como la tarjeta de crear tarea: se
+                        escribe directamente sobre él y un clic en cualquier
+                        parte lo enfoca. */}
+                    <Card
+                      className="cursor-text transition-colors focus-within:border-primary/60"
+                      onMouseDown={(e) => {
+                        // Lo que no es un control propio enfoca el texto sin
+                        // perder el cursor donde estaba.
+                        if ((e.target as HTMLElement).closest('textarea, button')) return;
+                        e.preventDefault();
+                        noteRef.current?.focus();
+                      }}
+                    >
+                      <CardContent className="pt-4">
                         <Textarea
-                          id="quick-note" data-tour="anotacion-texto"
+                          ref={noteRef}
+                          id="quick-note"
+                          data-tour="anotacion-texto"
+                          aria-label="La anotación"
                           value={noteText}
                           onChange={(e) => setNoteText(e.target.value)}
-                          placeholder="Lo que no quieres olvidar de esta asignatura"
-                          rows={5}
-                          className="resize-none text-sm"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                              e.preventDefault();
+                              saveNote();
+                            }
+                          }}
+                          placeholder="Lo que no quieres olvidar"
+                          rows={4}
+                          className="min-h-[96px] resize-none overflow-hidden border-0 bg-transparent p-0 text-sm focus-visible:ring-0 focus-visible:ring-offset-0"
                         />
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-[11px] text-muted-foreground">
-                            {course
-                              ? `Se guardará en ${course.name}, en su clase de hoy o en la última.`
-                              : 'Elige una asignatura para poder guardarla.'}
-                          </p>
-                          <Button onClick={saveNote} disabled={!course || !noteText.trim()} data-tour="anotacion-guardar">
+                        <div className="flex justify-end pt-4">
+                          <Button
+                            onClick={saveNote}
+                            disabled={!noteText.trim()}
+                            data-tour="anotacion-guardar"
+                            title={course ? `Guardar en ${course.name}` : 'Guardar en Inicio, sin asignatura'}
+                            className={cn(!noteText.trim() && 'border border-primary bg-primary/20 text-primary')}
+                          >
                             <NotebookPen className="mr-2 h-4 w-4" />
                             Guardar
                           </Button>
@@ -230,14 +321,6 @@ export default function QuickCreateButton() {
               </div>
             )}
           </div>
-
-          {mode !== 'menu' && (
-            <div className="shrink-0 border-t px-6 py-3">
-              <Button variant="ghost" size="sm" onClick={() => setMode('menu')}>
-                Atrás
-              </Button>
-            </div>
-          )}
         </DialogContent>
       </Dialog>
     </>

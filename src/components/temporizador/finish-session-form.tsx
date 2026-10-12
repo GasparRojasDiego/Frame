@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -19,25 +19,25 @@ import { Button } from '@/components/ui/button';
 import NoteEditor from '@/components/temporizador/NoteEditor';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { Check, Layers, NotebookPen, Search, Trash2 } from 'lucide-react';
+import { NotebookPen, Trash2 } from 'lucide-react';
 import { useCourse } from '@/context/CourseContext';
 import SessionNotesList, { SessionNotesHeading } from '@/components/temporizador/SessionNotesList';
+import { SessionSubjectPicker } from '@/components/temporizador/SubjectPickCard';
+import EchoWord from '@/components/shared/EchoWord';
 import { cn } from '@/lib/utils';
 import { formatHMS } from '@/lib/duration';
-import { SubjectCard } from '@/components/temporizador/SubjectPickCard';
-import { Input } from '../ui/input';
-import type { Course, Task } from '@/types';
 
 // ============================================================
 // Cierre de una sesión de estudio.
 //
-// Las asignaturas se eligen con la MISMA tarjeta que la interfaz Asignaturas:
-// portada de extremo a extremo arriba y el nombre centrado debajo. La flecha
-// de cada tarjeta despliega sus tareas JUSTO DEBAJO, sin ocultar el resto;
-// volver a pulsarla las repliega.
+// Arriba, con el eco de «SESIÓN» detrás del título: el tiempo, el enfoque, lo
+// anotado durante la sesión y qué se hizo. Debajo, qué se estudió, con el
+// mismo recorrido de tarjetas que el resto de la app: colecciones →
+// asignaturas → sus tareas (ver `SessionSubjectPicker`).
 //
 // Un solo carril de scroll: cabecera y pie quedan fijos, así "Registrar"
-// siempre está a la vista por larga que sea la lista.
+// siempre está a la vista por larga que sea la lista. Las divisorias dejan
+// aire a los lados, no van de borde a borde.
 // ============================================================
 
 interface FinishSessionFormProps {
@@ -57,56 +57,6 @@ interface FinishSessionFormProps {
   trigger: 'manual' | 'auto';
 }
 
-const formatEstimate = (minutes: number) => {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`;
-};
-
-/** Tarjeta de una tarea avanzable, desplegada bajo su asignatura. */
-function TaskPick({
-  task,
-  selected,
-  onToggle,
-}: {
-  task: Task;
-  selected: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-pressed={selected}
-      className={cn(
-        'flex w-full items-start gap-2 rounded-lg border p-2 text-left transition-all',
-        selected ? 'border-primary bg-primary/10' : 'border-border/70 bg-card hover:border-primary/40'
-      )}
-    >
-      <span
-        className={cn(
-          'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors',
-          selected ? 'border-primary bg-primary text-primary-foreground' : 'border-input'
-        )}
-      >
-        {selected && <Check className="h-3 w-3" />}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-[11px] font-semibold text-foreground">{task.name}</span>
-        <span className="block text-[10px] text-muted-foreground">
-          estimada {formatEstimate(task.estimatedMinutes!)} · {task.progress || 0}%
-        </span>
-        <span className="mt-1 block h-0.5 w-full overflow-hidden rounded-full bg-secondary">
-          <span
-            className="block h-full rounded-full bg-primary"
-            style={{ width: `${Math.min(100, task.progress || 0)}%` }}
-          />
-        </span>
-      </span>
-    </button>
-  );
-}
-
 export default function FinishSessionForm({
   isOpen,
   onClose,
@@ -121,24 +71,20 @@ export default function FinishSessionForm({
   const [perception, setPerception] = useState(0);
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([]);
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
-  const { courses, spaces, selectionMode, tasks, sessionNotes } = useCourse();
-  const [courseSearch, setCourseSearch] = useState('');
+  const { courses, selectionMode, sessionNotes } = useCourse();
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   /** Anotación libre de lo que se hizo: hace el registro mucho más útil
    *  cuando, meses después, hay que justificar en qué se fue el tiempo. */
   const [notes, setNotes] = useState('');
-  /** Asignaturas con sus tareas desplegadas debajo de la tarjeta. */
-  const [expandedCourseIds, setExpandedCourseIds] = useState<string[]>([]);
 
   useEffect(() => {
-    // Reset form when it's re-opened
+    // Reset form when it's re-opened (el selector de asignaturas vuelve solo
+    // a las colecciones: el contenido del recuadro se desmonta al cerrarse).
     if (isOpen) {
       setPerception(0);
       setSelectedSubjectIds([]);
       setSelectedTaskIds([]);
-      setCourseSearch('');
       setConfirmDiscard(false);
-      setExpandedCourseIds([]);
       setNotes('');
     }
   }, [isOpen]);
@@ -162,86 +108,11 @@ export default function FinishSessionForm({
     });
   };
 
-  const handleToggleSubject = (courseId: string) => {
-    setSelectedSubjectIds(prev => {
-      const checked = !prev.includes(courseId);
-      // Al desmarcar una asignatura se desmarcan también sus tareas.
-      if (!checked) {
-        setSelectedTaskIds(tPrev =>
-          tPrev.filter(tid => {
-            const task = tasks.find(t => t.id === tid);
-            return task ? task.courseId !== courseId : false;
-          })
-        );
-      }
-      return checked ? [...prev, courseId] : prev.filter(id => id !== courseId);
-    });
-  }
-
-  /** Marcar una tarea implica haber estudiado su asignatura: se selecciona
-   *  sola, porque una tarea avanzada sin asignatura no se puede registrar. */
-  const handleToggleTask = (taskId: string) => {
-    setSelectedTaskIds(prev => {
-      const checked = !prev.includes(taskId);
-      if (checked) {
-        const courseId = tasks.find(t => t.id === taskId)?.courseId;
-        if (courseId) {
-          setSelectedSubjectIds(sPrev => (sPrev.includes(courseId) ? sPrev : [...sPrev, courseId]));
-        }
-      }
-      return checked ? [...prev, taskId] : prev.filter(id => id !== taskId);
-    });
-  };
-
-  const toggleExpanded = (courseId: string) =>
-    setExpandedCourseIds(prev =>
-      prev.includes(courseId) ? prev.filter(id => id !== courseId) : [...prev, courseId]
-    );
-
-  /** Tareas pendientes CON tiempo estimado por asignatura: son las únicas que
-   *  pueden avanzar (el % se calcula con esa métrica). */
-  const advanceableByCourse = useMemo(() => {
-    const map = new Map<string, typeof tasks>();
-    for (const t of tasks ?? []) {
-      if ((t.estimatedMinutes ?? 0) <= 0 || (t.progress || 0) >= 100) continue;
-      const list = map.get(t.courseId);
-      if (list) list.push(t);
-      else map.set(t.courseId, [t]);
-    }
-    return map;
-  }, [tasks]);
-
-  /** Grupos visibles: colecciones con asignaturas + las independientes. Las
-   *  asignaturas ya marcadas nunca se ocultan al filtrar. */
-  const groups = useMemo(() => {
-    const search = courseSearch.trim().toLowerCase();
-    const matches = (name: string, id: string) =>
-      !search || name.toLowerCase().includes(search) || selectedSubjectIds.includes(id);
-
-    const inSpaces = new Set(spaces.flatMap(s => s.courseIds));
-    const out: { id: string; name: string; courses: Course[] }[] = [];
-
-    for (const space of spaces) {
-      const list = space.courseIds
-        .map(id => courses.find(c => c.id === id))
-        .filter((c): c is Course => !!c)
-        .filter(c => matches(c.name, c.id));
-      if (list.length > 0) out.push({ id: space.id, name: space.name, courses: list });
-    }
-
-    const loose = courses.filter(c => !inSpaces.has(c.id)).filter(c => matches(c.name, c.id));
-    if (loose.length > 0) out.push({ id: '__loose__', name: 'Asignaturas independientes', courses: loose });
-
-    return out;
-  }, [courseSearch, courses, spaces, selectedSubjectIds]);
-
-  const hasAnyCourses = courses && courses.length > 0;
-
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent
-          className="flex max-h-[80vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-xl [&>button]:text-foreground [&>button]:h-5 [&>button]:w-5"
+          className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl [&>button]:text-foreground [&>button]:h-5 [&>button]:w-5"
           hideCloseButton={trigger === 'auto'}
           onInteractOutside={(e) => {
             if (trigger === 'auto') e.preventDefault();
@@ -251,193 +122,134 @@ export default function FinishSessionForm({
           }}
         >
           {/* ---------- Cabecera fija ---------- */}
-          <DialogHeader className="shrink-0 border-b px-5 pb-3 pt-5">
-            <DialogTitle className="text-center text-lg font-bold tracking-wider text-primary">
-              Sesión terminada
-            </DialogTitle>
+          <DialogHeader className="shrink-0 space-y-0 text-left sm:text-left">
+            {/* Título y datos de la sesión, con «SESIÓN» a la deriva detrás. */}
+            <div className="relative overflow-hidden px-6 pb-3 pt-5">
+              <EchoWord word="Sesión" />
+              <DialogTitle className="relative text-center text-lg font-bold tracking-wider text-primary">
+                Sesión terminada
+              </DialogTitle>
 
-            <div
-              className={cn(
-                'grid items-center gap-4 pt-2',
-                selectionMode === 'rendimiento' ? 'sm:grid-cols-2' : 'grid-cols-1'
-              )}
-            >
-              <div className="space-y-0.5 text-center">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                  Tiempo estudiado
-                </p>
-                <p className="font-headline text-2xl font-bold tabular-nums text-primary">
-                  {formatHMS(studiedSeconds)}
-                </p>
-              </div>
-
-              {selectionMode === 'rendimiento' && (
-                <div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="perception" className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                      Nivel de enfoque
-                    </Label>
-                    <span
-                      className={cn(
-                        'w-8 rounded-md text-center text-xs font-semibold tabular-nums transition-colors',
-                        needsFocus
-                          ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
-                          : 'bg-primary/20 text-primary'
-                      )}
-                    >
-                      {perception}
-                    </span>
-                  </div>
-                  <Slider
-                    id="perception"
-                    min={0}
-                    max={20}
-                    step={1}
-                    value={[perception]}
-                    onValueChange={(value) => setPerception(value[0])}
-                    className="mt-2"
-                  />
-                  {/* El recordatorio: una línea que aparece solo mientras el
-                      enfoque siga en 0 y desaparece en cuanto se mueve. */}
-                  <p
-                    className={cn(
-                      'mt-1.5 text-[10px] leading-tight transition-colors',
-                      needsFocus ? 'text-amber-600 dark:text-amber-400' : 'text-transparent'
-                    )}
-                  >
-                    Mueve la barra: sin enfoque no se puede registrar.
+              <div
+                className={cn(
+                  'relative grid items-center gap-4 pt-2',
+                  selectionMode === 'rendimiento' ? 'sm:grid-cols-2' : 'grid-cols-1'
+                )}
+              >
+                <div className="space-y-0.5 text-center">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Tiempo estudiado
+                  </p>
+                  <p className="font-headline text-2xl font-bold tabular-nums text-primary">
+                    {formatHMS(studiedSeconds)}
                   </p>
                 </div>
-              )}
+
+                {selectionMode === 'rendimiento' && (
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="perception" className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                        Nivel de enfoque
+                      </Label>
+                      <span
+                        className={cn(
+                          'w-8 rounded-md text-center text-xs font-semibold tabular-nums transition-colors',
+                          needsFocus
+                            ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
+                            : 'bg-primary/20 text-primary'
+                        )}
+                      >
+                        {perception}
+                      </span>
+                    </div>
+                    <Slider
+                      id="perception"
+                      min={0}
+                      max={20}
+                      step={1}
+                      value={[perception]}
+                      onValueChange={(value) => setPerception(value[0])}
+                      className="mt-2"
+                    />
+                    {/* El recordatorio: una línea que aparece solo mientras el
+                        enfoque siga en 0 y desaparece en cuanto se mueve. */}
+                    <p
+                      className={cn(
+                        'mt-1.5 text-[10px] leading-tight transition-colors',
+                        needsFocus ? 'text-amber-600 dark:text-amber-400' : 'text-transparent'
+                      )}
+                    >
+                      Mueve la barra: sin enfoque no se puede registrar.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Lo anotado DURANTE la sesión, a la vista antes de resumir: es
-                justo lo que uno no recuerda al parar el reloj. */}
-            {sessionNotes.length > 0 && (
-              <div className="space-y-1.5 pt-3 text-left">
-                <SessionNotesHeading count={sessionNotes.length} />
-                <div className="max-h-28 overflow-y-auto pr-1">
-                  <SessionNotesList notes={sessionNotes} />
+            <div className="space-y-3 px-6 pb-4">
+              {/* Lo anotado DURANTE la sesión, a la vista antes de resumir: es
+                  justo lo que uno no recuerda al parar el reloj. */}
+              {sessionNotes.length > 0 && (
+                <div className="space-y-1.5">
+                  <SessionNotesHeading count={sessionNotes.length} />
+                  <div className="max-h-28 overflow-y-auto pr-1">
+                    <SessionNotesList notes={sessionNotes} />
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Anotación de la sesión: qué se hizo realmente. Va en la
-                cabecera, antes de elegir asignaturas, porque es lo que se
-                tiene fresco nada más parar el reloj. */}
-            <div className="space-y-1 pt-3 text-left">
-              <Label htmlFor="session-notes" className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-                <NotebookPen className="h-3.5 w-3.5 text-primary" />
-                ¿Qué hiciste?
-                <span className="normal-case tracking-normal text-muted-foreground/70">(opcional)</span>
-              </Label>
-              {/* Texto continuo o lista de avances, en el mismo campo. */}
-              <NoteEditor
-                id="session-notes"
-                value={notes}
-                onChange={setNotes}
-                placeholder="Resolví los ejercicios 12 al 20; me atasqué en la derivada de la cadena…"
-                rows={3}
-                dense
-                hint="Lista: un avance por línea"
-              />
+              {/* Anotación de la sesión: qué se hizo realmente. Va en la
+                  cabecera, antes de elegir asignaturas, porque es lo que se
+                  tiene fresco nada más parar el reloj. */}
+              <div className="space-y-1">
+                <Label
+                  htmlFor="session-notes"
+                  onClick={() => document.getElementById('session-notes')?.focus()}
+                  className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground"
+                >
+                  <NotebookPen className="h-3.5 w-3.5 text-primary" />
+                  ¿Qué hiciste?
+                  <span className="normal-case tracking-normal text-muted-foreground/70">(opcional)</span>
+                </Label>
+                {/* Texto con formato y listas, como un Word en pequeño. */}
+                <NoteEditor
+                  id="session-notes"
+                  value={notes}
+                  onChange={setNotes}
+                  placeholder="Resolví los ejercicios 12 al 20; me atasqué en la derivada de la cadena…"
+                  rows={3}
+                  dense
+                />
+              </div>
             </div>
           </DialogHeader>
 
+          {/* Divisoria con aire a ambos lados. */}
+          <div aria-hidden className="mx-6 h-px shrink-0 bg-border" />
+
           {/* ---------- Cuerpo: ÚNICO carril de scroll ---------- */}
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <Label className="text-sm font-semibold text-foreground">
-                  ¿Qué estudiaste?
-                  {selectedSubjectIds.length > 0 && (
-                    <span className="ml-2 text-xs font-normal text-primary">
-                      {selectedSubjectIds.length}{' '}
-                      {selectedSubjectIds.length === 1 ? 'seleccionada' : 'seleccionadas'}
-                    </span>
-                  )}
-                </Label>
-                <div className="relative w-full sm:w-48">
-                  <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar…"
-                    value={courseSearch}
-                    onChange={(e) => setCourseSearch(e.target.value)}
-                    className="h-8 border-primary/60 bg-card pl-8 text-xs"
-                  />
-                </div>
-              </div>
-
-              {!hasAnyCourses ? (
-                <p className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
-                  No has creado ninguna asignatura.
-                </p>
-              ) : groups.length === 0 ? (
-                <p className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
-                  Ninguna asignatura coincide con la búsqueda.
-                </p>
-              ) : (
-                groups.map((group) => (
-                  <div key={group.id} className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Layers className="h-3.5 w-3.5 shrink-0 text-primary" />
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                        {group.name}
-                      </span>
-                      <span className="h-px flex-1 bg-border" />
-                    </div>
-
-                    {/* `items-start`: cada asignatura es una celda propia, así
-                        al desplegar sus tareas crece solo esa columna y no se
-                        estira la de al lado. */}
-                    <div className="grid grid-cols-1 items-start gap-2 sm:grid-cols-2">
-                      {group.courses.map((course) => {
-                        const courseTasks = advanceableByCourse.get(course.id) ?? [];
-                        const expanded = expandedCourseIds.includes(course.id);
-                        return (
-                          <div key={course.id} className="space-y-2">
-                            <SubjectCard
-                              course={course}
-                              selected={selectedSubjectIds.includes(course.id)}
-                              pendingTasks={courseTasks.length}
-                              expanded={expanded}
-                              onToggle={() => handleToggleSubject(course.id)}
-                              onToggleTasks={() => toggleExpanded(course.id)}
-                            />
-
-                            {/* Las tareas caen JUSTO DEBAJO de su asignatura. */}
-                            {expanded && courseTasks.length > 0 && (
-                              <div className="space-y-1.5 duration-200 animate-in fade-in slide-in-from-top-2">
-                                {courseTasks.map((task) => (
-                                  <TaskPick
-                                    key={task.id}
-                                    task={task}
-                                    selected={selectedTaskIds.includes(task.id)}
-                                    onToggle={() => handleToggleTask(task.id)}
-                                  />
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+            <SessionSubjectPicker
+              subjectIds={selectedSubjectIds}
+              taskIds={selectedTaskIds}
+              onChange={({ subjectIds, taskIds }) => {
+                setSelectedSubjectIds(subjectIds);
+                setSelectedTaskIds(taskIds);
+              }}
+            />
           </div>
 
           {/* ---------- Pie fijo ---------- */}
-          <div className="flex shrink-0 items-center justify-between gap-3 border-t bg-card/60 px-5 py-3">
+          <div aria-hidden className="mx-6 h-px shrink-0 bg-border" />
+          <div className="flex shrink-0 items-center justify-between gap-3 px-6 py-3">
             <Button
               type="button"
-              variant="ghost"
+              variant="fantasmaRojo"
               size="sm"
-              className="text-xs text-muted-foreground hover:bg-destructive/15 hover:text-destructive"
+              className="text-xs"
               onClick={() => setConfirmDiscard(true)}
             >
-              <Trash2 className="mr-1.5 h-4 w-4" />
+              <Trash2 className="h-4 w-4" />
               Descartar
             </Button>
 

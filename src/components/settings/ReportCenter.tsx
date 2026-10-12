@@ -1,6 +1,4 @@
 import { useState, type ReactNode } from 'react';
-import { ScrollText } from 'lucide-react';
-import { Card } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import GeneralReportCard from '@/components/settings/GeneralReportCard';
 import PerformanceReportCard from '@/components/settings/PerformanceReportCard';
@@ -9,15 +7,22 @@ import { cn } from '@/lib/utils';
 import type { UserProfile } from '@/types';
 
 // ============================================================
-// Centro de informes (Ajustes, abajo a la derecha).
+// Centro de informes (recuadro del botón de informes de la barra superior).
 //
-// Los cuatro informes de Frame, a la vista y sin pasar por la rueda de la
-// cuenta. Se ven de uno en uno y a todo el ancho del recuadro: los cuatro
-// juntos no caben en media pantalla sin que se monten sus textos.
+// Hasta la 1.6.1 vivía en Ajustes, abajo a la derecha; desde la 1.6.2 se
+// abre desde la barra superior, a la derecha de «Crear», en cualquier
+// interfaz. Este componente es solo el CUERPO del recuadro: el título y el
+// marco los pone la barra (src/components/layout/header.tsx), que además lo
+// carga bajo demanda para no sumar los generadores de documentos al arranque.
 //
-// Los cuatro quedan montados en la misma celda y solo se ve el elegido.
-// Así el recuadro mide siempre lo que el más alto —no salta al cambiar de
-// pestaña— y cada informe conserva lo que se eligió en él (periodo, modo).
+// Los cuatro informes de Frame, de uno en uno y a todo el ancho: los cuatro
+// juntos no caben sin que se monten sus textos. Quedan montados en la misma
+// celda y solo se ve el elegido. Así el recuadro mide siempre lo que el más
+// alto —no salta al cambiar de pestaña— y cada informe conserva lo que se
+// eligió en él (periodo, modo).
+//
+// Cada informe trae su propia tarjeta; aquí se le quitan borde, fondo y
+// sombra para que no quede un recuadro dentro de otro.
 // ============================================================
 
 type ReportKey = 'general' | 'performance' | 'pending' | 'habits';
@@ -40,20 +45,8 @@ export default function ReportCenter({ userProfile }: { userProfile: UserProfile
   };
 
   return (
-    <Card className="flex h-full flex-col p-5" data-tour="informes">
-      <div className="mb-4 flex items-center gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-primary/40 bg-primary/10">
-          <ScrollText className="h-5 w-5 text-primary" />
-        </span>
-        <div>
-          <h3 className="text-lg font-bold text-primary">Centro de informes</h3>
-          <p className="text-xs text-muted-foreground">
-            General, rendimiento, pendientes y hábitos, en PDF o Word.
-          </p>
-        </div>
-      </div>
-
-      <Tabs value={active} onValueChange={(value) => setActive(value as ReportKey)} className="mb-3 w-full">
+    <div className="flex flex-col" data-tour="informes">
+      <Tabs value={active} onValueChange={(value) => setActive(value as ReportKey)} className="mb-1 w-full">
         <TabsList className="grid w-full grid-cols-4" data-tour="informes-tipos">
           {TABS.map((tab, index) => (
             <TabsTrigger key={tab.key} value={tab.key} className={cn(index < TABS.length - 1 && 'border-r')}>
@@ -63,13 +56,17 @@ export default function ReportCenter({ userProfile }: { userProfile: UserProfile
         </TabsList>
       </Tabs>
 
-      <div className="grid flex-1">
+      {/* `-mx-4`: el relleno de cada tarjeta queda alineado con las pestañas. */}
+      <div className="-mx-4 grid">
         {TABS.map(({ key }) => {
           const shown = key === active;
           return (
             <div
               key={key}
-              className={cn('col-start-1 row-start-1 flex flex-col [&>*]:flex-1', !shown && 'invisible')}
+              className={cn(
+                'col-start-1 row-start-1 flex flex-col [&>*]:flex-1 [&>*]:border-0 [&>*]:bg-transparent [&>*]:shadow-none',
+                !shown && 'invisible'
+              )}
               inert={!shown}
               aria-hidden={!shown}
             >
@@ -78,6 +75,6 @@ export default function ReportCenter({ userProfile }: { userProfile: UserProfile
           );
         })}
       </div>
-    </Card>
+    </div>
   );
 }

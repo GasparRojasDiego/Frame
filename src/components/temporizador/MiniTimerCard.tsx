@@ -7,7 +7,10 @@ import { cn } from '@/lib/utils';
 import { formatHMS } from '@/lib/duration';
 import { useCourse } from '@/context/CourseContext';
 import { useTimerTime } from '@/lib/timer-clock';
-import { Play, Pause, StopCircle, X, Minimize2, Maximize2, Timer, Clock } from 'lucide-react';
+import { isRichNoteEmpty } from '@/lib/rich-note';
+import { useToast } from '@/hooks/use-toast';
+import NoteEditor from './NoteEditor';
+import { Play, Pause, StopCircle, X, Minimize2, Maximize2, Timer, Clock, NotebookPen } from 'lucide-react';
 
 // ============================================================
 // Hora oficial de Perú (America/Lima) con máxima precisión: al activarse se
@@ -100,11 +103,18 @@ export default function MiniTimerCard() {
     sessionStartTime,
     setSessionStartTime,
     requestFinish,
+    addSessionNote,
   } = useCourse();
   const timerTime = useTimerTime();
+  const { toast } = useToast();
 
   const navigate = useNavigate();
   const { pathname } = useLocation();
+
+  // Anotar un avance desde la propia tarjeta, como en la ventana nativa: el
+  // mismo editor (siempre texto, con su barra de formato) en pequeño.
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [noteText, setNoteText] = useState('');
 
   // Opción persistente: mostrar también la hora en tiempo real de Perú.
   const [showPeruClock, setShowPeruClock] = useState(
@@ -157,7 +167,7 @@ export default function MiniTimerCard() {
 
   const handlePointerDown = (e: React.PointerEvent) => {
     // Los controles siguen siendo clics normales: solo arrastra el "cuerpo".
-    if ((e.target as HTMLElement).closest('button, input, a')) return;
+    if ((e.target as HTMLElement).closest('button, input, a, [contenteditable="true"]')) return;
     const el = wrapRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
@@ -231,6 +241,22 @@ export default function MiniTimerCard() {
       ? Math.max(0, Math.min(1, (sessionStartTime - timerTime) / sessionStartTime))
       : 0;
 
+  const hasSession = sessionStartTime > 0;
+  const elapsedSec = Math.max(0, Math.round(timerMode === 'focus' ? sessionStartTime - timerTime : timerTime));
+
+  const closeNote = () => {
+    setNoteOpen(false);
+    setNoteText('');
+  };
+
+  const submitNote = () => {
+    const clean = noteText.trim();
+    if (!hasSession || isRichNoteEmpty(clean)) return;
+    addSessionNote({ text: clean, elapsedSec });
+    toast({ title: 'Avance anotado', description: `Minuto ${formatHMS(elapsedSec)} de la sesión.` });
+    closeNote();
+  };
+
   if (miniTimerView === 'compact') {
     return (
       <div {...wrapperProps}>
@@ -283,6 +309,20 @@ export default function MiniTimerCard() {
             )}
           </div>
           <div className="flex items-center gap-1">
+            {/* Anotar el avance sin ir a Estudio ni cerrar la sesión. */}
+            <Button
+              size="icon"
+              variant="ghost"
+              className={cn(
+                'h-7 w-7',
+                noteOpen ? 'text-primary hover:text-primary' : 'text-muted-foreground'
+              )}
+              onClick={() => (noteOpen ? closeNote() : setNoteOpen(true))}
+              disabled={!hasSession}
+              title={hasSession ? 'Anotar un avance' : 'Inicia la sesión para anotar avances'}
+            >
+              <NotebookPen className="h-3.5 w-3.5" />
+            </Button>
             <Button
               size="icon"
               variant="ghost"
@@ -314,44 +354,82 @@ export default function MiniTimerCard() {
           </div>
         </div>
 
-        <p className="text-center font-mono text-4xl font-bold text-foreground tabular-nums">
-          {formatHMS(timerTime)}
-        </p>
-
-        {showPeruClock && <PeruClock />}
-
-        {timerMode === 'focus' && sessionStartTime > 0 && (
-          <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
-            <div
-              className="h-full rounded-full bg-primary transition-all duration-1000"
-              style={{ width: `${progress * 100}%` }}
+        {noteOpen && hasSession ? (
+          /* Anotación en caliente: el reloj queda arriba, pequeño. */
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Anotar avance
+              </span>
+              <span className="font-mono text-xs font-bold tabular-nums text-primary">
+                {formatHMS(timerTime)}
+              </span>
+            </div>
+            <NoteEditor
+              value={noteText}
+              onChange={setNoteText}
+              onSubmit={submitNote}
+              onCancel={closeNote}
+              placeholder="Escribe tu avance…"
+              rows={4}
+              autoFocus
+              dense
             />
+            <div className="flex justify-end gap-1.5">
+              <Button variant="fantasmaRojo" className="h-7 px-2.5 py-0 text-[11px] font-semibold" onClick={closeNote}>
+                Cancelar
+              </Button>
+              <Button
+                className="h-7 px-3 py-0 text-[11px] font-semibold"
+                onClick={submitNote}
+                disabled={isRichNoteEmpty(noteText)}
+              >
+                Anotar
+              </Button>
+            </div>
           </div>
-        )}
+        ) : (
+          <>
+            <p className="text-center font-mono text-4xl font-bold text-foreground tabular-nums">
+              {formatHMS(timerTime)}
+            </p>
 
-        <div className="mt-4 flex gap-2">
-          <Button className="flex-1 text-xs" onClick={handleStartPause} disabled={!canStart}>
-            {isTimerActive ? (
-              <Pause className="mr-2 h-4 w-4" />
-            ) : (
-              <Play className="mr-2 h-4 w-4" />
+            {showPeruClock && <PeruClock />}
+
+            {timerMode === 'focus' && sessionStartTime > 0 && (
+              <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                <div
+                  className="h-full rounded-full bg-primary transition-all duration-1000"
+                  style={{ width: `${progress * 100}%` }}
+                />
+              </div>
             )}
-            {isTimerActive ? 'Pausar' : sessionStartTime > 0 ? 'Reanudar' : 'Iniciar'}
-          </Button>
-          <Button
-            variant="secondary"
-            className={cn(
-              'flex-1 text-xs border border-transparent',
-              sessionStartTime > 0 &&
-                'hover:border-destructive hover:bg-destructive/20 hover:text-destructive-foreground'
-            )}
-            onClick={handleFinish}
-            disabled={sessionStartTime === 0}
-          >
-            <StopCircle className="mr-2 h-4 w-4" />
-            Finalizar
-          </Button>
-        </div>
+
+            <div className="mt-4 flex gap-2">
+              <Button className="flex-1 text-xs" onClick={handleStartPause} disabled={!canStart}>
+                {isTimerActive ? (
+                  <Pause className="mr-2 h-4 w-4" />
+                ) : (
+                  <Play className="mr-2 h-4 w-4" />
+                )}
+                {isTimerActive ? 'Pausar' : sessionStartTime > 0 ? 'Reanudar' : 'Iniciar'}
+              </Button>
+              <Button
+                variant="secondary"
+                className={cn(
+                  'flex-1 text-xs border border-transparent',
+                  sessionStartTime > 0 &&
+                    'hover:border-destructive hover:bg-destructive/20 hover:text-destructive-foreground'
+                )}
+                onClick={handleFinish}
+                disabled={sessionStartTime === 0}
+              >
+                <StopCircle className="mr-2 h-4 w-4" />
+                Finalizar
+              </Button>
+            </div>
+          </>
+        )}
       </Card>
     </div>
   );

@@ -8,6 +8,7 @@ import type {
   ArchivedTask,
   ArchivedNote,
   LocalCalendarEvent,
+  CalendarDayColor,
   Recording,
   UserProfile,
   StudySession,
@@ -40,6 +41,7 @@ import { CLOUD_APPLIED_EVENT } from '@/lib/supabase/sync';
 import { timerClock, useTimerTime } from '@/lib/timer-clock';
 import { COVER_HEAVY_CHARS, idle, shrinkCover } from '@/lib/cover-shrink';
 import { notify } from '@/lib/notify';
+import { useLocalEventReminders } from '@/components/calendar/useEventReminders';
 import { syncTasksToCalendar } from '@/lib/google/calendarSync';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { deleteAttachment } from '@/lib/file-handles';
@@ -218,6 +220,11 @@ interface CourseContextType {
   addLocalEvent: (event: Omit<LocalCalendarEvent, 'id'>) => void;
   updateLocalEvent: (id: string, updates: Partial<Omit<LocalCalendarEvent, 'id'>>) => void;
   deleteLocalEvent: (id: string) => void;
+  /** Color de fondo propio de cada casilla del calendario local. */
+  dayColors: CalendarDayColor[];
+  /** Pinta unos días con `color`; `null` les quita el color propio y `''`
+   *  los deja sin color aunque un evento los pinte. */
+  setDayColors: (days: string[], color: string | null) => void;
   /** Grabaciones de voz: sueltas (Inicio) o asignadas a una asignatura. */
   recordings: Recording[];
   addRecording: (recording: Recording) => void;
@@ -400,6 +407,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
   const [incompleteTasks, setIncompleteTasks] = useState<ArchivedTask[]>([]);
   const [archivedNotes, setArchivedNotes] = useState<ArchivedNote[]>([]);
   const [localEvents, setLocalEvents] = useState<LocalCalendarEvent[]>([]);
+  const [dayColors, setDayColorsState] = useState<CalendarDayColor[]>([]);
   const [schedules, setSchedules] = useState<MonthlySchedule[]>([]);
   const [classSessions, setClassSessions] = useState<ClassSession[]>([]);
   const [recordings, setRecordings] = useState<Recording[]>([]);
@@ -521,6 +529,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
         incompleteTasks: `incompleteTasks_${uid}`,
         archivedNotes: `archivedNotes_${uid}`,
         localEvents: `localEvents_${uid}`,
+        dayColors: `dayColors_${uid}`,
         schedules: `schedules_${uid}`,
         classSessions: `classSessions_${uid}`,
         recordings: `recordings_${uid}`,
@@ -636,6 +645,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     setIncompleteTasks(getArrayFromLocalStorage(storageKeys.incompleteTasks));
     setArchivedNotes(getArrayFromLocalStorage(storageKeys.archivedNotes));
     setLocalEvents(getArrayFromLocalStorage(storageKeys.localEvents));
+    setDayColorsState(getArrayFromLocalStorage(storageKeys.dayColors));
     setSchedules(getArrayFromLocalStorage(storageKeys.schedules));
     setClassSessions(getArrayFromLocalStorage(storageKeys.classSessions));
     setRecordings(getArrayFromLocalStorage(storageKeys.recordings));
@@ -1896,6 +1906,22 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     });
   }, [storageKeys]);
 
+  // Colores propios de las casillas: un registro por día (su id ES el día),
+  // así la sincronización los fusiona uno a uno y pintar en dos equipos no choca.
+  const setDayColors = useCallback((days: string[], color: string | null) => {
+    if (!storageKeys || days.length === 0) return;
+    const touched = new Set(days);
+    setDayColorsState(prev => {
+      const kept = prev.filter(c => !touched.has(c.id));
+      const updated = color === null ? kept : [...kept, ...days.map(id => ({ id, color }))];
+      setInLocalStorage(storageKeys.dayColors, updated);
+      return updated;
+    });
+  }, [storageKeys]);
+
+  // Avisos nativos de los eventos con hora (ver useEventReminders).
+  useLocalEventReminders(localEvents, storageKeys?.localEvents ?? null);
+
   // --- Grabaciones de voz ---
   const addRecording = useCallback((recording: Recording) => {
     if (!storageKeys) return;
@@ -2802,6 +2828,8 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     addLocalEvent,
     updateLocalEvent,
     deleteLocalEvent,
+    dayColors,
+    setDayColors,
     recordings,
     addRecording,
     updateRecording,

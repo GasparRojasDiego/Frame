@@ -27,7 +27,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import SubjectPicker from '@/components/courses/SubjectPicker';
-import EchoWord, { EchoHeader } from '@/components/shared/EchoWord';
+import EchoWord from '@/components/shared/EchoWord';
+import RecordingLimitPicker from '@/components/recordings/RecordingLimitPicker';
+import { loadRecordingLimit, sanitizeRecordingLimit } from '@/components/recordings/recording-limit';
 import { useCourse } from '@/context/CourseContext';
 import { deleteRecordingAudio, saveRecordingAudio } from '@/lib/music-db';
 import { QUICK_RECORDING_EVENT } from '@/lib/quick-recording';
@@ -39,11 +41,8 @@ import {
   IMPORTANCE_IDLE,
   IMPORTANCE_LABEL,
   IMPORTANCE_STYLE,
-  MAX_OPTIONS,
   formatDuration,
-  loadRecordingSettings,
   minutesLabel,
-  sanitizeRecordingSettings,
   saveRecordingSettings,
   type RecordingSettings,
 } from '@/lib/recordings';
@@ -117,18 +116,20 @@ const autoNameFor = (iso: string) => {
   return `Grabación ${format(Number.isNaN(date.getTime()) ? new Date() : date, 'd MMM HH:mm', { locale: es })}`;
 };
 
-/** Rueda de ajustes de la esquina superior izquierda del diálogo. Las medidas
- *  del botón son exactas para que el icono quede simétrico a la X de cierre,
- *  que DialogContent pinta en `absolute right-4 top-4`. */
+/** Rueda de la esquina superior izquierda del diálogo: el límite de la
+ *  grabación, en horas y minutos. Las medidas del botón son exactas para que
+ *  el icono quede simétrico a la X de cierre, que DialogContent pinta en
+ *  `absolute right-4 top-4`. */
 function RecordingSettingsPopover({
   settings,
   onChange,
-  disabled = false,
+  floor,
 }: {
   settings: RecordingSettings;
   onChange: (patch: Partial<RecordingSettings>) => void;
-  /** true durante la grabación: se muestra el estado pero no se edita. */
-  disabled?: boolean;
+  /** Grabando, el límite se puede alargar o acortar, pero nunca por debajo
+   *  de lo ya grabado: cortaría en el acto. */
+  floor?: number;
 }) {
   return (
     <Popover>
@@ -137,55 +138,31 @@ function RecordingSettingsPopover({
           type="button"
           variant="ghost"
           size="icon"
-          aria-label="Ajustes de grabación"
-          title="Ajustes de grabación"
+          aria-label="Límite de grabación"
+          title="Límite de grabación"
+          data-tour="grabar-limite"
           className="absolute left-[13px] top-[13px] h-[22px] w-[22px] rounded-sm text-muted-foreground opacity-70 transition-opacity hover:bg-primary/10 hover:text-primary hover:opacity-100"
         >
           <Settings className="h-4 w-4" />
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent align="start" side="bottom" sideOffset={8} className="w-80 space-y-4 p-4">
-        <div>
-          <p className="text-sm font-bold text-primary">Ajustes de grabación</p>
-          <p className="text-[10px] text-muted-foreground">Se recuerdan para tu cuenta.</p>
-        </div>
-
-        <p className="rounded-md border border-border/60 bg-secondary/40 p-2 text-[11px] leading-snug text-muted-foreground">
-          La grabación es continua: un solo audio, de principio a fin, hasta que pulses Terminar.
-        </p>
-
-        <div className="space-y-1.5">
-          <Label className="text-xs">Duración máxima</Label>
-          <div className="flex flex-wrap gap-1.5">
-            {MAX_OPTIONS.map((m) => (
-              <Button
-                key={m}
-                type="button"
-                size="sm"
-                disabled={disabled}
-                variant={settings.maxMinutes === m ? 'default' : 'outline'}
-                className="h-7 px-2.5 text-[11px]"
-                onClick={() => onChange({ maxMinutes: m })}
-              >
-                {minutesLabel(m)}
-              </Button>
-            ))}
-          </div>
-          <p className="text-[10px] leading-snug text-muted-foreground">
-            Tope de seguridad (máximo 2 h). Al alcanzarlo la grabación se detiene sola y pasa al
-            formulario, sin perder nada.
-          </p>
-        </div>
-
-        {disabled && (
-          <p className="rounded-md bg-secondary/60 p-2 text-[10px] text-muted-foreground">
-            Estás grabando: los cambios se aplicarán a la próxima grabación.
-          </p>
-        )}
+      <PopoverContent align="start" side="bottom" sideOffset={8} className="w-72 space-y-3 p-4">
+        <RecordingLimitPicker
+          value={settings.maxMinutes}
+          floor={floor}
+          onChange={(maxMinutes) => onChange({ maxMinutes })}
+        />
+        <p className="text-center text-[11px] text-muted-foreground">Se detiene sola al llegar al límite</p>
       </PopoverContent>
     </Popover>
   );
+}
+
+/** Línea al pie de una cabecera a sangre: con margen a ambos lados, nunca de
+ *  borde a borde del recuadro. */
+function HeaderRule() {
+  return <span aria-hidden className="pointer-events-none absolute inset-x-6 bottom-0 h-px bg-border" />;
 }
 
 /**
@@ -268,14 +245,16 @@ export default function RecordingDialog({
   // memoria: no hay dónde persistirlos.
   useEffect(() => {
     if (!open || !userProfile?.id) return;
-    const stored = loadRecordingSettings(userProfile.id);
+    const stored = loadRecordingLimit(userProfile.id);
     settingsRef.current = stored;
     setSettings(stored);
   }, [open, userProfile?.id]);
 
+  // Cualquier minuto entre 1 y 4 h vale. El tick lee settingsRef en cada
+  // vuelta, así que un cambio en plena grabación rige desde ese instante.
   const updateSettings = useCallback(
     (patch: Partial<RecordingSettings>) => {
-      const next = sanitizeRecordingSettings({ ...settingsRef.current, ...patch });
+      const next = sanitizeRecordingLimit({ ...settingsRef.current, ...patch });
       settingsRef.current = next;
       saveRecordingSettings(userProfile?.id, next);
       setSettings(next);
@@ -351,8 +330,8 @@ export default function RecordingDialog({
 
       if (reason === 'max') {
         toast({
-          title: 'Duración máxima alcanzada',
-          description: `Se detuvo a las ${minutesLabel(settingsRef.current.maxMinutes)}. Ya puedes guardarla.`,
+          title: 'Límite de grabación alcanzado',
+          description: `Se detuvo al llegar a ${minutesLabel(settingsRef.current.maxMinutes)}. Ya puedes guardarla.`,
         });
       } else if (reason === 'error') {
         toast({
@@ -784,25 +763,24 @@ export default function RecordingDialog({
       >
         {phase === 'confirm' && (
           <>
-            <EchoHeader word="Grabar">
-              <DialogHeader>
-                <DialogTitle className="text-center text-xl font-bold text-primary">Nueva grabación</DialogTitle>
-                <DialogDescription className="text-center text-xs">
-                  Se grabará audio con el micrófono de tu laptop. La grabación comienza
-                  de inmediato al confirmar.
-                </DialogDescription>
+            <div className="relative -mx-6 -mt-6 mb-2 overflow-hidden px-6 pb-4 pt-6">
+              <EchoWord word="Grabar" />
+              <DialogHeader className="relative">
+                <DialogTitle className="text-center text-xl font-bold text-primary">Grabación</DialogTitle>
+                <DialogDescription className="text-center text-xs">Micrófono del equipo</DialogDescription>
               </DialogHeader>
-            </EchoHeader>
+              <HeaderRule />
+            </div>
             <div className="flex flex-col items-center gap-2 py-2">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 border border-primary/40">
                 <Mic className="h-7 w-7 text-primary" />
               </div>
               <p className="text-center text-[10px] text-muted-foreground">
-                Grabación continua · máximo {minutesLabel(settings.maxMinutes)}
+                Máximo {minutesLabel(settings.maxMinutes)}
               </p>
             </div>
             <DialogFooter className="sm:justify-center gap-2">
-              <Button variant="outline" onClick={() => handleOpenChange(false)}>
+              <Button variant="fantasmaRojo" onClick={() => handleOpenChange(false)}>
                 Cancelar
               </Button>
               {/* autoFocus: con Ctrl+Shift+F basta presionar Enter para empezar */}
@@ -824,7 +802,7 @@ export default function RecordingDialog({
             <div className="flex flex-col items-center gap-4 py-3">
               <div className="relative flex h-20 w-20 items-center justify-center">
                 {!isPaused && (
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500/30" />
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500/30 motion-reduce:animate-none" />
                 )}
                 <div
                   className={cn(
@@ -843,7 +821,7 @@ export default function RecordingDialog({
 
 
               <div className="flex gap-3">
-                <Button variant="outline" className="w-32" onClick={togglePause}>
+                <Button variant="fantasma" className="w-32" onClick={togglePause}>
                   {isPaused ? <Play className="mr-2 h-4 w-4" /> : <Pause className="mr-2 h-4 w-4" />}
                   {isPaused ? 'Reanudar' : 'Pausar'}
                 </Button>
@@ -860,7 +838,7 @@ export default function RecordingDialog({
               </p>
               <p className="flex items-center gap-1.5 rounded-full bg-muted/60 px-3 py-1 text-[10px] text-muted-foreground">
                 <EyeOff className="h-3 w-3" />
-                Puedes cerrar este recuadro: la grabación sigue y el micrófono de arriba la muestra.
+                Puedes cerrar este recuadro: la grabación sigue.
               </p>
             </div>
           </>
@@ -868,34 +846,49 @@ export default function RecordingDialog({
 
         {(phase === 'form' || phase === 'saving') && (
           <>
-            {/* Cabecera: qué se grabó, cuándo y cuánto dura. */}
-            <div className="relative -mx-6 -mt-6 mb-1 overflow-hidden rounded-t-lg border-b border-primary/20 bg-gradient-to-br from-primary/20 via-primary/5 to-transparent px-6 pb-5 pt-6">
+            {/* Cabecera: qué se grabó, cuándo y cuánto dura. Sin degradado: el
+                eco basta para darle vida. */}
+            <div className="relative -mx-6 -mt-6 mb-1 overflow-hidden rounded-t-lg px-6 pb-5 pt-6">
               <EchoWord word="Guardar" />
-              <div className="relative flex items-center gap-4">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-primary/40 bg-primary/15 text-primary shadow-[0_0_24px_hsl(var(--primary)/0.25)]">
+              {/* Icono · título · hueco · X. La duración va centrada en el hueco
+                  que queda entre el final de «Guardar grabación» y la X. */}
+              <div className="relative flex items-center">
+                <div className="mr-4 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-primary/40 bg-primary/15 text-primary">
                   <Mic className="h-7 w-7" />
                 </div>
-                <DialogHeader className="min-w-0 flex-1 space-y-0.5 text-left">
-                  <DialogTitle className="text-xl font-bold">Guardar grabación</DialogTitle>
-                  <DialogDescription className="flex items-center gap-1.5 text-xs">
-                    <Clock className="h-3.5 w-3.5 shrink-0" />
-                    <span className="truncate first-letter:uppercase">{recordedAtLabel}</span>
-                  </DialogDescription>
-                  {isMultiPart && (
-                    <p className="text-[11px] font-semibold text-primary">
-                      {parts.length} partes de la misma grabación
-                    </p>
-                  )}
+                <DialogHeader className="shrink-0 space-y-0.5 text-left">
+                  <DialogTitle className="whitespace-nowrap text-xl font-bold">Guardar grabación</DialogTitle>
+                  {/* Ancho cero y mínimo del 100 %: la fecha y las partes no
+                      ensanchan la columna, que mide justo lo que el título, y
+                      el hueco empieza donde acaba él. En pantallas estrechas
+                      cuentan, para que nada se monte sobre la duración. */}
+                  <div className="space-y-0.5 sm:w-0 sm:min-w-full">
+                    <DialogDescription className="flex items-center gap-1.5 whitespace-nowrap text-xs">
+                      <Clock className="h-3.5 w-3.5 shrink-0" />
+                      <span className="first-letter:uppercase">{recordedAtLabel}</span>
+                    </DialogDescription>
+                    {isMultiPart && (
+                      <p className="whitespace-nowrap text-[11px] font-semibold text-primary">
+                        {parts.length} partes de la misma grabación
+                      </p>
+                    )}
+                  </div>
                 </DialogHeader>
-                <div className="shrink-0 text-right">
-                  <p className="font-headline text-3xl font-bold leading-none tabular-nums text-foreground">
-                    {formatDuration(totalDuration)}
-                  </p>
-                  <p className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    duración
-                  </p>
+                <div className="flex min-w-0 flex-1 justify-center px-2">
+                  <div className="text-center">
+                    <p className="font-headline text-3xl font-bold leading-none tabular-nums text-foreground">
+                      {formatDuration(totalDuration)}
+                    </p>
+                    <p className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      duración
+                    </p>
+                  </div>
                 </div>
+                {/* La X ocupa de 16 a 32 px del borde derecho y el relleno es de
+                    24: estos 8 px llevan el hueco justo hasta su borde izquierdo. */}
+                <span aria-hidden className="w-2 shrink-0" />
               </div>
+              <HeaderRule />
             </div>
 
             <div className="space-y-4 py-2">
@@ -977,34 +970,32 @@ export default function RecordingDialog({
                 />
               </div>
 
-              {/* Asignatura: los mismos mini-recuadros con imagen de
-                  colecciones y asignaturas que el «+» de la barra. */}
+              {/* Asignatura: las mismas tarjetas de colecciones y asignaturas
+                  que el «+» de la barra, escritas directamente sobre el
+                  recuadro. Sin tarjeta «Sin asignatura»: no elegir ninguna
+                  basta para que vaya a Inicio, y pulsar otra vez la elegida
+                  la desmarca. El relleno de 4 px deja ver el anillo de foco
+                  y el de la tarjeta elegida, que el desplazamiento recortaría. */}
               <div
                 className={cn(
-                  'max-h-[17rem] overflow-y-auto rounded-xl border border-border/70 bg-muted/20 p-3',
+                  '-mx-1 max-h-[17rem] overflow-y-auto p-1',
                   phase === 'saving' && 'pointer-events-none opacity-60'
                 )}
               >
                 <SubjectPicker
                   value={courseId === 'none' ? null : courseId}
-                  onChange={(id) => setCourseId(id ?? 'none')}
-                  allowNone
-                  noneLabel="Sin asignatura"
-                  noneHint="Se guarda al final de Inicio"
+                  onChange={(id) => setCourseId((prev) => (id === null || id === prev ? 'none' : id))}
                 />
               </div>
 
               <p className="text-center text-[10px] text-muted-foreground">
-                {isMultiPart
-                  ? 'Si cierras con la X, se guardan todas las partes con el nombre automático y aparecen al final de Inicio.'
-                  : 'Si cierras con la X, la grabación se guarda igual con el nombre automático y aparece al final de Inicio.'}
+                {isMultiPart ? 'Cerrar con la X también las guarda.' : 'Cerrar con la X también la guarda.'}
               </p>
             </div>
             <DialogFooter className="gap-2 sm:justify-center">
               <Button
                 type="button"
-                variant="outline"
-                className="border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                variant="fantasmaRojo"
                 onClick={() => setConfirmDiscard(true)}
                 disabled={phase === 'saving'}
               >
@@ -1035,7 +1026,7 @@ export default function RecordingDialog({
           <RecordingSettingsPopover
             settings={settings}
             onChange={updateSettings}
-            disabled={phase === 'recording'}
+            floor={phase === 'recording' ? Math.floor(elapsed / 60) + 1 : undefined}
           />
         )}
 

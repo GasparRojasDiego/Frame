@@ -29,7 +29,6 @@ import {
 } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
-  Award,
   ChartColumn,
   ChevronLeft,
   ChevronRight,
@@ -54,7 +53,6 @@ import {
   buildDayIndex,
   computeMetrics,
   dayKey,
-  gradeForScore,
   periodRange,
   PRIORITIES,
   shiftRange,
@@ -67,6 +65,15 @@ import {
 const WEEKDAY_LABELS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 const OTHER_SUBJECTS = 'Otras';
 const HEAT_LEVELS = ['bg-muted', 'bg-primary/25', 'bg-primary/45', 'bg-primary/70', 'bg-primary'];
+/** Columnas de la rejilla de cifras secundarias según cuántas hay (de 2 a 6):
+ *  siempre filas completas. Clases escritas enteras para que Tailwind las vea. */
+const SECONDARY_COLUMNS: Record<number, string> = {
+  2: 'md:grid-cols-2',
+  3: 'md:grid-cols-3',
+  4: 'md:grid-cols-4',
+  5: 'md:grid-cols-5',
+  6: 'md:grid-cols-3',
+};
 
 const TOOLTIP_STYLE = {
   backgroundColor: 'hsl(var(--background))',
@@ -358,24 +365,12 @@ export default function AcademicAnalytics() {
         value: `${current.daysMeetingGoal}/${current.elapsedDays}`,
         hint: `Meta acumulada: ${formatMinutes(current.goalMinutes)}`,
       },
-      {
-        label: 'Racha máxima',
-        value: `${current.longestStreak} ${current.longestStreak === 1 ? 'día' : 'días'}`,
-        hint: 'Días seguidos con estudio registrado',
-      },
     ];
     if (current.avgPerception !== null) {
       items.push({
         label: 'Percepción media',
         value: `${current.avgPerception.toFixed(1)}/20`,
         hint: 'Cómo valoraste tus sesiones',
-      });
-    }
-    if (current.avgScore !== null) {
-      items.push({
-        label: 'Rendimiento medio',
-        value: `${current.avgScore.toFixed(1)} ${gradeForScore(current.avgScore)}`,
-        hint: 'Calificación diaria de Estudio',
       });
     }
     if (current.bestDay) {
@@ -505,7 +500,7 @@ export default function AcademicAnalytics() {
               icon={Flame}
               label="Constancia"
               value={`${current.activeDays}/${current.totalDays}`}
-              hint={`Racha máxima de ${current.longestStreak} ${current.longestStreak === 1 ? 'día' : 'días'}`}
+              hint="Días con estudio registrado"
             >
               <Delta now={current.activeDays} before={previous.activeDays} scopeLabel={scopeLabel} />
             </KpiCard>
@@ -770,7 +765,9 @@ export default function AcademicAnalytics() {
             </TooltipProvider>
           </SectionCard>
 
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          {/* Rejilla sin huecos: las columnas siguen al número de cifras que
+              hay (cuatro en una fila; seis, en dos filas de tres). */}
+          <div className={cn('grid grid-cols-2 gap-4', SECONDARY_COLUMNS[secondaryMetrics.length] ?? 'md:grid-cols-4')}>
             {secondaryMetrics.map((item) => (
               <Card key={item.label} className="bg-card/50">
                 <CardContent className="p-4">
@@ -802,11 +799,6 @@ export default function AcademicAnalytics() {
               </CardContent>
             </Card>
           )}
-
-          <p className="flex items-center justify-center gap-1.5 text-center text-[10px] text-muted-foreground/70">
-            <Award className="h-3 w-3 shrink-0" />
-            Las tareas terminadas se contabilizan desde que la app empezó a archivarlas.
-          </p>
         </div>
       )}
     </section>

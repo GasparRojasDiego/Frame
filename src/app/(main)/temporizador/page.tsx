@@ -1,6 +1,6 @@
 import TimerDisplay from '@/components/temporizador/timer-display';
 import { useTodayKey } from '@/hooks/use-today';
-import React, { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { getStudyVideoPlayer } from '@/lib/study-video-player';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { StudySession, DailyPerformance, StudyGoals } from '@/types';
@@ -9,15 +9,16 @@ import { Separator } from '@/components/ui/separator';
 import GradesCalendar from '@/components/temporizador/GradesCalendar';
 import StudyVideosPanel from '@/components/temporizador/StudyVideosPanel';
 import EditSessionDialog from '@/components/temporizador/EditSessionDialog';
+import SessionCard from '@/components/temporizador/SessionCard';
+import SessionDetailDialog from '@/components/temporizador/SessionDetailDialog';
 import SessionNotesList, { SessionNotesHeading } from '@/components/temporizador/SessionNotesList';
 import AcademicAnalytics from '@/components/habits/AcademicAnalytics';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { YoutubeLogo } from '@/components/integrations/YoutubeIcon';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import MarqueeText from '@/components/ui/marquee-text';
 import { useCourse } from '@/context/CourseContext';
-import { sessionSeconds, formatDurationLabel, formatHMS } from '@/lib/duration';
+import { sessionSeconds, formatHMS } from '@/lib/duration';
 import { addDays, isBefore, parseISO, startOfToday, format, isSameDay, isToday } from 'date-fns';
 
 
@@ -48,30 +49,7 @@ export default function TimerPage() {
     selectionMode,
     sessionNotes,
     deleteSessionNote,
-    courses,
-    spaces,
   } = useCourse();
-
-  /**
-   * Colección o colecciones a las que pertenecen las asignaturas de una
-   * sesión. Las sesiones antiguas no guardan el id de la asignatura, solo su
-   * nombre: se resuelve por nombre en ese caso.
-   */
-  const collectionsOf = useCallback(
-    (session: StudySession): string[] => {
-      const ids = new Set(session.subjectIds ?? []);
-      if (ids.size === 0) {
-        for (const name of session.subjects ?? []) {
-          const match = courses.find((course) => course.name === name);
-          if (match) ids.add(match.id);
-        }
-      }
-      return spaces
-        .filter((space) => space.courseIds.some((id) => ids.has(id)))
-        .map((space) => space.name);
-    },
-    [courses, spaces]
-  );
 
   const [dailyStudySeconds, setDailyStudySeconds] = useState(0);
   const [recentSessions, setRecentSessions] = useState<StudySession[]>([]);
@@ -122,6 +100,13 @@ export default function TimerPage() {
   /** Sesión que se está corrigiendo. Solo puede ser una de HOY: esta lista
    *  no muestra ninguna otra. */
   const [editingSession, setEditingSession] = useState<StudySession | null>(null);
+  /** Sesión cuyo detalle está abierto. Se guarda el id y se busca en vivo:
+   *  tras corregirla, el detalle enseña ya lo corregido. */
+  const [openSessionId, setOpenSessionId] = useState<string | null>(null);
+  const openSession = useMemo(
+    () => (openSessionId ? (studySessions ?? []).find((s) => s.id === openSessionId) ?? null : null),
+    [openSessionId, studySessions]
+  );
 
   // Día vivo: con la app abierta de noche, la barra seguía sumando a la meta de
   // ayer y la nota en vivo se publicaba con la fecha anterior.
@@ -345,70 +330,32 @@ export default function TimerPage() {
             </Card>
           )}
 
+          {/* Cada sesión de hoy, como tarjeta: la de su asignatura arriba y lo
+              que dejó (tiempo y rendimiento) debajo. Dos por fila, cada una la
+              mitad del recuadro; si no caben, el recuadro desplaza. El alto
+              del recuadro no cambia: la pila sigue midiendo lo mismo. */}
           <Card className="w-full flex flex-col h-[280px]" data-tour="enfoque-metricas">
-            <CardHeader>
+            <CardHeader className="pb-3 pt-4">
               <CardTitle className="text-center text-sm font-headline text-muted-foreground">
                 Métricas de hoy
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 flex flex-col min-h-0">
+            <CardContent className="flex-1 flex flex-col min-h-0 pb-4">
               {recentSessions.length > 0 ? (
-                <ScrollArea className="flex-1 pr-4">
-                  <ul className="space-y-3 text-xs text-muted-foreground">
-                    {recentSessions.map((session, index) => (
-                      <React.Fragment key={session.id}>
-                        <li className="flex items-center gap-2">
-                          <div className="flex min-w-0 flex-1 items-center gap-3">
-                            {/* Rendimiento y tiempo, juntos: son la misma
-                                lectura (cuánto y cómo). */}
-                            <div className="flex shrink-0 items-center gap-2.5">
-                              {selectionMode === 'rendimiento' && (
-                                <div className="w-14 text-center">
-                                  <span className="text-sm font-bold text-primary">{session.perception}</span>
-                                  <p className="text-[10px]">Rendimiento</p>
-                                </div>
-                              )}
-                              <span className="w-16 text-center font-semibold text-foreground">
-                                {formatDurationLabel(sessionSeconds(session))}
-                              </span>
-                            </div>
-                            {/* Asignaturas y, debajo, su colección. Si no
-                                caben, se desplazan de derecha a izquierda. */}
-                            <div className="min-w-0 flex-1 text-center leading-tight">
-                              <MarqueeText
-                                text={session.subjects?.join(', ') || 'Sin asignatura'}
-                                className="text-xs font-medium text-foreground"
-                              />
-                              {(() => {
-                                const collections = collectionsOf(session);
-                                return collections.length > 0 ? (
-                                  <MarqueeText
-                                    text={collections.join(' · ')}
-                                    className="text-[10px] text-muted-foreground"
-                                  />
-                                ) : null;
-                              })()}
-                            </div>
-                          </div>
-
-                          {/* Corregir la sesión. Solo aparece aquí porque esta
-                              lista es la de HOY: pasada la medianoche el
-                              registro queda cerrado. */}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 shrink-0 text-muted-foreground hover:text-primary"
-                            onClick={() => setEditingSession(session)}
-                            title="Corregir esta sesión"
-                            aria-label="Corregir esta sesión"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                        </li>
-                        {index < recentSessions.length - 1 && <Separator />}
-                      </React.Fragment>
+                <ScrollArea className="-mr-3 flex-1 pr-3">
+                  {/* p-px: el realce de la tarjeta al pasar el ratón no se recorta. */}
+                  <div className="grid grid-cols-2 gap-3 p-px pb-1">
+                    {recentSessions.map((session) => (
+                      <SessionCard
+                        key={session.id}
+                        session={session}
+                        onOpen={() => setOpenSessionId(session.id)}
+                        // Solo hay lápiz aquí porque esta lista es la de HOY:
+                        // pasada la medianoche el registro queda cerrado.
+                        onEdit={() => setEditingSession(session)}
+                      />
                     ))}
-                  </ul>
+                  </div>
                 </ScrollArea>
               ) : (
                 <p className="text-xs text-muted-foreground text-center pt-2">Hoy todavía no registras sesiones.</p>
@@ -437,6 +384,19 @@ export default function TimerPage() {
       {/* Analítica académica: vive aquí, bajo el calendario, porque habla de
           estudio y no de hábitos. Es autónoma (tiene su propio periodo). */}
       <div data-tour="progreso-academico"><AcademicAnalytics /></div>
+
+      {/* Detalle de una sesión de hoy. Corregir abre su diálogo encima y,
+          al guardar, el detalle ya enseña lo corregido. */}
+      <SessionDetailDialog
+        session={openSession}
+        onClose={() => setOpenSessionId(null)}
+        dayPerformance={todayPerformance}
+        onEdit={setEditingSession}
+        onDelete={(id) => {
+          setOpenSessionId(null);
+          deleteStudySession(id);
+        }}
+      />
 
       <EditSessionDialog session={editingSession} onClose={() => setEditingSession(null)} />
     </div>

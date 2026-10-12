@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from '@/lib/image';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { ChevronLeft, ChevronRight, Music, Heart, Trash2, Shuffle, LoaderCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Music, Heart, Trash2, Shuffle, LoaderCircle, Search } from 'lucide-react';
 import { useCourse } from '@/context/CourseContext';
 import MusicImportButton from '@/components/music/MusicImportButton';
 import { cn } from '@/lib/utils';
@@ -168,80 +166,89 @@ export default function MusicLibrary() {
 
   return (
     <div ref={rootRef} className="p-6 pt-4 md:p-8 md:pt-4">
-      {/* Una sola fila flexible: buscador · contador con flechas · botones.
-          El contador va EN el flujo, no en posición absoluta: así nunca se
-          mete debajo de los botones al estrecharse la ventana. */}
+      {/* Una sola fila flexible: buscador · flechas de carpeta · botones.
+          El buscador no pasa de la mitad del ancho y lleva DENTRO, a la
+          derecha, cuántas canciones hay: el número es parte de la búsqueda
+          (baja al filtrar), no un dato suelto entre la barra y los botones. */}
       <div className="mt-2 mb-8 flex flex-wrap items-center gap-x-4 gap-y-3">
-        <div className="flex min-w-[16rem] flex-1 items-center gap-2">
-          <Label htmlFor="music-search" className="text-sm font-semibold text-foreground shrink-0">
-            Buscador
-          </Label>
-          <div className="min-w-0 flex-1">
-            <Input
-              id="music-search"
-              data-tour="musica-buscar"
-              placeholder="canciones o artistas..."
-              className="w-full bg-card border-primary"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <div className="flex shrink-0 items-center gap-1 whitespace-nowrap text-sm text-muted-foreground">
-              <span>
-                <span className="font-bold text-foreground/80">{filteredSongs.length}</span> canciones
-              </span>
-              {/* Las flechas cambian de carpeta (100 canciones cada una). Con
-                  una sola carpeta no hay nada que cambiar y no se dibujan. */}
-              {pageCount > 1 && (
-                <span className="ml-1 flex items-center gap-0.5" title={`Carpeta ${safePage + 1} de ${pageCount} · canciones ${pageFirst}–${pageLast}`}>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 text-muted-foreground hover:text-primary disabled:opacity-30"
-                    onClick={() => goToPage(safePage - 1)}
-                    disabled={safePage === 0}
-                    aria-label="Página anterior"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <span className="min-w-[3.25rem] text-center text-xs tabular-nums text-foreground/80">
-                    {safePage + 1}<span className="text-muted-foreground/70"> / {pageCount}</span>
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 text-muted-foreground hover:text-primary disabled:opacity-30"
-                    onClick={() => goToPage(safePage + 1)}
-                    disabled={safePage >= pageCount - 1}
-                    aria-label="Página siguiente"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </span>
-              )}
-          </div>
-        </div>
+        <label
+          htmlFor="music-search"
+          data-tour="musica-buscar"
+          className="flex h-10 w-full min-w-0 cursor-text items-center gap-2 rounded-md border border-primary bg-card px-3 ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 md:w-1/2"
+        >
+          <Search className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+          <input
+            id="music-search"
+            type="text"
+            placeholder="Buscar canciones o artistas…"
+            aria-label="Buscar canciones o artistas"
+            autoComplete="off"
+            spellCheck={false}
+            className="h-full min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <span className="shrink-0 whitespace-nowrap text-xs tabular-nums text-muted-foreground" aria-live="polite">
+            <span className="font-semibold text-foreground/70">{filteredSongs.length}</span>{' '}
+            {filteredSongs.length === 1 ? 'canción' : 'canciones'}
+          </span>
+        </label>
+
+        {/* Las flechas cambian de carpeta (100 canciones cada una). Con una
+            sola carpeta no hay nada que cambiar y no se dibujan. */}
+        {pageCount > 1 && (
+          <span
+            className="flex shrink-0 items-center gap-0.5 text-sm text-muted-foreground"
+            title={`Carpeta ${safePage + 1} de ${pageCount} · canciones ${pageFirst}–${pageLast}`}
+          >
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-muted-foreground hover:text-primary disabled:opacity-30"
+              onClick={() => goToPage(safePage - 1)}
+              disabled={safePage === 0}
+              aria-label="Página anterior"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="min-w-[3.25rem] text-center text-xs tabular-nums text-foreground/80">
+              {safePage + 1}<span className="text-muted-foreground/70"> / {pageCount}</span>
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-muted-foreground hover:text-primary disabled:opacity-30"
+              onClick={() => goToPage(safePage + 1)}
+              disabled={safePage >= pageCount - 1}
+              aria-label="Página siguiente"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </span>
+        )}
+
         <div className="ml-auto flex shrink-0 items-center gap-3">
           <Button
-            variant="ghost"
+            variant="fantasma"
             size="icon"
-            className="rounded-md border border-primary bg-primary/20"
             onClick={handleRandomPlay}
             disabled={filteredSongs.length === 0}
             title="Reproducir una canción al azar" data-tour="musica-azar"
           >
-            <Shuffle className="h-5 w-5 text-primary" />
+            <Shuffle className="h-5 w-5" />
           </Button>
 
+          {/* Fantasma; con el filtro puesto, sólido (como el botón activo de
+              la barra superior). */}
           <Button
-            variant="ghost"
+            variant={showOnlyFavorites ? 'default' : 'fantasma'}
             size="icon"
             onClick={() => setShowOnlyFavorites(prev => !prev)}
             data-tour="musica-favoritas"
-            className="rounded-md border border-primary bg-primary/20"
+            aria-pressed={showOnlyFavorites}
             title={showOnlyFavorites ? 'Ver toda la biblioteca' : 'Ver sólo favoritas'}
           >
-            <Heart className={cn('h-5 w-5 text-primary', showOnlyFavorites && 'fill-primary')} />
+            <Heart className={cn('h-5 w-5', showOnlyFavorites && 'fill-current')} />
           </Button>
 
           <MusicImportButton />

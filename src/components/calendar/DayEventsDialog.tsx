@@ -1,170 +1,361 @@
-import { useState } from 'react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { CalendarPlus, LayoutGrid, Pencil, Tag, Trash2 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useMemo, useRef, useState } from 'react';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+  BellPlus,
+  BookOpen,
+  CalendarDays,
+  CalendarPlus,
+  ClipboardList,
+  ListTodo,
+  Pencil,
+  Trash2,
+} from 'lucide-react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { useRouter } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
-import type { LocalCalendarEvent } from '@/types';
+import type { LocalCalendarEvent, Task } from '@/types';
+import { EVENT_KIND_META, getEventsForDay, normalizeKind } from '@/lib/calendar-events';
+import LocalEventForm, { type EventPreset } from './LocalEventDialog';
 import {
-  EVENT_KIND_META,
-  eventDisplay,
-  eventTextClass,
-  isEventInactive,
-  normalizeKind,
-} from '@/lib/calendar-events';
+  EVENT_TINT,
+  NoColorSwatch,
+  PanelHeader,
+  SectionLabel,
+  Swatch,
+  eventInk,
+  tintVar,
+} from './CalendarBits';
+import {
+  PAINT_COLORS,
+  capitalize,
+  eventEnd,
+  longDayLabel,
+  rangeLabel,
+  relativeDayLabel,
+  remindLabel,
+  weekdayName,
+  type DayRange,
+} from './calendar-model';
 
 // ============================================================
-// Gestión de los eventos de UN día. Se abre al pulsar una casilla con el
-// modo edición encendido: lista todo lo que hay ese día y ofrece crear,
-// editar y borrar. Deliberadamente NO se puede abrir sin modo edición, para
-// que un clic distraído en el calendario no borre nada.
+// EL recuadro del calendario LOCAL. Uno solo, con dos caras:
+//
+//   · el DÍA: lo que hay (eventos y tareas que vencen), su color y los dos
+//     botones para crear ahí un evento o un recordatorio;
+//   · el FORMULARIO de un evento (alta o edición).
+//
+// Del día se pasa al formulario y la flecha de arriba a la izquierda vuelve;
+// nunca hay un recuadro encima de otro. Borrar se confirma en la misma fila,
+// sin abrir otra ventana.
 // ============================================================
 
-export default function DayEventsDialog({
+export type CalendarPanel =
+  | { view: 'day'; day: string }
+  | {
+      view: 'form';
+      /** Evento a editar; ausente = alta. */
+      event?: LocalCalendarEvent;
+      range: DayRange;
+      preset?: EventPreset;
+      /** Día al que vuelve la flecha (si se llegó desde él). */
+      back?: string;
+    };
+
+const byTime = (a: LocalCalendarEvent, b: LocalCalendarEvent) =>
+  (a.time ?? '').localeCompare(b.time ?? '') || a.title.localeCompare(b.title);
+
+function DayView({
   day,
+  todayKey,
   events,
-  onClose,
-  onCreate,
+  tasks,
+  fill,
   onEdit,
   onDelete,
+  onCreate,
+  onPaint,
+  onNavigate,
 }: {
-  day: Date | null;
+  day: string;
+  todayKey: string;
   events: LocalCalendarEvent[];
-  onClose: () => void;
-  onCreate: () => void;
+  tasks: Task[];
+  fill: string;
   onEdit: (event: LocalCalendarEvent) => void;
-  onDelete: (id: string) => void;
+  onDelete: (event: LocalCalendarEvent) => void;
+  onCreate: (preset: EventPreset) => void;
+  onPaint: (color: string | null) => void;
+  onNavigate: (href: string) => void;
 }) {
-  const [pendingDelete, setPendingDelete] = useState<LocalCalendarEvent | null>(null);
+  const [confirming, setConfirming] = useState<string | null>(null);
+  const dayEvents = useMemo(() => [...getEventsForDay(events, day)].sort(byTime), [events, day]);
+  const empty = dayEvents.length === 0 && tasks.length === 0;
 
   return (
     <>
-      <Dialog open={!!day} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="max-h-[85vh] max-w-md overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-center text-xl font-bold capitalize text-primary">
-              {day && format(day, "EEEE d 'de' MMMM", { locale: es })}
-            </DialogTitle>
-          </DialogHeader>
+      <PanelHeader
+        word={weekdayName(day)}
+        title={capitalize(longDayLabel(day, todayKey))}
+        subtitle={relativeDayLabel(day, todayKey)}
+      />
 
-          <div className="space-y-2">
-            {events.length === 0 ? (
-              <p className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
-                No hay eventos este día.
-              </p>
-            ) : (
-              events.map((event) => {
-                const meta = EVENT_KIND_META[normalizeKind(event.kind)];
-                const isCell = eventDisplay(event) === 'casilla';
-                const inactive = isEventInactive(event);
-                return (
-                  <div
-                    key={event.id}
-                    className={cn(
-                      'flex items-start justify-between gap-2 rounded-lg p-3',
-                      inactive && 'opacity-60'
-                    )}
-                    style={{ backgroundColor: event.color }}
-                  >
-                    <div className="min-w-0">
-                      <p className={cn('truncate text-sm font-bold', eventTextClass(event.color))}>
-                        {meta.glyph} {event.title}
-                      </p>
-                      <p
-                        className={cn(
-                          'flex flex-wrap items-center gap-x-2 text-[10px] opacity-80',
-                          eventTextClass(event.color)
-                        )}
-                      >
-                        <span>{meta.label}</span>
-                        <span className="inline-flex items-center gap-1">
-                          {isCell ? <LayoutGrid className="h-2.5 w-2.5" /> : <Tag className="h-2.5 w-2.5" />}
-                          {isCell ? 'Casilla' : 'Actividad'}
-                        </span>
-                        {event.endDate && event.endDate !== event.date && (
-                          <span>
-                            hasta el {format(new Date(`${event.endDate}T00:00:00`), 'd MMM', { locale: es })}
-                          </span>
-                        )}
-                        {inactive && <span>· pasado</span>}
-                      </p>
-                      {event.description && (
-                        <p className={cn('mt-1 text-xs opacity-90', eventTextClass(event.color))}>
-                          {event.description}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex shrink-0 items-center gap-1">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className={cn('h-7 w-7 hover:bg-black/10', eventTextClass(event.color))}
-                        onClick={() => onEdit(event)}
-                        title="Editar este evento"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className={cn('h-7 w-7 hover:bg-black/10', eventTextClass(event.color))}
-                        onClick={() => setPendingDelete(event)}
-                        title="Eliminar este evento"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-
-            <Button variant="outline" className="w-full border-dashed" onClick={onCreate}>
-              <CalendarPlus className="mr-2 h-4 w-4" />
-              Añadir un evento a este día
-            </Button>
+      <div className="space-y-5">
+        {empty && (
+          <div className="flex flex-col items-center gap-2 py-3 text-center">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-primary">
+              <CalendarDays className="h-5 w-5" />
+            </span>
+            <p className="text-sm text-muted-foreground">Nada para este día.</p>
           </div>
-        </DialogContent>
-      </Dialog>
+        )}
 
-      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar este evento?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Se borrará "{pendingDelete?.title}" del calendario
-              {pendingDelete?.endDate && pendingDelete.endDate !== pendingDelete.date
-                ? ', incluidos todos los días del rango'
-                : ''}
-              . Esta acción no se puede deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive hover:bg-destructive/90"
-              onClick={() => {
-                if (pendingDelete) onDelete(pendingDelete.id);
-                setPendingDelete(null);
-              }}
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        {dayEvents.length > 0 && (
+          <section className="space-y-2">
+            <SectionLabel>Eventos</SectionLabel>
+            <ul className="space-y-1.5">
+              {dayEvents.map((event) => {
+                const meta = EVENT_KIND_META[normalizeKind(event.kind)];
+                const end = eventEnd(event);
+                const multi = end !== event.date;
+                const past = end < todayKey;
+                const remind = event.time ? remindLabel(event.remindBefore) : null;
+                const details = [
+                  meta.label,
+                  event.time ?? 'Todo el día',
+                  multi ? rangeLabel({ start: event.date, end }) : '',
+                  remind ? `Aviso ${remind.toLowerCase()}` : '',
+                  past ? 'Pasado' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' · ');
+
+                return (
+                  <li key={event.id}>
+                    {confirming === event.id ? (
+                      <div className="flex items-center gap-2 rounded-lg border border-destructive/60 bg-destructive/10 px-3 py-2">
+                        <p className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
+                          ¿Eliminar «{event.title}»{multi ? ' en todos sus días' : ''}?
+                        </p>
+                        <Button
+                          size="sm"
+                          variant="fantasma"
+                          className="h-7 px-2.5 text-xs"
+                          onClick={() => setConfirming(null)}
+                          autoFocus
+                        >
+                          No
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="h-7 px-2.5 text-xs"
+                          onClick={() => {
+                            onDelete(event);
+                            setConfirming(null);
+                          }}
+                        >
+                          Eliminar
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="group flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => onEdit(event)}
+                          className={cn(
+                            'flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-2 text-left transition-[filter] duration-150 hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:shadow-[inset_3px_0_0_var(--tint)] dark:hover:brightness-125 motion-reduce:transition-none',
+                            EVENT_TINT,
+                            eventInk(event.color),
+                            past && 'opacity-55 saturate-50'
+                          )}
+                          style={tintVar(event.color)}
+                          title="Editar"
+                        >
+                          <span aria-hidden className="text-base leading-none">
+                            {meta.glyph}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-semibold">{event.title}</span>
+                            <span className="block truncate text-[11px] opacity-75">{details}</span>
+                          </span>
+                          <Pencil className="h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-60" />
+                        </button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                          aria-label={`Eliminar «${event.title}»`}
+                          title="Eliminar"
+                          onClick={() => setConfirming(event.id)}
+                        >
+                          <Trash2 />
+                        </Button>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
+
+        {tasks.length > 0 && (
+          <section className="space-y-2">
+            <SectionLabel>Tareas que vencen</SectionLabel>
+            <ul className="space-y-1.5">
+              {tasks.map((task) => (
+                <li
+                  key={task.id}
+                  className="flex items-center gap-3 rounded-lg border border-border/70 bg-card px-3 py-2"
+                >
+                  <ClipboardList className="h-4 w-4 shrink-0 text-primary" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-foreground">{task.name}</p>
+                    <p className="truncate text-[11px] text-muted-foreground">
+                      {task.courseName || 'Sin asignatura'} · Importancia {String(task.priority).toLowerCase()}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0 text-muted-foreground hover:text-primary"
+                    aria-label={`Ver «${task.name}» en Tareas`}
+                    title="Ver en Tareas"
+                    onClick={() => onNavigate(`/tareas?highlightTaskId=${task.id}`)}
+                  >
+                    <ListTodo />
+                  </Button>
+                  {task.courseId && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0 text-muted-foreground hover:text-primary"
+                      aria-label={`Ir a la asignatura de «${task.name}»`}
+                      title="Ir a la asignatura"
+                      onClick={() => onNavigate(`/cursos/?id=${task.courseId}&highlightTaskId=${task.id}`)}
+                    >
+                      <BookOpen />
+                    </Button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        <section className="space-y-2.5">
+          <SectionLabel>Color de la casilla</SectionLabel>
+          <div className="flex flex-wrap items-center gap-2.5" role="group" aria-label="Color de la casilla">
+            {PAINT_COLORS.map(({ hex, name }) => (
+              <Swatch key={hex} color={hex} name={name} active={fill === hex} onClick={() => onPaint(hex)} />
+            ))}
+            <NoColorSwatch active={!fill} onClick={() => onPaint(null)} />
+          </div>
+        </section>
+
+        <div className="grid grid-cols-2 gap-2">
+          <Button variant="fantasma" onClick={() => onCreate('evento')}>
+            <CalendarPlus />
+            Evento
+          </Button>
+          <Button variant="fantasma" onClick={() => onCreate('recordatorio')}>
+            <BellPlus />
+            Recordatorio
+          </Button>
+        </div>
+      </div>
     </>
+  );
+}
+
+export default function DayEventsDialog({
+  panel,
+  onPanelChange,
+  todayKey,
+  events,
+  tasksOfDay,
+  fillOf,
+  onSave,
+  onDelete,
+  onPaint,
+}: {
+  panel: CalendarPanel | null;
+  onPanelChange: (panel: CalendarPanel | null) => void;
+  todayKey: string;
+  events: LocalCalendarEvent[];
+  tasksOfDay: (day: string) => Task[];
+  /** Color con que se ve la casilla ('' = ninguno). */
+  fillOf: (day: string) => string;
+  onSave: (payload: Omit<LocalCalendarEvent, 'id'>, existing?: LocalCalendarEvent) => void;
+  onDelete: (event: LocalCalendarEvent) => void;
+  onPaint: (days: string[], color: string | null) => void;
+}) {
+  const router = useRouter();
+  // Mientras el recuadro se desvanece al cerrar, sigue mostrando lo último.
+  const lastPanel = useRef(panel);
+  if (panel) lastPanel.current = panel;
+  const shown = panel ?? lastPanel.current;
+
+  const backTo = (day?: string): CalendarPanel | null => (day ? { view: 'day', day } : null);
+
+  return (
+    <Dialog open={!!panel} onOpenChange={(open) => !open && onPanelChange(null)}>
+      <DialogContent
+        className={cn('max-h-[88vh] overflow-y-auto', shown?.view === 'form' ? 'max-w-lg' : 'max-w-md')}
+        {...(shown?.view === 'form' ? { 'aria-describedby': undefined } : {})}
+      >
+        {shown?.view === 'day' && (
+          <DayView
+            key={shown.day}
+            day={shown.day}
+            todayKey={todayKey}
+            events={events}
+            tasks={tasksOfDay(shown.day)}
+            fill={fillOf(shown.day)}
+            onEdit={(event) =>
+              onPanelChange({
+                view: 'form',
+                event,
+                range: { start: event.date, end: eventEnd(event) },
+                back: shown.day,
+              })
+            }
+            onDelete={onDelete}
+            onCreate={(preset) =>
+              onPanelChange({ view: 'form', range: { start: shown.day, end: shown.day }, preset, back: shown.day })
+            }
+            onPaint={(color) => onPaint([shown.day], color)}
+            onNavigate={(href) => {
+              onPanelChange(null);
+              router.push(href);
+            }}
+          />
+        )}
+
+        {shown?.view === 'form' && (
+          <LocalEventForm
+            key={shown.event?.id ?? `${shown.range.start}_${shown.range.end}_${shown.preset ?? 'evento'}`}
+            event={shown.event}
+            range={shown.range}
+            preset={shown.preset}
+            todayKey={todayKey}
+            onBack={shown.back ? () => onPanelChange(backTo(shown.back)) : undefined}
+            onCancel={() => onPanelChange(backTo(shown.back))}
+            onSubmit={(payload) => {
+              onSave(payload, shown.event);
+              onPanelChange(backTo(shown.back));
+            }}
+            onDelete={
+              shown.event
+                ? () => {
+                    onDelete(shown.event!);
+                    onPanelChange(backTo(shown.back));
+                  }
+                : undefined
+            }
+          />
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

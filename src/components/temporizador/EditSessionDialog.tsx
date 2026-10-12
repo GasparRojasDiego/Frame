@@ -1,24 +1,25 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Clock, Layers, Lock, NotebookPen, Search } from 'lucide-react';
+import { Clock, Lock, NotebookPen } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import NoteEditor from '@/components/temporizador/NoteEditor';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { SubjectCard } from '@/components/temporizador/SubjectPickCard';
+import { SubjectMultiPicker } from '@/components/courses/SubjectPicker';
+import EchoWord from '@/components/shared/EchoWord';
 import { useCourse } from '@/context/CourseContext';
 import { cn } from '@/lib/utils';
 import { formatHMS, sessionSeconds } from '@/lib/duration';
 import { isSessionEditable } from '@/lib/session-edit';
-import type { Course, StudySession } from '@/types';
+import type { StudySession } from '@/types';
 
 // ============================================================
 // Corregir una sesión YA registrada, el mismo día.
@@ -37,9 +38,9 @@ import type { Course, StudySession } from '@/types';
 //
 // A partir del día siguiente no se abre: ver `isSessionEditable`.
 //
-// La estética es la del cierre de sesión —mismas tarjetas de asignatura,
-// mismo carril único de scroll— porque es el mismo formulario visto una
-// segunda vez.
+// Las asignaturas se marcan con las tarjetas de siempre y el mismo recorrido
+// que en el resto de la app: colecciones primero, luego sus asignaturas (o
+// la búsqueda directa). Un único carril de scroll, como el cierre de sesión.
 // ============================================================
 
 export default function EditSessionDialog({
@@ -50,12 +51,11 @@ export default function EditSessionDialog({
   session: StudySession | null;
   onClose: () => void;
 }) {
-  const { courses, spaces, updateStudySession } = useCourse();
+  const { courses, updateStudySession } = useCourse();
 
   const [perception, setPerception] = useState(0);
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
-  const [courseSearch, setCourseSearch] = useState('');
 
   const isRendimiento = session?.mode === 'rendimiento';
 
@@ -65,7 +65,6 @@ export default function EditSessionDialog({
     if (!session) return;
     setPerception(session.perception ?? 0);
     setNotes(session.notes ?? '');
-    setCourseSearch('');
     // Las sesiones antiguas guardaban solo los NOMBRES de las asignaturas; se
     // reconstruyen los ids por nombre para que también se puedan corregir.
     const ids = session.subjectIds?.length
@@ -73,36 +72,11 @@ export default function EditSessionDialog({
       : (session.subjects ?? [])
           .map((name) => courses.find((c) => c.name === name)?.id)
           .filter((id): id is string => Boolean(id));
-    setSelectedSubjectIds(ids);
+    // Una asignatura ya borrada no se puede volver a marcar: no se cuenta.
+    setSelectedSubjectIds(ids.filter((id) => courses.some((c) => c.id === id)));
     // Solo al cambiar de sesión: `courses` se recrea en cada sincronización.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.id]);
-
-  /** Grupos visibles: colecciones con asignaturas + las independientes. Las
-   *  ya marcadas nunca se ocultan al filtrar. */
-  const groups = useMemo(() => {
-    const search = courseSearch.trim().toLowerCase();
-    const matches = (name: string, id: string) =>
-      !search || name.toLowerCase().includes(search) || selectedSubjectIds.includes(id);
-
-    const inSpaces = new Set(spaces.flatMap((s) => s.courseIds));
-    const out: { id: string; name: string; courses: Course[] }[] = [];
-
-    for (const space of spaces) {
-      const list = space.courseIds
-        .map((id) => courses.find((c) => c.id === id))
-        .filter((c): c is Course => !!c)
-        .filter((c) => matches(c.name, c.id));
-      if (list.length > 0) out.push({ id: space.id, name: space.name, courses: list });
-    }
-
-    const loose = courses.filter((c) => !inSpaces.has(c.id)).filter((c) => matches(c.name, c.id));
-    if (loose.length > 0) {
-      out.push({ id: '__loose__', name: 'Asignaturas independientes', courses: loose });
-    }
-
-    return out;
-  }, [courseSearch, courses, spaces, selectedSubjectIds]);
 
   if (!session) return null;
 
@@ -113,11 +87,6 @@ export default function EditSessionDialog({
   // Sin asignaturas creadas no hay nada que marcar: no se bloquea el registro.
   const needsSubject = (courses?.length ?? 0) > 0 && selectedSubjectIds.length === 0;
   const blocked = !editable || needsFocus || needsSubject;
-
-  const toggleSubject = (courseId: string) =>
-    setSelectedSubjectIds((prev) =>
-      prev.includes(courseId) ? prev.filter((id) => id !== courseId) : [...prev, courseId]
-    );
 
   const save = () => {
     if (blocked) return;
@@ -143,14 +112,24 @@ export default function EditSessionDialog({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="flex max-h-[80vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-xl [&>button]:h-5 [&>button]:w-5 [&>button]:text-foreground">
         {/* ---------- Cabecera fija ---------- */}
-        <DialogHeader className="shrink-0 border-b px-5 pb-3 pt-5">
-          <DialogTitle className="text-center text-lg font-bold tracking-wider text-primary">
-            Corregir sesión
-          </DialogTitle>
+        <DialogHeader className="shrink-0 space-y-0 px-5 pb-3 pt-5">
+          {/* «CORREGIR», a la deriva detrás del título. */}
+          <div className="relative -mx-5 -mt-5 overflow-hidden px-5 pb-2 pt-5">
+            <EchoWord word="Corregir" />
+            <DialogTitle className="relative text-center text-lg font-bold tracking-wider text-primary">
+              Corregir sesión
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              Corrige el enfoque, las asignaturas y la anotación de una sesión de hoy.
+            </DialogDescription>
+          </div>
 
           <div className={cn('grid items-center gap-4 pt-2', isRendimiento ? 'sm:grid-cols-2' : 'grid-cols-1')}>
             <div className="space-y-0.5 text-center">
-              <p className="flex items-center justify-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+              <p
+                className="flex items-center justify-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground"
+                title="Lo mide el reloj: no se edita"
+              >
                 Tiempo estudiado
                 <Lock className="h-3 w-3" />
               </p>
@@ -212,7 +191,7 @@ export default function EditSessionDialog({
               ¿Qué hiciste?
               <span className="normal-case tracking-normal text-muted-foreground/70">(opcional)</span>
             </Label>
-            {/* Texto continuo o lista de avances, en el mismo campo. */}
+            {/* El mismo editor con formato del cierre de sesión. */}
             <NoteEditor
               id="edit-session-notes"
               value={notes}
@@ -220,73 +199,25 @@ export default function EditSessionDialog({
               placeholder="Resolví los ejercicios 12 al 20; me atasqué en la derivada de la cadena…"
               rows={3}
               dense
-              hint="Lista: un avance por línea"
             />
           </div>
         </DialogHeader>
+        <div className="mx-5 h-px shrink-0 bg-border" />
 
         {/* ---------- Cuerpo: ÚNICO carril de scroll ---------- */}
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <Label className="text-sm font-semibold text-foreground">
-                ¿Qué estudiaste?
-                {selectedSubjectIds.length > 0 && (
-                  <span className="ml-2 text-xs font-normal text-primary">
-                    {selectedSubjectIds.length}{' '}
-                    {selectedSubjectIds.length === 1 ? 'seleccionada' : 'seleccionadas'}
-                  </span>
-                )}
-              </Label>
-              <div className="relative w-full sm:w-48">
-                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar…"
-                  value={courseSearch}
-                  onChange={(e) => setCourseSearch(e.target.value)}
-                  className="h-8 border-primary/60 bg-card pl-8 text-xs"
-                />
-              </div>
-            </div>
-
-            {groups.length === 0 ? (
-              <p className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
-                Ninguna asignatura coincide con la búsqueda.
-              </p>
-            ) : (
-              groups.map((group) => (
-                <div key={group.id} className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Layers className="h-3.5 w-3.5 shrink-0 text-primary" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                      {group.name}
-                    </span>
-                    <span className="h-px flex-1 bg-border" />
-                  </div>
-                  <div className="grid grid-cols-1 items-start gap-2 sm:grid-cols-2">
-                    {group.courses.map((course) => (
-                      <SubjectCard
-                        key={course.id}
-                        course={course}
-                        selected={selectedSubjectIds.includes(course.id)}
-                        onToggle={() => toggleSubject(course.id)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))
-            )}
-
-            <p className="pt-1 text-[10px] leading-relaxed text-muted-foreground">
-              El tiempo lo mide el reloj y no se edita. El avance que esta sesión aplicó a tus tareas
-              se ajusta desde cada tarea, no desde aquí.
-            </p>
-          </div>
+          {/* Tarjetas: colecciones primero, luego sus asignaturas. */}
+          <SubjectMultiPicker
+            values={selectedSubjectIds}
+            onChange={setSelectedSubjectIds}
+            title="¿Qué estudiaste?"
+          />
         </div>
 
         {/* ---------- Pie fijo ---------- */}
-        <div className="flex shrink-0 items-center justify-between gap-3 border-t bg-card/60 px-5 py-3">
-          <Button type="button" variant="ghost" size="sm" className="text-xs" onClick={onClose}>
+        <div className="mx-5 h-px shrink-0 bg-border" />
+        <div className="flex shrink-0 items-center justify-between gap-3 px-5 py-3">
+          <Button type="button" variant="fantasmaRojo" size="sm" className="text-xs" onClick={onClose}>
             Cancelar
           </Button>
 

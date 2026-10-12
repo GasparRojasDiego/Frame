@@ -1,0 +1,205 @@
+import { useEffect, useMemo, useState } from 'react';
+import { format, isValid, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { ArrowLeft, Layers, NotebookPen, Trash2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import SubjectPicker from '@/components/courses/SubjectPicker';
+import EchoWord from '@/components/shared/EchoWord';
+import { useCourse } from '@/context/CourseContext';
+import { useToast } from '@/hooks/use-toast';
+import { deleteLooseNote, useLooseNotes, type LooseNote } from '@/lib/loose-notes';
+import { cn } from '@/lib/utils';
+
+// ============================================================
+// Anotaciones sin asignatura (Inicio, junto a las grabaciones sueltas).
+//
+// Lo que se apuntó con el «+» de la barra sin elegir asignatura. Cada una es
+// una tarjeta comprimida a media anchura —sus primeras líneas y la fecha— y
+// un clic la abre entera, con lo único que se puede hacer con ella: colocarla
+// en su asignatura (pasa a ser una anotación de su clase de hoy o de la
+// última) o borrarla.
+//
+// Sin anotaciones, la sección no existe.
+// ============================================================
+
+function whenLabel(iso: string): string {
+  try {
+    const date = parseISO(iso);
+    return isValid(date) ? format(date, "d 'de' MMMM · HH:mm", { locale: es }) : '';
+  } catch {
+    return '';
+  }
+}
+
+function LooseNoteDialog({ note, onClose }: { note: LooseNote | null; onClose: () => void }) {
+  const { courses, addNote, userProfile } = useCourse();
+  const { toast } = useToast();
+  /** Paso 2: elegir la asignatura donde colocarla. */
+  const [placing, setPlacing] = useState(false);
+  const [courseId, setCourseId] = useState<string | null>(null);
+  /** Borrar pide un segundo clic; el aviso caduca solo. */
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  useEffect(() => {
+    if (!confirmDelete) return;
+    const timer = window.setTimeout(() => setConfirmDelete(false), 3000);
+    return () => window.clearTimeout(timer);
+  }, [confirmDelete]);
+
+  const course = useMemo(() => courses.find((c) => c.id === courseId), [courses, courseId]);
+
+  const remove = () => {
+    if (!note || !userProfile) return;
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
+    }
+    deleteLooseNote(userProfile.id, note.id);
+    toast({ title: 'Anotación borrada' });
+    onClose();
+  };
+
+  const place = () => {
+    if (!note || !course || !userProfile) return;
+    // Pasa a ser una anotación de la asignatura (en su clase de hoy o en la
+    // última, como las que se crean desde ella) y deja de estar suelta.
+    addNote(course.id, note.content, { kind: 'text' });
+    deleteLooseNote(userProfile.id, note.id);
+    toast({
+      title: 'Anotación colocada',
+      description: `Queda en ${course.name}, dentro de su clase de hoy (o de la última).`,
+    });
+    onClose();
+  };
+
+  return (
+    <Dialog open={Boolean(note)} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        className={cn(
+          'flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0',
+          placing ? 'sm:max-w-2xl' : 'sm:max-w-lg'
+        )}
+      >
+        {/* `pt-[15px]`: título, flecha de atrás y X de cierre en la misma línea. */}
+        <DialogHeader className="relative shrink-0 overflow-hidden px-6 pb-4 pt-[15px]">
+          <EchoWord word="Anotación" />
+          <div className="relative flex items-center justify-center">
+            {/* Atrás: flecha en la esquina superior izquierda, a la altura del título. */}
+            {placing && (
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                onClick={() => {
+                  setPlacing(false);
+                  setCourseId(null);
+                }}
+                title="Volver a la anotación"
+                aria-label="Volver a la anotación"
+                // `-left-4`: el icono queda a 16 px del borde, simétrico a la X.
+                className="absolute -left-4 top-1/2 h-8 w-8 -translate-y-1/2 rounded-md text-muted-foreground hover:bg-primary/10 hover:text-primary"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            )}
+            <DialogTitle className="text-center text-lg font-bold text-primary">
+              {placing ? 'Colocar en una asignatura' : 'Anotación'}
+            </DialogTitle>
+          </div>
+          <DialogDescription className="relative text-center text-xs">
+            {note ? whenLabel(note.createdAt) : ''}
+          </DialogDescription>
+        </DialogHeader>
+        {/* Divisorias con margen a ambos lados, no de borde a borde. */}
+        <div aria-hidden className="mx-6 h-px shrink-0 bg-border" />
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+          {placing ? (
+            <SubjectPicker value={courseId} onChange={setCourseId} />
+          ) : (
+            <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground">
+              {note?.content}
+            </p>
+          )}
+        </div>
+
+        <div aria-hidden className="mx-6 h-px shrink-0 bg-border" />
+        <div className="flex shrink-0 items-center justify-between gap-2 px-6 py-3">
+          {placing ? (
+            <>
+              <span />
+              <Button
+                size="sm"
+                onClick={place}
+                disabled={!course}
+                className={cn(!course && 'border border-primary bg-primary/20 text-primary')}
+              >
+                <Layers className="mr-2 h-4 w-4" />
+                Colocar
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button size="sm" variant="fantasmaRojo" onClick={remove}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                {confirmDelete ? 'Pulsa otra vez para borrar' : 'Borrar'}
+              </Button>
+              <Button size="sm" variant="fantasma" onClick={() => setPlacing(true)}>
+                <Layers className="mr-2 h-4 w-4" />
+                Colocar en una asignatura
+              </Button>
+            </>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export default function LooseNotesSection() {
+  const { userProfile } = useCourse();
+  const notes = useLooseNotes(userProfile?.id);
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  if (notes.length === 0) return null;
+
+  // Si la abierta desaparece (borrada en otro equipo), el recuadro se cierra solo.
+  const open = notes.find((note) => note.id === openId) ?? null;
+
+  return (
+    <div className="pt-4">
+      {/* Mismo título que «Grabaciones», su vecina en Inicio. */}
+      <h1 className="pb-4 pt-8 text-center font-headline text-2xl font-bold text-primary">Anotaciones</h1>
+
+      <div className="grid grid-cols-2 gap-4">
+        {notes.map((note) => (
+          <button
+            key={note.id}
+            type="button"
+            onClick={() => setOpenId(note.id)}
+            title="Ver la anotación completa"
+            className="flex min-w-0 flex-col gap-2 rounded-lg border bg-card p-4 text-left shadow-sm transition-colors hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <span className="flex items-center gap-2 text-[10px] font-medium text-muted-foreground">
+              <NotebookPen className="h-3.5 w-3.5 shrink-0 text-primary" />
+              <span className="truncate">{whenLabel(note.createdAt)}</span>
+            </span>
+            {/* Comprimida: las primeras líneas; el resto, al abrirla. */}
+            <span className="line-clamp-3 whitespace-pre-line break-words text-sm text-foreground">
+              {note.content}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <LooseNoteDialog key={open?.id ?? 'none'} note={open} onClose={() => setOpenId(null)} />
+    </div>
+  );
+}

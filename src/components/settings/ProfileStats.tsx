@@ -31,7 +31,8 @@ const DIFFICULTY_HEX: Record<TaskDifficulty, string> = {
 const KIND_ORDER: TaskKind[] = ['Tarea', 'Examen', 'Proyecto', 'Actividad', 'Personal'];
 const DAY_INITIALS = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
 
-/** Cifra suelta, para la retícula de datos secundarios. */
+/** Cifra suelta, para la retícula de datos secundarios. El tinte baja de
+ *  arriba hacia abajo (vertical y sutil, como el resto de degradados). */
 const Metric = ({
   icon: Icon,
   label,
@@ -47,7 +48,7 @@ const Metric = ({
 }) => (
   <div
     className={cn(
-      'flex flex-col justify-center gap-1 rounded-xl border border-border/60 bg-gradient-to-br to-transparent p-3',
+      'flex flex-col justify-center gap-1 rounded-xl border border-border/60 bg-gradient-to-b to-transparent p-3',
       accent ?? 'from-primary/[0.07]'
     )}
   >
