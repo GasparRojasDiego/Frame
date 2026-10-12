@@ -578,7 +578,7 @@ export function buildGeneralReport(input: GeneralReportInput): DocModel {
       [
         { text: 'Vídeos de estudio', bold: true },
         { text: String(input.studyVideoCount ?? 0) },
-        { text: 'guardados en el centro de enfoque' },
+        { text: 'guardados en Estudio' },
       ],
     ],
   });

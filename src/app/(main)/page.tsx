@@ -744,7 +744,10 @@ export default function HomePage() {
                     {/* Columna derecha: «Próxima tarea» arriba y «Días de racha»
                         abajo. Los dos huecos miden lo mismo (`flex-1` en ambos);
                         la tarea va arriba con el cuerpo entero para su ficha. */}
-                    <div className="flex flex-col gap-4">
+                    <div className="relative min-h-0">
+                    {/* La columna no empuja la fila: toma el alto que marca la
+                        izquierda y lo reparte a partes iguales. */}
+                    <div className="absolute inset-0 flex flex-col gap-4">
                       {criticalTask ? (
                           <Dialog>
                             <DialogTrigger asChild>
@@ -760,7 +763,7 @@ export default function HomePage() {
                                     event.currentTarget.click();
                                   }
                                 }}
-                                className="flex flex-1 cursor-pointer rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                className="flex min-h-0 flex-1 basis-0 cursor-pointer rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                 data-tour="proxima-tarea"
                               >
                                 <StatTile
@@ -768,41 +771,26 @@ export default function HomePage() {
                                   label="Próxima tarea"
                                   accent="from-amber-500/15"
                                   interactive
-                                  className="min-w-0"
+                                  className="min-h-0 min-w-0 overflow-hidden"
                                 >
-                                  <div className="flex min-h-0 flex-1 flex-col gap-1">
-                                    {/* Nombre de la tarea y su avance. */}
-                                    <div className="flex items-center gap-2">
-                                      <p
-                                        className="min-w-0 flex-1 truncate font-headline text-sm font-bold text-primary"
-                                        title={criticalTask.name}
-                                      >
-                                        {criticalTask.name}
-                                      </p>
-                                      <span
-                                        className="flex shrink-0 items-center gap-1"
-                                        title={`Avance: ${criticalTaskProgress}%`}
-                                      >
-                                        <span className="h-1 w-8 overflow-hidden rounded-full bg-secondary">
-                                          <span
-                                            className="block h-full rounded-full bg-primary transition-[width] duration-500 motion-reduce:transition-none"
-                                            style={{ width: `${criticalTaskProgress}%` }}
-                                          />
-                                        </span>
-                                        <span className="text-[10px] font-semibold tabular-nums text-muted-foreground">
-                                          {criticalTaskProgress}%
-                                        </span>
-                                      </span>
-                                    </div>
+                                  <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden">
+                                    {/* Nombre de la tarea: hasta dos líneas, sin
+                                        competir por el ancho con nada más (el
+                                        avance va en la línea de datos). */}
+                                    <p
+                                      className="line-clamp-2 shrink-0 break-words font-headline text-sm font-bold leading-snug text-primary"
+                                      title={criticalTask.name}
+                                    >
+                                      {criticalTask.name}
+                                    </p>
 
-                                    {/* Asignatura, cuenta atrás, fecha de entrega,
-                                        importancia y dificultad. Se reparten en
-                                        una o dos líneas según el ancho; lo que
-                                        sobra debajo es para la descripción. */}
-                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] leading-4 text-muted-foreground">
-                                      <span className="max-w-full truncate font-semibold text-foreground/80">
-                                        {criticalTask.courseName}
-                                      </span>
+                                    {/* Dos líneas de datos de alto fijo: cuenta
+                                        atrás y asignatura (recortada); después
+                                        fecha, importancia, dificultad y avance,
+                                        donde lo que no cabe salta a una línea
+                                        oculta (se corta entre datos, nunca a mitad
+                                        de uno). El resto es para la descripción. */}
+                                    <div className="flex h-4 shrink-0 items-center gap-2 overflow-hidden text-[11px] leading-4 text-muted-foreground">
                                       {criticalTaskCountdown && (
                                         <CountdownChip
                                           days={criticalTaskCountdown.days}
@@ -811,6 +799,11 @@ export default function HomePage() {
                                           title={criticalTaskDue ? `Fecha de entrega: ${criticalTaskDue.long}` : undefined}
                                         />
                                       )}
+                                      <span className="min-w-0 max-w-full truncate font-semibold text-foreground/80">
+                                        {criticalTask.courseName}
+                                      </span>
+                                    </div>
+                                    <div className="flex h-4 shrink-0 flex-wrap items-center gap-x-2 gap-y-1 overflow-hidden text-[11px] leading-4 text-muted-foreground">
                                       {criticalTaskDue && (
                                         <span
                                           className="shrink-0"
@@ -839,6 +832,20 @@ export default function HomePage() {
                                           <DifficultyBars level={criticalTask.difficulty} />
                                         </span>
                                       )}
+                                      <span
+                                        className="flex shrink-0 items-center gap-1"
+                                        title={`Avance: ${criticalTaskProgress}%`}
+                                      >
+                                        <span className="h-1 w-8 overflow-hidden rounded-full bg-secondary">
+                                          <span
+                                            className="block h-full rounded-full bg-primary transition-[width] duration-500 motion-reduce:transition-none"
+                                            style={{ width: `${criticalTaskProgress}%` }}
+                                          />
+                                        </span>
+                                        <span className="text-[10px] font-semibold tabular-nums text-muted-foreground">
+                                          {criticalTaskProgress}%
+                                        </span>
+                                      </span>
                                     </div>
 
                                     {/* Inicio de la descripción: ocupa lo que sobra
@@ -875,7 +882,7 @@ export default function HomePage() {
                             </DialogContent>
                           </Dialog>
                         ) : (
-                          <div className="flex flex-1" data-tour="proxima-tarea">
+                          <div className="flex min-h-0 flex-1 basis-0" data-tour="proxima-tarea">
                             <StatTile icon={AlertTriangle} label="Próxima tarea" accent="from-amber-500/15">
                               <p className="font-headline text-lg font-bold text-primary">Todo en orden</p>
                               <p className="text-xs text-muted-foreground">No tienes tareas pendientes con fecha.</p>
@@ -883,7 +890,7 @@ export default function HomePage() {
                           </div>
                         )}
 
-                      <StatTile icon={Flame} label="Días de racha" accent="from-orange-500/15">
+                      <StatTile icon={Flame} label="Días de racha" accent="from-orange-500/15" className="min-h-0 basis-0 overflow-hidden">
                         {/* La llama crece con la racha y el anillo mide cuánto
                             falta para el siguiente hito de 7 días. */}
                         <div className="flex items-center gap-3">
@@ -932,6 +939,7 @@ export default function HomePage() {
                           </div>
                         </div>
                       </StatTile>
+                    </div>
                     </div>
                   </div>
                 </CardContent>

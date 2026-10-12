@@ -144,7 +144,7 @@ export default function FocusTimePicker({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="overflow-hidden sm:max-w-sm">
-        <div className="relative -mx-6 -mt-6 overflow-hidden border-b px-6 pb-4 pt-6">
+        <div className="relative -mx-6 -mt-6 overflow-hidden px-6 pb-4 pt-6 after:absolute after:inset-x-6 after:bottom-0 after:h-px after:bg-border">
           <EchoWord word="Tiempo" />
           <DialogHeader className="relative">
             <DialogTitle className="text-center text-lg font-bold text-primary">Duración de la sesión</DialogTitle>
