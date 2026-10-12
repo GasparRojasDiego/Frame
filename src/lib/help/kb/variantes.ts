@@ -28,7 +28,7 @@ export const VARIANTES: Record<string, string[]> = {
   ],
   'menu-plegar': [
     'cómo hago más pequeño el menú', 'ocultar la barra lateral', 'contraer el menú', 'expandir el menú', 'quiero más espacio en la pantalla',
-    'cerrar el menú de la izquierda', 'el menú desapareció cómo lo vuelvo a abrir', 'minimizar el menú',
+    'cerrar el menú de la izquierda', 'el menú desapareció cómo lo vuelvo a abrir', 'minimizar el menú', 'esconder el menú lateral',
   ],
   'sin-internet': [
     'frame funciona offline', 'puedo usar frame sin conexión', 'necesito internet para usar frame', 'qué pasa si me quedo sin internet',

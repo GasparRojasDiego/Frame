@@ -30,7 +30,7 @@ export const CURIOSIDADES: Entry[] = [
   {
     id: 'grabar-atajo',
     title: 'Grabar al instante con el teclado',
-    q: ['hay un atajo para grabar', 'cómo empiezo a grabar sin abrir nada', 'grabar rápido con el teclado', 'tecla para grabar'],
+    q: ['hay un atajo para grabar', 'grabar rápido con el teclado', 'tecla para grabar'],
     k: ['ctrl shift f', 'atajo', 'grabar', 'teclado', 'al instante'],
     a: 'Pulsa Ctrl + Shift + F en cualquier interfaz: se abre la grabadora y empieza a grabar en el acto, sin pulsar nada más.',
     rel: ['grabar-nota', 'atajos'],
