@@ -18,6 +18,16 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        // «Fantasma»: borde del azul de la app bien visible, interior del
+        // mismo azul muy suave. Es el estilo de los botones de la barra
+        // superior (el de la interfaz activa pasa a `default`, sólido).
+        fantasma:
+          "border border-primary bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary",
+        // «Fantasma rojo»: borde rojo notorio, interior del mismo rojo menos
+        // notorio y el contenido en el color del texto (negro o blanco según
+        // el tema), nunca rojo. Para «Cancelar» y acciones de descarte.
+        fantasmaRojo:
+          "border border-destructive bg-destructive/10 text-foreground hover:bg-destructive/20 hover:text-foreground",
       },
       size: {
         default: "h-10 px-4 py-2",
