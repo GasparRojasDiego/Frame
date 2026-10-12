@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import CourseCollectionDialog from '@/components/courses/CourseCollectionDialog';
 import type { Space } from '@/types';
+import { useCardImageHeight } from '@/lib/card-image-height';
 import { cn } from '@/lib/utils';
 
 const PRIORITY_COLOR: Record<TaskPriority, string> = {
@@ -52,6 +53,7 @@ function CourseCard({
   const [isPickerOpen, setPickerOpen] = useState(false);
   // El encuadre usa la proporción real del hueco de la imagen en esta tarjeta.
   const imageBoxRef = useRef<HTMLDivElement>(null);
+  const imageHeight = useCardImageHeight();
   const [pickerAspect, setPickerAspect] = useState<number>();
   const [isCollectionOpen, setCollectionOpen] = useState(false);
 
@@ -78,7 +80,7 @@ function CourseCard({
       onClick={onOpen}
     >
       {/* Imagen de la asignatura (u olas animadas sobre fondo transparente) */}
-      <div ref={imageBoxRef} className="relative h-28 bg-transparent">
+      <div ref={imageBoxRef} className="relative bg-transparent" style={{ height: imageHeight }}>
         {image ? (
           <img src={image} alt={course.name} className="h-full w-full object-cover" />
         ) : (
@@ -182,6 +184,7 @@ function SpaceCard({
   const [isPickerOpen, setPickerOpen] = useState(false);
   // El encuadre usa la proporción real del hueco de la imagen en esta tarjeta.
   const imageBoxRef = useRef<HTMLDivElement>(null);
+  const imageHeight = useCardImageHeight();
   const [pickerAspect, setPickerAspect] = useState<number>();
 
 
@@ -196,7 +199,7 @@ function SpaceCard({
       className="group cursor-pointer overflow-hidden transition-all hover:border-primary/60 hover:shadow-[0_0_20px_hsl(var(--primary)/0.15)]"
       onClick={onOpen}
     >
-      <div ref={imageBoxRef} className="relative h-28 bg-transparent">
+      <div ref={imageBoxRef} className="relative bg-transparent" style={{ height: imageHeight }}>
         {image ? (
           <img src={image} alt={space.name} className="h-full w-full object-cover" />
         ) : (

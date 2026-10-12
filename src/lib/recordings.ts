@@ -6,7 +6,7 @@
  * igual que hace el centro de notificaciones con `notificationsSeen_<uid>`.
  */
 
-import type { RecordingImportance } from '@/types';
+import type { RecordingImportance, RecordingKind } from '@/types';
 
 /**
  * Color de cada grado de importancia, el mismo en la lista de grabaciones,
@@ -30,6 +30,20 @@ export const IMPORTANCE_LABEL: Record<RecordingImportance, string> = {
   baja: 'Baja',
   media: 'Media',
   alta: 'Alta',
+};
+
+/** Punto de color de cada importancia (en los desplegables). */
+export const IMPORTANCE_DOT: Record<RecordingImportance, string> = {
+  baja: 'bg-green-500',
+  media: 'bg-amber-500',
+  alta: 'bg-red-500',
+};
+
+export const RECORDING_KIND_LABEL: Record<RecordingKind, string> = {
+  tarea: 'Tarea',
+  recordatorio: 'Recordatorio',
+  explicacion: 'Explicación',
+  personal: 'Personal',
 };
 
 /** Desde la 1.4.8 solo existe la grabación continua: un audio, un archivo. */

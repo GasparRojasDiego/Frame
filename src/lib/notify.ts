@@ -7,6 +7,7 @@ import {
   requestPermission,
   sendNotification,
 } from '@tauri-apps/plugin-notification';
+import { getNotificationPrefs, logNotification, type LogKind } from '@/lib/notification-log';
 
 let audioEl: HTMLAudioElement | null = null;
 
@@ -38,9 +39,19 @@ export interface NotifyOptions {
   body: string;
   /** reproduce el chime de Frame (por defecto true) */
   sound?: boolean;
+  /** Cómo se anota en la campana (por defecto, «aviso»). */
+  kind?: LogKind;
+  /** Interfaz a la que lleva desde la campana. */
+  route?: string;
 }
 
-export async function notify({ title, body, sound = true }: NotifyOptions): Promise<void> {
+export async function notify({ title, body, sound = true, kind = 'aviso', route }: NotifyOptions): Promise<void> {
+  // Todo queda en el registro de la campana, aunque las notificaciones estén
+  // desactivadas: así se puede repasar lo que pasó.
+  logNotification({ kind, title, detail: body, route });
+  const prefs = getNotificationPrefs();
+  if (!prefs.enabled) return;
+  if (!prefs.sound) sound = false;
   // El sonido va PRIMERO y por su cuenta: antes esperaba a la respuesta del
   // permiso de notificaciones, y si esa llamada fallaba el fin de la sesión de
   // enfoque se quedaba mudo (con un rechazo de promesa sin atender de propina).

@@ -346,6 +346,8 @@ export interface CalendarDayColor {
 
 /** Nivel de importancia de una grabación de voz. */
 export type RecordingImportance = 'baja' | 'media' | 'alta';
+/** De qué es el audio (1.6.4). */
+export type RecordingKind = 'tarea' | 'recordatorio' | 'explicacion' | 'personal';
 
 /** Grabación de voz hecha con el micrófono desde la barra superior.
  *  Vive suelta en Inicio o asignada a una asignatura, y siempre puede
@@ -355,6 +357,8 @@ export interface Recording {
   name: string;
   description?: string;
   importance: RecordingImportance;
+  /** Tipo de audio; las anteriores a la 1.6.4 no lo tienen. */
+  kind?: RecordingKind;
   /** ISO 8601 exacto (fecha y hora con minutos) del inicio de la grabación */
   recordedAt: string;
   /** null/undefined = sin asignatura (aparece al final de Inicio) */

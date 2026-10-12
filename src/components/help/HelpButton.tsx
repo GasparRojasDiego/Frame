@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { MessageCircleQuestion } from 'lucide-react';
+import { LifeBuoy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePathname, useRouter } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
@@ -40,7 +40,7 @@ export default function HelpButton({ className }: { className?: string }) {
       title={inHelp ? 'Cerrar el Centro de ayuda' : 'Centro de ayuda'}
       aria-label={inHelp ? 'Cerrar el Centro de ayuda' : 'Abrir el Centro de ayuda'}
     >
-      <MessageCircleQuestion className="h-5 w-5" />
+      <LifeBuoy className="h-5 w-5" />
     </Button>
   );
 }

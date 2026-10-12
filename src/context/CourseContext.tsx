@@ -1057,7 +1057,12 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
         setIsTimerActive(false);
         setIsTimerPaused(true);
         setAutoFinishPending(true);
-        void notify({ title: 'Frame', body: 'Tu sesión de enfoque ha terminado.' });
+        void notify({ title: 'Sesión terminada', body: 'Tu sesión de estudio ha terminado.', kind: 'sesion', route: '/temporizador' });
+        // Con la vista flotante, Frame suele estar detrás de otras apps: al
+        // terminar la sesión se pone delante para registrarla.
+        if (isTauri() && miniStateRef.current.miniTimerView !== 'hidden') {
+          void invoke('focus_main_window').catch(() => {});
+        }
       }
     };
 
@@ -1269,6 +1274,8 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
         }
         void notify({
           title: 'Recordatorio de tarea',
+          kind: 'recordatorio',
+          route: '/tareas',
           body: `${task.name}${task.courseName ? ` — ${task.courseName}` : ''}${when}`,
         });
         lastSent[task.id] = slotKey;

@@ -5,6 +5,7 @@ import { useCourse } from '@/context/CourseContext';
 import { Button } from '@/components/ui/button';
 import CoursesGrid from '@/components/courses/CoursesGrid';
 import ScheduleImportDialog from '@/components/courses/ScheduleImportDialog';
+import CardImageSettings from '@/components/courses/CardImageSettings';
 
 // Interfaz "Asignaturas": las tarjetas de cursos y colecciones estilo aula.
 // (Las pestañas Estudio y Classroom se retiraron en la Fase 16.)
@@ -47,6 +48,8 @@ export default function KnowledgePage() {
             <Plus className="mr-2 h-4 w-4" />
             Añadir
           </Button>
+          {/* Engranaje: el alto de la imagen de todas las tarjetas. */}
+          <CardImageSettings />
         </div>
       </div>
 

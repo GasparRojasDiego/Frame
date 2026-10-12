@@ -19,7 +19,6 @@ import { invoke, isTauri } from '@tauri-apps/api/core';
 import { Card } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
@@ -43,9 +42,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import SubjectPicker from '@/components/courses/SubjectPicker';
 import { useCourse } from '@/context/CourseContext';
 import { getRecordingAudio } from '@/lib/music-db';
-import { formatDuration } from '@/lib/recordings';
+import { formatDuration, RECORDING_KIND_LABEL } from '@/lib/recordings';
+import { ImportancePicker, KindPicker } from '@/components/recordings/RecordingPickers';
+import NoteEditor from '@/components/temporizador/NoteEditor';
+import { isRichNoteEmpty, richNoteToLine } from '@/lib/rich-note';
 import { useToast } from '@/hooks/use-toast';
-import type { Recording, RecordingImportance } from '@/types';
+import type { Recording, RecordingImportance, RecordingKind } from '@/types';
 import { IMPORTANCE_LABEL, IMPORTANCE_STYLE } from '@/lib/recordings';
 import { cn } from '@/lib/utils';
 
@@ -70,6 +72,7 @@ function RecordingDetailsDialog({
   const [name, setName] = useState(recording.name);
   const [description, setDescription] = useState(recording.description ?? '');
   const [importance, setImportance] = useState<RecordingImportance>(recording.importance);
+  const [kind, setKind] = useState<RecordingKind | undefined>(recording.kind);
   const [courseId, setCourseId] = useState<string>(recording.courseId ?? 'none');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -117,6 +120,7 @@ function RecordingDetailsDialog({
       setName(recording.name);
       setDescription(recording.description ?? '');
       setImportance(recording.importance);
+      setKind(recording.kind);
       setCourseId(recording.courseId ?? 'none');
       setDuration(recording.durationSec);
       setSpeed(1);
@@ -171,8 +175,9 @@ function RecordingDetailsDialog({
     const finalName = name.trim() || recording.name;
     const updates: Partial<Recording> = {
       name: finalName,
-      description: description.trim() || undefined,
+      description: isRichNoteEmpty(description) ? undefined : description.trim(),
       importance,
+      kind,
       courseId: courseId === 'none' ? null : courseId,
     };
     // Si cambió el nombre, el archivo en disco se renombra igual.
@@ -197,7 +202,7 @@ function RecordingDetailsDialog({
       description: courseName ? `"${finalName}" quedó en ${courseName}.` : `"${finalName}" quedó en Inicio.`,
     });
     onOpenChange(false);
-  }, [courseId, courses, description, importance, name, onOpenChange, recording, toast, updateRecording]);
+  }, [courseId, courses, description, importance, kind, name, onOpenChange, recording, toast, updateRecording]);
 
   const handleDelete = useCallback(() => {
     deleteRecording(recording.id);
@@ -367,37 +372,29 @@ function RecordingDetailsDialog({
             <Label htmlFor="recEditDesc" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Descripción
             </Label>
-            <Textarea
+            <NoteEditor
               id="recEditDesc"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={setDescription}
               placeholder="¿De qué trata este audio?"
-              className="min-h-[60px] resize-none bg-card text-sm"
+              ariaLabel="Descripción de la grabación"
+              rows={3}
+              className="gap-2"
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Importancia
-            </Label>
-            <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="Importancia">
-              {(['baja', 'media', 'alta'] as const).map((level) => (
-                <button
-                  key={level}
-                  type="button"
-                  role="radio"
-                  aria-checked={importance === level}
-                  onClick={() => setImportance(level)}
-                  className={cn(
-                    'h-9 rounded-md border text-xs font-semibold transition-colors',
-                    importance === level
-                      ? IMPORTANCE_STYLE[level]
-                      : 'border-border/70 text-muted-foreground hover:border-primary/40 hover:text-foreground'
-                  )}
-                >
-                  {IMPORTANCE_LABEL[level]}
-                </button>
-              ))}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Importancia
+              </Label>
+              <ImportancePicker value={importance} onChange={setImportance} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Tipo
+              </Label>
+              <KindPicker value={kind} onChange={setKind} />
             </div>
           </div>
 
@@ -472,6 +469,11 @@ export function RecordingCard({ recording, showCourse = true }: { recording: Rec
               >
                 {IMPORTANCE_LABEL[recording.importance]}
               </span>
+              {recording.kind && (
+                <span className="shrink-0 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                  {RECORDING_KIND_LABEL[recording.kind]}
+                </span>
+              )}
               {recording.partCount != null && recording.partCount > 1 && (
                 <span className="shrink-0 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
                   Parte {recording.partIndex}/{recording.partCount}
@@ -479,7 +481,7 @@ export function RecordingCard({ recording, showCourse = true }: { recording: Rec
               )}
             </div>
             {recording.description && (
-              <p className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground">{recording.description}</p>
+              <p className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground">{richNoteToLine(recording.description)}</p>
             )}
             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
               <span className="flex items-center gap-1">

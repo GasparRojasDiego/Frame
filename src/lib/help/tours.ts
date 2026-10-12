@@ -392,6 +392,10 @@ const TOURS: Record<string, Def> = {
     title: 'La interfaz Asignaturas',
     steps: [{ el: 'nav-knowledge', say: 'Entra en «Asignaturas»: tus materias y colecciones.' }],
   },
+  'asig-alto-imagen': {
+    title: 'El alto de las imágenes',
+    steps: [{ el: 'asig-ajustes', go: '/knowledge', say: 'Este engranaje cambia el alto de la imagen de todas las tarjetas; «Valor predeterminado» lo deja como estaba.', next: true }],
+  },
   'asig-crear': {
     title: 'Crear una asignatura',
     steps: [

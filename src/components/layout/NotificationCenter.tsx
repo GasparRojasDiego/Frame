@@ -1,7 +1,41 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { format, parseISO, startOfDay, differenceInCalendarDays } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Bell, X, Check, CheckCheck, AlertTriangle, CalendarClock, Clock, Download, WifiOff } from 'lucide-react';
+import {
+  AlertTriangle,
+  Bell,
+  BellRing,
+  CalendarClock,
+  CheckCheck,
+  Clock,
+  Download,
+  Info,
+  Settings,
+  Timer,
+  Trash2,
+  WifiOff,
+  X,
+} from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  clearLog,
+  markAllRead,
+  markRead,
+  setNotificationPrefs,
+  setNotificationUser,
+  syncCurrent,
+  useNotificationLog,
+  useNotificationPrefs,
+  type LogEntry,
+  type LogKind,
+} from '@/lib/notification-log';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
@@ -23,20 +57,27 @@ interface AppNotification {
   detail: string;
 }
 
-const KIND_META: Record<AppNotification['kind'], { icon: React.ElementType; className: string; label: string }> = {
+const KIND_META: Record<LogKind, { icon: React.ElementType; className: string; label: string }> = {
   vencida: { icon: AlertTriangle, className: 'text-red-500 bg-red-500/10 border-red-500/30', label: 'Vencida' },
   hoy: { icon: Clock, className: 'text-amber-500 bg-amber-500/10 border-amber-500/30', label: 'Vence hoy' },
   proxima: { icon: CalendarClock, className: 'text-primary bg-primary/10 border-primary/30', label: 'Próxima' },
   actualizacion: { icon: Download, className: 'text-primary bg-primary/15 border-primary/40', label: 'Actualización' },
   conexion: { icon: WifiOff, className: 'text-amber-500 bg-amber-500/10 border-amber-500/30', label: 'Sin conexión' },
+  recordatorio: { icon: BellRing, className: 'text-primary bg-primary/10 border-primary/30', label: 'Recordatorio' },
+  sesion: { icon: Timer, className: 'text-primary bg-primary/10 border-primary/30', label: 'Estudio' },
+  aviso: { icon: Info, className: 'text-muted-foreground bg-muted border-border', label: 'Aviso' },
 };
+
+/** Las que la campana calcula (y dejan de estar vigentes); el resto llegan una vez. */
+const CALCULATED = new Set<LogKind>(['vencida', 'hoy', 'proxima', 'actualizacion', 'conexion']);
 
 /**
  * Centro de notificaciones de la campana: recuadro emergente bajo el botón
- * con TODOS los pendientes (tareas vencidas, de hoy y de los próximos 3
- * días), X para cerrarlo, y la posibilidad de marcar cada notificación (o
- * todas) como vista. Las no vistas alimentan el contador de la campana; las
- * revisadas quedan atenuadas al final. Lo visto se recuerda por usuario.
+ * con el REGISTRO de notificaciones (lib/notification-log.ts): lo vigente
+ * (tareas vencidas, de hoy y de los próximos 3 días, versión nueva,
+ * conexión) y lo que llegó al sistema (recordatorios, fin de la sesión),
+ * cada una con su hora. El engranaje activa o silencia las notificaciones y
+ * borra el registro; «Marcar como leído» apaga el contador.
  */
 export default function NotificationCenter() {
   const { tasks, courses, userProfile } = useCourse();
@@ -144,91 +185,79 @@ export default function NotificationCenter() {
     return items.sort((a, b) => order[a.kind] - order[b.kind]);
   }, [tasks, courses, update.version, connection, userProfile]);
 
-  const persistSeen = useCallback(
-    (next: Record<string, string>) => {
-      // Poda: solo se recuerdan ids que siguen siendo notificaciones vigentes.
-      const validIds = new Set(notifications.map((n) => n.id));
-      const pruned: Record<string, string> = {};
-      for (const [id, ts] of Object.entries(next)) {
-        if (validIds.has(id)) pruned[id] = ts;
-      }
-      setSeenMap(pruned);
-      try {
-        if (seenKey) window.localStorage.setItem(seenKey, JSON.stringify(pruned));
-      } catch {
-        // Cuota llena: lo visto vale para esta sesión y se reintenta luego.
-      }
-    },
-    [notifications, seenKey]
-  );
+  // Lo vigente se anota en el registro (con la hora en que apareció); lo que
+  // ya pasó sigue en el registro como historial.
+  useEffect(() => setNotificationUser(userProfile?.id ?? null), [userProfile?.id]);
+  const log = useNotificationLog();
+  const prefs = useNotificationPrefs();
+  useEffect(() => {
+    // Lo visto con la campana anterior (1.6.3 y antes) entra ya leído.
+    syncCurrent(notifications, new Set(Object.keys(seenMap)));
+  }, [notifications, seenMap]);
 
-  const markSeen = useCallback(
-    (id: string) => persistSeen({ ...seenMap, [id]: new Date().toISOString() }),
-    [persistSeen, seenMap]
-  );
+  const activeIds = useMemo(() => new Set(notifications.map((n) => n.id)), [notifications]);
+  const badgeCount = log.filter((entry) => !entry.read).length;
 
-  const markAllSeen = useCallback(() => {
-    const next = { ...seenMap };
-    notifications.forEach((n) => {
-      next[n.id] = next[n.id] ?? new Date().toISOString();
-    });
-    persistSeen(next);
-  }, [notifications, persistSeen, seenMap]);
-
-  const unseen = notifications.filter((n) => !seenMap[n.id]);
-  const seen = notifications.filter((n) => !!seenMap[n.id]);
-  const badgeCount = unseen.length;
-
-  const openTask = useCallback(
-    (n: AppNotification) => {
-      markSeen(n.id);
+  const openEntry = useCallback(
+    (entry: LogEntry) => {
+      markRead(entry.id);
       setOpen(false);
-      if (n.kind === 'conexion') {
-        if (n.id === 'sesion-perdida') void signInAgain();
+      if (entry.kind === 'conexion') {
+        if (entry.id === 'sesion-perdida') void signInAgain();
         return;
       }
-      if (n.kind === 'actualizacion') {
+      if (entry.kind === 'actualizacion') {
         openUpdateDialog();
         return;
       }
-      router.push(`/tareas?highlightTaskId=${n.taskId}`, { scroll: false });
+      if (entry.taskId) {
+        router.push(`/tareas?highlightTaskId=${entry.taskId}`, { scroll: false });
+        return;
+      }
+      if (entry.route) router.push(entry.route);
     },
-    [markSeen, router]
+    [router]
   );
 
-  const renderItem = (n: AppNotification, isSeen: boolean) => {
-    const meta = KIND_META[n.kind];
+  const whenLabel = (at: number) => {
+    const date = new Date(at);
+    const days = differenceInCalendarDays(startOfDay(new Date()), startOfDay(date));
+    const hour = format(date, 'HH:mm');
+    if (days === 0) return `Hoy, ${hour}`;
+    if (days === 1) return `Ayer, ${hour}`;
+    return `${format(date, "d 'de' MMM", { locale: es })}, ${hour}`;
+  };
+
+  const renderItem = (entry: LogEntry) => {
+    const meta = KIND_META[entry.kind] ?? KIND_META.aviso;
     const Icon = meta.icon;
+    // Lo que ya no está vigente (tarea culminada, versión instalada…) queda
+    // como historial, más tenue.
+    const past = !activeIds.has(entry.id) && CALCULATED.has(entry.kind);
     return (
       <div
-        key={n.id}
+        key={entry.id}
         className={cn(
           'group flex items-start gap-2.5 rounded-md px-2 py-2 transition-colors hover:bg-accent/50',
-          isSeen && 'opacity-55'
+          (entry.read || past) && 'opacity-60'
         )}
       >
-        <button className="flex flex-1 items-start gap-2.5 text-left" onClick={() => openTask(n)}>
+        <button className="flex min-w-0 flex-1 items-start gap-2.5 text-left" onClick={() => openEntry(entry)}>
           <span className={cn('mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border', meta.className)}>
             <Icon className="h-3.5 w-3.5" />
           </span>
-          <span className="min-w-0">
-            <span className="block truncate text-xs font-semibold text-foreground">{n.title}</span>
-            <span className="block truncate text-[11px] text-muted-foreground">
-              {meta.label} · {n.detail}
+          <span className="min-w-0 flex-1">
+            <span className="flex items-baseline gap-2">
+              <span className="min-w-0 flex-1 truncate text-xs font-semibold text-foreground">{entry.title}</span>
+              <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">{whenLabel(entry.at)}</span>
+            </span>
+            <span className="block text-[11px] leading-snug text-muted-foreground">
+              {meta.label}
+              {past ? ' · ya no está vigente' : ''} · {entry.detail}
             </span>
           </span>
         </button>
-        {!isSeen && (
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-6 w-6 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-primary group-hover:opacity-100"
-            title="Marcar como vista"
-            onClick={() => markSeen(n.id)}
-          >
-            <Check className="h-3.5 w-3.5" />
-          </Button>
-        )}
+        {!entry.read && <span aria-label="Sin leer" className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary" />}
       </div>
     );
   };
@@ -258,59 +287,69 @@ export default function NotificationCenter() {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[340px] p-0" withArrow>
-        <div className="flex items-center justify-between px-3 py-2.5">
-          <p className="text-sm font-bold text-primary">Notificaciones</p>
-          <div className="flex items-center gap-1">
-            {unseen.length > 0 && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-6 px-2 text-[10px] text-muted-foreground hover:text-primary"
-                onClick={markAllSeen}
-              >
-                <CheckCheck className="mr-1 h-3 w-3" />
-                Marcar todas
+      <PopoverContent align="end" className="w-[380px] p-0" withArrow>
+        <div className="flex items-center gap-1 px-2 py-2">
+          {/* Engranaje: sonido, notificaciones y borrar el registro. */}
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground" title="Ajustes de notificaciones" data-tour="campana-ajustes">
+                <Settings className="h-4 w-4" />
               </Button>
-            )}
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-6 w-6 text-muted-foreground"
-              title="Cerrar"
-              onClick={() => setOpen(false)}
-            >
-              <X className="h-3.5 w-3.5" />
-            </Button>
-          </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-72">
+              <DropdownMenuCheckboxItem
+                checked={prefs.sound}
+                onCheckedChange={(checked) => setNotificationPrefs({ sound: !!checked })}
+                onSelect={(event) => event.preventDefault()}
+              >
+                Sonido de las notificaciones
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={prefs.enabled}
+                onCheckedChange={(checked) => setNotificationPrefs({ enabled: !!checked })}
+                onSelect={(event) => event.preventDefault()}
+              >
+                Notificaciones activadas
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => clearLog()} disabled={log.length === 0}>
+                <Trash2 className="mr-2 h-3.5 w-3.5" />
+                Borrar todas las notificaciones
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2 text-xs text-muted-foreground hover:text-primary"
+            onClick={markAllRead}
+            disabled={badgeCount === 0}
+          >
+            <CheckCheck className="mr-1.5 h-3.5 w-3.5" />
+            Marcar como leído
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="ml-auto h-7 w-7 text-muted-foreground"
+            title="Cerrar"
+            onClick={() => setOpen(false)}
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
         </div>
         {/* Divisoria con aire a ambos lados, no de borde a borde. */}
         <Separator className="mx-3 w-auto" />
 
-        {notifications.length === 0 ? (
+        {log.length === 0 ? (
           <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
             <Bell className="h-8 w-8 text-muted-foreground/40" />
             <p className="text-xs font-semibold text-foreground">Estás al día</p>
-            <p className="text-[11px] text-muted-foreground">No tienes pendientes por vencer.</p>
           </div>
         ) : (
-          <ScrollArea className="max-h-[340px]">
-            <div className="space-y-0.5 p-1.5">
-              {unseen.length > 0 && (
-                <p className="px-2 pt-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  No vistas ({unseen.length})
-                </p>
-              )}
-              {unseen.map((n) => renderItem(n, false))}
-              {seen.length > 0 && (
-                <>
-                  <p className="px-2 pt-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    Revisadas
-                  </p>
-                  {seen.map((n) => renderItem(n, true))}
-                </>
-              )}
-            </div>
+          // Todo el registro, con su propio desplazamiento.
+          <ScrollArea className="h-[min(30rem,65vh)]">
+            <div className="space-y-0.5 p-1.5">{log.map(renderItem)}</div>
           </ScrollArea>
         )}
       </PopoverContent>

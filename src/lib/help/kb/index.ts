@@ -10,6 +10,9 @@ import { MUSICA } from './musica';
 import { AJUSTES, CUENTA, GRABACIONES, INFORMES, PROBLEMAS } from './cuenta';
 import { EXTENSIONES, SUGERENCIAS } from './extensiones';
 import { MAS } from './mas';
+import { CURIOSIDADES } from './curiosidades';
+
+export { CURIOSITY_IDS } from './curiosidades';
 import { VARIANTES } from './variantes';
 
 // ============================================================
@@ -40,6 +43,7 @@ const SOURCES: [HelpAreaId, Omit<HelpEntry, 'area'>[]][] = [
   ['cuenta', CUENTA],
   ['problemas', PROBLEMAS],
   ['extensiones', EXTENSIONES],
+  ['curiosidades', CURIOSIDADES],
   ['sugerencias', SUGERENCIAS],
 ];
 

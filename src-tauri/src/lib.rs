@@ -268,6 +268,56 @@ async fn http_get_text(url: String) -> Result<String, String> {
     resp.text().await.map_err(|e| e.to_string())
 }
 
+/// Servicios de letras a los que Frame pregunta (ver `src/lib/lyrics-sources.ts`).
+/// Lista cerrada: el webview no puede hablarles directamente (CORS) y un
+/// comando que aceptara cualquier dirección sería una puerta abierta.
+const LYRICS_HOSTS: [&str; 4] = ["lrclib.net", "music.youtube.com", "music.163.com", "lyrics.kugou.com"];
+
+/// Petición GET o POST a un servicio de letras; devuelve el cuerpo como texto.
+#[tauri::command]
+async fn lyrics_request(
+    method: String,
+    url: String,
+    headers: Option<HashMap<String, String>>,
+    body: Option<String>,
+) -> Result<String, String> {
+    let parsed: tauri::Url = url.trim().parse().map_err(|_| "Dirección no válida.".to_string())?;
+    let allowed = parsed.scheme() == "https"
+        && parsed.host_str().map_or(false, |host| LYRICS_HOSTS.contains(&host));
+    if !allowed {
+        return Err("Servicio de letras no permitido.".into());
+    }
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(12))
+        .build()
+        .map_err(|e| e.to_string())?;
+    let mut request = if method.eq_ignore_ascii_case("POST") {
+        client.post(parsed.as_str())
+    } else {
+        client.get(parsed.as_str())
+    };
+    let headers = headers.unwrap_or_default();
+    if !headers.keys().any(|key| key.eq_ignore_ascii_case("user-agent")) {
+        request = request.header(
+            "User-Agent",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+        );
+    }
+    for (key, value) in headers {
+        request = request.header(key, value);
+    }
+    if let Some(body) = body {
+        request = request.body(body);
+    }
+    let response = request.send().await.map_err(|e| e.to_string())?;
+    let status = response.status();
+    let text = response.text().await.map_err(|e| e.to_string())?;
+    if !status.is_success() {
+        return Err(format!("HTTP {}", status.as_u16()));
+    }
+    Ok(text)
+}
+
 /// GET binario → data URL: las miniaturas de los vídeos de estudio.
 #[tauri::command]
 async fn http_get_data_url(url: String) -> Result<String, String> {
@@ -766,10 +816,18 @@ async fn focus_main_window(app: tauri::AppHandle) -> Result<(), String> {
         // deja detrás. Ponerla un instante «siempre encima» la trae al
         // frente de verdad; enseguida se quita, para que después se comporte
         // como una ventana normal.
+        //
+        // Quitarlo en el acto no bastaba cuando Frame no era la app activa
+        // (fin de una sesión con la vista flotante): Windows la volvía a dejar
+        // detrás. Se mantiene encima un momento y luego se suelta.
         let _ = w.set_always_on_top(true);
         let _ = w.set_focus();
-        let _ = w.set_always_on_top(false);
-        let _ = w.set_focus();
+        let w2 = w.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(1500));
+            let _ = w2.set_always_on_top(false);
+            let _ = w2.set_focus();
+        });
     }
     Ok(())
 }
@@ -1285,6 +1343,7 @@ pub fn run() {
             google_token_request,
             http_get_text,
             http_get_data_url,
+            lyrics_request,
             google_embed_update,
             youtube_embed_current_url,
             open_local_file,

@@ -154,15 +154,15 @@ export const BARRA: Entry[] = [
   {
     id: 'notificaciones',
     title: 'La campana de notificaciones',
-    q: ['qué es la campana', 'cómo veo mis notificaciones', 'qué significan los avisos', 'cómo marco las notificaciones como vistas', 'por qué tengo un número en la campana'],
-    k: ['campana', 'avisos', 'vencida', 'vence hoy', 'proxima'],
-    a: 'La campana reúne tus pendientes: tareas vencidas, que vencen hoy o en los próximos 3 días, además de avisos de actualización y de conexión. El número indica cuántos no has visto.',
+    q: ['qué es la campana', 'cómo veo mis notificaciones', 'qué significan los avisos', 'cómo marco las notificaciones como vistas', 'por qué tengo un número en la campana', 'cómo silencio las notificaciones', 'cómo borro las notificaciones', 'historial de notificaciones', 'quitar el sonido de las notificaciones'],
+    k: ['campana', 'avisos', 'vencida', 'vence hoy', 'proxima', 'sonido', 'silenciar', 'engranaje', 'historial', 'leido'],
+    a: 'La campana guarda el registro de tus notificaciones, cada una con su hora: tareas vencidas, que vencen hoy o en los próximos 3 días, recordatorios, el fin de las sesiones de estudio, actualizaciones y avisos de conexión. El número indica cuántas no has leído.',
     steps: [
-      'Pulsa la campana para abrir la lista.',
-      'Pulsa un aviso para ir a la tarea.',
-      'Usa «Marcar como vista» en uno o «Marcar todas».',
+      'Pulsa la campana para abrir el registro; pulsa una notificación para ir a lo que avisa.',
+      '«Marcar como leído» apaga el número.',
+      'El engranaje de la izquierda activa o desactiva el sonido y las notificaciones, y borra todas.',
     ],
-    rel: ['tareas-vencidas', 'sin-conexion-aviso', 'actualizar-frame'],
+    tip: 'Lo que ya no está vigente (una tarea que culminaste) se queda en el registro, más tenue.'
   },
   {
     id: 'sin-conexion-aviso',

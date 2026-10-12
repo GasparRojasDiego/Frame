@@ -1,11 +1,16 @@
 import { deleteImage, getImage, saveImage } from '@/lib/music-db';
+import { searchLyrics, type LyricsSource } from '@/lib/lyrics-sources';
+import type { Song } from '@/types';
 
 // ============================================================
 // Letras de las canciones: guardado, lectura y ajuste fino.
 //
-// Frame no busca letras en internet: cada canción trae la suya al importarla
-// (etiqueta USLT del MP3 o un .lrc con el mismo nombre, ver music-import.ts)
-// y queda guardada en el equipo, junto a la canción.
+// Cada canción puede traer la suya al importarla (etiqueta USLT del MP3 o un
+// .lrc con el mismo nombre, ver music-import.ts). Si no trae ninguna, al abrir
+// «Reproduciendo» Frame la reconoce en internet (LRCLIB, YouTube Music,
+// NetEase y Kugou, ver lyrics-sources.ts; vuelve en la 1.6.4) y la guarda en
+// el equipo: después se ve sin conexión. Lo que no se encontró se vuelve a
+// intentar pasadas dos semanas.
 // ============================================================
 
 export interface LyricLine {
@@ -23,6 +28,10 @@ export interface SongLyrics {
   instrumental?: boolean;
   /** Ajuste fino del usuario, en segundos: positivo = la letra va más tarde. */
   offset?: number;
+  /** De dónde salió, si se reconoció en internet. */
+  source?: LyricsSource;
+  /** Cuándo se buscó en internet por última vez (epoch ms). */
+  checkedAt?: number;
 }
 
 const lyricsKey = (songId: string) => `lyrics_${songId}`;
@@ -73,6 +82,8 @@ export async function storedLyrics(songId: string): Promise<SongLyrics | null> {
       missing: Boolean(value.missing),
       instrumental: value.instrumental === true,
       offset: typeof value.offset === 'number' ? value.offset : 0,
+      source: value.source,
+      checkedAt: typeof value.checkedAt === 'number' ? value.checkedAt : 0,
     };
   } catch {
     return null;
@@ -91,6 +102,65 @@ export async function setLyricsOffset(songId: string, offset: number): Promise<v
   const stored = await storedLyrics(songId);
   if (!stored) return;
   await save(songId, { ...stored, offset: Math.round(offset * 10) / 10 });
+}
+
+const RETRY_AFTER_MS = 14 * 24 * 60 * 60 * 1000;
+const inFlight = new Map<string, Promise<SongLyrics | null>>();
+
+/**
+ * La letra de una canción: la guardada o, si no hay, la que se reconozca en
+ * internet (y se guarda). Una letra con tiempos nunca se cambia por una peor.
+ * Nunca lanza: la letra es un extra.
+ */
+export function findLyrics(song: Song, durationSec: number): Promise<SongLyrics | null> {
+  const pending = inFlight.get(song.id);
+  if (pending) return pending;
+  const task = (async (): Promise<SongLyrics | null> => {
+    const stored = await storedLyrics(song.id);
+    if (stored && !stored.missing && (stored.synced.length > 0 || stored.instrumental)) return stored;
+    if (stored?.checkedAt && Date.now() - stored.checkedAt < RETRY_AFTER_MS) return stored;
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return stored;
+    try {
+      const { found, reached } = await searchLyrics({
+        title: song.title?.trim() || song.fileName || '',
+        artist: song.artist ?? '',
+        album: song.album,
+        duration: durationSec > 0 ? durationSec : 0,
+      });
+      // Ningún servicio respondió: es la red, no la canción. No se guarda nada.
+      if (!reached) return stored;
+      if (!found || (found.synced.length === 0 && !found.plain && !found.instrumental)) {
+        const kept: SongLyrics = stored?.plain
+          ? { ...stored, checkedAt: Date.now() }
+          : { synced: [], plain: '', missing: true, offset: 0, checkedAt: Date.now() };
+        await save(song.id, kept);
+        return kept;
+      }
+      // Ya había una letra sin tiempos y la de internet tampoco trae: se queda la propia.
+      if (stored?.plain && found.synced.length === 0) {
+        const kept = { ...stored, checkedAt: Date.now() };
+        await save(song.id, kept);
+        return kept;
+      }
+      const result: SongLyrics = {
+        synced: found.synced,
+        plain: found.plain,
+        missing: false,
+        instrumental: found.instrumental === true,
+        source: found.source,
+        offset: 0,
+        checkedAt: Date.now(),
+      };
+      await save(song.id, result);
+      return result;
+    } catch {
+      return stored;
+    }
+  })().finally(() => {
+    if (inFlight.get(song.id) === task) inFlight.delete(song.id);
+  });
+  inFlight.set(song.id, task);
+  return task;
 }
 
 /** Canción eliminada: su letra guardada se va con ella. */

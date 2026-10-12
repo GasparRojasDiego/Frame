@@ -89,6 +89,8 @@ export function useLocalEventReminders(events: LocalCalendarEvent[], scope: stri
           void notify({
             title: `${meta.glyph} ${event.title}`,
             body: `${whenText(at, now)}${event.description ? ` — ${event.description}` : ''}`,
+            kind: 'recordatorio',
+            route: '/calendario',
           });
           sent[mark] = memo[mark] = Date.now();
           changed = true;

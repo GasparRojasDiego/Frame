@@ -180,18 +180,46 @@ type Toast = Omit<ToasterToast, "id">
 // ------------------------------------------------------------
 const AUTO_DISMISS_MARGIN_MS = 1200
 const PRESENCE_EVENTS = ['focus', 'pointermove', 'pointerdown', 'keydown'] as const
+/** Pase lo que pase, un aviso no sigue en pantalla más de esto. */
+const HARD_CAP_MS = 60_000
+
+// «Con el ratón encima» se mide por movimiento reciente, no con `:hover`: al
+// minimizar, el puntero baja hacia la barra de tareas cruzando el aviso de la
+// esquina, el motor web no recibe la salida y `:hover` queda pegado para
+// siempre (1.6.3 y antes: el aviso no se cerraba nunca al volver).
+let lastPointerOnToast = 0
+if (typeof window !== 'undefined') {
+  window.addEventListener(
+    'pointermove',
+    (event) => {
+      const target = event.target as Element | null
+      if (target?.closest?.('[data-toast-viewport]')) lastPointerOnToast = Date.now()
+    },
+    true
+  )
+}
+const readingNow = () =>
+  document.hasFocus() && !document.hidden && Date.now() - lastPointerOnToast < 2500
 
 function armAutoDismiss(duration: number, dismiss: () => void) {
   if (typeof window === 'undefined' || !Number.isFinite(duration) || duration <= 0) return
 
+  const born = Date.now()
+  let done = false
+  const finish = () => {
+    if (done) return
+    done = true
+    dismiss()
+  }
   const close = () => {
     // Con el ratón encima se está leyendo: se espera a que lo aparte.
-    if (document.querySelector('[data-toast-viewport]:hover')) {
+    if (readingNow() && Date.now() - born < HARD_CAP_MS) {
       window.setTimeout(close, 1500)
       return
     }
-    dismiss()
+    finish()
   }
+  window.setTimeout(finish, HARD_CAP_MS)
   const start = () => window.setTimeout(close, duration + AUTO_DISMISS_MARGIN_MS)
 
   if (document.hasFocus() && !document.hidden) {
@@ -200,9 +228,14 @@ function armAutoDismiss(duration: number, dismiss: () => void) {
   }
   const onBack = () => {
     PRESENCE_EVENTS.forEach((name) => window.removeEventListener(name, onBack, true))
+    document.removeEventListener('visibilitychange', onVisible)
     start()
   }
+  const onVisible = () => {
+    if (!document.hidden) onBack()
+  }
   PRESENCE_EVENTS.forEach((name) => window.addEventListener(name, onBack, true))
+  document.addEventListener('visibilitychange', onVisible)
 }
 
 function toast({ ...props }: Toast) {

@@ -95,7 +95,7 @@ export const ENFOQUE: Entry[] = [
     q: ['cómo pongo negrita en una anotación', 'cómo hago una lista numerada en mis notas de estudio', 'cómo doy formato a lo que escribo en la sesión', 'viñetas en la anotación de la sesión'],
     k: ['formato', 'negrita', 'cursiva', 'subrayado', 'vinetas', 'numerada', 'lista numerada', 'word'],
     a: 'Encima del cuadro de texto hay una barra como la de Word: selecciona el texto y pulsa negrita, cursiva o subrayado, o los botones de lista con viñetas y lista numerada (con varias líneas seleccionadas, las convierte en lista; otra pulsación las devuelve a texto). Escribir «- » o «1. » al principio de una línea también abre la lista.',
-    tip: 'Atajos: Ctrl + B, Ctrl + I y Ctrl + U; Ctrl + Z deshace y Ctrl + Y rehace. Vale en «Anotar avance», en «Sesión terminada» y en las vistas flotantes.',
+    tip: 'Atajos: Ctrl + B, Ctrl + I y Ctrl + U; Ctrl + Z deshace y Ctrl + Y rehace. Vale en «Anotar avance», en «Sesión terminada», en las vistas flotantes, en «Anotación nueva» del «+» y en la descripción de las grabaciones.',
     go: '/temporizador',
     rel: ['enfoque-anotar', 'enfoque-finalizar'],
   },

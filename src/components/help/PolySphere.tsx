@@ -1,12 +1,14 @@
 import { useEffect, useRef } from 'react';
 
 // ============================================================
-// La esfera del Centro de ayuda: una esfera de polígonos (icosaedro
-// subdividido, 80 caras) que gira despacio. Aristas en el azul de la app y
-// caras del mismo azul, muy tenue; las caras de atrás solo se insinúan.
+// La figura del Centro de ayuda: un dodecaedro (12 pentágonos, desde la
+// 1.6.4; antes, una esfera de 80 triángulos) que gira despacio. Aristas en
+// el azul de la app y caras del mismo azul, muy tenue; las caras de atrás
+// solo se insinúan.
 //
-// Se pinta sin React en cada fotograma: los 80 polígonos se crean una vez y
+// Se pinta sin React en cada fotograma: los 12 polígonos se crean una vez y
 // solo se les cambian los puntos. Con «reducir movimiento», queda quieta.
+// `pulse` cambia con cada tecla: la figura se encoge y se agranda un poco.
 // ============================================================
 
 type Vec = [number, number, number];
@@ -15,45 +17,39 @@ const normalize = ([x, y, z]: Vec): Vec => {
   const length = Math.hypot(x, y, z);
   return [x / length, y / length, z / length];
 };
+const add = (a: Vec, b: Vec): Vec => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+const sub = (a: Vec, b: Vec): Vec => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const dot = (a: Vec, b: Vec) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const cross = (a: Vec, b: Vec): Vec => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 
-/** Icosaedro subdividido una vez, sobre la esfera unidad. */
-function buildMesh(): { vertices: Vec[]; faces: [number, number, number][] } {
+/**
+ * Dodecaedro como dual del icosaedro: cada vértice del icosaedro da una cara
+ * pentagonal, cuyos vértices son los centros de las 5 caras que lo rodean,
+ * ordenados por ángulo alrededor de él.
+ */
+function buildMesh(): Vec[][] {
   const t = (1 + Math.sqrt(5)) / 2;
-  const vertices: Vec[] = (
+  const ico: Vec[] = (
     [
       [-1, t, 0], [1, t, 0], [-1, -t, 0], [1, -t, 0],
       [0, -1, t], [0, 1, t], [0, -1, -t], [0, 1, -t],
       [t, 0, -1], [t, 0, 1], [-t, 0, -1], [-t, 0, 1],
     ] as Vec[]
   ).map(normalize);
-  let faces: [number, number, number][] = [
+  const faces: [number, number, number][] = [
     [0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11],
     [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
     [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9],
     [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1],
   ];
-  const cache = new Map<string, number>();
-  const middle = (a: number, b: number) => {
-    const key = a < b ? `${a}-${b}` : `${b}-${a}`;
-    const found = cache.get(key);
-    if (found !== undefined) return found;
-    const [p, q] = [vertices[a], vertices[b]];
-    vertices.push(normalize([(p[0] + q[0]) / 2, (p[1] + q[1]) / 2, (p[2] + q[2]) / 2]));
-    cache.set(key, vertices.length - 1);
-    return vertices.length - 1;
-  };
-  faces = faces.flatMap(([a, b, c]) => {
-    const ab = middle(a, b);
-    const bc = middle(b, c);
-    const ca = middle(c, a);
-    return [
-      [a, ab, ca],
-      [b, bc, ab],
-      [c, ca, bc],
-      [ab, bc, ca],
-    ] as [number, number, number][];
+  const centres = faces.map(([a, b, c]) => normalize(add(add(ico[a], ico[b]), ico[c])));
+  return ico.map((vertex, index) => {
+    const around = faces.map((face, f) => (face.includes(index) ? centres[f] : null)).filter((c): c is Vec => !!c);
+    // Base del plano tangente para ordenar los 5 puntos por ángulo.
+    const u = normalize(sub(around[0], vertex.map((v) => v * dot(around[0], vertex)) as Vec));
+    const w = cross(vertex, u);
+    return around.sort((p, q) => Math.atan2(dot(p, w), dot(p, u)) - Math.atan2(dot(q, w), dot(q, u)));
   });
-  return { vertices, faces };
 }
 
 const MESH = buildMesh();
@@ -61,52 +57,70 @@ const LIGHT = normalize([-0.45, 0.6, 0.65]);
 const TILT = 0.38;
 /** Radianes por milisegundo: una vuelta cada ~22 s. */
 const SPEED = 0.000285;
+/** El dodecaedro inscrito se ve algo menor que una esfera del mismo radio. */
+const SCALE = 1.08;
 
-export default function PolySphere({ size = 168, className }: { size?: number; className?: string }) {
+export default function PolySphere({
+  size = 168,
+  pulse = 0,
+  className,
+}: {
+  size?: number;
+  /** Cambia con cada tecla escrita: la figura «respira». */
+  pulse?: number;
+  className?: string;
+}) {
   const group = useRef<SVGGElement>(null);
+  const svg = useRef<SVGSVGElement>(null);
+
+  useEffect(() => {
+    if (!pulse || !svg.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    svg.current.animate(
+      [{ transform: 'scale(1)' }, { transform: 'scale(0.9)' }, { transform: 'scale(1.06)' }, { transform: 'scale(1)' }],
+      { duration: 460, easing: 'ease-out' }
+    );
+  }, [pulse]);
 
   useEffect(() => {
     const root = group.current;
     if (!root) return;
-    const polygons = MESH.faces.map(() => {
+    const polygons = MESH.map(() => {
       const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
       polygon.setAttribute('stroke-linejoin', 'round');
       root.appendChild(polygon);
       return polygon;
     });
-    const r = size / 2 - 2;
+    const r = (size / 2 - 3) / SCALE;
     const c = size / 2;
     const cosT = Math.cos(TILT);
     const sinT = Math.sin(TILT);
 
+    const rotate = ([x, y, z]: Vec, cosA: number, sinA: number): Vec => {
+      // Giro sobre el eje vertical y, luego, una leve inclinación hacia el usuario.
+      const x1 = x * cosA + z * sinA;
+      const z1 = -x * sinA + z * cosA;
+      return [x1 * SCALE, (y * cosT - z1 * sinT) * SCALE, (y * sinT + z1 * cosT) * SCALE];
+    };
+
     const draw = (angle: number) => {
       const cosA = Math.cos(angle);
       const sinA = Math.sin(angle);
-      const rotated = MESH.vertices.map(([x, y, z]): Vec => {
-        // Giro sobre el eje vertical y, luego, una leve inclinación hacia el usuario.
-        const x1 = x * cosA + z * sinA;
-        const z1 = -x * sinA + z * cosA;
-        return [x1, y * cosT - z1 * sinT, y * sinT + z1 * cosT];
-      });
-      MESH.faces.forEach((face, index) => {
-        const [a, b, d] = face.map((i) => rotated[i]);
-        const centre: Vec = [(a[0] + b[0] + d[0]) / 3, (a[1] + b[1] + d[1]) / 3, (a[2] + b[2] + d[2]) / 3];
+      MESH.forEach((face, index) => {
+        const points = face.map((vertex) => rotate(vertex, cosA, sinA));
+        const centre = normalize(points.reduce(add, [0, 0, 0] as Vec));
         const front = centre[2] > 0;
         const polygon = polygons[index];
-        polygon.setAttribute(
-          'points',
-          [a, b, d].map(([x, y]) => `${(c + x * r).toFixed(2)},${(c - y * r).toFixed(2)}`).join(' ')
-        );
+        polygon.setAttribute('points', points.map(([x, y]) => `${(c + x * r).toFixed(2)},${(c - y * r).toFixed(2)}`).join(' '));
         // Por estilo y no por atributo: los atributos de SVG no resuelven var().
         if (front) {
-          const light = Math.max(0, centre[0] * LIGHT[0] + centre[1] * LIGHT[1] + centre[2] * LIGHT[2]);
-          polygon.style.fill = `hsl(var(--primary) / ${(0.05 + light * 0.13).toFixed(3)})`;
-          polygon.style.stroke = 'hsl(var(--primary) / 0.85)';
-          polygon.style.strokeWidth = '1.1';
+          const light = Math.max(0, dot(centre, LIGHT));
+          polygon.style.fill = `hsl(var(--primary) / ${(0.05 + light * 0.14).toFixed(3)})`;
+          polygon.style.stroke = 'hsl(var(--primary) / 0.9)';
+          polygon.style.strokeWidth = '1.4';
         } else {
           polygon.style.fill = 'none';
-          polygon.style.stroke = 'hsl(var(--primary) / 0.14)';
-          polygon.style.strokeWidth = '0.8';
+          polygon.style.stroke = 'hsl(var(--primary) / 0.16)';
+          polygon.style.strokeWidth = '1';
         }
         // Las de atrás, debajo: el orden del DOM es el orden de pintado.
         if (!front && polygon !== root.firstChild) root.insertBefore(polygon, root.firstChild);
@@ -132,10 +146,12 @@ export default function PolySphere({ size = 168, className }: { size?: number; c
 
   return (
     <svg
+      ref={svg}
       width={size}
       height={size}
       viewBox={`0 0 ${size} ${size}`}
       className={className}
+      style={{ transformOrigin: 'center' }}
       aria-hidden="true"
       focusable="false"
     >

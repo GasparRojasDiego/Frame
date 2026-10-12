@@ -186,7 +186,7 @@ export const CASOS: [string, string | string[] | null][] = [
   // --- Grabaciones ---
   ['grabar la explicacion del profe', 'grabar-nota'],
   ['como grabo audio', 'grabar-nota'],
-  ['atajo para grabar', ['grabar-nota', 'atajos']],
+  ['atajo para grabar', ['grabar-atajo', 'grabar-nota', 'atajos']],
   ['donde se guardaron mis grabaciones', 'grabacion-donde'],
   ['cambiar el nombre de una grabacion', 'grabacion-detalles'],
   ['borrar una grabacion', 'grabacion-detalles'],

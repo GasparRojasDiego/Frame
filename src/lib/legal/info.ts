@@ -12,7 +12,7 @@
 
 import { TERMS_VERSION } from './terms';
 
-export const INFO_VERSION = '4.5';
+export const INFO_VERSION = '4.6';
 
 export function infoDocument({
   appVersion,
@@ -135,7 +135,7 @@ Frame está construida sobre software de terceros distribuido bajo licencias abi
 
 Los servicios de Google —Gmail, YouTube y Classroom— son operados por Google LLC; su disponibilidad, contenido y condiciones dependen de Google. La copia en la nube y la autenticación se ejecutan sobre la infraestructura de **Supabase**.
 
-El pronóstico del clima procede de **Open-Meteo**.
+Las letras sincronizadas que una canción no trae se reconocen en **LRCLIB** (lrclib.net) y, cuando allí no están, en **YouTube Music**, **NetEase Cloud Music** y **Kugou**: Frame les envía el título, el artista y la duración de la canción —nada que te identifique— y guarda la letra en tu equipo. El pronóstico del clima procede de **Open-Meteo**.
 
 Notion es una marca de Notion Labs, Inc.; la extensión solo lee los archivos que exportas tú y no se conecta a su servicio.
 
@@ -154,6 +154,8 @@ Se ofrece soporte para la versión estable vigente y para la inmediatamente ante
 ## 8 · Historial de versiones
 
 **${appVersion} — ${releaseDate}**
+
+*1.6.4:* **Centro de ayuda** con «Historial» a la izquierda (por días), figura de pentágonos que respira al escribir, frases que rotan y tema nuevo **«Curiosidades»** · **la campana guarda el registro** de tus notificaciones, con su hora, y un engranaje para el sonido, activarlas o borrarlas · **«Anotación nueva»** y la descripción de las grabaciones con botones de formato como en Word · **«Guardar grabación»**: importancia y **tipo de audio** en desplegables · **vuelven las letras reconocidas en internet** · **89 imágenes nuevas** en la galería · engranaje en Asignaturas para el **alto de las imágenes** · los avisos de la esquina ya no se quedan clavados al minimizar · al terminar una sesión con la vista flotante, Frame se pone delante.
 
 *1.6.3:* **Centro de ayuda renovado**: una conversación como en un chat, temas en tarjetas en lugar de adivinar la pregunta, «Mostrar cómo» y «Nueva conversación», con su botón en la barra superior · **Informes en Ajustes**: rendimiento y pendientes, semanal, mensual o anual, con resumen y **vista previa real** del documento · **menú lateral** en tres bloques · **Calendario** solo local y con la cuadrícula del calendario de Estudio: Frame deja de conectarse con Google Calendar · botones de cancelar y descartar en gris; el rojo, solo para confirmar un borrado · el temporizador de Estudio, centrado · «Crear» respeta el tema oscuro.
 

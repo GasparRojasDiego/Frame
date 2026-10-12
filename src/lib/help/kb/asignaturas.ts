@@ -55,10 +55,21 @@ export const ASIGNATURAS: Entry[] = [
     title: 'Poner una imagen a una asignatura o colección',
     q: ['cómo pongo una imagen a mi asignatura', 'cómo cambio la portada del curso', 'cómo pongo foto a la colección', 'fondo de la asignatura'],
     k: ['imagen', 'portada', 'camara', 'galeria', 'encuadre'],
-    a: 'Pulsa el botón de la cámara en la tarjeta (o en la cabecera de la asignatura). Elige una imagen de la galería de Frame (arquitectura, paisajes u otros) o sube la tuya, y encuádrala.',
+    a: 'Pulsa el botón de la cámara en la tarjeta (o en la cabecera de la asignatura). Elige una imagen de la galería de Frame (89 imágenes: ciudades, monumentos, paisajes, espacio y otros) o sube la tuya, y encuádrala.',
     tip: 'Sin imagen, la tarjeta muestra unas olas animadas. Con cuenta, la imagen aparece también en tu celular.',
     go: '/knowledge',
     rel: ['encuadre-imagen'],
+  },
+  {
+    // 1.6.4
+    id: 'asig-alto-imagen',
+    title: 'El alto de la imagen de las tarjetas',
+    q: ['cómo cambio el alto de la imagen de las tarjetas', 'quiero las imágenes de las asignaturas más grandes', 'hacer más pequeñas las portadas de las asignaturas', 'para qué es el engranaje de asignaturas'],
+    k: ['alto', 'altura', 'imagen', 'portada', 'tarjetas', 'engranaje', 'tamano'],
+    a: 'En Asignaturas, el engranaje de arriba a la derecha abre «Alto de las imágenes»: mueve la barra y cambia a la vez la parte de imagen de todas las tarjetas de colecciones y asignaturas. «Valor predeterminado» la deja como estaba.',
+    tip: 'Se recuerda en este dispositivo.',
+    go: '/knowledge',
+    rel: ['asig-imagen', 'encuadre-imagen'],
   },
   {
     id: 'encuadre-imagen',

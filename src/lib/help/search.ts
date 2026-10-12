@@ -69,6 +69,7 @@ export type HelpAreaId =
   | 'cuenta'
   | 'problemas'
   | 'extensiones'
+  | 'curiosidades'
   | 'sugerencias';
 
 export const HELP_AREAS: Record<HelpAreaId, { label: string; route?: string }> = {
@@ -89,6 +90,7 @@ export const HELP_AREAS: Record<HelpAreaId, { label: string; route?: string }> =
   cuenta: { label: 'Cuenta y nube' },
   problemas: { label: 'Problemas' },
   extensiones: { label: 'Extensiones' },
+  curiosidades: { label: 'Curiosidades' },
   sugerencias: { label: 'Sugerencias' },
 };
 

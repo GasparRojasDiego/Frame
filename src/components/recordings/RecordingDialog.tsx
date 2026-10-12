@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Mic, Pause, Play, Square, LoaderCircle, Clock, Settings, Trash2, Flag, EyeOff } from 'lucide-react';
+import { Mic, Pause, Play, Square, LoaderCircle, Clock, Settings, Trash2, EyeOff } from 'lucide-react';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import {
   Dialog,
@@ -25,7 +25,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import SubjectPicker from '@/components/courses/SubjectPicker';
 import EchoWord from '@/components/shared/EchoWord';
 import RecordingLimitPicker from '@/components/recordings/RecordingLimitPicker';
@@ -34,13 +33,13 @@ import { useCourse } from '@/context/CourseContext';
 import { deleteRecordingAudio, saveRecordingAudio } from '@/lib/music-db';
 import { QUICK_RECORDING_EVENT } from '@/lib/quick-recording';
 import { useToast } from '@/hooks/use-toast';
-import type { Recording, RecordingImportance } from '@/types';
+import type { Recording, RecordingImportance, RecordingKind } from '@/types';
+import { ImportancePicker, KindPicker } from '@/components/recordings/RecordingPickers';
+import NoteEditor from '@/components/temporizador/NoteEditor';
+import { isRichNoteEmpty } from '@/lib/rich-note';
 import { cn } from '@/lib/utils';
 import {
   DEFAULT_RECORDING_SETTINGS,
-  IMPORTANCE_IDLE,
-  IMPORTANCE_LABEL,
-  IMPORTANCE_STYLE,
   formatDuration,
   minutesLabel,
   saveRecordingSettings,
@@ -236,6 +235,7 @@ export default function RecordingDialog({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [importance, setImportance] = useState<RecordingImportance>('media');
+  const [kind, setKind] = useState<RecordingKind>('explicacion');
   const [courseId, setCourseId] = useState<string>('none');
 
   const settingsRef = useRef(settings);
@@ -322,6 +322,7 @@ export default function RecordingDialog({
     setName('');
     setDescription('');
     setImportance('media');
+    setKind('explicacion');
     setCourseId('none');
     segmentsRef.current = [];
     closedMsRef.current = 0;
@@ -654,8 +655,9 @@ export default function RecordingDialog({
         const recording: Recording = {
           id: segment.id,
           name: finalName,
-          description: description.trim() || undefined,
+          description: isRichNoteEmpty(description) ? undefined : description.trim(),
           importance,
+          kind,
           recordedAt: segment.recordedAt,
           courseId: courseId === 'none' ? null : courseId,
           durationSec: segment.durationSec,
@@ -721,7 +723,7 @@ export default function RecordingDialog({
         description: 'No se pudo guardar el audio. Inténtalo de nuevo.',
       });
     }
-  }, [addRecording, courseId, courses, description, importance, name, onOpenChange, resetAll, toast]);
+  }, [addRecording, courseId, courses, description, importance, kind, name, onOpenChange, resetAll, toast]);
 
   // Descartar: el audio ya estaba pre-guardado en IndexedDB (por si la app se
   // cerraba de golpe), así que descartarlo es BORRARLO también de ahí. Nada en
@@ -939,49 +941,25 @@ export default function RecordingDialog({
             </div>
 
             <div className="space-y-4 py-2">
-              <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
-                <div className="space-y-2">
+              {/* Nombre (mitad del ancho), importancia y tipo (un cuarto cada uno). */}
+              <div className="grid gap-4 sm:grid-cols-4">
+                <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="recName" className="text-xs">Nombre</Label>
                   <Input
                     id="recName"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="border-primary bg-card"
+                    className="h-10 border-primary bg-card"
                     disabled={phase === 'saving'}
                   />
                 </div>
-                {/* Importancia: cada opción lleva su color aunque no esté
-                    elegida, así se reconoce antes de leer la etiqueta. */}
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-1.5 text-xs">
-                    <Flag className="h-3 w-3" /> Importancia
-                  </Label>
-                  <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="Importancia">
-                    {(['baja', 'media', 'alta'] as const).map((level) => (
-                      <button
-                        key={level}
-                        type="button"
-                        role="radio"
-                        aria-checked={importance === level}
-                        onClick={() => setImportance(level)}
-                        disabled={phase === 'saving'}
-                        className={cn(
-                          'flex h-10 min-w-[4.5rem] items-center justify-center gap-1.5 rounded-md border text-xs font-semibold transition-all',
-                          importance === level
-                            ? cn(IMPORTANCE_STYLE[level], 'scale-[1.03] shadow-sm')
-                            : IMPORTANCE_IDLE[level]
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            'h-2 w-2 rounded-full',
-                            level === 'baja' ? 'bg-green-500' : level === 'media' ? 'bg-amber-500' : 'bg-red-500'
-                          )}
-                        />
-                        {IMPORTANCE_LABEL[level]}
-                      </button>
-                    ))}
-                  </div>
+                  <Label className="text-xs">Importancia</Label>
+                  <ImportancePicker value={importance} onChange={setImportance} disabled={phase === 'saving'} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Tipo</Label>
+                  <KindPicker value={kind} onChange={setKind} disabled={phase === 'saving'} />
                 </div>
               </div>
               {isMultiPart && (
@@ -1007,14 +985,18 @@ export default function RecordingDialog({
               )}
               <div className="space-y-2">
                 <Label htmlFor="recDesc" className="text-xs">Descripción (opcional)</Label>
-                <Textarea
-                  id="recDesc"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="¿De qué trata este audio?"
-                  className="min-h-[56px] bg-card"
-                  disabled={phase === 'saving'}
-                />
+                {/* Botones de formato (como en Word) y, separado, el recuadro. */}
+                <div className={cn(phase === 'saving' && 'pointer-events-none opacity-60')}>
+                  <NoteEditor
+                    id="recDesc"
+                    value={description}
+                    onChange={setDescription}
+                    placeholder="¿De qué trata este audio?"
+                    ariaLabel="Descripción de la grabación"
+                    rows={3}
+                    className="gap-2"
+                  />
+                </div>
               </div>
 
               {/* Asignatura: las mismas tarjetas de colecciones y asignaturas
@@ -1035,9 +1017,6 @@ export default function RecordingDialog({
                 />
               </div>
 
-              <p className="text-center text-[10px] text-muted-foreground">
-                {isMultiPart ? 'Cerrar con la X también las guarda.' : 'Cerrar con la X también la guarda.'}
-              </p>
             </div>
             <DialogFooter className="gap-2 sm:justify-center">
               <Button

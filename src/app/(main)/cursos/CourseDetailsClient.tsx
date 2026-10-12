@@ -79,6 +79,8 @@ import RecordingsSection from '@/components/recordings/RecordingsSection';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import RichNoteView from '@/components/temporizador/RichNoteView';
+import { richNoteToLine } from '@/lib/rich-note';
 import { ExternalLink } from 'lucide-react';
 
 
@@ -474,7 +476,7 @@ const SortableNoteCard = ({
                       rows={1}
                   />
                 ) : (
-                  <p
+                  <div
                       onClick={() => onStartEdit(note)}
                       className={cn(
                           "text-xs text-muted-foreground whitespace-pre-wrap cursor-text min-h-[20px]",
@@ -482,8 +484,8 @@ const SortableNoteCard = ({
                           showSeparator ? "pt-2" : "pt-0"
                       )}
                   >
-                      {note.content || <span className="italic text-muted-foreground/50">Haz clic para añadir contenido...</span>}
-                  </p>
+                      {note.content ? <RichNoteView text={note.content} /> : <span className="italic text-muted-foreground/50">Haz clic para añadir contenido...</span>}
+                  </div>
                 )
               ) : kind === 'url' ? (
                 <a
@@ -1384,7 +1386,7 @@ export default function CourseDetailsClient({ id }: { id: string }) {
                           )}
                           <div className="min-w-0">
                             <p className="truncate text-sm font-semibold text-foreground">
-                              {n.kind === 'file' ? n.fileName ?? 'Archivo' : n.kind === 'url' ? n.url : n.content}
+                              {n.kind === 'file' ? n.fileName ?? 'Archivo' : n.kind === 'url' ? n.url : richNoteToLine(n.content ?? '')}
                             </p>
                             {n.kind !== 'text' && n.content && (
                               <p className="truncate text-xs text-muted-foreground">{n.content}</p>

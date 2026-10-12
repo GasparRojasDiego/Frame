@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, ClipboardList, NotebookPen, Plus } from 'lucide-react';
 import {
   Dialog,
@@ -8,11 +8,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
 import SubjectPicker from '@/components/courses/SubjectPicker';
 import EchoWord from '@/components/shared/EchoWord';
 import TaskComposer, { type TaskDraft } from '@/components/tasks/TaskComposer';
+import NoteEditor from '@/components/temporizador/NoteEditor';
+import { isRichNoteEmpty } from '@/lib/rich-note';
 import { useCourse } from '@/context/CourseContext';
 import { useToast } from '@/hooks/use-toast';
 import { addLooseNote } from '@/lib/loose-notes';
@@ -46,7 +46,6 @@ export default function QuickCreateButton() {
   const [mode, setMode] = useState<Mode>('menu');
   const [courseId, setCourseId] = useState<string | null>(null);
   const [noteText, setNoteText] = useState('');
-  const noteRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (open) return;
@@ -54,15 +53,6 @@ export default function QuickCreateButton() {
     setCourseId(null);
     setNoteText('');
   }, [open]);
-
-  // La anotación crece con lo escrito, como la descripción de la tarea: un
-  // recuadro con scroll interno esconde justo lo que se acaba de teclear.
-  useEffect(() => {
-    const textarea = noteRef.current;
-    if (!textarea) return;
-    textarea.style.height = 'auto';
-    textarea.style.height = `${textarea.scrollHeight}px`;
-  }, [noteText, mode]);
 
   const course = useMemo(() => courses.find((c) => c.id === courseId), [courses, courseId]);
 
@@ -94,8 +84,8 @@ export default function QuickCreateButton() {
   };
 
   const saveNote = () => {
+    if (isRichNoteEmpty(noteText)) return;
     const text = noteText.trim();
-    if (!text) return;
     if (course) {
       addNote(course.id, text, { kind: 'text' });
       toast({
@@ -272,51 +262,31 @@ export default function QuickCreateButton() {
                       </span>
                       <span className="h-px flex-1 bg-border" />
                     </div>
-                    {/* Un solo recuadro, como la tarjeta de crear tarea: se
-                        escribe directamente sobre él y un clic en cualquier
-                        parte lo enfoca. */}
-                    <Card
-                      className="cursor-text transition-colors focus-within:border-primary/60"
-                      onMouseDown={(e) => {
-                        // Lo que no es un control propio enfoca el texto sin
-                        // perder el cursor donde estaba.
-                        if ((e.target as HTMLElement).closest('textarea, button')) return;
-                        e.preventDefault();
-                        noteRef.current?.focus();
-                      }}
-                    >
-                      <CardContent className="pt-4">
-                        <Textarea
-                          ref={noteRef}
-                          id="quick-note"
-                          data-tour="anotacion-texto"
-                          aria-label="La anotación"
-                          value={noteText}
-                          onChange={(e) => setNoteText(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                              e.preventDefault();
-                              saveNote();
-                            }
-                          }}
-                          placeholder="Lo que no quieres olvidar"
-                          rows={4}
-                          className="min-h-[96px] resize-none overflow-hidden border-0 bg-transparent p-0 text-sm focus-visible:ring-0 focus-visible:ring-offset-0"
-                        />
-                        <div className="flex justify-end pt-4">
-                          <Button
-                            onClick={saveNote}
-                            disabled={!noteText.trim()}
-                            data-tour="anotacion-guardar"
-                            title={course ? `Guardar en ${course.name}` : 'Guardar en Inicio, sin asignatura'}
-                            className={cn(!noteText.trim() && 'border border-primary bg-primary/20 text-primary')}
-                          >
-                            <NotebookPen className="mr-2 h-4 w-4" />
-                            Guardar
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    {/* Arriba, los botones de formato (como en Word); debajo y
+                        separado de ellos, el recuadro donde se escribe. */}
+                    <NoteEditor
+                      id="quick-note"
+                      value={noteText}
+                      onChange={setNoteText}
+                      onSubmit={saveNote}
+                      placeholder="Lo que no quieres olvidar"
+                      ariaLabel="La anotación"
+                      rows={5}
+                      autoFocus
+                      className="gap-3"
+                    />
+                    <div className="flex justify-end pt-2">
+                      <Button
+                        onClick={saveNote}
+                        disabled={isRichNoteEmpty(noteText)}
+                        data-tour="anotacion-guardar"
+                        title={course ? `Guardar en ${course.name}` : 'Guardar en Inicio, sin asignatura'}
+                        className={cn(isRichNoteEmpty(noteText) && 'border border-primary bg-primary/20 text-primary')}
+                      >
+                        <NotebookPen className="mr-2 h-4 w-4" />
+                        Guardar
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>

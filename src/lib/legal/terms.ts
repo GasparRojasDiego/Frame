@@ -18,7 +18,7 @@
 // que solo el titular puede rellenar.
 // ============================================================
 
-export const TERMS_VERSION = '4.5';
+export const TERMS_VERSION = '4.6';
 
 export function termsDocument({ appVersion, effectiveDate }: { appVersion: string; effectiveDate: string }): string {
   return `# Términos y Condiciones de Uso de Frame
@@ -166,7 +166,7 @@ A efectos de estos Términos, los siguientes términos tienen el significado que
 
 ### Cláusula 10. Servicios de Terceros
 
-**10.1.** La Aplicación integra Servicios de Terceros, en particular los servicios de Google LLC —Gmail, YouTube, Classroom y Drive— y la infraestructura de **Supabase**.
+**10.1.** La Aplicación integra Servicios de Terceros, en particular los servicios de Google LLC —Gmail, YouTube, Classroom y Drive—, la infraestructura de **Supabase** y los servicios de letras **LRCLIB**, **YouTube Music**, **NetEase Cloud Music** y **Kugou**.
 
 **10.2.** El uso de dichos servicios se rige por los términos y políticas de sus respectivos titulares, que el Usuario acepta directamente con ellos. El Proveedor no es parte de esa relación.
 
@@ -392,6 +392,8 @@ Si tenemos conocimiento de que se han recogido datos de un menor de catorce año
 **6.3.** Cuando utilizas las interfaces de Gmail, YouTube, Classroom o Drive, **interactúas directamente con Google LLC** conforme a su propia política de privacidad. En esa relación Google es responsable del tratamiento y el Proveedor no interviene.
 
 **6.4. Compromiso de uso limitado.** El uso que la Aplicación hace de la información recibida de las API de Google se ajusta a la *Google API Services User Data Policy*, incluidos sus requisitos de uso limitado. En particular, esos datos **se emplean únicamente para proveer o mejorar las funciones visibles al usuario, no se transfieren a terceros salvo para prestar esas funciones o por exigencia legal, no se usan con fines publicitarios y no se someten a lectura humana** salvo consentimiento expreso, requerimiento legal o razones de seguridad.
+
+**6.4 bis. Letras de canciones.** Cuando una canción de tu biblioteca no trae letra, al abrir «Reproduciendo» la Aplicación consulta **LRCLIB**, **YouTube Music**, **NetEase Cloud Music** y **Kugou** enviando únicamente el título, el artista, el álbum y la duración de esa canción —nada que te identifique—, y guarda la letra en tu dispositivo para no volver a pedirla.
 
 **6.5.** No cedemos datos personales a terceros distintos de los indicados, salvo requerimiento de autoridad competente en el ejercicio de sus funciones.
 

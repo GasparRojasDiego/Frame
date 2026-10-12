@@ -15,7 +15,7 @@ import {
 // ============================================================
 // Selector de imagen unificado de Frame: al presionar un botón de
 // "elegir imagen" se abren DOS caminos:
-//   1. La galería nativa (3 categorías arriba, miniaturas abajo).
+//   1. La galería nativa (categorías arriba, miniaturas abajo).
 //   2. "Subir imagen": el usuario escoge su propio archivo.
 // En ambos casos devuelve un data-URL, así que quien lo usa lo
 // guarda exactamente igual que una imagen subida a mano.
@@ -63,7 +63,7 @@ export default function ImagePickerDialog({
       setSaving(false);
     }
   };
-  const [category, setCategory] = useState<NativePictureCategory['id']>('arquitectura');
+  const [category, setCategory] = useState<NativePictureCategory['id']>('ciudades');
   const [busySrc, setBusySrc] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -117,13 +117,13 @@ export default function ImagePickerDialog({
         ) : (
         <>
 
-        {/* Las 3 categorías de la galería nativa */}
-        <div className="flex items-center justify-center gap-2">
+        {/* Las categorías de la galería nativa */}
+        <div className="flex flex-wrap items-center justify-center gap-2">
           {NATIVE_PICTURE_CATEGORIES.map((c) => (
             <Button
               key={c.id}
               size="sm"
-              variant={category === c.id ? 'default' : 'outline'}
+              variant={category === c.id ? 'default' : 'fantasma'}
               className="text-xs"
               onClick={() => setCategory(c.id)}
             >

@@ -17,7 +17,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { useCourse } from '@/context/CourseContext';
-import { activeLineIndex, setLyricsOffset, storedLyrics, type SongLyrics } from '@/lib/lyrics';
+import { activeLineIndex, findLyrics, setLyricsOffset, type SongLyrics } from '@/lib/lyrics';
 import { formatClock, playbackClock, usePlaybackPosition } from '@/lib/playback-clock';
 import { cn } from '@/lib/utils';
 
@@ -160,13 +160,19 @@ export default function NowPlayingView({ open, onClose }: { open: boolean; onClo
 
   const songId = currentSong?.id ?? null;
 
-  // La letra guardada se lee al abrir y al cambiar de canción.
+  // La letra se lee al abrir y al cambiar de canción; si no la hay guardada,
+  // se reconoce en internet (findLyrics) y queda guardada.
+  const songRef = useRef(currentSong);
+  songRef.current = currentSong;
+  const durationRef = useRef(duration);
+  durationRef.current = duration;
   useEffect(() => {
-    if (!open || !songId) return;
+    const song = songRef.current;
+    if (!open || !songId || !song) return;
     let alive = true;
     setLyrics(null);
     setLoading(true);
-    void storedLyrics(songId)
+    void findLyrics(song, durationRef.current)
       .then((result) => alive && setLyrics(result))
       .catch(() => alive && setLyrics(null))
       .finally(() => alive && setLoading(false));

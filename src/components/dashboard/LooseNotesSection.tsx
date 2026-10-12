@@ -15,6 +15,8 @@ import EchoWord from '@/components/shared/EchoWord';
 import { useCourse } from '@/context/CourseContext';
 import { useToast } from '@/hooks/use-toast';
 import { deleteLooseNote, useLooseNotes, type LooseNote } from '@/lib/loose-notes';
+import RichNoteView from '@/components/temporizador/RichNoteView';
+import { richNoteToPlain } from '@/lib/rich-note';
 import { cn } from '@/lib/utils';
 
 // ============================================================
@@ -124,9 +126,7 @@ function LooseNoteDialog({ note, onClose }: { note: LooseNote | null; onClose: (
           {placing ? (
             <SubjectPicker value={courseId} onChange={setCourseId} />
           ) : (
-            <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground">
-              {note?.content}
-            </p>
+            <RichNoteView text={note?.content ?? ''} className="break-words text-sm leading-relaxed text-foreground" />
           )}
         </div>
 
@@ -199,7 +199,7 @@ export default function LooseNotesSection() {
             </span>
             {/* Comprimida: las primeras líneas; el resto, al abrirla. */}
             <span className="line-clamp-3 whitespace-pre-line break-words text-sm text-foreground">
-              {note.content}
+              {richNoteToPlain(note.content)}
             </span>
           </button>
         ))}
