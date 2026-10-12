@@ -260,7 +260,7 @@ export const CUENTA: Entry[] = [
     q: ['cómo actualizo frame', 'hay una versión nueva', 'cómo instalo la actualización', 'qué es el botón actualizar ahora', 'tengo la última versión', 'cuánto pesa la actualización', 'no me deja actualizar'],
     k: ['actualizar', 'version', 'update', 'peso', 'tiempo estimado', 'descargar'],
     a: 'Cuando hay una versión nueva aparece un botón de descarga junto a tu nombre y un aviso en la campana. Al pulsarlo se abre un recuadro con el peso de la actualización, el tiempo estimado hasta poder usarla y sus pasos (Descargar, Verificar firma, Instalar, Reiniciar). Pulsa «Actualizar ahora» y verás el porcentaje real y el tiempo restante; al terminar, Frame se reinicia sola.',
-    tip: 'Con una sesión de estudio en marcha o música sonando no deja actualizar: termina la sesión o pausa la música. Frame nunca se actualiza sin que lo confirmes, y tus datos se conservan.',
+    tip: 'Con una sesión de estudio en marcha, música sonando o una grabación a medias no deja actualizar: termina la sesión, pausa la música o termina y guarda la grabación. Frame nunca se actualiza sin que lo confirmes, y tus datos se conservan.',
     rel: ['instalar-frame'],
   },
   {

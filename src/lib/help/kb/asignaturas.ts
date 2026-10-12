@@ -16,10 +16,10 @@ export const ASIGNATURAS: Entry[] = [
   {
     id: 'asig-crear',
     title: 'Crear una asignatura',
-    q: ['cómo creo una asignatura', 'cómo agrego un curso', 'cómo añado una materia', 'dónde creo mis cursos', 'nueva asignatura'],
+    q: ['cómo creo una asignatura', 'cómo agrego un curso', 'cómo añado una materia', 'dónde creo mis cursos', 'nueva asignatura', 'cómo creo varias asignaturas a la vez'],
     k: ['crear asignatura', 'curso', 'materia', 'anadir', 'cneb', 'curriculo nacional'],
-    a: 'En «Asignaturas», pulsa «Añadir». Escribe su nombre (y el del profesor, opcional) o pulsa una de las áreas del CNEB que aparecen debajo, tras la línea (Matemática, Comunicación, Inglés…): su nombre se escribe solo. Pulsa «Crear».',
-    tip: 'Se crea una asignatura cada vez; las áreas que ya tienes salen atenuadas. La portada no viene puesta: la eliges después desde su tarjeta, con el botón de la cámara.',
+    a: 'En «Asignaturas», pulsa «Añadir». Escribe su nombre (y el del profesor, opcional) o pulsa una de las áreas del CNEB que aparecen debajo, tras la línea (Matemática, Comunicación, Inglés…): su nombre se escribe solo. Pulsa «Crear». Si marcas varias áreas, el botón pasa a «Crear N asignaturas» y las crea todas de una vez.',
+    tip: 'Las áreas que ya tienes salen atenuadas. La portada no viene puesta: la eliges después desde su tarjeta, con el botón de la cámara.',
     go: '/knowledge',
     rel: ['asig-imagen', 'asig-coleccion', 'asig-abrir'],
   },

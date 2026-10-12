@@ -55,6 +55,30 @@ export function saveRecordingSettings(uid: string | null | undefined, settings: 
   }
 }
 
+// ------------------------------------------------------------
+// ¿Hay una grabación a medias? (grabando, en pausa o sin guardar todavía)
+//
+// La publica la grabadora y la consulta el actualizador: reiniciar para
+// instalar perdería el audio que solo está en memoria. Vive aquí, fuera de
+// React, porque el guardián del actualizador se pregunta en cualquier momento.
+// ------------------------------------------------------------
+
+let recorderBusy = false;
+const recorderListeners = new Set<() => void>();
+
+export function setRecorderBusy(busy: boolean): void {
+  if (busy === recorderBusy) return;
+  recorderBusy = busy;
+  recorderListeners.forEach((listener) => listener());
+}
+
+export const isRecorderBusy = (): boolean => recorderBusy;
+
+export function subscribeRecorderBusy(listener: () => void): () => void {
+  recorderListeners.add(listener);
+  return () => recorderListeners.delete(listener);
+}
+
 export const minutesLabel = (m: number): string =>
   m < 60 ? `${m} min` : m % 60 === 0 ? `${m / 60} h` : `${Math.floor(m / 60)} h ${m % 60} min`;
 

@@ -184,7 +184,7 @@ function PhraseStage({ text }: { text: string }) {
  * cada vuelta (así «buenos días» no sigue en pie por la tarde).
  */
 function HeaderPhrases({ name }: { name?: string }) {
-  const { tasks, archivedTasks, courses, studySessions, habits, studyGoals, dailyPerformances } = useCourse();
+  const { tasks, archivedTasks, courses, studySessions, habits, studyGoals, dailyPerformances, streakGoal } = useCourse();
   const todayKey = useTodayKey();
   const [tick, setTick] = useState(0);
   const [currentId, setCurrentId] = useState<string | null>(null);
@@ -202,10 +202,11 @@ function HeaderPhrases({ name }: { name?: string }) {
         habits: habits ?? [],
         studyGoals,
         dailyPerformances: dailyPerformances ?? [],
+        streakGoal,
       }),
     // `tick` y `todayKey` no se leen dentro: solo renuevan el «ahora».
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [tick, todayKey, name, tasks, archivedTasks, courses, studySessions, habits, studyGoals, dailyPerformances]
+    [tick, todayKey, name, tasks, archivedTasks, courses, studySessions, habits, studyGoals, dailyPerformances, streakGoal]
   );
   const phrasesRef = useRef(phrases);
   phrasesRef.current = phrases;

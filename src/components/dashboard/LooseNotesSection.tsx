@@ -165,7 +165,13 @@ function LooseNoteDialog({ note, onClose }: { note: LooseNote | null; onClose: (
 
 export default function LooseNotesSection() {
   const { userProfile } = useCourse();
-  const notes = useLooseNotes(userProfile?.id);
+  const stored = useLooseNotes(userProfile?.id);
+  // La más reciente primero. Lo guardado no basta: al sincronizar, lo que llega
+  // de otro equipo se añade al final de la lista local (sync-merge.ts).
+  const notes = useMemo(
+    () => [...stored].sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0)),
+    [stored]
+  );
   const [openId, setOpenId] = useState<string | null>(null);
 
   if (notes.length === 0) return null;

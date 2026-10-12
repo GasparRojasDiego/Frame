@@ -24,7 +24,7 @@ import { toast } from '@/hooks/use-toast';
 import { APP_VERSION } from '@/lib/version';
 
 /** `ready`: descargada y verificada, esperando a que acabe la sesión de
- *  estudio o la música que empezó mientras se descargaba. */
+ *  estudio, la música o la grabación que empezó mientras se descargaba. */
 export type UpdatePhase = 'idle' | 'checking' | 'available' | 'downloading' | 'verifying' | 'ready' | 'installing';
 
 /** Los pasos que ve el usuario, en orden. */
@@ -67,9 +67,10 @@ let state: UpdateState = {
 };
 
 /** Devuelve true si hay trabajo en curso que un reinicio interrumpiría (una
- *  sesión de estudio, música sonando). La registra el layout, que es quien
- *  conoce el estado de la app. Mientras devuelva true, el recuadro no deja
- *  actualizar y lo dice; `startUpdateInstall` lo vuelve a comprobar. */
+ *  sesión de estudio, música sonando, una grabación a medias). La registra el
+ *  layout, que es quien conoce el estado de la app. Mientras devuelva true, el
+ *  recuadro no deja actualizar y lo dice; `startUpdateInstall` lo vuelve a
+ *  comprobar, y una descarga que acaba entonces queda en `ready`. */
 let busyGuard: (() => boolean) | null = null;
 
 export function setUpdateBusyGuard(guard: (() => boolean) | null): void {
@@ -156,6 +157,9 @@ async function runCheck(options?: { silent?: boolean }): Promise<void> {
       version: update.version,
       progress: null,
       size: manifest ?? (sameVersion ? state.size : null),
+      // Un sondeo que llega bien desmiente el fallo de conexión de antes; el
+      // de la firma sigue en pie mientras la versión sea la misma.
+      error: sameVersion && state.error === BAD_SIGNATURE ? state.error : null,
     });
 
     // Aviso UNA vez por versión: en cada sondeo posterior el testigo del
@@ -247,6 +251,8 @@ const SPEED_TAU_MS = 2500;
 const SAMPLE_MS = 250;
 /** Cada cuánto, como mucho, se avisa del avance (el plugin manda un aviso por trozo). */
 const EMIT_MS = 100;
+/** Un minuto sin recibir nada: la descarga está estancada, no lenta. */
+const STALL_MS = 60_000;
 
 function readTimings(): UpdateTimings {
   try {
@@ -401,8 +407,9 @@ export function estimateUpdate(now: number = performance.now()): UpdateEstimate 
  */
 export async function startUpdateInstall(): Promise<void> {
   if (!isTauri() || installing) return;
-  // Con una sesión de estudio o música sonando no se reinicia: el recuadro
-  // ya lo dice y deja el botón apagado; esto es solo la última red.
+  // Con una sesión de estudio, música sonando o una grabación a medias no se
+  // reinicia: el recuadro ya lo dice y deja el botón apagado; esto es solo la
+  // última red.
   if (busyGuard?.()) return;
   if (state.phase === 'ready' && verified) return resumeVerifiedInstall();
 
@@ -450,8 +457,31 @@ async function downloadAndVerify(update: Update): Promise<void> {
   let lastEmit = 0;
   let finishedAt = 0;
 
-  await update.download((event) => {
+  // Vigía: una conexión viva pero muda (un proxy, un antivirus que inspecciona
+  // HTTPS) no hace fallar la descarga nunca, y el recuadro se quedaba en
+  // «Descargando» sin poder reintentar. Si en STALL_MS no llega ni un byte, se
+  // da por fallida; lo que esa descarga abandonada avise después, no cuenta.
+  let abandoned = false;
+  let stallTimer: ReturnType<typeof setTimeout> | undefined;
+  let stall: (reason: Error) => void = () => undefined;
+  const stalled = new Promise<never>((_, reject) => {
+    stall = reject;
+  });
+  const watch = () => {
+    clearTimeout(stallTimer);
+    stallTimer = setTimeout(() => {
+      abandoned = true;
+      stall(new Error('La descarga dejó de recibir datos'));
+    }, STALL_MS);
+  };
+
+  watch();
+  const download = update.download((event) => {
+    if (abandoned) return;
     const now = performance.now();
+    // Tras el último byte queda verificar la firma, que es local: sin vigía.
+    if (event.event === 'Finished') clearTimeout(stallTimer);
+    else watch();
     if (event.event === 'Started') {
       const length = positive(event.data.contentLength);
       if (length !== null) total = length;
@@ -485,6 +515,11 @@ async function downloadAndVerify(update: Update): Promise<void> {
       setState({ phase: 'verifying', downloaded, progress: 1, speed: ema, stepStartedAt: now });
     }
   });
+  try {
+    await Promise.race([download, stalled]);
+  } finally {
+    clearTimeout(stallTimer);
+  }
 
   // `download` termina después de comprobar la firma: ese rato es «verificar».
   const verifiedAt = performance.now();
@@ -499,8 +534,9 @@ async function downloadAndVerify(update: Update): Promise<void> {
   saveTimings(learned);
   verified = update;
 
-  // Si mientras bajaba empezó una sesión de estudio o sonó música, no se
-  // reinicia en medio: queda lista y el recuadro espera a que se libere.
+  // Si mientras bajaba empezó una sesión de estudio, sonó música o se puso a
+  // grabar, no se reinicia en medio: queda lista y el recuadro espera a que se
+  // libere.
   if (busyGuard?.()) {
     setState({ phase: 'ready', progress: 1, speed: null, stepStartedAt: null, dialogOpen: true });
     return;
@@ -540,6 +576,8 @@ async function resumeVerifiedInstall(): Promise<void> {
   }
 }
 
+const BAD_SIGNATURE = 'La firma de la descarga no es la de Frame: no se instaló nada.';
+
 function fail(e: unknown) {
   console.warn('startUpdateInstall failed', e);
   forget(LANDING_KEY);
@@ -554,9 +592,7 @@ function fail(e: unknown) {
     downloaded: 0,
     speed: null,
     stepStartedAt: null,
-    error: badSignature
-      ? 'La firma de la descarga no es la de Frame: no se instaló nada.'
-      : 'No se pudo actualizar. Revisa tu conexión e inténtalo de nuevo.',
+    error: badSignature ? BAD_SIGNATURE : 'No se pudo actualizar. Revisa tu conexión e inténtalo de nuevo.',
   });
 }
 

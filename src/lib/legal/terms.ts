@@ -18,7 +18,7 @@
 // que solo el titular puede rellenar.
 // ============================================================
 
-export const TERMS_VERSION = '4.3';
+export const TERMS_VERSION = '4.4';
 
 export function termsDocument({ appVersion, effectiveDate }: { appVersion: string; effectiveDate: string }): string {
   return `# Términos y Condiciones de Uso de Frame
@@ -154,7 +154,7 @@ A efectos de estos Términos, los siguientes términos tienen el significado que
 - eliminación de la Cuenta por el propio Usuario, conforme a la Política de Privacidad;
 - supresión manual, por el Usuario o por terceros con acceso al dispositivo, de los directorios de datos de la Aplicación.
 
-**9.3. Alcance de la Copia de Seguridad en la Nube.** Con Cuenta activa y conexión disponible, la Aplicación replica el **Estado Académico**, comprensivo de asignaturas, colecciones, tareas y su avance, sesiones de estudio, calificaciones, hábitos, eventos del calendario local, horarios importados, metas y configuración.
+**9.3. Alcance de la Copia de Seguridad en la Nube.** Con Cuenta activa y conexión disponible, la Aplicación replica el **Estado Académico**, comprensivo de asignaturas, colecciones, tareas y su avance, sesiones de estudio con sus anotaciones, calificaciones, hábitos, eventos y recordatorios del calendario local con los colores de sus casillas, anotaciones guardadas sin asignatura, horarios importados, metas y configuración.
 
 **9.4. Exclusiones expresas de la Copia de Seguridad en la Nube.** **No se replican, en ningún caso y por razón de su tamaño: los archivos de música, las grabaciones de voz y las imágenes**, incluidas portadas de asignatura, imágenes de horario y adjuntos de imagen. Para conservarlos, el Usuario debe emplear las funciones de exportación de la Aplicación y almacenar el resultado por sus propios medios.
 
@@ -343,7 +343,7 @@ Asignaturas, colecciones, profesores, tareas y su contenido, notas de recursos, 
 
 ### 3.2 Datos replicados en tu cuenta
 
-Si inicias sesión, se replica tu **Estado Académico**: asignaturas, tareas y su avance, sesiones, calificaciones, hábitos, eventos, horarios, metas y configuración. También se guardan en una carpeta privada de tu Cuenta, para que aparezcan en tus otros dispositivos, tu **foto de perfil, la imagen de tu horario y las imágenes de tus playlists, asignaturas y colecciones**. **Nunca se replican la música, las grabaciones de voz ni los adjuntos.**
+Si inicias sesión, se replica tu **Estado Académico**: asignaturas, tareas y su avance, sesiones y sus anotaciones, calificaciones, hábitos, eventos y recordatorios del calendario con los colores de sus casillas, anotaciones sin asignatura, horarios, metas y configuración. También se guardan en una carpeta privada de tu Cuenta, para que aparezcan en tus otros dispositivos, tu **foto de perfil, la imagen de tu horario y las imágenes de tus playlists, asignaturas y colecciones**. **Nunca se replican la música, las grabaciones de voz ni los adjuntos.**
 
 ### 3.3 Datos de cuenta
 

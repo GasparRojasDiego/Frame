@@ -14,9 +14,11 @@ import { addDays, eventEnd, toKey } from './calendar-model';
 // Vive junto al estado (CourseContext), no en la interfaz Calendario: el aviso
 // tiene que llegar estés donde estés dentro de la app.
 //
-// Cada aviso se da UNA vez por día y evento. Si Frame estaba cerrado a la
-// hora del aviso, al abrirlo se da el pendiente mientras el evento no haya
-// pasado (con un margen de 15 minutos); uno ya pasado no se da tarde.
+// Cada aviso se da UNA vez por día y evento; si después se cambia la hora o
+// la antelación de modo que el aviso cae más tarde, se vuelve a dar a la nueva
+// hora. Si Frame estaba cerrado a la hora del aviso, al abrirlo se da el
+// pendiente mientras el evento no haya pasado (con un margen de 15 minutos);
+// uno ya pasado no se da tarde.
 // ============================================================
 
 const GRACE_MS = 15 * 60_000;
@@ -41,6 +43,9 @@ export function useLocalEventReminders(events: LocalCalendarEvent[], scope: stri
   useEffect(() => {
     if (!scope) return;
     const sentKey = `localEventReminderSent_${scope}`;
+    // Copia en memoria de las marcas dadas en esta sesión: con localStorage
+    // lleno o inaccesible, un aviso no se repetiría cada 30 s.
+    const memo: Record<string, number> = {};
 
     const readSent = (): Record<string, number> => {
       try {
@@ -60,7 +65,7 @@ export function useLocalEventReminders(events: LocalCalendarEvent[], scope: stri
 
       const now = new Date();
       const today = toKey(now);
-      const sent = readSent();
+      const sent = { ...readSent(), ...memo };
       let changed = false;
 
       for (const event of armed) {
@@ -74,15 +79,18 @@ export function useLocalEventReminders(events: LocalCalendarEvent[], scope: stri
           const at = new Date(y, mo - 1, d, h, m);
           const fireAt = at.getTime() - (event.remindBefore ?? 0) * 60_000;
           if (now.getTime() < fireAt || now.getTime() > at.getTime() + GRACE_MS) continue;
+          // La marca guarda cuándo se dio el aviso, y solo cuenta si fue a partir
+          // de la hora de aviso actual: si luego se movió el evento o se acortó
+          // la antelación, el aviso cae más tarde y se vuelve a dar.
           const mark = `${event.id}#${day}`;
-          if (sent[mark]) continue;
+          if (sent[mark] && sent[mark] >= fireAt) continue;
 
           const meta = EVENT_KIND_META[normalizeKind(event.kind)];
           void notify({
             title: `${meta.glyph} ${event.title}`,
             body: `${whenText(at, now)}${event.description ? ` — ${event.description}` : ''}`,
           });
-          sent[mark] = Date.now();
+          sent[mark] = memo[mark] = Date.now();
           changed = true;
         }
       }
@@ -90,11 +98,16 @@ export function useLocalEventReminders(events: LocalCalendarEvent[], scope: stri
       if (changed) {
         // De paso se olvidan las marcas de hace más de dos días.
         const horizon = Date.now() - 2 * 86_400_000;
-        for (const [mark, at] of Object.entries(sent)) if (at < horizon) delete sent[mark];
+        for (const [mark, at] of Object.entries(sent)) {
+          if (at < horizon) {
+            delete sent[mark];
+            delete memo[mark];
+          }
+        }
         try {
           window.localStorage.setItem(sentKey, JSON.stringify(sent));
         } catch {
-          /* sin almacenamiento: como mucho se repetiría un aviso */
+          /* sin almacenamiento: la copia en memoria evita repetirlo en esta sesión */
         }
       }
     };

@@ -26,6 +26,7 @@ import { SessionSubjectPicker } from '@/components/temporizador/SubjectPickCard'
 import EchoWord from '@/components/shared/EchoWord';
 import { cn } from '@/lib/utils';
 import { formatHMS } from '@/lib/duration';
+import { isRichNoteEmpty } from '@/lib/rich-note';
 
 // ============================================================
 // Cierre de una sesión de estudio.
@@ -98,13 +99,18 @@ export default function FinishSessionForm({
 
   const handleSubmit = () => {
     if (needsSubject || needsFocus) return;
-    const selectedCourses = courses.filter(c => selectedSubjectIds.includes(c.id));
+    // Nombres en el MISMO orden que los ids (el de marcado): quien los lea
+    // puede emparejarlos uno a uno.
+    const selectedNames = selectedSubjectIds
+      .map(id => courses.find(c => c.id === id)?.name)
+      .filter((name): name is string => Boolean(name));
     onSubmit({
       perception,
-      subjects: selectedCourses.map(c => c.name),
+      subjects: selectedNames,
       subjectIds: selectedSubjectIds,
       taskIds: selectedTaskIds,
-      notes: notes.trim(),
+      // Una lista que se quedó sin nada escrito no es una nota.
+      notes: isRichNoteEmpty(notes) ? '' : notes.trim(),
     });
   };
 
@@ -203,6 +209,7 @@ export default function FinishSessionForm({
                   tiene fresco nada más parar el reloj. */}
               <div className="space-y-1">
                 <Label
+                  id="session-notes-label"
                   htmlFor="session-notes"
                   onClick={() => document.getElementById('session-notes')?.focus()}
                   className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground"
@@ -214,6 +221,7 @@ export default function FinishSessionForm({
                 {/* Texto con formato y listas, como un Word en pequeño. */}
                 <NoteEditor
                   id="session-notes"
+                  ariaLabelledBy="session-notes-label"
                   value={notes}
                   onChange={setNotes}
                   placeholder="Resolví los ejercicios 12 al 20; me atasqué en la derivada de la cadena…"

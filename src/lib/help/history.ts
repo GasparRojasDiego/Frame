@@ -89,6 +89,12 @@ function fromLegacy(raw: unknown): HelpConversation[] {
     if (group && turn.at - group[group.length - 1].at <= LEGACY_GAP_MS) group.push(turn);
     else groups.push([turn]);
   }
+  // Las preguntas sueltas del historial viejo pueden dar más conversaciones de
+  // las que caben: las más antiguas se juntan en una sola, así el tope no
+  // borra nada al convertir.
+  if (groups.length > MAX_CONVERSATIONS) {
+    groups.unshift(groups.splice(0, groups.length - MAX_CONVERSATIONS + 1).flat());
+  }
   return groups
     .map((group) => ({
       id: `legacy-${group[0].id}`,

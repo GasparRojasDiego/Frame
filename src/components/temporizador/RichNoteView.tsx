@@ -65,8 +65,9 @@ export default function RichNoteView({ text, className }: { text: string; classN
               block.kind === 'bullet' ? 'list-disc pl-4' : 'list-decimal pl-5 marker:font-semibold'
             )}
           >
+            {/* Cada punto numerado, con el número que se escribió («15.», no «1.»). */}
             {block.lines.map((line, lineIndex) => (
-              <li key={lineIndex} className="whitespace-pre-wrap pl-0.5">
+              <li key={lineIndex} value={line.number} className="whitespace-pre-wrap pl-0.5">
                 <Runs runs={line.runs} />
               </li>
             ))}

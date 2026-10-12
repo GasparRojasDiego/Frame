@@ -12,7 +12,7 @@
 
 import { TERMS_VERSION } from './terms';
 
-export const INFO_VERSION = '4.3';
+export const INFO_VERSION = '4.4';
 
 export function infoDocument({
   appVersion,
@@ -79,15 +79,15 @@ Frame distingue tres lugares de almacenamiento. Conocer la diferencia es lo que 
 
 El **botón redondo** de abajo a la derecha abre la **Ayuda**, que ocupa todo el espacio entre el menú y la barra superior. Su barra responde cómo usar Frame con tus palabras. No es una inteligencia artificial: responde desde una guía escrita función por función, al instante, sin internet y sin inventar. Lo que no es sobre la app lo dice.
 
-Al preguntar, la respuesta ocupa los 3/5 de la derecha. Cada pregunta queda en **«Conversaciones»** —solo en este equipo y en tu perfil—. Cuando hay algo que pulsar, **«Descubrir»** lo enseña paso a paso: la pantalla se oscurece, solo queda iluminado el botón correcto y **Apex**, la mascota de VT Asvent, acompaña cada paso.
+Cada vez que abres Frame empieza una conversación: tus preguntas de esa apertura quedan juntas y, al cerrar Frame, se guardan en **«Conversaciones»** —solo en este equipo y en tu perfil—. Cuando hay algo que pulsar, **«Descubrir»** lo enseña paso a paso: la pantalla se oscurece, solo queda iluminado el botón correcto y **Apex**, la mascota de VT Asvent, acompaña cada paso.
 
-Con el botón **«+»** de esa barra se añade la extensión **Notion**: importa tus tareas y fechas desde la exportación de una base de datos de Notion (el .zip o el .csv), sin conectarse a tu cuenta.
+**Importar de Notion** (Ajustes → rueda de la cuenta) trae tus tareas y fechas desde la exportación de una base de datos de Notion (el .zip o el .csv), sin conectarse a tu cuenta.
 
 ### 4.2 Núcleo académico
 
 Asignaturas con imagen de portada, agrupables en colecciones, con profesor y estadísticas propias; clases del mes generadas desde tu horario, con el tema visto en cada una; recursos (notas, enlaces y archivos) y un registro permanente de lo culminado.
 
-Tareas con descripción, asignatura, fecha límite, importancia, tipo, dificultad, tiempo estimado y porcentaje de avance, que puedes ajustar a mano o que sube solo con tus sesiones de estudio en proporción al tiempo estimado. Recordatorios tarea por tarea, con días, hora y repetición. Adjuntos enlazados al archivo original de tu disco: si sigues editándolo, Frame ve siempre la versión actual.
+El botón **«+»** de la barra superior crea una tarea o una anotación sin ir hasta la asignatura; una anotación sin asignatura queda como tarjeta al final de Inicio. Tareas con descripción, asignatura, fecha de entrega, importancia, tipo, dificultad, tiempo estimado y porcentaje de avance, que puedes ajustar a mano o que sube solo con tus sesiones de estudio en proporción al tiempo estimado. Recordatorios tarea por tarea, con días, hora y repetición. Adjuntos enlazados al archivo original de tu disco: si sigues editándolo, Frame ve siempre la versión actual.
 
 Archivo de tareas culminadas e incompletas, con tiempo dedicado y puntualidad; aviso diario de tareas vencidas para reprogramarlas, culminarlas o descartarlas.
 
@@ -95,17 +95,17 @@ Archivo de tareas culminadas e incompletas, con tiempo dedicado y puntualidad; a
 
 Temporizador o cronómetro, con **vista flotante** siempre visible en dos tamaños. En **modo rendimiento** valoras tu concentración de 1 a 20 y Frame calcula la nota del día (AD, A, B, C); en **modo tiempo** solo cuentan los minutos frente a tu meta.
 
-Al terminar, el formulario recoge el tiempo exacto, tu enfoque, las asignaturas y tareas trabajadas y **lo que hiciste, como texto continuo o como lista** de avances. Durante la sesión puedes anotar avances con su minuto. Si Frame se cierra con una sesión en marcha, al volver el mismo día puedes retomarla.
+Al terminar, el formulario recoge el tiempo exacto, tu enfoque, las asignaturas y tareas trabajadas y **lo que hiciste, con un editor de texto con negrita, cursiva, subrayado y listas**; las asignaturas y sus tareas se eligen con tarjetas. Durante la sesión puedes anotar avances con su minuto. Si Frame se cierra con una sesión en marcha, al volver el mismo día puedes retomarla.
 
-Calendario de calificaciones con el detalle de cada jornada (incluido cuándo estudiaste: mañana, tarde o noche), progreso académico semanal o mensual y vídeos de estudio de YouTube, que se ven con su reproductor.
+Cada sesión es una tarjeta con su asignatura, su tiempo y su rendimiento, y se abre con todo su detalle. Calendario de calificaciones con el detalle de cada jornada (tiempo frente a la meta, sesiones, enfoque medio, nota y cuándo estudiaste: mañana, tarde o noche), progreso académico semanal o mensual y vídeos de estudio de YouTube, que se ven con su reproductor.
 
 ### 4.4 Análisis e informes
 
-Inicio resume tu día: clima, horario, nota de ayer, racha, promedio semanal, próxima tarea, «Tu semana en datos» y la matriz de competencias (carga pendiente por asignatura, no una medida de conocimiento). Hábitos con fases del día, anillos, semana tipo y mapa de constancia. **Cuatro informes** en PDF y Word —general, rendimiento, pendientes y hábitos—.
+La barra superior muestra frases con tus datos recientes que cambian solas. Inicio resume tu día: clima, horario, nota de ayer, racha, promedio semanal, próxima tarea, «Tu semana en datos» y la matriz de competencias (carga pendiente por asignatura, no una medida de conocimiento). Hábitos con fases del día, anillos, semana tipo y mapa de constancia. **Cuatro informes** en PDF y Word —general, rendimiento, pendientes y hábitos—, en el **Centro de informes** de la barra superior.
 
 ### 4.5 Calendario, Google y música
 
-Calendario local sin conexión con diez tipos de evento; **Gmail, Google Calendar, Classroom y YouTube** integrados en la barra lateral. Biblioteca con **tu propia música**: «Importar» trae canciones sueltas o carpetas enteras de tu equipo, con su portada y su letra (etiquetas del archivo o un .lrc con el mismo nombre), y se reproduce con letras sincronizadas, playlists y favoritas; al pulsar el nombre de la playlist en el reproductor se ubica la canción que suena. Grabación de voz desde cualquier pantalla (\`Ctrl+Shift+F\`).
+Calendario local sin conexión: eventos de uno o varios días, recordatorios con aviso, colores en las casillas y selección de varios días a la vez arrastrando; **Gmail, Google Calendar, Classroom y YouTube** integrados en la barra lateral. Biblioteca con **tu propia música**: «Importar» trae canciones sueltas o carpetas enteras de tu equipo, con su portada y su letra (etiquetas del archivo o un .lrc con el mismo nombre), y se reproduce con letras sincronizadas, playlists y favoritas; al pulsar el nombre de la playlist en el reproductor se ubica la canción que suena. Grabación de voz desde cualquier pantalla (\`Ctrl+Shift+F\`), con el límite que elijas, hasta 4 horas. Las actualizaciones muestran su peso, el tiempo estimado y el avance real antes y durante la instalación.
 
 ---
 
@@ -154,6 +154,8 @@ Se ofrece soporte para la versión estable vigente y para la inmediatamente ante
 ## 8 · Historial de versiones
 
 **${appVersion} — ${releaseDate}**
+
+*1.6.2:* **la barra superior habla de ti**: frases con tus datos recientes que cambian solas · **Centro de informes** en la barra superior · **anotaciones sin asignatura** en Inicio · **Estudio**: tarjetas de sesión con su detalle, editor de texto tipo Word, asignaturas y tareas elegidas con tarjetas · **calendario local rediseñado**: varios días a la vez, recordatorios y colores de casilla · grabaciones con el límite que elijas (hasta 4 h) · **actualizar** muestra peso, tiempo estimado y avance real · Ajustes con un menú de cuenta pequeño e «Importar de Notion» · la Ayuda guarda una conversación por cada vez que abres Frame · **corregido**: «Importar» de Música no abría el explorador («current webview is not a WebviewWindow»).
 
 *1.6.1:* **la Ayuda tiene su propia pantalla**: un botón redondo abajo a la derecha la abre a pantalla completa, con el menú y la barra superior a la vista, y Apex junto a la barra; tus preguntas quedan en «Conversaciones» · **Inicio, más ligero**: fuera la esfera · **«Enfoque» pasa a llamarse «Estudio»** en el menú · **tu música, desde tu equipo**: el botón «Importar» de Música abre el explorador de archivos para traer canciones sueltas o carpetas enteras, con su portada y su letra; Frame deja de descargar canciones, vídeos, portadas y letras · Música empieza siempre arriba de la primera carpeta de 100 al abrir Frame · Asignaturas ofrece las diez áreas del **CNEB** · las grabaciones de voz se guardan en M4A · **Frame pesa mucho menos y gasta menos procesador**: el instalador baja a una fracción del anterior y las animaciones se detienen cuando no se ven · fuera la pantalla de presentación y «Exportar música».
 

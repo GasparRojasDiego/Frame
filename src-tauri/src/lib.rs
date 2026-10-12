@@ -1116,20 +1116,32 @@ struct SavedRecording {
 /// Guarda una grabación de voz como archivo permanente, en el formato en que la
 /// grabó el motor web: M4A (AAC) donde se puede, WebM (Opus) si no. Los dos se
 /// abren con el reproductor de Windows. Devuelve la ruta final en disco.
+///
+/// El audio llega en crudo, sin base64: con 4 h de grabación, la cadena y sus
+/// copias para el IPC duplicaban la memoria. El nombre y la extensión van en
+/// cabeceras; el nombre, como cadena JSON escapada a ASCII, que es lo único
+/// que admite una cabecera.
 #[tauri::command]
 async fn save_recording(
     app_handle: tauri::AppHandle,
-    file_name: String,
-    data_base64: String,
-    ext: Option<String>,
+    request: tauri::ipc::Request<'_>,
 ) -> Result<SavedRecording, String> {
-    use base64::Engine;
-    let bytes = base64::engine::general_purpose::STANDARD
-        .decode(data_base64.as_bytes())
-        .map_err(|e| format!("Audio ilegible: {e}"))?;
-    let ext = match ext.as_deref() {
+    use serde::Deserialize;
+    let header = |name: &str| request.headers().get(name).and_then(|v| v.to_str().ok());
+    let file_name: String = header("frame-file-name")
+        .and_then(|v| serde_json::from_str(v).ok())
+        .unwrap_or_default();
+    let ext = match header("frame-ext") {
         Some("m4a") => "m4a",
         _ => "webm",
+    };
+    let bytes: std::borrow::Cow<[u8]> = match request.body() {
+        tauri::ipc::InvokeBody::Raw(bytes) => std::borrow::Cow::Borrowed(bytes.as_slice()),
+        // Sin el protocolo propio del IPC (respaldo por postMessage), los bytes
+        // llegan como una lista JSON de números.
+        tauri::ipc::InvokeBody::Json(value) => std::borrow::Cow::Owned(
+            Vec::<u8>::deserialize(value).map_err(|e| format!("Audio ilegible: {e}"))?,
+        ),
     };
 
     let dir = recordings_dir(&app_handle)?;

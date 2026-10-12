@@ -27,7 +27,11 @@ import RichNoteView from './RichNoteView';
 // siempre, legible tal cual en la nube y en Android.
 //
 // · Enter dentro de una lista crea el siguiente punto; en un punto vacío, sale.
-// · Ctrl+B / Ctrl+I / Ctrl+U dan formato; Ctrl+Z deshace; Ctrl+Enter anota.
+//   Mayús+Enter, también (el formato no tiene saltos dentro de un punto).
+// · Ctrl+B / Ctrl+I / Ctrl+U dan formato; Ctrl+Enter anota.
+// · Ctrl+Z / Ctrl+Y y los botones deshacen y rehacen SOLO la nota: lleva su
+//   propio historial, porque el del navegador es uno para toda la página y
+//   deshacía lo escrito en otro campo (el buscador de asignaturas, p. ej.).
 // ============================================================
 
 type Command = 'bold' | 'italic' | 'underline' | 'insertUnorderedList' | 'insertOrderedList';
@@ -98,11 +102,19 @@ function marksOf(element: HTMLElement, inherited: Marks): Marks {
   return marks;
 }
 
+/** El número de un punto de lista numerada: se lo queda la primera línea que
+ *  se abre dentro; si hubiera más, siguen la cuenta al guardarse. */
+type NumberSlot = { number?: number };
+
 function domToLines(root: HTMLElement): RichLine[] {
   const lines: RichLine[] = [];
   const cursor: { line: RichLine | null } = { line: null };
-  const open = (kind: RichLineKind) => {
+  const open = (kind: RichLineKind, slot: NumberSlot | null) => {
     const line: RichLine = { kind, runs: [] };
+    if (kind === 'number' && slot?.number !== undefined) {
+      line.number = slot.number;
+      slot.number = undefined;
+    }
     lines.push(line);
     cursor.line = line;
     return line;
@@ -111,16 +123,16 @@ function domToLines(root: HTMLElement): RichLine[] {
     cursor.line = null;
   };
 
-  const walk = (node: Node, marks: Marks, kind: RichLineKind) => {
+  const walk = (node: Node, marks: Marks, kind: RichLineKind, slot: NumberSlot | null) => {
     if (node.nodeType === Node.TEXT_NODE) {
       // Un «\n» suelto (texto con white-space: pre-wrap) también parte la línea.
       const parts = (node.nodeValue ?? '').replace(HARD_SPACE, ' ').replace(ZERO_WIDTH, '').split('\n');
       parts.forEach((part, index) => {
         if (index > 0) {
           close();
-          if (!part && index < parts.length - 1) open(kind);
+          if (!part && index < parts.length - 1) open(kind, slot);
         }
-        if (part) appendRun(cursor.line ?? open(kind), part, marks);
+        if (part) appendRun(cursor.line ?? open(kind, slot), part, marks);
       });
       return;
     }
@@ -129,7 +141,7 @@ function domToLines(root: HTMLElement): RichLine[] {
     const tag = element.tagName;
     if (SKIP_TAGS.has(tag)) return;
     if (tag === 'BR') {
-      if (!cursor.line) open(kind); // un salto sin texto antes es una línea vacía
+      if (!cursor.line) open(kind, slot); // un salto sin texto antes es una línea vacía
       close();
       return;
     }
@@ -139,15 +151,24 @@ function domToLines(root: HTMLElement): RichLine[] {
     const block = BLOCK_TAGS.has(tag);
     if (block) close();
     const before = lines.length;
-    element.childNodes.forEach((child) =>
-      walk(child, nextMarks, tag === 'LI' && nextKind === 'text' ? 'bullet' : nextKind)
-    );
+    // Cada punto numerado lleva el número que se ve: el `start` de su lista
+    // (o el `value` del punto) y de ahí en adelante.
+    let counter = tag === 'OL' ? (element as HTMLOListElement).start : 1;
+    element.childNodes.forEach((child) => {
+      let childSlot = tag === 'OL' || tag === 'UL' ? null : slot;
+      if (tag === 'OL' && child.nodeName === 'LI') {
+        const item = child as HTMLLIElement;
+        if (item.hasAttribute('value')) counter = item.value;
+        childSlot = { number: counter++ };
+      }
+      walk(child, nextMarks, tag === 'LI' && nextKind === 'text' ? 'bullet' : nextKind, childSlot);
+    });
     // Un punto de lista vacío sigue siendo un punto.
-    if (tag === 'LI' && lines.length === before) open(nextKind === 'text' ? 'bullet' : nextKind);
+    if (tag === 'LI' && lines.length === before) open(nextKind === 'text' ? 'bullet' : nextKind, slot);
     if (block) close();
   };
 
-  root.childNodes.forEach((child) => walk(child, {}, 'text'));
+  root.childNodes.forEach((child) => walk(child, {}, 'text', null));
   return lines;
 }
 
@@ -181,6 +202,8 @@ function renderLines(root: HTMLElement, lines: RichLine[]) {
   root.replaceChildren();
   let list: HTMLElement | null = null;
   let listKind: RichLineKind | null = null;
+  /** Número que tocaría al siguiente punto de la lista numerada abierta. */
+  let expected = 1;
   for (const line of lines) {
     if (line.kind === 'text') {
       list = null;
@@ -190,11 +213,17 @@ function renderLines(root: HTMLElement, lines: RichLine[]) {
       root.appendChild(row);
       continue;
     }
-    if (!list || listKind !== line.kind) {
+    // El número escrito se respeta con el `start` de la lista (no con el
+    // `value` de cada punto: Enter clona el punto con sus atributos). Si la
+    // cuenta salta («3.» y luego «7.»), empieza otra lista en su número.
+    const number = line.kind === 'number' ? (line.number ?? (listKind === 'number' ? expected : 1)) : 0;
+    if (!list || listKind !== line.kind || (line.kind === 'number' && number !== expected)) {
       list = document.createElement(line.kind === 'bullet' ? 'ul' : 'ol');
+      if (line.kind === 'number' && number !== 1) list.setAttribute('start', String(number));
       listKind = line.kind;
       root.appendChild(list);
     }
+    expected = number + 1;
     const item = document.createElement('li');
     fillRuns(item, line.runs);
     list.appendChild(item);
@@ -213,6 +242,48 @@ function caretToEnd(element: HTMLElement) {
   selection.removeAllRanges();
   selection.addRange(range);
 }
+
+/** Dónde está el cursor, en caracteres de texto desde el principio (null: fuera). */
+function caretOffset(root: HTMLElement): number | null {
+  const selection = window.getSelection();
+  const node = selection?.focusNode;
+  if (!selection || !node || !root.contains(node)) return null;
+  try {
+    const range = document.createRange();
+    range.selectNodeContents(root);
+    range.setEnd(node, selection.focusOffset);
+    return range.toString().length;
+  } catch {
+    return null;
+  }
+}
+
+/** Pone el cursor a `offset` caracteres del principio (o al final). */
+function placeCaret(root: HTMLElement, offset: number | null) {
+  const selection = window.getSelection();
+  if (offset === null || !selection) return caretToEnd(root);
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let left = offset;
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const length = node.nodeValue?.length ?? 0;
+    if (left <= length) {
+      const range = document.createRange();
+      range.setStart(node, left);
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      return;
+    }
+    left -= length;
+  }
+  caretToEnd(root);
+}
+
+/** Un estado de la nota en el historial: su valor y dónde quedó el cursor. */
+type Snapshot = { value: string; caret: number | null };
+const HISTORY_LIMIT = 200;
+/** Lo tecleado seguido (sin pausas de más de esto) es un solo paso de deshacer. */
+const TYPING_PAUSE_MS = 1000;
 
 /** ¿El nodo de texto abre su línea? (nada escrito antes dentro del mismo bloque) */
 function startsLine(node: Node, root: HTMLElement): boolean {
@@ -253,6 +324,8 @@ export default function NoteEditor({
   hint = null,
   toolbarEnd,
   className,
+  ariaLabel,
+  ariaLabelledBy,
 }: {
   id?: string;
   value: string;
@@ -269,6 +342,11 @@ export default function NoteEditor({
   /** Lo que va a la derecha de la barra, en lugar del texto breve. */
   toolbarEnd?: ReactNode;
   className?: string;
+  /** Nombre del cuadro para lectores de pantalla (si no, el `placeholder`).
+   *  Un `<label htmlFor>` no nombra a un `contentEditable`. */
+  ariaLabel?: string;
+  /** Id del elemento que lo nombra (la etiqueta visible); manda sobre `ariaLabel`. */
+  ariaLabelledBy?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   /** Último valor que salió de aquí: si el padre lo devuelve igual, el DOM no
@@ -280,24 +358,70 @@ export default function NoteEditor({
   const [active, setActive] = useState<ActiveState>(NOTHING_ACTIVE);
   const [empty, setEmpty] = useState(() => value.trim() === '');
 
-  // Valor de fuera (al abrir o al vaciarse tras anotar) → DOM.
+  // Historial propio de la nota (ver la cabecera): `present` es el estado
+  // actual; `past` y `future`, lo que deshacer y rehacer. `group` y `at`
+  // juntan lo tecleado seguido en un solo paso.
+  const present = useRef<Snapshot>({ value: '', caret: null });
+  const history = useRef({ past: [] as Snapshot[], future: [] as Snapshot[], group: null as string | null, at: 0 });
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+  const syncHistory = useCallback(() => {
+    setCanUndo(history.current.past.length > 0);
+    setCanRedo(history.current.future.length > 0);
+  }, []);
+  /** Mientras se encadenan órdenes al DOM (pegar, convertir en lista…), sus
+   *  `input` no se anotan uno a uno: se emite una vez al terminar. */
+  const quiet = useRef(false);
+  const quietly = (run: () => void) => {
+    quiet.current = true;
+    try {
+      run();
+    } finally {
+      quiet.current = false;
+    }
+  };
+  /** El arrastre empezó dentro de la nota: soltarlo en ella es MOVER. */
+  const dragFromInside = useRef(false);
+
+  // Valor de fuera (al abrir o al vaciarse tras anotar) → DOM. Es otra nota:
+  // el historial empieza de cero.
   useLayoutEffect(() => {
     const element = ref.current;
     if (!element || value === emitted.current) return;
     renderLines(element, parseRichNote(value));
     emitted.current = value;
     setEmpty(isDomEmpty(element));
-  }, [value]);
+    present.current = { value, caret: null };
+    history.current = { past: [], future: [], group: null, at: 0 };
+    syncHistory();
+  }, [value, syncHistory]);
 
-  const emit = useCallback(() => {
-    const element = ref.current;
-    if (!element) return;
-    setEmpty(isDomEmpty(element));
-    const next = serializeRichNote(domToLines(element));
-    if (next === emitted.current) return;
-    emitted.current = next;
-    onChangeRef.current(next);
-  }, []);
+  /** DOM → valor, y un paso más en el historial. `group` junta lo tecleado
+   *  seguido; `boundary` (un espacio) abre paso nuevo, como en Word. */
+  const emit = useCallback(
+    (group: string | null = null, boundary = false) => {
+      const element = ref.current;
+      if (!element) return;
+      setEmpty(isDomEmpty(element));
+      const next = serializeRichNote(domToLines(element));
+      if (next === emitted.current) return;
+      const h = history.current;
+      const now = Date.now();
+      const sameStep = group !== null && !boundary && h.group === group && now - h.at < TYPING_PAUSE_MS;
+      if (!sameStep) {
+        h.past.push(present.current);
+        if (h.past.length > HISTORY_LIMIT) h.past.shift();
+      }
+      h.future = [];
+      h.group = group;
+      h.at = now;
+      present.current = { value: next, caret: caretOffset(element) };
+      syncHistory();
+      emitted.current = next;
+      onChangeRef.current(next);
+    },
+    [syncHistory]
+  );
 
   /** Botones encendidos según dónde esté el cursor, como en Word. */
   const refreshActive = useCallback(() => {
@@ -335,16 +459,64 @@ export default function NoteEditor({
     return () => cancelAnimationFrame(frame);
   }, [autoFocus]);
 
+  /** Deshacer / rehacer con el historial de la nota: se repinta el estado
+   *  guardado y el cursor vuelve a donde estaba entonces. */
+  const travel = useCallback(
+    (direction: 'undo' | 'redo') => {
+      const element = ref.current;
+      if (!element) return;
+      const h = history.current;
+      const target = direction === 'undo' ? h.past.pop() : h.future.pop();
+      if (!target) return;
+      (direction === 'undo' ? h.future : h.past).push(present.current);
+      h.group = null;
+      present.current = target;
+      renderLines(element, parseRichNote(target.value));
+      emitted.current = target.value;
+      setEmpty(isDomEmpty(element));
+      if (document.activeElement !== element) element.focus();
+      placeCaret(element, target.caret);
+      syncHistory();
+      onChangeRef.current(target.value);
+      refreshActive();
+    },
+    [refreshActive, syncHistory]
+  );
+
+  // Deshacer desde el menú del clic derecho: también con el historial propio.
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const onBeforeInput = (event: InputEvent) => {
+      if (event.inputType !== 'historyUndo' && event.inputType !== 'historyRedo') return;
+      event.preventDefault();
+      travel(event.inputType === 'historyUndo' ? 'undo' : 'redo');
+    };
+    element.addEventListener('beforeinput', onBeforeInput);
+    return () => element.removeEventListener('beforeinput', onBeforeInput);
+  }, [travel]);
+
   const exec = (command: Command | 'undo' | 'redo') => {
+    if (command === 'undo' || command === 'redo') return travel(command);
     const element = ref.current;
     if (!element) return;
     if (document.activeElement !== element) {
       element.focus();
       caretToEnd(element);
     }
-    document.execCommand(command, false);
+    quietly(() => document.execCommand(command, false));
     emit();
     refreshActive();
+  };
+
+  /** ¿El cursor está dentro de un punto de lista de esta nota? */
+  const caretInListItem = () => {
+    const element = ref.current;
+    const node = window.getSelection()?.anchorNode;
+    if (!element || !node || !element.contains(node)) return false;
+    const from = node.nodeType === Node.ELEMENT_NODE ? (node as Element) : node.parentElement;
+    const item = from?.closest('li');
+    return !!item && element.contains(item);
   };
 
   /** «- », «* » o «1. » al principio de una línea: se convierte en lista. */
@@ -372,16 +544,43 @@ export default function NoteEditor({
   };
 
   const handleInput = (event: React.FormEvent<HTMLDivElement>) => {
+    if (quiet.current) return;
     const native = event.nativeEvent as InputEvent;
-    if (native.inputType === 'insertText' && native.data === ' ') autoList();
-    emit();
+    const type = native.inputType ?? '';
+    if (type === 'insertText' && native.data === ' ') quietly(autoList);
+    // Teclear y borrar seguido se deshace de una vez; mover arrastrando
+    // (quitar de un sitio y poner en otro), también.
+    const group =
+      type === 'insertText' || type === 'insertCompositionText'
+        ? 'insert'
+        : type === 'deleteContentBackward' || type === 'deleteContentForward'
+          ? 'delete'
+          : type === 'deleteByDrag' || type === 'insertFromDrop'
+            ? 'drag'
+            : null;
+    emit(group, native.data === ' ');
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+    const mod = event.ctrlKey || event.metaKey;
+    if (event.key === 'Enter' && mod) {
       event.preventDefault();
       emit();
       onSubmit?.();
+      return;
+    }
+    const key = event.key.toLowerCase();
+    if (mod && !event.altKey && (key === 'z' || key === 'y')) {
+      event.preventDefault();
+      travel(key === 'y' || event.shiftKey ? 'redo' : 'undo');
+      return;
+    }
+    // Mayús+Enter dentro de una lista: otro punto, como Enter. Un salto dentro
+    // del mismo punto se guardaría como dos (el formato no tiene otro modo), y
+    // lo que se ve tiene que ser lo que se guarda.
+    if (event.key === 'Enter' && event.shiftKey && !mod && caretInListItem()) {
+      event.preventDefault();
+      document.execCommand('insertParagraph');
       return;
     }
     if (event.key === 'Escape' && onCancel) {
@@ -392,11 +591,18 @@ export default function NoteEditor({
 
   const handlePaste = (event: React.ClipboardEvent<HTMLDivElement>) => {
     event.preventDefault();
-    insertPlainText(event.clipboardData.getData('text/plain'));
+    quietly(() => insertPlainText(event.clipboardData.getData('text/plain')));
     emit();
   };
 
   const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    if (dragFromInside.current) {
+      // Mover dentro de la propia nota: lo hace el navegador (quita el texto
+      // de donde estaba y lo pone, con su formato, donde se suelta). Lo que
+      // quede en el DOM se sanea al emitir.
+      dragFromInside.current = false;
+      return;
+    }
     event.preventDefault();
     const text = event.dataTransfer.getData('text/plain');
     if (!text) return;
@@ -409,7 +615,7 @@ export default function NoteEditor({
       selection?.removeAllRanges();
       selection?.addRange(range);
     }
-    insertPlainText(text);
+    quietly(() => insertPlainText(text));
     emit();
   };
 
@@ -417,18 +623,25 @@ export default function NoteEditor({
   // del doble: a partir de ahí, scroll dentro del recuadro.
   const minHeight = Math.round(rows * (dense ? 15 : 22.75) + (dense ? 14 : 18));
 
-  const tool = (command: Command | 'undo' | 'redo', label: string, Icon: LucideIcon, pressed?: boolean) => (
+  const tool = (
+    command: Command | 'undo' | 'redo',
+    label: string,
+    Icon: LucideIcon,
+    pressed?: boolean,
+    disabled = false
+  ) => (
     <button
       type="button"
       tabIndex={-1}
       title={label}
       aria-label={label}
       aria-pressed={pressed}
+      disabled={disabled}
       // Sin robar el foco al texto: la selección se queda donde estaba.
       onMouseDown={(event) => event.preventDefault()}
       onClick={() => exec(command)}
       className={cn(
-        'flex shrink-0 items-center justify-center rounded transition-colors',
+        'flex shrink-0 items-center justify-center rounded transition-colors disabled:pointer-events-none disabled:opacity-40',
         dense ? 'h-5 w-5' : 'h-6 w-6',
         pressed ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-background hover:text-foreground'
       )}
@@ -453,8 +666,8 @@ export default function NoteEditor({
           {tool('insertUnorderedList', 'Lista con viñetas', List, active.insertUnorderedList)}
           {tool('insertOrderedList', 'Lista numerada', ListOrdered, active.insertOrderedList)}
           {divider}
-          {tool('undo', 'Deshacer (Ctrl+Z)', Undo2)}
-          {tool('redo', 'Rehacer (Ctrl+Y)', Redo2)}
+          {tool('undo', 'Deshacer (Ctrl+Z)', Undo2, undefined, !canUndo)}
+          {tool('redo', 'Rehacer (Ctrl+Y)', Redo2, undefined, !canRedo)}
         </div>
         {toolbarEnd ??
           (hint && <span className={cn('text-muted-foreground', dense ? 'text-[9px]' : 'text-[10px]')}>{hint}</span>)}
@@ -466,6 +679,8 @@ export default function NoteEditor({
           ref={ref}
           role="textbox"
           aria-multiline="true"
+          aria-label={ariaLabelledBy ? undefined : (ariaLabel ?? placeholder)}
+          aria-labelledby={ariaLabelledBy}
           aria-placeholder={placeholder}
           contentEditable
           suppressContentEditableWarning
@@ -478,6 +693,12 @@ export default function NoteEditor({
           onFocus={refreshActive}
           onBlur={() => setActive(NOTHING_ACTIVE)}
           onPaste={handlePaste}
+          onDragStart={() => {
+            dragFromInside.current = true;
+          }}
+          onDragEnd={() => {
+            dragFromInside.current = false;
+          }}
           onDrop={handleDrop}
           style={{ minHeight, maxHeight: Math.round(minHeight * 2.4) }}
           className={cn(

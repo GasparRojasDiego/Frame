@@ -171,6 +171,7 @@ export default function SessionNoteDialog({
           {/* Se escribe directamente; el enfoque, arriba a la derecha. */}
           <NoteEditor
             id="session-note-text"
+            ariaLabel="Avance de la sesión"
             value={text}
             onChange={setText}
             onSubmit={save}

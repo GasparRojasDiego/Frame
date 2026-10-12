@@ -366,6 +366,7 @@ export default function MiniTimerCard() {
               </span>
             </div>
             <NoteEditor
+              ariaLabel="Avance de la sesión"
               value={noteText}
               onChange={setNoteText}
               onSubmit={submitNote}

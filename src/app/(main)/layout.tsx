@@ -49,6 +49,7 @@ import { clearSessionLost, markSessionLost } from '@/lib/connection-status';
 import ConnectionNotice from '@/components/layout/ConnectionNotice';
 import { consumeIntentionalSignOut } from '@/lib/supabase/auth';
 import { startUpdaterLoop, setUpdateBusyGuard } from '@/lib/updater';
+import { isRecorderBusy } from '@/lib/recordings';
 import { onStorageQuotaError } from '@/lib/safe-storage';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { getImage } from '@/lib/music-db';
@@ -135,11 +136,13 @@ function AppLayout({ children, userProfile }: { children: ReactNode; userProfile
         return () => onStorageQuotaError(null);
     }, [toast]);
 
-    // Nada de reiniciar para actualizar mientras el usuario está estudiando o
-    // escuchando música: el actualizador lo consulta antes de instalar (y el
-    // recuadro de actualización no deja confirmar mientras dure).
+    // Nada de reiniciar para actualizar mientras el usuario está estudiando,
+    // escuchando música o con una grabación a medias: el actualizador lo
+    // consulta antes de instalar (y el recuadro de actualización no deja
+    // confirmar mientras dure). La grabadora se lee en el momento: su estado
+    // vive fuera de React.
     useEffect(() => {
-        setUpdateBusyGuard(() => isTimerActive || isPlaying);
+        setUpdateBusyGuard(() => isTimerActive || isPlaying || isRecorderBusy());
         return () => setUpdateBusyGuard(null);
     }, [isTimerActive, isPlaying]);
 
@@ -541,7 +544,7 @@ function AppController({ children }: { children: React.ReactNode }) {
         const guest = findGuestToAdopt(user.id);
         if (guest) {
           const bring = window.confirm(
-            `En este equipo usaste Frame como invitado${guest.username ? ` («${guest.username}»)` : ''} y hay asignaturas, tareas o sesiones guardadas.\n\n¿Quieres sumarlas a tu cuenta?\n\nAceptar: se suman a tu cuenta (sin borrar nada de lo que ya tenía) y se respaldan en la nube.\nCancelar: tu cuenta sigue como está (los datos de invitado no se borran).`
+            `En este equipo usaste Frame como invitado${guest.username ? ` («${guest.username}»)` : ''} y hay datos guardados (asignaturas, tareas, sesiones, anotaciones, grabaciones o el calendario).\n\n¿Quieres sumarlas a tu cuenta?\n\nAceptar: se suman a tu cuenta (sin borrar nada de lo que ya tenía) y se respaldan en la nube.\nCancelar: tu cuenta sigue como está (los datos de invitado no se borran).`
           );
           rememberAdoptionAnswer(user.id);
           if (bring) {

@@ -419,7 +419,7 @@ export interface ClearPlan {
   add: Omit<LocalCalendarEvent, 'id'>[];
   /** Días con color propio que se olvidan. */
   colorDays: string[];
-  /** Eventos tocados (borrados o recortados), para el aviso. */
+  /** Eventos tocados: borrados (`remove`) más recortados o partidos (`update`). */
   eventCount: number;
 }
 
@@ -428,11 +428,16 @@ export interface ClearPlan {
  * tocar nada fuera de él: un evento que asoma por un lado se recorta, y uno
  * que cubre el rango por los dos lados se parte en dos. Las tareas no son del
  * calendario y no se tocan.
+ *
+ * `todayKey` decide qué parte de un evento partido conserva su id: la que
+ * tiene los avisos de hoy y mañana, porque la marca de «aviso ya dado» va por
+ * id y una copia con id nuevo lo repetiría.
  */
 export function planClear(
   events: LocalCalendarEvent[],
   dayColors: CalendarDayColor[],
-  range: DayRange
+  range: DayRange,
+  todayKey?: string
 ): ClearPlan {
   const { start: s, end: e } = range;
   const plan: ClearPlan = { remove: [], update: [], add: [], colorDays: [], eventCount: 0 };
@@ -451,12 +456,16 @@ export function planClear(
       const from = addDays(e, 1);
       plan.update.push({ id: event.id, changes: { date: from, endDate: single(from, b) } });
     } else {
-      // Cubre el rango por los dos lados: queda la parte de antes y nace una
-      // copia con la de después.
+      // Cubre el rango por los dos lados: una parte se queda con el evento y
+      // la otra nace como copia. Normalmente se queda la de antes; si la de
+      // después empieza mañana o antes, la de antes ya pasó y se queda esa.
       const from = addDays(e, 1);
-      plan.update.push({ id: event.id, changes: { endDate: single(a, addDays(s, -1)) } });
+      const before = { endDate: single(a, addDays(s, -1)) };
+      const after = { date: from, endDate: single(from, b) };
+      const keepAfter = !!todayKey && from <= addDays(todayKey, 1);
       const { id: _id, ...rest } = event;
-      plan.add.push({ ...rest, date: from, endDate: single(from, b) });
+      plan.update.push({ id: event.id, changes: keepAfter ? after : before });
+      plan.add.push({ ...rest, ...(keepAfter ? before : after) });
     }
   }
   for (const { id } of dayColors) if (id >= s && id <= e) plan.colorDays.push(id);

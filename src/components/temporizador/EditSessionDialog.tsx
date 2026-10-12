@@ -185,6 +185,7 @@ export default function EditSessionDialog({
           <div className="space-y-1 pt-3 text-left">
             {/* El editor es un `contentEditable`: el `htmlFor` no lo enfoca solo. */}
             <Label
+              id="edit-session-notes-label"
               htmlFor="edit-session-notes"
               onClick={() => document.getElementById('edit-session-notes')?.focus()}
               className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground"
@@ -196,6 +197,7 @@ export default function EditSessionDialog({
             {/* El mismo editor con formato del cierre de sesión. */}
             <NoteEditor
               id="edit-session-notes"
+              ariaLabelledBy="edit-session-notes-label"
               value={notes}
               onChange={setNotes}
               placeholder="Resolví los ejercicios 12 al 20; me atasqué en la derivada de la cadena…"

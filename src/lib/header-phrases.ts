@@ -3,7 +3,8 @@ import { es } from 'date-fns/locale';
 import { GOAL_DAY_KEYS, UNASSIGNED_SUBJECT } from '@/lib/academic-metrics';
 import { sessionSeconds } from '@/lib/duration';
 import { isScheduled } from '@/lib/habit-schedule';
-import type { ArchivedTask, Course, DailyPerformance, Habit, StudyGoals, StudySession, Task } from '@/types';
+import { currentStreak } from '@/lib/streak';
+import type { ArchivedTask, Course, DailyPerformance, Habit, StreakGoal, StudyGoals, StudySession, Task } from '@/types';
 
 // ============================================================
 // Las frases de la barra superior.
@@ -37,6 +38,8 @@ export interface PhraseData {
   habits: Habit[];
   studyGoals: StudyGoals | null | undefined;
   dailyPerformances: DailyPerformance[];
+  /** Meta de racha de Ajustes: sin ella no hay frase de racha. */
+  streakGoal?: StreakGoal | null;
 }
 
 /** Marca de tiempo de un ISO, o NaN si viene corrupto de localStorage. */
@@ -102,14 +105,12 @@ export function buildHeaderPhrases(data: PhraseData): HeaderPhrase[] {
   let weekMin = 0;
   let lastWeekMin = 0;
   const weekBySubject = new Map<string, number>();
-  const studiedDays = new Set<string>();
 
   for (const session of data.studySessions ?? []) {
     const t = timeOf(session.startTime);
     if (!Number.isFinite(t)) continue;
     const minutes = sessionSeconds(session) / 60;
     if (minutes <= 0) continue;
-    studiedDays.add(dayKey(new Date(t)));
     if (inRange(t, todayStart, tomorrowStart)) todayMin += minutes;
     if (inRange(t, yesterdayStart, todayStart)) yesterdayMin += minutes;
     if (inRange(t, lastWeekStart, weekStart)) lastWeekMin += minutes;
@@ -157,12 +158,16 @@ export function buildHeaderPhrases(data: PhraseData): HeaderPhrase[] {
     }
   }
 
-  // --- Días seguidos con estudio, contando desde hoy o, si hoy aún no, desde ayer ---
-  let streak = 0;
-  for (let cursor = studiedDays.has(todayKey) ? today : subDays(today, 1); studiedDays.has(dayKey(cursor)); cursor = subDays(cursor, 1)) {
-    streak += 1;
-    if (streak > 366) break;
-  }
+  // --- Racha: la misma regla que «Días de racha» de Inicio (meta de racha) ---
+  const streak = data.streakGoal
+    ? currentStreak({
+        now,
+        streakGoal: data.streakGoal,
+        studySessions: data.studySessions ?? [],
+        dailyPerformances: data.dailyPerformances ?? [],
+        studyGoals: data.studyGoals,
+      })
+    : 0;
 
   const phrases: HeaderPhrase[] = [];
   const push = (id: string, text: string | false | null | undefined) => {
@@ -180,10 +185,12 @@ export function buildHeaderPhrases(data: PhraseData): HeaderPhrase[] {
   // 2. Hoy.
   push('estudio-hoy', todayMin >= 1 && `Hoy llevas ${spanLabel(todayMin)} de estudio`);
   const goal = data.studyGoals?.[GOAL_DAY_KEYS[now.getDay()]] ?? 0;
+  // Sin nada estudiado hoy, la meta no es un dato: acompaña a las demás frases
+  // en este puesto, pero sola no tapa el saludo (las metas vienen puestas).
+  const bareGoalAt = goal > 0 && todayMin < 1 ? phrases.length : -1;
   if (goal > 0) {
     if (todayMin >= goal) push('meta-hoy', `Meta de hoy cumplida: ${spanLabel(goal)}`);
     else if (todayMin >= 1) push('meta-hoy', `Te faltan ${spanLabel(Math.max(1, goal - todayMin))} para tu meta de hoy`);
-    else push('meta-hoy', `Tu meta de hoy: ${spanLabel(goal)} de estudio`);
   }
   push(
     'tareas-hoy',
@@ -199,7 +206,7 @@ export function buildHeaderPhrases(data: PhraseData): HeaderPhrase[] {
         : `${habitsDoneToday} de ${habitsToday.length} hábitos de hoy hechos`
     );
   }
-  push('racha', streak >= 2 && `${streak} días seguidos estudiando`);
+  push('racha', streak >= 2 && `Llevas ${streak} días de racha`);
 
   // 3. Esta semana (sin repetir lo que ya dijo «hoy», p. ej. un lunes).
   push('estudio-semana', weekMin - todayMin >= 1 && `Esta semana llevas ${spanLabel(weekMin)} de estudio`);
@@ -207,10 +214,13 @@ export function buildHeaderPhrases(data: PhraseData): HeaderPhrase[] {
     'tareas-semana',
     doneWeek > doneToday && `${doneWeek} ${plural(doneWeek, 'tarea culminada', 'tareas culminadas')} esta semana`
   );
+  // Cuenta marcas (un hábito marcado cinco días son cinco), no hábitos.
   push(
     'habitos-semana',
     habitChecksWeek > habitsDoneToday &&
-      `${habitChecksWeek} ${plural(habitChecksWeek, 'hábito marcado', 'hábitos marcados')} esta semana`
+      (habitChecksWeek === 1
+        ? 'Esta semana ya marcaste un hábito'
+        : `Esta semana marcaste tus hábitos ${habitChecksWeek} veces`)
   );
   const [topSubject, topMinutes] =
     [...weekBySubject.entries()]
@@ -236,5 +246,7 @@ export function buildHeaderPhrases(data: PhraseData): HeaderPhrase[] {
       `La semana pasada culminaste ${doneLastWeek} ${plural(doneLastWeek, 'tarea', 'tareas')}`
   );
 
-  return phrases.length > 0 ? phrases : [greetingPhrase(now, data.name)];
+  if (phrases.length === 0) return [greetingPhrase(now, data.name)];
+  if (bareGoalAt >= 0) phrases.splice(bareGoalAt, 0, { id: 'meta-hoy', text: `Tu meta de hoy: ${spanLabel(goal)} de estudio` });
+  return phrases;
 }

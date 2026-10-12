@@ -35,6 +35,12 @@ export interface SessionSubject {
 /**
  * Asignaturas de la sesión en el orden en que se marcaron. Las sesiones
  * antiguas no guardan el id, solo el nombre: se resuelven por nombre.
+ *
+ * Los ids y los nombres NO se emparejan por posición: hasta la 1.6.2 el
+ * cierre de sesión guardaba los ids en el orden de marcado y los nombres en
+ * el del catálogo. Primero se resuelven los ids; a los que ya no existen (una
+ * asignatura borrada) les tocan los nombres que no son de ninguna asignatura
+ * ya encontrada, prefiriendo el de su misma posición si está entre ellos.
  */
 export function sessionSubjects(session: StudySession, courses: Course[]): SessionSubject[] {
   const names = session.subjects ?? [];
@@ -42,14 +48,23 @@ export function sessionSubjects(session: StudySession, courses: Course[]): Sessi
   const out: SessionSubject[] = [];
   const seen = new Set<string>();
 
+  const byId = ids.map((id) => (id ? courses.find((c) => c.id === id) ?? null : null));
+  const found = new Set(byId.flatMap((course) => (course ? [course.name] : [])));
+  const spare = names.filter((name) => !found.has(name));
+  const takeSpare = (index: number): string | undefined => {
+    const same = spare.indexOf(names[index]);
+    return spare.length > 0 ? spare.splice(same >= 0 ? same : 0, 1)[0] : undefined;
+  };
+
   const longest = Math.max(names.length, ids.length);
   for (let index = 0; index < longest; index++) {
     const id = ids[index];
-    const name = names[index];
-    const course =
-      (id ? courses.find((c) => c.id === id) : undefined) ??
-      (name ? courses.find((c) => c.name === name) : undefined) ??
-      null;
+    let course = byId[index] ?? null;
+    let name: string | undefined;
+    if (!course) {
+      name = takeSpare(index);
+      course = (name ? courses.find((c) => c.name === name) : undefined) ?? null;
+    }
     const key = course?.id ?? id ?? `name:${name ?? index}`;
     if (seen.has(key)) continue;
     seen.add(key);

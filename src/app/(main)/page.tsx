@@ -16,7 +16,6 @@ import {
   isWithinInterval,
   startOfWeek,
   endOfWeek,
-  isSameDay,
   differenceInCalendarDays,
   startOfToday,
   addDays,
@@ -28,6 +27,7 @@ import { saveImage } from '@/lib/music-db';
 import { useStoredImage } from '@/hooks/use-stored-image';
 import { sessionSeconds } from '@/lib/duration';
 import { GOAL_DAY_KEYS, gradeForScore } from '@/lib/academic-metrics';
+import { currentStreak } from '@/lib/streak';
 import RecordingsSection from '@/components/recordings/RecordingsSection';
 import InboxTasksSection from '@/components/tasks/InboxTasksSection';
 import AcademicPulse from '@/components/dashboard/AcademicPulse';
@@ -386,84 +386,8 @@ export default function HomePage() {
           setWeeklyAverageScore(null);
       }
 
-      // 3. Streak
-      if (streakGoal) {
-          const perfMap = new Map(dailyPerformances.map(p => [p.date, p]));
-          const sessionMap = new Map<string, number>();
-          studySessions.forEach(session => {
-              const dateStr = localDayKey(session.startTime);
-              const currentMins = sessionMap.get(dateStr) || 0;
-              sessionMap.set(dateStr, currentMins + session.duration);
-          });
-          
-          const gradeValues: Record<string, number> = { 'C':0, 'B': 1, 'A': 2, 'AD': 3 };
-          const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
-
-          let currentStreak = 0;
-          let dayToCheck = now;
-          let isStreakGoing = true;
-
-          for (let i = 0; i < 365 && isStreakGoing; i++) {
-              const dateStr = format(dayToCheck, 'yyyy-MM-dd');
-              let dayGoalMet = false;
-
-              if (isSameDay(dayToCheck, now)) {
-                  // --- Live calculation for today ---
-                  if (streakGoal.mode === 'tiempo') {
-                      const totalMinsToday = sessionMap.get(dateStr) || 0;
-                      if (totalMinsToday >= streakGoal.minutes) {
-                          dayGoalMet = true;
-                      }
-                  } else { // rendimiento mode
-                      const todaysPerfSessions = studySessions.filter(s => localDayKey(s.startTime) === dateStr && s.mode === 'rendimiento');
-                      if (todaysPerfSessions.length > 0) {
-                          const totalMinutes = todaysPerfSessions.reduce((acc, s) => acc + s.duration, 0);
-                          const totalPerception = todaysPerfSessions.reduce((acc, s) => acc + s.perception, 0);
-                          const pAvg = totalPerception / todaysPerfSessions.length;
-                          
-                          const todayKey = dayKeys[dayToCheck.getDay()];
-                          const tObj = studyGoals[todayKey] || 0;
-
-                          if (tObj > 0) {
-                              const rDiarioRaw = pAvg * (totalMinutes / tObj);
-                              const rDiario = Math.min(20, rDiarioRaw);
-                              const grade = getGrade(rDiario);
-                              if (gradeValues[grade] >= gradeValues[streakGoal.grade]) {
-                                  dayGoalMet = true;
-                              }
-                          }
-                      }
-                  }
-              } else {
-                  // --- Use stored data for past days ---
-                  if (streakGoal.mode === 'tiempo') {
-                      const totalMinsPastDay = sessionMap.get(dateStr) || 0;
-                      if (totalMinsPastDay >= streakGoal.minutes) {
-                          dayGoalMet = true;
-                      }
-                  } else { // rendimiento mode
-                      const perf = perfMap.get(dateStr);
-                      if (perf && gradeValues[perf.grade] >= gradeValues[streakGoal.grade]) {
-                          dayGoalMet = true;
-                      }
-                  }
-              }
-
-              if (dayGoalMet) {
-                  currentStreak++;
-                  dayToCheck = subDays(dayToCheck, 1);
-              } else if (isSameDay(dayToCheck, now)) {
-                  // El día de hoy todavía está en juego: no cuenta, pero tampoco
-                  // rompe. La racha se rompe por un día PASADO sin cumplir.
-                  dayToCheck = subDays(dayToCheck, 1);
-              } else {
-                  isStreakGoing = false;
-              }
-          }
-          setStreak(currentStreak);
-      } else {
-        setStreak(0);
-      }
+      // 3. Streak (la misma regla que la frase de la barra superior)
+      setStreak(streakGoal ? currentStreak({ now, streakGoal, studySessions, dailyPerformances, studyGoals }) : 0);
     } else {
       setYesterdayPerformance(null);
       setYesterdayStudyTime(0);

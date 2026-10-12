@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ElementType, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ElementType, type ReactNode } from 'react';
 import {
   Check,
   CircleAlert,
@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import EchoWord from '@/components/shared/EchoWord';
 import { useUpdateState } from '@/components/layout/UpdateBadge';
 import { useCourse } from '@/context/CourseContext';
+import { isRecorderBusy, subscribeRecorderBusy } from '@/lib/recordings';
 import {
   closeUpdateDialog,
   estimateUpdate,
@@ -40,8 +41,9 @@ import { cn } from '@/lib/utils';
 // descarga, el paso en curso y el tiempo restante, que se recalcula en vivo
 // con la velocidad medida (ver «Estimación» en lib/updater.ts).
 //
-// Con una sesión de estudio en marcha o música sonando no deja actualizar:
-// el reinicio las cortaría. Lo dice y el botón vuelve en cuanto se liberan.
+// Con una sesión de estudio en marcha, música sonando o una grabación a medias
+// no deja actualizar: el reinicio las cortaría. Lo dice y el botón vuelve en
+// cuanto se liberan.
 // ============================================================
 
 const STEP_META: Record<UpdateStep, { label: string; icon: ElementType }> = {
@@ -61,17 +63,20 @@ const SPEED_CAPTION: Record<Exclude<SpeedSource, 'medida'>, (speed: string) => s
 
 /** Por qué no se puede actualizar ahora (o, si ya se descarga, a qué esperará
  *  para instalar: entonces queda «lista» y se instala con «Instalar ahora»). */
-function busyMessage(studying: boolean, music: boolean, downloading: boolean): string {
-  const [wait, ask] =
-    studying && music
-      ? ['termines tu sesión de estudio y pauses la música', 'Termina tu sesión de estudio y pausa la música']
-      : studying
-        ? ['termines tu sesión de estudio', 'Termina tu sesión de estudio']
-        : ['pauses la música', 'Pausa la música'];
-  const cut = studying && music ? 'las cortaría' : 'la cortaría';
+function busyMessage(studying: boolean, music: boolean, recording: boolean, downloading: boolean): string {
+  // [lo que espera, lo que se pide]
+  const parts: [string, string][] = [];
+  if (studying) parts.push(['termines tu sesión de estudio', 'termina tu sesión de estudio']);
+  if (recording) parts.push(['termines y guardes la grabación', 'termina y guarda la grabación']);
+  if (music) parts.push(['pauses la música', 'pausa la música']);
+  const list = (items: string[]) =>
+    items.length > 1 ? `${items.slice(0, -1).join(', ')} y ${items[items.length - 1]}` : items[0] ?? '';
+  const wait = list(parts.map(([w]) => w));
+  const ask = list(parts.map(([, a]) => a));
+  const cut = parts.length > 1 ? 'las cortaría' : 'la cortaría';
   return downloading
     ? `Al terminar la descarga esperará a que ${wait}: el reinicio ${cut}.`
-    : `${ask} para actualizar: el reinicio ${cut}.`;
+    : `${ask.charAt(0).toUpperCase()}${ask.slice(1)} para actualizar: el reinicio ${cut}.`;
 }
 
 /**
@@ -95,6 +100,7 @@ function useSmoothCountdown(target: number, active: boolean): number {
 export default function UpdateDialog() {
   const update = useUpdateState();
   const { isTimerActive, isPlaying } = useCourse();
+  const recording = useSyncExternalStore(subscribeRecorderBusy, isRecorderBusy, isRecorderBusy);
   const { phase, version, dialogOpen, error } = update;
   const [now, setNow] = useState(() => performance.now());
 
@@ -114,7 +120,7 @@ export default function UpdateDialog() {
 
   const started = phase === 'downloading' || phase === 'verifying' || phase === 'ready' || phase === 'installing';
   const remaining = useSmoothCountdown(estimate.remainingMs, started && phase !== 'ready');
-  const blocked = isTimerActive || isPlaying;
+  const blocked = isTimerActive || isPlaying || recording;
 
   const statusOf = (step: UpdateStep): StepStatus => {
     if (!started || !estimate.current) return 'pending';
@@ -239,7 +245,9 @@ export default function UpdateDialog() {
           </ol>
 
           {blocked && phase !== 'installing' && (
-            <Notice>{busyMessage(isTimerActive, isPlaying, phase === 'downloading' || phase === 'verifying')}</Notice>
+            <Notice>
+              {busyMessage(isTimerActive, isPlaying, recording, phase === 'downloading' || phase === 'verifying')}
+            </Notice>
           )}
           {error && !started && <Notice>{error}</Notice>}
         </div>

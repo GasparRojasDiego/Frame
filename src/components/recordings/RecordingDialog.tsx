@@ -29,7 +29,7 @@ import { Textarea } from '@/components/ui/textarea';
 import SubjectPicker from '@/components/courses/SubjectPicker';
 import EchoWord from '@/components/shared/EchoWord';
 import RecordingLimitPicker from '@/components/recordings/RecordingLimitPicker';
-import { loadRecordingLimit, sanitizeRecordingLimit } from '@/components/recordings/recording-limit';
+import { clampLimit, loadRecordingLimit, sanitizeRecordingLimit } from '@/components/recordings/recording-limit';
 import { useCourse } from '@/context/CourseContext';
 import { deleteRecordingAudio, saveRecordingAudio } from '@/lib/music-db';
 import { QUICK_RECORDING_EVENT } from '@/lib/quick-recording';
@@ -44,6 +44,7 @@ import {
   formatDuration,
   minutesLabel,
   saveRecordingSettings,
+  setRecorderBusy,
   type RecordingSettings,
 } from '@/lib/recordings';
 
@@ -100,16 +101,16 @@ const pickMimeType = (): string => {
   return '';
 };
 
-const blobToBase64 = (blob: Blob): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const s = reader.result as string;
-      resolve(s.slice(s.indexOf(',') + 1));
-    };
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(blob);
-  });
+// Voz, no música: con estas tasas, 4 h de audio (el techo) pesan unos 170 MB
+// en AAC y 115 MB en Opus. 96 kb/s es lo mínimo que acepta el codificador AAC
+// de Windows.
+const audioBitsFor = (mime: string): number => (mime.startsWith('audio/mp4') ? 96_000 : 64_000);
+
+/** Las cabeceras HTTP solo llevan ASCII: el nombre viaja como cadena JSON con
+ *  todo lo que no sea ASCII imprimible (de « » a «~») escapado como \uXXXX, y
+ *  Rust la lee tal cual. */
+const asciiJson = (text: string): string =>
+  JSON.stringify(text).replace(/[^ -~]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`);
 
 const autoNameFor = (iso: string) => {
   const date = iso ? new Date(iso) : new Date();
@@ -131,8 +132,38 @@ function RecordingSettingsPopover({
    *  de lo ya grabado: cortaría en el acto. */
   floor?: number;
 }) {
+  // Grabando, acortar el límite pasa por valores de paso (bajar las horas
+  // antes de subir los minutos) que el suelo dejaría a segundos del corte.
+  // Por eso lo que acorta espera en borrador y rige al cerrar este ajuste;
+  // lo que alarga rige al momento.
+  const [draft, setDraft] = useState<number | null>(null);
+  const latest = useRef({ draft, floor, onChange });
+  latest.current = { draft, floor, onChange };
+
+  const commit = useCallback(() => {
+    const { draft: pending, floor: low, onChange: apply } = latest.current;
+    if (pending === null) return;
+    latest.current.draft = null;
+    setDraft(null);
+    apply({ maxMinutes: clampLimit(pending, low) });
+  }, []);
+
+  // Si el recuadro se cierra (o la grabación acaba) con el ajuste abierto,
+  // lo pendiente no se pierde.
+  useEffect(() => commit, [commit]);
+
+  const change = (maxMinutes: number) => {
+    if (floor !== undefined && maxMinutes < settings.maxMinutes) {
+      setDraft(maxMinutes);
+      return;
+    }
+    latest.current.draft = null;
+    setDraft(null);
+    onChange({ maxMinutes });
+  };
+
   return (
-    <Popover>
+    <Popover onOpenChange={(next) => !next && commit()}>
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -148,12 +179,10 @@ function RecordingSettingsPopover({
       </PopoverTrigger>
 
       <PopoverContent align="start" side="bottom" sideOffset={8} className="w-72 space-y-3 p-4">
-        <RecordingLimitPicker
-          value={settings.maxMinutes}
-          floor={floor}
-          onChange={(maxMinutes) => onChange({ maxMinutes })}
-        />
-        <p className="text-center text-[11px] text-muted-foreground">Se detiene sola al llegar al límite</p>
+        <RecordingLimitPicker value={draft ?? settings.maxMinutes} floor={floor} onChange={change} />
+        <p className="text-center text-[11px] text-muted-foreground">
+          {draft !== null ? 'El nuevo límite rige al cerrar este ajuste' : 'Se detiene sola al llegar al límite'}
+        </p>
       </PopoverContent>
     </Popover>
   );
@@ -241,10 +270,15 @@ export default function RecordingDialog({
     settingsRef.current = settings;
   }, [settings]);
 
-  // Los ajustes se recargan al abrir. Sin perfil (invitado) se conservan en
-  // memoria: no hay dónde persistirlos.
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
+
+  // Los ajustes se recargan al abrir un recuadro nuevo. Sin perfil (invitado)
+  // se conservan en memoria: no hay dónde persistirlos. Reabrirlo con una
+  // grabación en curso no relee nada: el límite que rige es el de memoria,
+  // que puede llevar un cambio hecho en vivo que el disco no llegó a guardar.
   useEffect(() => {
-    if (!open || !userProfile?.id) return;
+    if (!open || !userProfile?.id || phaseRef.current !== 'confirm') return;
     const stored = loadRecordingLimit(userProfile.id);
     settingsRef.current = stored;
     setSettings(stored);
@@ -396,7 +430,8 @@ export default function RecordingDialog({
   // produciría partes irreproducibles.
   const buildRecorder = useCallback((stream: MediaStream): ActiveRecorder => {
     const mime = pickMimeType();
-    const recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+    const audioBitsPerSecond = audioBitsFor(mime);
+    const recorder = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond } : { audioBitsPerSecond });
     mimeRef.current = recorder.mimeType || 'audio/webm';
 
     const chunks: Blob[] = [];
@@ -573,8 +608,6 @@ export default function RecordingDialog({
 
   // Atajo Ctrl+Shift+F: la cabecera abre el diálogo y pide empezar YA, sin
   // pasar por la confirmación. Si ya se está grabando, no hace nada.
-  const phaseRef = useRef(phase);
-  phaseRef.current = phase;
   useEffect(() => {
     const handleQuick = () => {
       if (phaseRef.current === 'confirm') void startRecording();
@@ -639,12 +672,18 @@ export default function RecordingDialog({
         // 2) Archivo permanente en disco (Documentos\Frame\Grabaciones).
         if (isTauri()) {
           try {
-            const base64 = await blobToBase64(segment.blob);
-            const saved = await invoke<{ path: string; format: string }>('save_recording', {
-              fileName: finalName,
-              dataBase64: base64,
-              ext: mimeRef.current.startsWith('audio/mp4') ? 'm4a' : 'webm',
-            });
+            // Los bytes van en crudo, sin base64: con 4 h de audio, la cadena
+            // y sus copias para el IPC duplicaban la memoria.
+            const saved = await invoke<{ path: string; format: string }>(
+              'save_recording',
+              await segment.blob.arrayBuffer(),
+              {
+                headers: {
+                  'Frame-File-Name': asciiJson(finalName),
+                  'Frame-Ext': mimeRef.current.startsWith('audio/mp4') ? 'm4a' : 'webm',
+                },
+              }
+            );
             recording.filePath = saved.path;
             recording.fileFormat = saved.format;
           } catch (e) {
@@ -706,6 +745,14 @@ export default function RecordingDialog({
   useEffect(() => {
     onStateChange?.(phase === 'recording' ? (isPaused ? 'paused' : 'recording') : 'idle');
   }, [isPaused, onStateChange, phase]);
+
+  // Y hacia el actualizador: con una grabación a medias no se reinicia. Cuenta
+  // también el formulario: hasta guardarla, la grabación no figura en ninguna
+  // parte de Frame.
+  useEffect(() => {
+    setRecorderBusy(phase !== 'confirm');
+  }, [phase]);
+  useEffect(() => () => setRecorderBusy(false), []);
 
   // Si la grabación termina sola (el tope de duración) mientras el recuadro
   // está cerrado, el formulario de guardar se abre sin esperar: el audio no

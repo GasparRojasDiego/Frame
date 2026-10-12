@@ -29,6 +29,8 @@ export default function CourseSpaceDialog() {
   const existingNames = useMemo(() => new Set(courses.map((course) => course.name.trim().toLowerCase())), [courses]);
   const [newSpaceName, setNewSpaceName] = useState('');
   const [selectedCourseIdsForSpace, setSelectedCourseIdsForSpace] = useState<string[]>([]);
+  /** Áreas del CNEB marcadas cuando son dos o más (con una, manda el nombre escrito). */
+  const [pickedSubjects, setPickedSubjects] = useState<string[]>([]);
 
   useEffect(() => {
     if (!isCreateCourseOpen) {
@@ -36,11 +38,41 @@ export default function CourseSpaceDialog() {
       setNewTeacherName('');
       setNewSpaceName('');
       setSelectedCourseIdsForSpace([]);
+      setPickedSubjects([]);
       setAddDialogView('course');
     }
   }, [isCreateCourseOpen, setNewCourseName, setNewTeacherName]);
 
+  /** Sugerencia del CNEB que coincide con el nombre escrito (si alguna). */
+  const typedName = newCourseName.trim().toLowerCase();
+  const typedSubject = CATALOG_SUBJECTS.find(
+    (subject) => subject.toLowerCase() === typedName && !existingNames.has(typedName)
+  );
+  // Con una sola marcada, la marca sale del nombre (como al escribirlo); con
+  // varias, de la lista, y se crean todas de una vez.
+  const batch = pickedSubjects.length >= 2;
+  const marked = batch ? pickedSubjects : typedSubject ? [typedSubject] : [];
+  const freshPicked = pickedSubjects.filter((subject) => !existingNames.has(subject.toLowerCase()));
+
+  const toggleSubject = (subject: string) => {
+    const next = marked.includes(subject) ? marked.filter((entry) => entry !== subject) : [...marked, subject];
+    if (next.length >= 2) {
+      setPickedSubjects(next);
+      setNewCourseName('');
+      return;
+    }
+    // Una o ninguna: se comporta como siempre, escribiendo (o borrando) el nombre.
+    setPickedSubjects([]);
+    setNewCourseName(next[0] ?? '');
+  };
+
   const handleCreateCourse = () => {
+    if (batch) {
+      if (freshPicked.length === 0) return;
+      freshPicked.forEach((subject) => addCourse(subject, newTeacherName));
+      setCreateCourseOpen(false);
+      return;
+    }
     if (newCourseName.trim()) {
       addCourse(newCourseName, newTeacherName);
       setCreateCourseOpen(false);
@@ -54,9 +86,6 @@ export default function CourseSpaceDialog() {
       setCreateCourseOpen(false);
     }
   };
-
-  /** Sugerencia del CNEB que coincide con el nombre escrito (si alguna). */
-  const typedName = newCourseName.trim().toLowerCase();
 
   return (
     <Dialog open={isCreateCourseOpen} onOpenChange={setCreateCourseOpen}>
@@ -81,16 +110,21 @@ export default function CourseSpaceDialog() {
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label htmlFor="courseName" className="text-xs">Nombre de la asignatura</Label>
+              {/* Con varias áreas marcadas, cada una se crea con su nombre. */}
               <Input
                 id="courseName"
                 value={newCourseName}
                 onChange={(e) => setNewCourseName(e.target.value)}
-                placeholder="Ej: Física Cuántica" data-tour="asig-nombre"
+                disabled={batch}
+                placeholder={batch ? `${marked.length} áreas del CNEB marcadas abajo` : 'Ej: Física Cuántica'}
+                data-tour="asig-nombre"
                 className="bg-card border-primary"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="teacherName" className="text-xs">Nombre del profesor (opcional)</Label>
+              <Label htmlFor="teacherName" className="text-xs">
+                {batch ? 'Nombre del profesor (opcional, para todas)' : 'Nombre del profesor (opcional)'}
+              </Label>
               <Input
                 id="teacherName"
                 value={newTeacherName}
@@ -101,15 +135,16 @@ export default function CourseSpaceDialog() {
             </div>
 
             {/* Las áreas del CNEB ya no son un modo aparte: van debajo, tras
-                una línea fina, como atajos que escriben el nombre. Pulsar la
-                elegida otra vez la quita. Las que ya tienes no se ofrecen. */}
+                una línea fina. Una marcada escribe el nombre; con varias se
+                crean todas de una vez. Pulsar una marcada la quita. Las que ya
+                tienes no se ofrecen. */}
             <div role="separator" className="mx-8 h-px bg-border/70" />
             <div className="space-y-2" data-tour="asig-cneb">
               <p className="text-center text-[11px] font-semibold text-muted-foreground">Del {CATALOG_NAME}</p>
               <div className="flex flex-wrap justify-center gap-1.5">
                 {CATALOG_SUBJECTS.map((subject) => {
                   const owned = existingNames.has(subject.toLowerCase());
-                  const chosen = !owned && typedName === subject.toLowerCase();
+                  const chosen = !owned && marked.includes(subject);
                   return (
                     <button
                       key={subject}
@@ -117,7 +152,7 @@ export default function CourseSpaceDialog() {
                       disabled={owned}
                       aria-pressed={chosen}
                       title={owned ? 'Ya tienes esta asignatura' : undefined}
-                      onClick={() => setNewCourseName(chosen ? '' : subject)}
+                      onClick={() => toggleSubject(subject)}
                       className={cn(
                         'rounded-md border px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                         chosen
@@ -166,9 +201,15 @@ export default function CourseSpaceDialog() {
           <Button
             onClick={addDialogView === 'course' ? handleCreateCourse : handleCreateSpace}
             data-tour="asig-crear"
-            disabled={addDialogView === 'course' ? !newCourseName.trim() : (!newSpaceName.trim() || selectedCourseIdsForSpace.length < 2)}
+            disabled={
+              addDialogView === 'course'
+                ? batch
+                  ? freshPicked.length === 0
+                  : !newCourseName.trim()
+                : !newSpaceName.trim() || selectedCourseIdsForSpace.length < 2
+            }
           >
-            Crear
+            {addDialogView === 'course' && batch && freshPicked.length >= 2 ? `Crear ${freshPicked.length} asignaturas` : 'Crear'}
           </Button>
         </DialogFooter>
       </DialogContent>

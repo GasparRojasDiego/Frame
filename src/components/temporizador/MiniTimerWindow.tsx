@@ -354,6 +354,7 @@ export default function MiniTimerWindow() {
               <span className="font-mono text-xs font-bold tabular-nums text-primary">{formatTime(time)}</span>
             </div>
             <NoteEditor
+              ariaLabel="Avance de la sesión"
               value={noteText}
               onChange={setNoteText}
               onSubmit={submitNote}

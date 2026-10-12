@@ -147,7 +147,7 @@ export const BARRA: Entry[] = [
     title: 'Las frases de la barra superior',
     q: ['qué son las frases de arriba', 'por qué cambia el texto de la barra', 'de dónde salen las frases del centro', 'cómo cambio la frase de arriba', 'puedo escribir mi propia frase'],
     k: ['frase', 'frases', 'cita', 'motivacion', 'lema', 'saludo', 'texto del centro'],
-    a: 'En el centro de la barra superior salen frases con tus datos recientes: lo que estudiaste hoy o ayer, tu meta de hoy, las tareas culminadas hoy, esta semana o la pasada, tu próxima entrega, tus hábitos de hoy, los días seguidos estudiando o tu asignatura de la semana. Cambian solas cada minuto y medio; con el ratón encima, la frase se detiene. Sin datos todavía, te saluda.',
+    a: 'En el centro de la barra superior salen frases con tus datos recientes: lo que estudiaste hoy o ayer, tu meta de hoy, las tareas culminadas hoy, esta semana o la pasada, tu próxima entrega, tus hábitos de hoy o de la semana, tus días de racha o tu asignatura de la semana. Cambian solas cada minuto y medio; con el ratón encima, la frase se detiene. Sin datos todavía, te saluda.',
     tip: 'No se escriben ni se editan: salen solas de lo que haces en Frame.',
     rel: ['barra-superior', 'enfoque-hoy'],
   },

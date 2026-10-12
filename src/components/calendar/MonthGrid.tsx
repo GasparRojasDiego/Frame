@@ -149,9 +149,12 @@ export default function MonthGrid({
     [layouts, maxLanes, weeks]
   );
 
-  const focusCell = useCallback((day: string) => {
+  /** `reveal`: desplaza hasta la casilla si queda fuera de la vista (teclado y
+   *  «Hoy»; con el ratón la casilla ya está a la vista y no se mueve nada). */
+  const focusCell = useCallback((day: string, reveal = false) => {
     const cell = bodyRef.current?.querySelector<HTMLElement>(`[data-day="${day}"]`);
     cell?.focus({ preventScroll: true });
+    if (reveal) cell?.scrollIntoView({ block: 'nearest' });
   }, []);
 
   // Tras cambiar de mes con el teclado, el foco aterriza en su día.
@@ -159,7 +162,7 @@ export default function MonthGrid({
     const day = pendingFocus.current;
     if (!day || day < first || day > last) return;
     pendingFocus.current = null;
-    focusCell(day);
+    focusCell(day, true);
   }, [first, last, focusCell]);
 
   useEffect(() => {
@@ -168,7 +171,7 @@ export default function MonthGrid({
     pendingFocus.current = focusRequest.day;
     if (focusRequest.day >= first && focusRequest.day <= last) {
       pendingFocus.current = null;
-      focusCell(focusRequest.day);
+      focusCell(focusRequest.day, true);
     }
     // Solo reacciona a una petición nueva.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -249,7 +252,7 @@ export default function MonthGrid({
       pendingFocus.current = target;
       onMonthChange(cursorOf(target));
     } else {
-      focusCell(target);
+      focusCell(target, true);
     }
   };
 

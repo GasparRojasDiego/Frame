@@ -16,7 +16,21 @@
 
 import { guestLinkedTo } from '@/lib/guest-link';
 
-const DATA_KEYS = ['courses', 'tasks', 'studySessions', 'habits', 'notes', 'archivedTasks'];
+// Basta con una para ofrecer la fusión. Incluye lo que no exige asignatura
+// (anotaciones sueltas, grabaciones, el calendario y sus colores): un invitado
+// puede tener solo eso, y el traslado ya lo lleva.
+const DATA_KEYS = [
+  'courses',
+  'tasks',
+  'studySessions',
+  'habits',
+  'notes',
+  'archivedTasks',
+  'looseNotes',
+  'recordings',
+  'localEvents',
+  'dayColors',
+];
 
 const hasData = (uid: string): boolean =>
   DATA_KEYS.some((name) => {

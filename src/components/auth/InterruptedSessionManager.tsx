@@ -267,6 +267,7 @@ export default function InterruptedSessionManager({ session, onDone }: Interrupt
                 {view === 'registering' && (
                   <div className="space-y-1">
                     <Label
+                      id="recovered-notes-label"
                       htmlFor="recovered-notes"
                       onClick={() => document.getElementById('recovered-notes')?.focus()}
                       className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground"
@@ -278,6 +279,7 @@ export default function InterruptedSessionManager({ session, onDone }: Interrupt
                     {/* Texto con formato y listas, como un Word en pequeño. */}
                     <NoteEditor
                       id="recovered-notes"
+                      ariaLabelledBy="recovered-notes-label"
                       value={notes}
                       onChange={setNotes}
                       placeholder="Resolví los ejercicios 12 al 20; me atasqué en la derivada de la cadena…"

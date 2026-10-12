@@ -17,7 +17,7 @@ import { useTodayKey } from '@/hooks/use-today';
 import { ensureNotificationPermission } from '@/lib/notify';
 import { cn } from '@/lib/utils';
 import type { LocalCalendarEvent, Task } from '@/types';
-import { EVENT_KIND_META, normalizeKind } from '@/lib/calendar-events';
+import { EVENT_KIND_META, eventDisplay, normalizeKind } from '@/lib/calendar-events';
 import MonthBar from './MonthBar';
 import MonthGrid, { type GridSelection } from './MonthGrid';
 import SelectionBar from './SelectionBar';
@@ -27,11 +27,13 @@ import {
   MONTH_NAMES,
   buildFills,
   buildTaskItems,
+  capitalize,
   cursorOf,
   daysBetween,
   daysOf,
   eventEnd,
   groupTasksByDay,
+  inRange,
   monthKeyOf,
   monthWeeks,
   orderRange,
@@ -187,10 +189,15 @@ export default function FullCalendarView({
       if (existing) updateLocalEvent(existing.id, payload);
       else addLocalEvent(payload);
 
-      // «Pintar las casillas» manda sobre los días que se dejaron sin color.
+      // «Pintar las casillas» manda sobre los días que se dejaron sin color, pero
+      // solo en los que el evento empieza a pintar ahora: los que ya pintaba y se
+      // dejaron sin color a mano siguen así aunque se edite otra cosa.
       if (payload.display === 'casilla') {
-        const end = payload.endDate ?? payload.date;
-        const blanks = dayColors.filter((c) => !c.color && c.id >= payload.date && c.id <= end).map((c) => c.id);
+        const end = eventEnd(payload);
+        const painted = existing && eventDisplay(existing) === 'casilla' ? { start: existing.date, end: eventEnd(existing) } : null;
+        const blanks = dayColors
+          .filter((c) => !c.color && c.id >= payload.date && c.id <= end && !inRange(c.id, painted))
+          .map((c) => c.id);
         if (blanks.length) setDayColors(blanks, null);
       }
 
@@ -227,14 +234,14 @@ export default function FullCalendarView({
 
   const requestClear = useCallback(
     (target: DayRange) => {
-      const plan = planClear(localEvents, dayColors, target);
+      const plan = planClear(localEvents, dayColors, target, todayKey);
       if (plan.eventCount === 0 && plan.colorDays.length === 0) {
         toast({ title: 'Nada que vaciar', description: 'Esos días no tienen eventos ni color.' });
         return;
       }
       setPendingClear({ range: target, plan });
     },
-    [localEvents, dayColors, toast]
+    [localEvents, dayColors, todayKey, toast]
   );
 
   const applyClear = () => {
@@ -275,18 +282,25 @@ export default function FullCalendarView({
     return () => window.removeEventListener('keydown', onKey);
   }, [range?.start, range?.end, panel, pendingClear, requestClear]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const clearCount = pendingClear
-    ? [
-        pendingClear.plan.eventCount
-          ? `${pendingClear.plan.eventCount} ${pendingClear.plan.eventCount === 1 ? 'evento' : 'eventos'}`
-          : '',
-        pendingClear.plan.colorDays.length
-          ? `el color de ${pendingClear.plan.colorDays.length} ${pendingClear.plan.colorDays.length === 1 ? 'casilla' : 'casillas'}`
-          : '',
-      ]
-        .filter(Boolean)
-        .join(' y ')
-    : '';
+  // Lo que hará «Vaciar», separando lo que se borra de lo que solo se recorta
+  // (un evento que sigue en otros días no se pierde).
+  const clearSummary = (() => {
+    if (!pendingClear) return '';
+    const removed = pendingClear.plan.remove.length;
+    const trimmed = pendingClear.plan.update.length;
+    const colors = pendingClear.plan.colorDays.length;
+    const parts = [
+      removed ? (removed === 1 ? 'se borrará 1 evento' : `se borrarán ${removed} eventos`) : '',
+      trimmed
+        ? trimmed === 1
+          ? 'se recortará 1 evento que sigue en otros días'
+          : `se recortarán ${trimmed} eventos que siguen en otros días`
+        : '',
+      colors ? `se quitará el color de ${colors} ${colors === 1 ? 'casilla' : 'casillas'}` : '',
+    ].filter(Boolean);
+    const text = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} y ${parts[parts.length - 1]}` : parts[0] ?? '';
+    return capitalize(text);
+  })();
 
   return (
     <section className={cn('flex min-h-0 flex-col gap-3', className)} aria-label="Calendario local">
@@ -383,7 +397,7 @@ export default function FullCalendarView({
                 : `¿Vaciar del ${pendingClear ? rangeLabel(pendingClear.range) : ''}?`}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Se quitará {clearCount}. Las tareas no se tocan.
+              {clearSummary}. Las tareas no se tocan.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
