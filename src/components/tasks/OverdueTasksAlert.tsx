@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { useCourse } from '@/context/CourseContext';
 import { format, parseISO, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { EchoHeader } from '@/components/shared/EchoWord';
 
 // ============================================================
 // Alerta de tareas VENCIDAS: cuando una tarea pasó su fecha de entrega, al
@@ -70,17 +71,19 @@ export default function OverdueTasksAlert() {
   return (
     <Dialog open={isOpen} onOpenChange={(o) => !o && snooze()}>
       <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center justify-center gap-2 text-xl font-bold text-primary">
-            <AlertTriangle className="h-5 w-5 text-yellow-500" />
-            Tareas vencidas
-          </DialogTitle>
-          <DialogDescription className="text-center text-xs">
-            {overdue.length === 1
-              ? 'Una tarea pasó su fecha de entrega. Decide qué hacer con ella:'
-              : `${overdue.length} tareas pasaron su fecha de entrega. Decide qué hacer con cada una:`}
-          </DialogDescription>
-        </DialogHeader>
+        <EchoHeader word="Vencidas">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-center gap-2 text-xl font-bold text-primary">
+              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              Tareas vencidas
+            </DialogTitle>
+            <DialogDescription className="text-center text-xs">
+              {overdue.length === 1
+                ? 'Una tarea pasó su fecha de entrega. Decide qué hacer con ella:'
+                : `${overdue.length} tareas pasaron su fecha de entrega. Decide qué hacer con cada una:`}
+            </DialogDescription>
+          </DialogHeader>
+        </EchoHeader>
 
         <ScrollArea className="max-h-[340px]">
           <div className="space-y-3 pr-3">

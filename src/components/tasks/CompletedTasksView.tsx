@@ -99,7 +99,7 @@ export function CompletedTaskCard({ task, studiedMinutes }: { task: ArchivedTask
 
       <div className="flex items-start justify-between gap-3 pl-1.5">
         <div className="min-w-0">
-          <p className="truncate text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="truncate text-[10px] font-semibold text-muted-foreground">
             {task.courseName}
           </p>
           <p className="truncate text-sm font-semibold text-foreground">{task.name}</p>
@@ -202,7 +202,7 @@ function IncompleteTasksSection() {
         aria-expanded={open}
         className="flex w-full items-center justify-between gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2.5 text-left"
       >
-        <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+        <span className="flex items-center gap-2 text-xs font-bold text-amber-600 dark:text-amber-400">
           <CircleSlash className="h-4 w-4" />
           Tareas incompletas · {incompleteTasks.length}
         </span>
@@ -324,8 +324,8 @@ export default function CompletedTasksView() {
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => shiftMonth(-1)} title="Mes anterior">
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="min-w-[10rem] text-center font-headline text-sm font-bold uppercase tracking-wider text-primary">
-            {monthLabel}
+          <span className="min-w-[10rem] text-center font-headline text-sm font-bold text-primary">
+            {monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}
           </span>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => shiftMonth(1)} title="Mes siguiente">
             <ChevronRight className="h-4 w-4" />
@@ -346,25 +346,25 @@ export default function CompletedTasksView() {
       {/* ---------- Resumen del mes: la cifra que pide la auxiliar ---------- */}
       <Card className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-4">
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Tareas culminadas</p>
+          <p className="text-[10px] text-muted-foreground">Tareas culminadas</p>
           <p className="font-headline text-2xl font-bold tabular-nums text-primary">
             {monthTasks.length}
           </p>
         </div>
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Tiempo dedicado</p>
+          <p className="text-[10px] text-muted-foreground">Tiempo dedicado</p>
           <p className="font-headline text-2xl font-bold tabular-nums text-foreground">
             {totals.minutes > 0 ? formatMinutes(Math.round(totals.minutes)) : '—'}
           </p>
         </div>
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Entregadas a tiempo</p>
+          <p className="text-[10px] text-muted-foreground">Entregadas a tiempo</p>
           <p className="font-headline text-2xl font-bold tabular-nums text-foreground">
             {totals.withDeadline > 0 ? `${totals.onTime}/${totals.withDeadline}` : '—'}
           </p>
         </div>
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Semanas con entregas</p>
+          <p className="text-[10px] text-muted-foreground">Semanas con entregas</p>
           <p className="font-headline text-2xl font-bold tabular-nums text-foreground">
             {weeks.length}
           </p>
@@ -393,7 +393,7 @@ export default function CompletedTasksView() {
           return (
             <section key={week.start.toISOString()} className="space-y-2.5">
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                <h3 className="text-xs font-bold text-foreground">
                   {/* La semana ISO puede empezar en el mes anterior: en ese
                       caso se nombra también el mes de partida. */}
                   Semana del{' '}

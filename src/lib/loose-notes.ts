@@ -11,9 +11,9 @@ import { CLOUD_APPLIED_EVENT } from '@/lib/supabase/sync';
 // hasta que se coloque en su asignatura o se borre.
 //
 // No entra en el modelo de notas del contexto a propósito: una nota de
-// asignatura vive dentro de una clase (`classKey`) y todas las pantallas que
-// las leen dan por hecho que tiene `courseId`. Meter notas con `courseId`
-// vacío las habría colado en recuentos e informes de asignatura.
+// asignatura es un recurso suyo y todas las pantallas que las leen dan por
+// hecho que tiene `courseId`. Meter notas con `courseId` vacío las habría
+// colado en recuentos e informes de asignatura.
 //
 // Clave por perfil (`looseNotes_<uid>`), en la lista de claves que viajan a
 // la nube (storage-snapshot.ts) y fusionada registro a registro por su `id`

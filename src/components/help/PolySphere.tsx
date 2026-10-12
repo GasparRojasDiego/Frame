@@ -1,14 +1,18 @@
 import { useEffect, useRef } from 'react';
 
 // ============================================================
-// La figura del Centro de ayuda: un icosaedro truncado, como un balón de
-// fútbol (12 pentágonos y 20 hexágonos, desde la 1.6.5; antes un dodecaedro
-// y, en la 1.6.3, una esfera de triángulos) que gira despacio. Aristas en el
-// azul de la app y caras del mismo azul, tenue; las de atrás solo se insinúan.
+// La figura del Centro de ayuda: un dodecaedro (12 pentágonos) que gira
+// despacio de lado. (1.6.3: esfera de triángulos · 1.6.4: dodecaedro ·
+// 1.6.5: balón de fútbol · 1.6.6: vuelve el dodecaedro, a pedido de Diego.)
 //
-// Se pinta sin React en cada fotograma: los 32 polígonos se crean una vez y
+// Encuadre (1.6.6): por el CENTRO EXACTO del cuadrado pasa un VÉRTICE, no
+// una cara. El dodecaedro gira sobre su eje de 5 caras (vertical) inclinado
+// hacia el usuario el ángulo justo para que los vértices de la banda central
+// —a 10,8° de latitud— pasen por el centro al girar: una inclinación pequeña,
+// dentro de los 10–20° pedidos. Arranca con uno de esos vértices en el centro.
+//
+// Se pinta sin React en cada fotograma: los 12 polígonos se crean una vez y
 // solo se les cambian los puntos. Con «reducir movimiento», queda quieta.
-// `pulse` cambia con cada tecla: la figura se encoge y se agranda un poco.
 // ============================================================
 
 type Vec = [number, number, number];
@@ -22,19 +26,26 @@ const sub = (a: Vec, b: Vec): Vec => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const dot = (a: Vec, b: Vec) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const cross = (a: Vec, b: Vec): Vec => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 
-/**
- * Icosaedro truncado (el balón de fútbol, desde la 1.6.5): se corta cada
- * vértice del icosaedro a un tercio de sus aristas. Cada vértice deja un
- * pentágono (los 5 puntos de corte a su alrededor) y cada cara triangular,
- * un hexágono (2 puntos por arista). 12 pentágonos y 20 hexágonos; los 60
- * vértices quedan a la misma distancia del centro.
- */
-interface Face {
-  points: Vec[];
-  pentagon: boolean;
+/** Gira `v` para que el eje `from` (unitario) quede en +y. */
+function alignToY(v: Vec, from: Vec): Vec {
+  const to: Vec = [0, 1, 0];
+  const axis = cross(from, to);
+  const sin = Math.hypot(...axis);
+  const cos = dot(from, to);
+  if (sin < 1e-9) return cos > 0 ? v : [v[0], -v[1], -v[2]];
+  const k = normalize(axis);
+  // Rodrigues.
+  const kv = cross(k, v);
+  const kdv = dot(k, v);
+  return [0, 1, 2].map((i) => v[i] * cos + kv[i] * sin + k[i] * kdv * (1 - cos)) as Vec;
 }
 
-function buildMesh(): Face[] {
+/**
+ * Dodecaedro como dual del icosaedro: sus 20 vértices son los centros de las
+ * caras del icosaedro, y cada una de sus 12 caras rodea un vértice del
+ * icosaedro. Se orienta con el eje de una cara en vertical.
+ */
+function buildMesh(): { faces: Vec[][]; tilt: number; phase: number } {
   const t = (1 + Math.sqrt(5)) / 2;
   const ico: Vec[] = (
     [
@@ -43,63 +54,38 @@ function buildMesh(): Face[] {
       [t, 0, -1], [t, 0, 1], [-t, 0, -1], [-t, 0, 1],
     ] as Vec[]
   ).map(normalize);
-  const faces: [number, number, number][] = [
+  const tris: [number, number, number][] = [
     [0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11],
     [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
     [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9],
     [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1],
   ];
-  /** Punto de corte cerca de `a` sobre la arista a→b. */
-  const cut = (a: number, b: number): Vec => add(ico[a], sub(ico[b], ico[a]).map((v) => v / 3) as Vec);
-  const radius = Math.hypot(...cut(0, 1));
-  const unit = (v: Vec): Vec => v.map((c) => c / radius) as Vec;
+  const axis = ico[0];
+  const vertices = tris.map(([a, b, c]) => alignToY(normalize(add(add(ico[a], ico[b]), ico[c])), axis));
+  const centres = ico.map((v) => alignToY(v, axis));
 
-  const hexagons: Face[] = faces.map(([a, b, c]) => ({
-    points: [cut(a, b), cut(b, a), cut(b, c), cut(c, b), cut(c, a), cut(a, c)].map(unit),
-    pentagon: false,
-  }));
-
-  const pentagons: Face[] = ico.map((vertex, index) => {
-    const neighbours = new Set<number>();
-    for (const face of faces) if (face.includes(index)) face.forEach((v) => v !== index && neighbours.add(v));
-    const around = [...neighbours].map((n) => unit(cut(index, n)));
-    // Base del plano tangente para ordenar los 5 puntos por ángulo.
-    const u = normalize(sub(around[0], vertex.map((v) => v * dot(around[0], vertex)) as Vec));
-    const w = cross(vertex, u);
+  const faces = centres.map((centre, index) => {
+    const around = tris.flatMap((tri, i) => (tri.includes(index) ? [vertices[i]] : []));
+    const u = normalize(sub(around[0], centre.map((v) => v * dot(around[0], centre)) as Vec));
+    const w = cross(centre, u);
     around.sort((p, q) => Math.atan2(dot(p, w), dot(p, u)) - Math.atan2(dot(q, w), dot(q, u)));
-    return { points: around, pentagon: true };
+    return around;
   });
 
-  return [...pentagons, ...hexagons];
+  // Vértice de la banda central (latitud positiva más pequeña, ≈10,8°).
+  const band = vertices.filter((v) => v[1] > 1e-6).sort((a, b) => a[1] - b[1])[0];
+  const tilt = Math.asin(band[1]);
+  const phase = Math.atan2(-band[0], band[2]);
+  return { faces, tilt, phase };
 }
 
-const MESH = buildMesh();
+const { faces: MESH, tilt: TILT, phase: PHASE } = buildMesh();
 const LIGHT = normalize([-0.45, 0.6, 0.65]);
-const TILT = 0.38;
 /** Radianes por milisegundo: una vuelta cada ~22 s. */
 const SPEED = 0.000285;
-const SCALE = 1;
 
-export default function PolySphere({
-  size = 168,
-  pulse = 0,
-  className,
-}: {
-  size?: number;
-  /** Cambia con cada tecla escrita: la figura «respira». */
-  pulse?: number;
-  className?: string;
-}) {
+export default function PolySphere({ size = 168, className }: { size?: number; className?: string }) {
   const group = useRef<SVGGElement>(null);
-  const svg = useRef<SVGSVGElement>(null);
-
-  useEffect(() => {
-    if (!pulse || !svg.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    svg.current.animate(
-      [{ transform: 'scale(1)' }, { transform: 'scale(0.9)' }, { transform: 'scale(1.06)' }, { transform: 'scale(1)' }],
-      { duration: 460, easing: 'ease-out' }
-    );
-  }, [pulse]);
 
   useEffect(() => {
     const root = group.current;
@@ -110,23 +96,23 @@ export default function PolySphere({
       root.appendChild(polygon);
       return polygon;
     });
-    const r = (size / 2 - 3) / SCALE;
+    const r = size / 2 - 3;
     const c = size / 2;
     const cosT = Math.cos(TILT);
     const sinT = Math.sin(TILT);
 
     const rotate = ([x, y, z]: Vec, cosA: number, sinA: number): Vec => {
-      // Giro sobre el eje vertical y, luego, una leve inclinación hacia el usuario.
+      // Giro de lado (eje vertical) y la inclinación hacia el usuario.
       const x1 = x * cosA + z * sinA;
       const z1 = -x * sinA + z * cosA;
-      return [x1 * SCALE, (y * cosT - z1 * sinT) * SCALE, (y * sinT + z1 * cosT) * SCALE];
+      return [x1, y * cosT - z1 * sinT, y * sinT + z1 * cosT];
     };
 
     const draw = (angle: number) => {
       const cosA = Math.cos(angle);
       const sinA = Math.sin(angle);
       MESH.forEach((face, index) => {
-        const points = face.points.map((vertex) => rotate(vertex, cosA, sinA));
+        const points = face.map((vertex) => rotate(vertex, cosA, sinA));
         const centre = normalize(points.reduce(add, [0, 0, 0] as Vec));
         const front = centre[2] > 0;
         const polygon = polygons[index];
@@ -134,11 +120,9 @@ export default function PolySphere({
         // Por estilo y no por atributo: los atributos de SVG no resuelven var().
         if (front) {
           const light = Math.max(0, dot(centre, LIGHT));
-          // Los pentágonos, algo más llenos: el dibujo del balón.
-          const base = face.pentagon ? 0.16 : 0.04;
-          polygon.style.fill = `hsl(var(--primary) / ${(base + light * 0.12).toFixed(3)})`;
+          polygon.style.fill = `hsl(var(--primary) / ${(0.06 + light * 0.14).toFixed(3)})`;
           polygon.style.stroke = 'hsl(var(--primary) / 0.9)';
-          polygon.style.strokeWidth = '1.15';
+          polygon.style.strokeWidth = '1.25';
         } else {
           polygon.style.fill = 'none';
           polygon.style.stroke = 'hsl(var(--primary) / 0.16)';
@@ -150,13 +134,13 @@ export default function PolySphere({
     };
 
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      draw(0.6);
+      draw(PHASE);
       return () => polygons.forEach((polygon) => polygon.remove());
     }
     let frame = 0;
     const start = performance.now();
     const tick = (now: number) => {
-      draw(0.6 + (now - start) * SPEED);
+      draw(PHASE + (now - start) * SPEED);
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
@@ -168,12 +152,10 @@ export default function PolySphere({
 
   return (
     <svg
-      ref={svg}
       width={size}
       height={size}
       viewBox={`0 0 ${size} ${size}`}
       className={className}
-      style={{ transformOrigin: 'center' }}
       aria-hidden="true"
       focusable="false"
     >

@@ -23,6 +23,12 @@ import { relaunch } from '@tauri-apps/plugin-process';
 import { toast } from '@/hooks/use-toast';
 import { APP_VERSION } from '@/lib/version';
 
+/**
+ * Compilación para Microsoft Store (scripts/empaquetar-msix.ps1): la Store
+ * actualiza la app por su cuenta, así que el actualizador propio no se usa.
+ */
+export const IS_STORE_BUILD = import.meta.env.VITE_STORE_BUILD === '1';
+
 /** `ready`: descargada y verificada, esperando a que acabe la sesión de
  *  estudio, la música o la grabación que empezó mientras se descargaba. */
 export type UpdatePhase = 'idle' | 'checking' | 'available' | 'downloading' | 'verifying' | 'ready' | 'installing';
@@ -122,7 +128,7 @@ const ANNOUNCED_KEY = 'lastAnnouncedUpdate';
  */
 export function checkForUpdates(options?: { silent?: boolean }): Promise<void> {
   // Instalando, o con una ya descargada a la espera, consultar soltaría su handle.
-  if (!isTauri() || installing || state.phase === 'ready') return Promise.resolve();
+  if (!isTauri() || IS_STORE_BUILD || installing || state.phase === 'ready') return Promise.resolve();
   if (checkInFlight) return checkInFlight;
   checkInFlight = runCheck(options).finally(() => {
     checkInFlight = null;
@@ -677,7 +683,7 @@ export function formatDuration(ms: number): string {
 /** Sondeo: 20 s tras arrancar y luego cada 30 minutos. SOLO MIRA Y AVISA;
  *  ninguna de las dos llamadas instala nada. */
 export function startUpdaterLoop(): () => void {
-  if (!isTauri()) return () => {};
+  if (!isTauri() || IS_STORE_BUILD) return () => {};
   const first = setTimeout(() => void checkForUpdates({ silent: true }), 20000);
   const interval = setInterval(() => void checkForUpdates({ silent: true }), 30 * 60 * 1000);
   return () => {

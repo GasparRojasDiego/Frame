@@ -234,11 +234,12 @@ export default function StudyVideosPanel({
           </p>
         </div>
       ) : (
-        <ScrollArea className="min-h-0 flex-1 pr-2">
+        <ScrollArea className="min-h-0 flex-1">
           {/* Rejilla al estilo YouTube: miniatura arriba, título debajo. */}
           {/* Dos por fila, siempre: cada vídeo ocupa la mitad del ancho y su
               miniatura se ve lo bastante grande para reconocerlo. */}
-          <ul className="grid grid-cols-2 gap-3">
+          {/* `pr-4`: la columna derecha no toca la barra de desplazamiento (1.6.6). */}
+          <ul className="grid grid-cols-2 gap-3 pr-4">
             {videos.map((video) => {
               return (
                 <li key={video.id} className="group relative">

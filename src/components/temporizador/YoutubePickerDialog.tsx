@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import GoogleEmbed from '@/components/integrations/GoogleEmbed';
 import { formatVideoDuration, readYoutubeVideo, youtubeIdFromUrl, type YoutubeVideoInfo } from '@/lib/study-videos';
 import type { StudyVideo } from '@/types';
+import EchoWord from '@/components/shared/EchoWord';
 
 // ============================================================
 // Buscar un vídeo de estudio sin salir de Enfoque.
@@ -84,14 +85,15 @@ export default function YoutubePickerDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex h-[86vh] max-w-5xl flex-col gap-0 overflow-hidden p-0">
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b px-4 py-2.5">
-          <DialogTitle className="flex items-center gap-2 text-sm font-bold text-primary">
+        <div className="relative flex shrink-0 items-center justify-between gap-3 overflow-hidden px-4 py-2.5">
+          <EchoWord word="Buscar" />
+          <DialogTitle className="relative flex items-center gap-2 text-sm font-bold text-primary">
             <Video className="h-4 w-4" />
             Buscar un vídeo de estudio
           </DialogTitle>
           <Button
             size="sm"
-            className="mr-8"
+            className="relative mr-8"
             onClick={() => void inspect()}
             disabled={sheetOpen}
             title="Guardar el vídeo que estás viendo"
@@ -100,6 +102,7 @@ export default function YoutubePickerDialog({
             Añadir
           </Button>
         </div>
+        <div aria-hidden className="mx-4 h-px shrink-0 bg-border" />
 
         <div className="relative min-h-0 flex-1">
           <GoogleEmbed kind="youtube" heightClass="absolute inset-0" allowInModal paused={sheetOpen} />

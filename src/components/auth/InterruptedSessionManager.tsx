@@ -201,7 +201,7 @@ export default function InterruptedSessionManager({ session, onDone }: Interrupt
                 )}
               >
                 <div className="space-y-0.5 text-center">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  <p className="text-[10px] text-muted-foreground">
                     {origin === 'notes' ? 'Al menos' : 'Tiempo estudiado'}
                   </p>
                   <p className="font-headline text-2xl font-bold tabular-nums text-primary">
@@ -214,7 +214,7 @@ export default function InterruptedSessionManager({ session, onDone }: Interrupt
                     <div className="flex items-center justify-between">
                       <Label
                         htmlFor="recovered-perception"
-                        className="text-[10px] uppercase tracking-wider text-muted-foreground"
+                        className="text-[10px] text-muted-foreground"
                       >
                         Nivel de enfoque
                       </Label>
@@ -270,11 +270,11 @@ export default function InterruptedSessionManager({ session, onDone }: Interrupt
                       id="recovered-notes-label"
                       htmlFor="recovered-notes"
                       onClick={() => document.getElementById('recovered-notes')?.focus()}
-                      className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground"
+                      className="flex items-center gap-1.5 text-[10px] text-muted-foreground"
                     >
                       <NotebookPen className="h-3.5 w-3.5 text-primary" />
                       ¿Qué hiciste?
-                      <span className="normal-case tracking-normal text-muted-foreground/70">(opcional)</span>
+                      <span className="text-muted-foreground/70">(opcional)</span>
                     </Label>
                     {/* Texto con formato y listas, como un Word en pequeño. */}
                     <NoteEditor

@@ -14,6 +14,7 @@ import { useCourse } from '@/context/CourseContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { Course } from '@/types';
+import { EchoHeader } from '@/components/shared/EchoWord';
 
 // ============================================================
 // Mover UNA asignatura de colección.
@@ -85,15 +86,17 @@ export default function CourseCollectionDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center justify-center gap-2 text-lg font-bold text-primary">
-            <Layers className="h-5 w-5" />
-            Colección de {course.name}
-          </DialogTitle>
-          <DialogDescription className="text-center text-xs">
-            Una asignatura pertenece como mucho a una colección.
-          </DialogDescription>
-        </DialogHeader>
+        <EchoHeader word="Colección">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-center gap-2 text-lg font-bold text-primary">
+              <Layers className="h-5 w-5" />
+              Colección de {course.name}
+            </DialogTitle>
+            <DialogDescription className="text-center text-xs">
+              Una asignatura pertenece como mucho a una colección.
+            </DialogDescription>
+          </DialogHeader>
+        </EchoHeader>
 
         {spaces.length === 0 ? (
           <p className="rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground">

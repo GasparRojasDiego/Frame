@@ -27,7 +27,7 @@ export default function NameDriftBackdrop({ name, className }: { name: string; c
       {ROWS.map((row, rowIndex) => (
         <div
           key={rowIndex}
-          className={cn('frame-name-drift flex w-max whitespace-nowrap font-headline font-black uppercase tracking-tight text-foreground', row.size, row.opacity, row.offset)}
+          className={cn('frame-name-drift flex w-max whitespace-nowrap font-headline font-black tracking-tight text-foreground', row.size, row.opacity, row.offset)}
           style={{ animation: `frame-name-drift ${row.seconds}s linear infinite` }}
         >
           {/* Dos mitades idénticas: el bucle no tiene costura. */}

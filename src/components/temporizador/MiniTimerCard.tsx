@@ -84,7 +84,7 @@ export function PeruClock({ compact = false }: { compact?: boolean }) {
   return (
     <div className="mt-2 flex items-center justify-center gap-1.5 text-muted-foreground">
       <PeruFlag className="h-2.5 w-[15px]" />
-      <span className="text-[10px] font-semibold uppercase tracking-wider">Perú</span>
+      <span className="text-[10px] font-semibold">Perú</span>
       <span className="font-mono text-sm font-bold text-foreground tabular-nums">{time}</span>
     </div>
   );
@@ -358,7 +358,7 @@ export default function MiniTimerCard() {
           /* Anotación en caliente: el reloj queda arriba, pequeño. */
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <span className="text-[10px] font-semibold text-muted-foreground">
                 Anotar avance
               </span>
               <span className="font-mono text-xs font-bold tabular-nums text-primary">

@@ -348,7 +348,7 @@ export default function MiniTimerWindow() {
              barra de formato), en versión compacta. */
           <div className="flex min-h-0 flex-1 flex-col gap-1.5 p-2.5">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <span className="text-[10px] font-semibold text-muted-foreground">
                 Anotar avance
               </span>
               <span className="font-mono text-xs font-bold tabular-nums text-primary">{formatTime(time)}</span>

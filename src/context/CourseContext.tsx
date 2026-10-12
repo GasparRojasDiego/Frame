@@ -24,8 +24,6 @@ import type {
   TaskSortMode,
   Habit,
   HabitPhase,
-  MonthlySchedule,
-  ClassSession,
 } from '@/types';
 import {
   deleteSongFileFromDB,
@@ -44,9 +42,7 @@ import { notify } from '@/lib/notify';
 import { useLocalEventReminders } from '@/components/calendar/useEventReminders';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { deleteAttachment } from '@/lib/file-handles';
-import { resolveClassKey } from '@/lib/class-link';
 import { forgetLyrics } from '@/lib/lyrics';
-import { buildClassSessions, classSessionKey } from '@/lib/schedule';
 import { emit as tauriEmit, listen as tauriListen } from '@tauri-apps/api/event';
 import { format, parseISO } from 'date-fns';
 import { isSessionEditable } from '@/lib/session-edit';
@@ -205,17 +201,6 @@ interface CourseContextType {
   applySessionProgressToTasks: (taskIds: string[], minutes: number) => void;
   /** Eventos del calendario local (día libre, institucional, personal). */
   localEvents: LocalCalendarEvent[];
-  // --- Horario del colegio y clases del mes ---
-  schedules: MonthlySchedule[];
-  classSessions: ClassSession[];
-  /** Guarda (o reemplaza) el horario de un mes Y crea sus clases en el acto.
-   *  Devuelve cuántas clases quedaron creadas para ese mes. */
-  saveSchedule: (schedule: MonthlySchedule) => number;
-  updateClassSession: (id: string, updates: Partial<Omit<ClassSession, 'id'>>) => void;
-  deleteClassSession: (id: string) => void;
-  /** Borra todas las clases de un mes (para regenerarlas tras corregir el horario). */
-  clearClassSessions: (month: string) => void;
-
   addLocalEvent: (event: Omit<LocalCalendarEvent, 'id'>) => void;
   updateLocalEvent: (id: string, updates: Partial<Omit<LocalCalendarEvent, 'id'>>) => void;
   deleteLocalEvent: (id: string) => void;
@@ -253,9 +238,9 @@ interface CourseContextType {
   addNote: (
     courseId: string,
     content: string,
-    extra?: { kind?: NoteKind; url?: string; fileName?: string; fileMime?: string; fileDataUrl?: string; classKey?: string }
+    extra?: { kind?: NoteKind; url?: string; fileName?: string; fileMime?: string; fileDataUrl?: string }
   ) => void;
-  updateNote: (id: string, updates: string | Partial<Pick<Note, 'content' | 'url' | 'fileName' | 'fileMime' | 'classKey'>>) => void;
+  updateNote: (id: string, updates: string | Partial<Pick<Note, 'content' | 'url' | 'fileName' | 'fileMime'>>) => void;
   deleteNote: (id: string) => void;
   updateNotesOrder: (orderedNotes: Note[]) => void;
 
@@ -407,8 +392,6 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
   const [archivedNotes, setArchivedNotes] = useState<ArchivedNote[]>([]);
   const [localEvents, setLocalEvents] = useState<LocalCalendarEvent[]>([]);
   const [dayColors, setDayColorsState] = useState<CalendarDayColor[]>([]);
-  const [schedules, setSchedules] = useState<MonthlySchedule[]>([]);
-  const [classSessions, setClassSessions] = useState<ClassSession[]>([]);
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [studySessions, setStudySessions] = useState<StudySession[]>([]);
@@ -645,8 +628,6 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     setArchivedNotes(getArrayFromLocalStorage(storageKeys.archivedNotes));
     setLocalEvents(getArrayFromLocalStorage(storageKeys.localEvents));
     setDayColorsState(getArrayFromLocalStorage(storageKeys.dayColors));
-    setSchedules(getArrayFromLocalStorage(storageKeys.schedules));
-    setClassSessions(getArrayFromLocalStorage(storageKeys.classSessions));
     setRecordings(getArrayFromLocalStorage(storageKeys.recordings));
     setTaskSortModeState(getFromLocalStorage(storageKeys.taskSortMode, 'custom'));
     setSessionNotes(getArrayFromLocalStorage(storageKeys.sessionNotes));
@@ -1376,15 +1357,6 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
         setInLocalStorage(storageKeys.dailyPerformances, updated);
         return updated;
       });
-      setSchedules(prev => {
-        if (!prev.some(m => m.slots.some(slot => slot.courseId === id))) return prev;
-        const updated = prev.map(m => ({
-          ...m,
-          slots: m.slots.map(slot => (slot.courseId === id ? { ...slot, courseName: newName } : slot)),
-        }));
-        setInLocalStorage(storageKeys.schedules, updated);
-        return updated;
-      });
     }
   }, [storageKeys, courses]);
 
@@ -1435,20 +1407,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
       setArchivedNotes(prev => prev.filter(n => n.courseId !== id));
       void deleteImage(`courseImage_${id}`);
 
-      // Horario y colecciones: sin esto quedaban clases de una asignatura que ya
-      // no existe y colecciones que seguían contándola.
-      const latestClassSessions = getArrayFromLocalStorage<ClassSession>(storageKeys.classSessions);
-      if (latestClassSessions.some(c => c.courseId === id)) {
-        const kept = latestClassSessions.filter(c => c.courseId !== id);
-        setInLocalStorage(storageKeys.classSessions, kept);
-        setClassSessions(kept);
-      }
-      const latestSchedules = getArrayFromLocalStorage<MonthlySchedule>(storageKeys.schedules);
-      if (latestSchedules.some(m => m.slots.some(slot => slot.courseId === id))) {
-        const kept = latestSchedules.map(m => ({ ...m, slots: m.slots.filter(slot => slot.courseId !== id) }));
-        setInLocalStorage(storageKeys.schedules, kept);
-        setSchedules(kept);
-      }
+      // Colecciones: sin esto seguían contando una asignatura que ya no existe.
       const latestSpaces = getArrayFromLocalStorage<Space>(storageKeys.spaces);
       if (latestSpaces.some(space => space.courseIds.includes(id))) {
         const kept = latestSpaces.map(space => ({ ...space, courseIds: space.courseIds.filter(c => c !== id) }));
@@ -1472,17 +1431,9 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
 
   const addTask = useCallback((taskData: Omit<Task, 'id'> & { id?: string }) => {
     if (!storageKeys) return;
-    // La tarea queda vinculada a la clase en la que se dejó: la de hoy de esa
-    // asignatura o, si hoy no hay, la última dada.
-    const classKey =
-      taskData.classKey ??
-      (taskData.courseId
-        ? resolveClassKey(getArrayFromLocalStorage<ClassSession>(storageKeys.classSessions), taskData.courseId)
-        : undefined);
     const newTask: Task = {
       ...taskData,
       id: taskData.id ?? crypto.randomUUID(),
-      ...(classKey ? { classKey } : {}),
     };
     let created = false;
     setTasks(prev => {
@@ -1674,14 +1625,9 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
   const addNote = useCallback((
     courseId: string,
     content: string,
-    extra?: { kind?: NoteKind; url?: string; fileName?: string; fileMime?: string; fileDataUrl?: string; classKey?: string }
+    extra?: { kind?: NoteKind; url?: string; fileName?: string; fileMime?: string; fileDataUrl?: string }
   ) => {
     if (!storageKeys) return;
-    // El recurso nace en la clase de hoy de esa asignatura o, si hoy no hay, en
-    // la última dada (ver src/lib/class-link.ts). Quien llama puede fijar otra.
-    const classKey =
-      extra?.classKey ??
-      resolveClassKey(getArrayFromLocalStorage<ClassSession>(storageKeys.classSessions), courseId);
     const newNote: Note = {
       id: crypto.randomUUID(),
       courseId,
@@ -1692,7 +1638,6 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
       url: extra?.url,
       fileName: extra?.fileName,
       fileMime: extra?.fileMime,
-      ...(classKey ? { classKey } : {}),
     };
     if (extra?.fileDataUrl) {
       void saveImage(`noteFile_${newNote.id}`, extra.fileDataUrl);
@@ -1706,7 +1651,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
 
   const updateNote = useCallback((
     id: string,
-    updates: string | Partial<Pick<Note, 'content' | 'url' | 'fileName' | 'fileMime' | 'classKey'>>
+    updates: string | Partial<Pick<Note, 'content' | 'url' | 'fileName' | 'fileMime'>>
   ) => {
     if (!storageKeys) return;
     const patch = typeof updates === 'string' ? { content: updates } : updates;
@@ -1796,75 +1741,6 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
   }, [storageKeys]);
 
   // --- Horario del colegio ---
-  /**
-   * Guardar el horario y crear las clases del mes son UN SOLO gesto: importar
-   * el horario y luego tener que pulsar "Añadir" en otra pantalla no tenía
-   * sentido para nadie.
-   *
-   * Un horario nuevo manda de HOY en adelante, nunca hacia atrás: las clases
-   * de ese mes que ya pasaron se quedan exactamente como estaban —son lo que
-   * de verdad ocurrió, y guardan los recursos y tareas de ese día—, y solo
-   * las de hoy y las siguientes se rehacen con el horario nuevo. De esas, lo
-   * que el usuario ya hubiera anotado en una clase que sigue en pie (misma
-   * asignatura, fecha y hora de inicio) se conserva.
-   */
-  const saveSchedule = useCallback((schedule: MonthlySchedule): number => {
-    if (!storageKeys) return 0;
-
-    const nextSchedules = [...schedules.filter(s => s.month !== schedule.month), schedule]
-      .sort((a, b) => a.month.localeCompare(b.month));
-    setSchedules(nextSchedules);
-    setInLocalStorage(storageKeys.schedules, nextSchedules);
-
-    const todayKey = format(new Date(), 'yyyy-MM-dd');
-    const notes = new Map(
-      classSessions
-        .filter(c => c.date.startsWith(schedule.month) && c.topic)
-        .map(c => [classSessionKey(c), c.topic as string])
-    );
-    const fresh = buildClassSessions(schedule, [])
-      .filter(session => session.date >= todayKey)
-      .map(session => {
-        const topic = notes.get(classSessionKey(session));
-        return topic ? { ...session, topic } : session;
-      });
-    // Lo ya vivido de este mes, intacto.
-    const past = classSessions.filter(c => c.date.startsWith(schedule.month) && c.date < todayKey);
-    const untouched = classSessions.filter(c => !c.date.startsWith(schedule.month));
-    const updated = [...untouched, ...past, ...fresh];
-    setClassSessions(updated);
-    setInLocalStorage(storageKeys.classSessions, updated);
-
-    return fresh.length;
-  }, [storageKeys, schedules, classSessions]);
-
-  const updateClassSession = useCallback((id: string, updates: Partial<Omit<ClassSession, 'id'>>) => {
-    if (!storageKeys) return;
-    setClassSessions(prev => {
-      const updated = prev.map(c => (c.id === id ? { ...c, ...updates, id: c.id } : c));
-      setInLocalStorage(storageKeys.classSessions, updated);
-      return updated;
-    });
-  }, [storageKeys]);
-
-  const deleteClassSession = useCallback((id: string) => {
-    if (!storageKeys) return;
-    setClassSessions(prev => {
-      const updated = prev.filter(c => c.id !== id);
-      setInLocalStorage(storageKeys.classSessions, updated);
-      return updated;
-    });
-  }, [storageKeys]);
-
-  const clearClassSessions = useCallback((month: string) => {
-    if (!storageKeys) return;
-    setClassSessions(prev => {
-      const updated = prev.filter(c => !c.date.startsWith(month));
-      setInLocalStorage(storageKeys.classSessions, updated);
-      return updated;
-    });
-  }, [storageKeys]);
-
   // --- Eventos del calendario LOCAL ---
   const addLocalEvent = useCallback((event: Omit<LocalCalendarEvent, 'id'>) => {
     if (!storageKeys) return;
@@ -2806,12 +2682,6 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     purgeCourseArchive,
     removeTask,
     applySessionProgressToTasks,
-    schedules,
-    classSessions,
-    saveSchedule,
-    updateClassSession,
-    deleteClassSession,
-    clearClassSessions,
     localEvents,
     addLocalEvent,
     updateLocalEvent,

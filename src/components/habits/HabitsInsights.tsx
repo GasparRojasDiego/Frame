@@ -25,6 +25,7 @@ import {
   Target,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { EchoTileHeader } from '@/components/shared/EchoWord';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -224,9 +225,9 @@ function Gauge({
         y="64%"
         textAnchor="middle"
         className="fill-muted-foreground"
-        style={{ fontSize: size * 0.075, letterSpacing: '0.14em' }}
+        style={{ fontSize: size * 0.075 }}
       >
-        CUMPLIDO
+        Cumplido
       </text>
     </svg>
   );
@@ -344,10 +345,10 @@ function Panel({
     >
       <CardContent className="p-4 pt-5">
         {title && (
-          <div className="mb-4 text-center">
+          <EchoTileHeader word={title.split(' ')[0]} className="-mt-5 mb-4 pt-5 text-center">
             <h4 className="text-sm font-semibold text-primary">{title}</h4>
             {subtitle && <p className="text-[11px] text-muted-foreground">{subtitle}</p>}
-          </div>
+          </EchoTileHeader>
         )}
         {children}
       </CardContent>

@@ -47,14 +47,15 @@ function usePrefersReducedMotion(): boolean {
 // ============================================================
 // La frase del centro de la barra.
 //
-// Mismo formato exacto que la frase propia de antes (mayúsculas, espaciado
-// ancho, azul primario, centrada y truncada) y altura fija, para que nada
-// salte al cambiar. El relevo:
-//   · la saliente se va un poco a la izquierda, se encoge y se deshace letra
-//     a letra —cada una deriva, se desenfoca y se apaga con un leve desfase—;
-//   · la entrante nace pequeña y tenue y crece hasta su tamaño.
-// Con «reducir movimiento», un fundido simple.
+// Altura fija y centrada, para que nada salte al cambiar. El relevo (1.6.6,
+// Diego: «únicamente hacerse más pequeño y crecer, nada más»): la saliente se
+// encoge hasta desaparecer y la entrante crece desde nada hasta su tamaño.
+// Con «reducir movimiento», cambia sin animación.
 // ============================================================
+
+/** Lo que tarda cada mitad del relevo. */
+const SHRINK_MS = 260;
+const GROW_MS = 320;
 
 function PhraseStage({ text }: { text: string }) {
   const reduced = usePrefersReducedMotion();
@@ -69,9 +70,9 @@ function PhraseStage({ text }: { text: string }) {
   useLayoutEffect(() => {
     if (text === shown) return;
     turn.current += 1;
-    setLeaving({ text: shown, key: turn.current });
+    setLeaving(reduced ? null : { text: shown, key: turn.current });
     setShown(text);
-  }, [text, shown]);
+  }, [text, shown, reduced]);
 
   useLayoutEffect(() => {
     if (!leaving) return;
@@ -81,58 +82,23 @@ function PhraseStage({ text }: { text: string }) {
       setLeaving(null);
       return;
     }
-    const animations: Animation[] = [];
-
-    if (reduced) {
-      animations.push(out.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 220, easing: 'ease-out', fill: 'forwards' }));
-      if (incoming) {
-        animations.push(
-          incoming.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 260, delay: 140, easing: 'ease-out', fill: 'backwards' })
-        );
-      }
-    } else {
-      const letters = Array.from(out.querySelectorAll<HTMLElement>('[data-letter]'));
-      // El desfase total no depende del largo: una frase larga no tarda más.
-      const spread = 420;
-      const step = letters.length > 1 ? spread / (letters.length - 1) : 0;
-      const letterMs = 460;
-      letters.forEach((letter, index) => {
-        // Azar estable por letra (sin Math.random): cada una cae distinto.
-        const r = ((index * 9301 + 49297) % 233280) / 233280;
-        animations.push(
-          letter.animate(
-            [
-              { opacity: 1, transform: 'translate(0, 0) scale(1)', filter: 'blur(0px)' },
-              {
-                opacity: 0,
-                transform: `translate(${-(8 + r * 16)}px, ${(r - 0.5) * 8}px) scale(${0.5 + r * 0.3})`,
-                filter: 'blur(3px)',
-              },
-            ],
-            { duration: letterMs, delay: index * step, easing: 'cubic-bezier(0.55, 0, 1, 0.45)', fill: 'both' }
-          )
-        );
-      });
+    const animations: Animation[] = [
+      out.animate([{ transform: 'scale(1)' }, { transform: 'scale(0)' }], {
+        duration: SHRINK_MS,
+        easing: 'ease-in',
+        fill: 'forwards',
+      }),
+    ];
+    if (incoming) {
       animations.push(
-        out.animate([{ transform: 'translateX(0) scale(1)' }, { transform: 'translateX(-10px) scale(0.94)' }], {
-          duration: spread + letterMs,
-          easing: 'ease-in',
-          fill: 'forwards',
+        incoming.animate([{ transform: 'scale(0)' }, { transform: 'scale(1)' }], {
+          duration: GROW_MS,
+          delay: SHRINK_MS,
+          easing: 'ease-out',
+          fill: 'backwards',
         })
       );
-      if (incoming) {
-        animations.push(
-          incoming.animate(
-            [
-              { opacity: 0, transform: 'scale(0.86)', filter: 'blur(2px)' },
-              { opacity: 1, transform: 'scale(1)', filter: 'blur(0px)' },
-            ],
-            { duration: 650, delay: spread * 0.6, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'backwards' }
-          )
-        );
-      }
     }
-
     const key = leaving.key;
     Promise.all(animations.map((animation) => animation.finished))
       .then(() => setLeaving((current) => (current?.key === key ? null : current)))
@@ -140,11 +106,11 @@ function PhraseStage({ text }: { text: string }) {
         /* cancelada: llegó otra frase a mitad del relevo */
       });
     return () => animations.forEach((animation) => animation.cancel());
-    // Solo al empezar cada relevo; `reduced` se lee en ese instante.
+    // Solo al empezar cada relevo.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leaving?.key]);
 
-  const type = 'text-sm font-semibold uppercase tracking-widest text-primary';
+  const type = 'text-sm font-semibold tracking-wide text-primary';
 
   return (
     <>
@@ -153,12 +119,8 @@ function PhraseStage({ text }: { text: string }) {
       </h1>
       {leaving && (
         <div aria-hidden className="pointer-events-none absolute inset-0 flex flex-col justify-center">
-          <p key={leaving.key} ref={outRef} className={cn('overflow-hidden whitespace-nowrap px-2 text-center', type)}>
-            {Array.from(leaving.text).map((char, index) => (
-              <span key={index} data-letter className="inline-block">
-                {char === ' ' ? ' ' : char}
-              </span>
-            ))}
+          <p key={leaving.key} ref={outRef} className={cn('truncate px-2 text-center', type)}>
+            {leaving.text}
           </p>
         </div>
       )}

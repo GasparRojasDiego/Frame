@@ -1,4 +1,4 @@
-import type { HelpEntry } from '../search';
+import type { HelpEntry } from '../areas';
 
 type Entry = Omit<HelpEntry, 'area'>;
 
@@ -8,8 +8,6 @@ export const HABITOS: Entry[] = [
   {
     id: 'habitos-intro',
     title: 'La interfaz Hábitos',
-    q: ['qué es la interfaz hábitos', 'para qué sirve hábitos', 'hábitos'],
-    k: ['registro de habitos', 'rutinas'],
     a: '**Hábitos** te ayuda a mantener tus rutinas: leer, hacer ejercicio, tomar agua, repasar… Lo encuentras en el menú de la izquierda, en el primer bloque.\n\nEs como una tabla semanal: cada **fila** es un hábito y cada **casilla** es un día. Los hábitos se agrupan según el momento del día en que los haces: **mañana**, **tarde** o **noche**.\n\nDebajo de la tabla verás unos **anillos de colores** y un análisis de tu constancia, para que veas cómo vas.',
     go: '/habitos',
     rel: ['habito-crear', 'habito-marcar', 'habito-analisis'],
@@ -17,8 +15,6 @@ export const HABITOS: Entry[] = [
   {
     id: 'habito-crear',
     title: 'Crear un hábito',
-    q: ['cómo creo un hábito', 'cómo agrego una rutina', 'cómo añado un hábito nuevo', 'quiero leer todos los días', 'nuevo hábito', 'quiero leer 20 minutos cada noche', 'quiero tomar agua todos los días', 'hacer ejercicio diario'],
-    k: ['crear habito', 'rutina', 'nuevo', 'todos los dias', 'cada noche', 'diario'],
     a: '¡Qué buena idea empezar un hábito nuevo! Hacerlo en Frame es muy fácil:',
     steps: [
       'En el menú de la izquierda, entra en **Hábitos**.',
@@ -34,8 +30,6 @@ export const HABITOS: Entry[] = [
   {
     id: 'habito-marcar',
     title: 'Marcar un hábito como cumplido',
-    q: ['cómo marco un hábito', 'cómo registro que cumplí un hábito', 'cómo pongo el check del hábito', 'ya hice mi rutina de hoy', 'como marco que hice mi rutina', 'cumplí mi hábito de hoy', 'palomear un hábito'],
-    k: ['marcar', 'check', 'cumplido', 'casilla', 'palomear', 'cumpli', 'hice'],
     a: '¿Ya cumpliste tu hábito de hoy? En **Hábitos**, busca la fila de ese hábito y **pulsa la casilla** del día de hoy: se marcará como cumplida.\n\nSi te equivocaste, vuelve a pulsarla para desmarcarla.',
     tip: 'Las casillas de los días que no le tocan a ese hábito aparecen bloqueadas, con el mensaje «Este día no le toca».',
     go: '/habitos',
@@ -44,8 +38,6 @@ export const HABITOS: Entry[] = [
   {
     id: 'habito-semanas',
     title: 'Ver semanas anteriores de tus hábitos',
-    q: ['cómo veo la semana pasada de mis hábitos', 'cómo marco un hábito de ayer', 'cambiar de semana en hábitos'],
-    k: ['semana anterior', 'semana siguiente', 'historial'],
     a: 'En **Hábitos**, junto al título **Registro de hábitos**, hay dos **flechas**: una para ir a la **semana anterior** y otra para volver a la **siguiente**.\n\nAsí puedes revisar cómo te fue otras semanas o marcar un hábito que olvidaste marcar.',
     go: '/habitos',
     rel: ['habito-marcar'],
@@ -53,8 +45,6 @@ export const HABITOS: Entry[] = [
   {
     id: 'habito-fases',
     title: 'Fases del día de un hábito (mañana, tarde, noche)',
-    q: ['qué son las fases de los hábitos', 'cómo cambio un hábito a la noche', 'qué significa mañana tarde noche en hábitos'],
-    k: ['fase', 'manana', 'tarde', 'noche'],
     a: 'Cada hábito pertenece a un momento del día, para que la tabla quede ordenada como tu día real:\n\n**Mañana**: de 5:00 a 11:59. **Tarde**: de 12:00 a 18:59. **Noche**: desde las 19:00.\n\nSi quieres cambiar un hábito de momento, pulsa el **icono de la fase** que aparece en su fila.',
     go: '/habitos',
     rel: ['habito-crear'],
@@ -62,8 +52,6 @@ export const HABITOS: Entry[] = [
   {
     id: 'habito-frecuencia',
     title: 'Cambiar qué días toca un hábito',
-    q: ['cómo hago que un hábito sea solo de lunes a viernes', 'cambiar los días de un hábito', 'hábito solo algunos días', 'frecuencia de un hábito'],
-    k: ['frecuencia', 'dias', 'entre semana', 'fin de semana', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'],
     a: 'No todos los hábitos son de todos los días, y Frame lo entiende.\n\nEn la fila del hábito, pulsa el **icono del calendario** (dice «¿Qué días toca?» al pasar el ratón) y marca los días en que quieres hacerlo. Los demás días no contarán como fallo.',
     go: '/habitos',
     rel: ['habito-crear'],
@@ -71,16 +59,12 @@ export const HABITOS: Entry[] = [
   {
     id: 'habito-renombrar',
     title: 'Cambiar el nombre de un hábito',
-    q: ['cómo edito un hábito', 'cómo cambio el nombre de un hábito', 'renombrar hábito'],
-    k: ['editar', 'nombre', 'habito'],
     a: 'En **Hábitos**, pulsa el **lápiz** (Editar nombres), arriba de la tabla. Los nombres se vuelven editables: cambia los que quieras y pulsa otra vez el lápiz para guardar.',
     go: '/habitos',
   },
   {
     id: 'habito-archivar',
     title: 'Archivar, recuperar o borrar un hábito',
-    q: ['cómo elimino un hábito', 'cómo archivo un hábito', 'ya no quiero seguir un hábito', 'cómo recupero un hábito archivado', 'borrar hábito'],
-    k: ['archivar', 'eliminar', 'recuperar', 'habito'],
     a: 'Si ya no sigues un hábito, puedes **archivarlo**: deja de aparecer en la tabla, pero conserva todo su historial por si quieres retomarlo.\n\nEn **Hábitos**, pulsa el botón de la **caja** (Archivar hábitos), arriba de la tabla, y elige el hábito. Para recuperarlo, entra en **Ver archivados**: desde ahí puedes restaurarlo o eliminarlo para siempre.',
     go: '/habitos',
     rel: ['habito-crear'],
@@ -88,8 +72,6 @@ export const HABITOS: Entry[] = [
   {
     id: 'habito-analisis',
     title: 'Análisis de tus hábitos',
-    q: ['cómo veo mi constancia', 'estadísticas de hábitos', 'qué día fallo más', 'qué son los días perfectos', 'racha de hábitos', 'qué es el mapa de constancia'],
-    k: ['constancia', 'dias perfectos', 'racha perfecta', 'semana tipo', 'mapa'],
     a: 'En **Hábitos**, debajo de la tabla, encontrarás un análisis de tu constancia:\n\nTu **ritmo** del periodo, tus **días perfectos** (los días en que cumpliste todo), tu **racha perfecta**, los días activos, tu **semana tipo** (qué día de la semana cumples más y cuál menos) y un **mapa de constancia** de las últimas 12 semanas.\n\nPuedes verlo por semana o por mes.',
     tip: 'El cumplimiento solo cuenta los días que ya pasaron, no los que faltan.',
     go: '/habitos',
@@ -98,8 +80,6 @@ export const HABITOS: Entry[] = [
   {
     id: 'habito-anillos',
     title: 'Los anillos de hábitos',
-    q: ['qué significan los anillos de colores', 'qué es cada color de los anillos', 'anillos de hábitos'],
-    k: ['anillos', 'colores', 'segmentos'],
     a: 'Los **anillos de colores** de la sección **Hábitos** son una forma visual de ver tu semana: cada anillo es un hábito y cada trozo del anillo es un día. Cuando cumples el hábito ese día, su trozo se pinta.\n\nPara saber qué hábito es cada color, pulsa el botón **Qué es cada color**.',
     go: '/habitos',
     rel: ['habito-analisis'],

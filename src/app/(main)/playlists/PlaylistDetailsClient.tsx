@@ -55,6 +55,7 @@ import { useCourse } from '@/context/CourseContext';
 import SongPickerGrid from '@/components/music/SongPickerGrid';
 import { songCardId, useSongHighlight } from '@/hooks/use-song-highlight';
 import { songMatches } from '@/lib/music-search';
+import { EchoHeader } from '@/components/shared/EchoWord';
 
 
 const SortablePlaylistSongCard = ({ song, onPlay, onRemove, highlighted }: { song: Song; onPlay: () => void; onRemove: () => void; highlighted?: boolean }) => {
@@ -515,11 +516,13 @@ export default function PlaylistDetailsClient({ id }: { id: string }) {
           reaparecía una lista de casillas con el nombre del archivo. */}
       <Dialog open={isAddSongsOpen} onOpenChange={setAddSongsOpen}>
         <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-center text-xl font-bold text-primary">
-              Añadir canciones a "{playlist.name}"
-            </DialogTitle>
-          </DialogHeader>
+          <EchoHeader word="Añadir">
+            <DialogHeader>
+              <DialogTitle className="text-center text-xl font-bold text-primary">
+                Añadir canciones a "{playlist.name}"
+              </DialogTitle>
+            </DialogHeader>
+          </EchoHeader>
 
           <SongPickerGrid
             selectedIds={playlist.songIds}

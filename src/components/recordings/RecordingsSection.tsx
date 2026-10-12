@@ -50,6 +50,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { Recording, RecordingImportance, RecordingKind } from '@/types';
 import { IMPORTANCE_LABEL, IMPORTANCE_STYLE } from '@/lib/recordings';
 import { cn } from '@/lib/utils';
+import EchoWord from '@/components/shared/EchoWord';
 
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
@@ -256,7 +257,9 @@ function RecordingDetailsDialog({
         </DropdownMenu>
 
         {/* --- Cabecera: qué audio es, de un vistazo --- */}
-        <DialogHeader className="items-center space-y-0 bg-gradient-to-b from-primary/10 via-primary/[0.04] to-transparent px-8 pb-5 pt-10 text-center">
+        <DialogHeader className="relative items-center overflow-hidden space-y-0 bg-gradient-to-b from-primary/10 via-primary/[0.04] to-transparent px-8 pb-5 pt-10 text-center">
+          <EchoWord word="Grabación" />
+          <div className="relative flex w-full flex-col items-center">
           <DialogTitle className="sr-only">Detalles de la grabación</DialogTitle>
           <div
             className={cn(
@@ -283,6 +286,7 @@ function RecordingDetailsDialog({
             <span aria-hidden>·</span>
             <span className="font-semibold tabular-nums text-foreground">{formatDuration(sliderMax)}</span>
           </p>
+          </div>
         </DialogHeader>
         {/* Divisoria con aire a ambos lados, no de borde a borde. */}
         <div aria-hidden className="mx-6 h-px bg-border/60" />
@@ -369,7 +373,7 @@ function RecordingDetailsDialog({
 
           {/* --- Datos --- */}
           <div className="space-y-1.5">
-            <Label htmlFor="recEditDesc" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <Label htmlFor="recEditDesc" className="text-[11px] font-semibold text-muted-foreground">
               Descripción
             </Label>
             <NoteEditor
@@ -385,13 +389,13 @@ function RecordingDetailsDialog({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <Label className="text-[11px] font-semibold text-muted-foreground">
                 Importancia
               </Label>
               <ImportancePicker value={importance} onChange={setImportance} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <Label className="text-[11px] font-semibold text-muted-foreground">
                 Tipo
               </Label>
               <KindPicker value={kind} onChange={setKind} />

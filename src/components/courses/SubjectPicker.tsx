@@ -6,7 +6,7 @@ import { useCourse } from '@/context/CourseContext';
 import { getImage } from '@/lib/music-db';
 import { cn } from '@/lib/utils';
 import WaveBackdrop from '@/components/courses/WaveBackdrop';
-import { useCardImageHeight } from '@/lib/card-image-height';
+import { useCardImageStyle } from '@/lib/card-image-height';
 import type { Course } from '@/types';
 
 // ============================================================
@@ -79,8 +79,8 @@ export function PickCard({
   disabled?: boolean;
   onSelect: () => void;
 }) {
-  // El alto de la imagen es el que el usuario eligió en Asignaturas (1.6.5).
-  const imageHeight = useCardImageHeight();
+  // La proporción de la imagen es la que el usuario eligió en Asignaturas (1.6.6).
+  const imageStyle = useCardImageStyle();
   return (
     <button
       type="button"
@@ -95,7 +95,7 @@ export function PickCard({
         disabled && 'cursor-not-allowed opacity-45 hover:border-border/70'
       )}
     >
-      <span className="relative block" style={{ height: imageHeight }}>
+      <span className="relative block" style={imageStyle}>
         <SubjectCover imageKeys={imageKeys} className="h-full w-full" />
         {selected !== undefined && (
           <span
@@ -342,10 +342,15 @@ export function SubjectMultiPicker({
   max,
   className,
   searchClassName,
+  grouped = false,
 }: {
   values: string[];
   onChange: (courseIds: string[]) => void;
   title?: string;
+  /** Todas las asignaturas a la vista, agrupadas: una línea fina por
+   *  colección con su nombre al centro y debajo sus tarjetas (sin tarjetas
+   *  de colección que abrir). Lo usa «Elegir asignaturas» (1.6.6). */
+  grouped?: boolean;
   /** Tope de marcadas: al alcanzarlo, las demás tarjetas se atenúan. */
   max?: number;
   className?: string;
@@ -429,6 +434,19 @@ export function SubjectMultiPicker({
         ) : (
           <div className={grid}>{searchResults.map(courseCard)}</div>
         )
+      ) : grouped ? (
+        <div className="space-y-4">
+          {groups.map((group) => (
+            <div key={group.id} className="space-y-2.5">
+              <div className="flex items-center gap-3">
+                <span aria-hidden className="h-px flex-1 bg-border" />
+                <span className="shrink-0 text-[11px] font-semibold text-muted-foreground">{group.name}</span>
+                <span aria-hidden className="h-px flex-1 bg-border" />
+              </div>
+              <div className={grid}>{group.courses.map(courseCard)}</div>
+            </div>
+          ))}
+        </div>
       ) : current ? (
         <div className={grid}>{current.courses.map(courseCard)}</div>
       ) : (

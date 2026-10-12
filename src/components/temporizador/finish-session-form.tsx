@@ -143,7 +143,7 @@ export default function FinishSessionForm({
                 )}
               >
                 <div className="space-y-0.5 text-center">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  <p className="text-[10px] text-muted-foreground">
                     Tiempo estudiado
                   </p>
                   <p className="font-headline text-2xl font-bold tabular-nums text-primary">
@@ -154,7 +154,7 @@ export default function FinishSessionForm({
                 {selectionMode === 'rendimiento' && (
                   <div>
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="perception" className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                      <Label htmlFor="perception" className="text-[10px] text-muted-foreground">
                         Nivel de enfoque
                       </Label>
                       <span
@@ -212,11 +212,11 @@ export default function FinishSessionForm({
                   id="session-notes-label"
                   htmlFor="session-notes"
                   onClick={() => document.getElementById('session-notes')?.focus()}
-                  className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground"
+                  className="flex items-center gap-1.5 text-[10px] text-muted-foreground"
                 >
                   <NotebookPen className="h-3.5 w-3.5 text-primary" />
                   ¿Qué hiciste?
-                  <span className="normal-case tracking-normal text-muted-foreground/70">(opcional)</span>
+                  <span className="text-muted-foreground/70">(opcional)</span>
                 </Label>
                 {/* Texto con formato y listas, como un Word en pequeño. */}
                 <NoteEditor
@@ -227,6 +227,7 @@ export default function FinishSessionForm({
                   placeholder="Resolví los ejercicios 12 al 20; me atasqué en la derivada de la cadena…"
                   rows={3}
                   dense
+                  toolbarSide
                 />
               </div>
             </div>

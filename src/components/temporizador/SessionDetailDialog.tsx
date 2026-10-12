@@ -16,7 +16,7 @@ import {
 import { Button } from '@/components/ui/button';
 import EchoWord from '@/components/shared/EchoWord';
 import { SessionCover, useCourseImages } from '@/components/temporizador/SessionCard';
-import { useCardImageHeight } from '@/lib/card-image-height';
+import { useCardImageStyle } from '@/lib/card-image-height';
 import RichNoteView from '@/components/temporizador/RichNoteView';
 import SessionNotesList, { SessionNotesHeading } from '@/components/temporizador/SessionNotesList';
 import { sessionHasFocus, sessionRange, sessionSubjects } from '@/components/temporizador/session-info';
@@ -84,8 +84,8 @@ export function SessionDetailView({
 
   const subjects = useMemo(() => sessionSubjects(session, courses ?? []), [session, courses]);
   const images = useCourseImages(subjects.map((subject) => subject.course?.id ?? null));
-  // La portada mide lo que el usuario eligió en Asignaturas (1.6.5).
-  const imageHeight = useCardImageHeight();
+  // La portada guarda la proporción elegida en Asignaturas (1.6.6).
+  const imageStyle = useCardImageStyle();
 
   /** Colección de cada asignatura (la primera en la que aparece). */
   const collectionOf = (courseId: string | undefined): string | null =>
@@ -164,10 +164,10 @@ export function SessionDetailView({
 
       {/* ---------- Cuerpo: único carril de scroll ---------- */}
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {/* La portada de la asignatura, de extremo a extremo y con el alto
-            elegido en Asignaturas. Se funde hacia abajo con el fondo del
+        {/* La portada de la asignatura, de extremo a extremo y con la
+            proporción elegida en Asignaturas. Se funde hacia abajo con el fondo del
             recuadro; encima, el nombre centrado y su colección. */}
-        <div className="relative" style={{ height: imageHeight }}>
+        <div className="relative" style={imageStyle}>
           <SessionCover images={images} active={0} split className="h-full w-full" />
           <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 px-6 pb-2 text-center">

@@ -40,6 +40,7 @@ import {
   needsNameResolution,
   resolvePlaceName,
 } from '@/lib/weather';
+import { EchoHeader } from '@/components/shared/EchoWord';
 
 const KIND_ICON = {
   sun: Sun,
@@ -422,12 +423,14 @@ export default function WeatherCard() {
       {/* Selector de ubicación */}
       <Dialog open={isPickerOpen} onOpenChange={setPickerOpen}>
         <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-xl text-primary font-bold text-center">Ubicación del clima</DialogTitle>
-            <DialogDescription className="text-center">
-              Detección automática por GPS, o busca tu ciudad manualmente.
-            </DialogDescription>
-          </DialogHeader>
+          <EchoHeader word="Ubicación">
+            <DialogHeader>
+              <DialogTitle className="text-xl text-primary font-bold text-center">Ubicación del clima</DialogTitle>
+              <DialogDescription className="text-center">
+                Detección automática por GPS, o busca tu ciudad manualmente.
+              </DialogDescription>
+            </DialogHeader>
+          </EchoHeader>
           <Button
             variant="outline"
             className="w-full border-primary/60 text-primary hover:bg-primary/10 hover:text-primary"

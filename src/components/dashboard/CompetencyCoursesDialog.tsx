@@ -15,8 +15,9 @@ import { MAX_COMPETENCY_COURSES, MIN_COMPETENCY_COURSES } from '@/lib/competency
 // ============================================================
 // Elegir las asignaturas del radar.
 //
-// Las mismas tarjetas que el «+» de la barra (colección → asignaturas, o
-// búsqueda directa), pero marcando varias. El tope de vértices se hace
+// Las tarjetas de asignatura de siempre, todas a la vista y agrupadas por
+// colección (una línea fina con su nombre al centro; 1.6.6), o con búsqueda
+// directa, marcando varias. El tope de vértices se hace
 // cumplir aquí: la tarjeta que pasaría del máximo no se marca y el contador
 // lo avisa en rojo un momento.
 // ============================================================
@@ -96,9 +97,10 @@ export default function CompetencyCoursesDialog({
           <SubjectMultiPicker
             values={draft}
             onChange={handleChange}
-            title="Colecciones"
+            title="Asignaturas"
             max={MAX_COMPETENCY_COURSES}
             searchClassName="sm:w-56"
+            grouped
           />
         </div>
 

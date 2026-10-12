@@ -33,6 +33,7 @@ import InboxTasksSection from '@/components/tasks/InboxTasksSection';
 import AcademicPulse from '@/components/dashboard/AcademicPulse';
 import LooseNotesSection from '@/components/dashboard/LooseNotesSection';
 import { DIFFICULTY_META, DifficultyBars } from '@/components/tasks/task-badges';
+import { EchoHeader, EchoTileHeader } from '@/components/shared/EchoWord';
 
 // El radar usa la biblioteca de gráficos (la más pesada de la app) y está al
 // final de Inicio: se carga aparte para que Inicio aparezca antes.
@@ -303,12 +304,14 @@ const StatTile = ({
       className
     )}
   >
-    <div className="flex items-center gap-2">
-      <span className="shrink-0 rounded-md bg-background/60 p-1">
-        <Icon className="h-3.5 w-3.5 text-primary" />
-      </span>
-      <span className="truncate text-xs font-semibold text-muted-foreground">{label}</span>
-    </div>
+    <EchoTileHeader word={label.split(/[ ,]/)[0]} pad="3.5" className="pb-2">
+      <div className="flex items-center gap-2">
+        <span className="shrink-0 rounded-md bg-background/60 p-1">
+          <Icon className="h-3.5 w-3.5 text-primary" />
+        </span>
+        <span className="truncate text-xs font-semibold text-muted-foreground">{label}</span>
+      </div>
+    </EchoTileHeader>
     {children}
   </div>
 );
@@ -588,20 +591,21 @@ export default function HomePage() {
           </div>
           <div ref={studyHoursCardRef} className="lg:col-span-6" data-tour="rendimiento">
             <Card className="h-full">
-                <CardHeader>
+                <CardHeader className="pb-4">
                     <CardTitle className="text-lg font-headline text-center">Rendimiento académico</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col gap-4">
                       <StatTile
                         icon={Clock}
                         label={`Ayer, ${yesterdayFormatted}`}
-                        accent="from-primary/10"
+                        accent="from-primary/[0.06]"
                       >
                         {/* Aguja sobre 20 (o sobre la meta diaria en modo
                             tiempo): el número solo no dice si 14 es mucho. */}
-                        <div className="flex items-center justify-between gap-2">
+                        <div className="grid flex-1 grid-cols-2 items-center gap-2">
+                          <div className="flex justify-center">
                           {selectionMode === 'rendimiento' ? (
                             <ArcGauge
                               value={yesterdayPerformance?.score ?? 0}
@@ -618,7 +622,8 @@ export default function HomePage() {
                               sub={`${yesterdayMinutes}m`}
                             />
                           )}
-                          <div className="flex flex-col items-end gap-1.5">
+                          </div>
+                          <div className="flex flex-col items-center gap-1.5 text-center">
                             {selectionMode === 'rendimiento' && (
                               <GradeBadge grade={yesterdayPerformance?.grade ?? null} />
                             )}
@@ -633,11 +638,11 @@ export default function HomePage() {
                       <StatTile
                         icon={Calendar}
                         label="Promedio semanal"
-                        accent="from-chart-2/15"
+                        accent="from-chart-2/[0.09]"
                       >
                         {/* Silueta de los 7 días: la tendencia importa más que
                             el promedio, que oculta si vas subiendo o cayendo. */}
-                        <div className="flex items-end justify-between gap-2">
+                        <div className="flex items-end justify-center gap-3">
                           <div className="flex items-baseline gap-1.5">
                             <span className="font-headline text-3xl font-bold text-primary tabular-nums">
                               {selectionMode === 'rendimiento'
@@ -687,34 +692,32 @@ export default function HomePage() {
                                     event.currentTarget.click();
                                   }
                                 }}
-                                className="flex min-h-0 flex-1 basis-0 cursor-pointer rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                className="flex min-h-0 flex-[3] basis-0 cursor-pointer rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                 data-tour="proxima-tarea"
                               >
                                 <StatTile
                                   icon={AlertTriangle}
                                   label="Próxima tarea"
-                                  accent="from-amber-500/15"
+                                  accent="from-amber-500/[0.09]"
                                   interactive
                                   className="min-h-0 min-w-0 overflow-hidden"
                                 >
                                   <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden">
-                                    {/* Nombre de la tarea: hasta dos líneas, sin
-                                        competir por el ancho con nada más (el
-                                        avance va en la línea de datos). */}
+                                    {/* Título de la tarea (hasta dos líneas) y,
+                                        debajo, su asignatura. */}
                                     <p
-                                      className="line-clamp-2 shrink-0 break-words font-headline text-sm font-bold leading-snug text-primary"
+                                      className="line-clamp-2 shrink-0 break-words font-headline text-sm font-bold leading-snug text-foreground"
                                       title={criticalTask.name}
                                     >
                                       {criticalTask.name}
                                     </p>
+                                    <p className="shrink-0 truncate text-[11px] font-semibold text-muted-foreground">
+                                      {criticalTask.courseName}
+                                    </p>
 
-                                    {/* Dos líneas de datos de alto fijo: cuenta
-                                        atrás y asignatura (recortada); después
-                                        fecha, importancia, dificultad y avance,
-                                        donde lo que no cabe salta a una línea
-                                        oculta (se corta entre datos, nunca a mitad
-                                        de uno). El resto es para la descripción. */}
-                                    <div className="flex h-4 shrink-0 items-center gap-2 overflow-hidden text-[11px] leading-4 text-muted-foreground">
+                                    {/* Una línea de datos: cuánto falta, fecha,
+                                        importancia y dificultad. */}
+                                    <div className="mt-0.5 flex h-4 shrink-0 flex-wrap items-center gap-x-2.5 gap-y-1 overflow-hidden text-[11px] leading-4 text-muted-foreground">
                                       {criticalTaskCountdown && (
                                         <CountdownChip
                                           days={criticalTaskCountdown.days}
@@ -723,11 +726,6 @@ export default function HomePage() {
                                           title={criticalTaskDue ? `Fecha de entrega: ${criticalTaskDue.long}` : undefined}
                                         />
                                       )}
-                                      <span className="min-w-0 max-w-full truncate font-semibold text-foreground/80">
-                                        {criticalTask.courseName}
-                                      </span>
-                                    </div>
-                                    <div className="flex h-4 shrink-0 flex-wrap items-center gap-x-2 gap-y-1 overflow-hidden text-[11px] leading-4 text-muted-foreground">
                                       {criticalTaskDue && (
                                         <span
                                           className="shrink-0"
@@ -756,20 +754,6 @@ export default function HomePage() {
                                           <DifficultyBars level={criticalTask.difficulty} />
                                         </span>
                                       )}
-                                      <span
-                                        className="flex shrink-0 items-center gap-1"
-                                        title={`Avance: ${criticalTaskProgress}%`}
-                                      >
-                                        <span className="h-1 w-8 overflow-hidden rounded-full bg-secondary">
-                                          <span
-                                            className="block h-full rounded-full bg-primary transition-[width] duration-500 motion-reduce:transition-none"
-                                            style={{ width: `${criticalTaskProgress}%` }}
-                                          />
-                                        </span>
-                                        <span className="text-[10px] font-semibold tabular-nums text-muted-foreground">
-                                          {criticalTaskProgress}%
-                                        </span>
-                                      </span>
                                     </div>
 
                                     {/* Inicio de la descripción: ocupa lo que sobra
@@ -783,14 +767,32 @@ export default function HomePage() {
                                     >
                                       {criticalTaskDescription || 'Sin descripción.'}
                                     </FitText>
+
+                                    {/* El avance, abajo del todo y a lo ancho. */}
+                                    <div
+                                      className="flex shrink-0 items-center gap-2"
+                                      title={`Avance: ${criticalTaskProgress}%`}
+                                    >
+                                      <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary">
+                                        <span
+                                          className="block h-full rounded-full bg-primary transition-[width] duration-500 motion-reduce:transition-none"
+                                          style={{ width: `${criticalTaskProgress}%` }}
+                                        />
+                                      </span>
+                                      <span className="text-[10px] font-semibold tabular-nums text-muted-foreground">
+                                        {criticalTaskProgress}%
+                                      </span>
+                                    </div>
                                   </div>
                                 </StatTile>
                               </div>
                             </DialogTrigger>
                             <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle className="text-primary text-xl font-bold text-center">Interfaz</DialogTitle>
-                                </DialogHeader>
+                                <EchoHeader word="Interfaz">
+                                  <DialogHeader>
+                                      <DialogTitle className="text-primary text-xl font-bold text-center">Interfaz</DialogTitle>
+                                  </DialogHeader>
+                                </EchoHeader>
                                 <div className="grid grid-cols-2 gap-4 pt-4">
                                     <Button
                                       variant="fantasma"
@@ -806,18 +808,18 @@ export default function HomePage() {
                             </DialogContent>
                           </Dialog>
                         ) : (
-                          <div className="flex min-h-0 flex-1 basis-0" data-tour="proxima-tarea">
-                            <StatTile icon={AlertTriangle} label="Próxima tarea" accent="from-amber-500/15">
-                              <p className="font-headline text-lg font-bold text-primary">Todo en orden</p>
+                          <div className="flex min-h-0 flex-[3] basis-0" data-tour="proxima-tarea">
+                            <StatTile icon={AlertTriangle} label="Próxima tarea" accent="from-amber-500/[0.09]">
+                              <p className="font-headline text-lg font-bold text-foreground">Todo en orden</p>
                               <p className="text-xs text-muted-foreground">No tienes tareas pendientes con fecha.</p>
                             </StatTile>
                           </div>
                         )}
 
-                      <StatTile icon={Flame} label="Días de racha" accent="from-orange-500/15" className="min-h-0 basis-0 overflow-hidden">
+                      <StatTile icon={Flame} label="Días de racha" accent="from-orange-500/[0.09]" className="min-h-0 flex-[2] basis-0 overflow-hidden">
                         {/* La llama crece con la racha y el anillo mide cuánto
                             falta para el siguiente hito de 7 días. */}
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-1 items-center justify-center gap-3">
                           <div className="relative flex h-[52px] w-[52px] shrink-0 items-center justify-center">
                             <svg viewBox="0 0 36 36" className="absolute inset-0 h-full w-full -rotate-90">
                               <circle cx="18" cy="18" r="15.5" fill="none" strokeWidth="3" className="stroke-secondary" />
@@ -842,7 +844,7 @@ export default function HomePage() {
                               fill={streak >= 7 ? 'currentColor' : 'none'}
                             />
                           </div>
-                          <div className="min-w-0">
+                          <div className="flex min-w-0 flex-col items-center text-center">
                             <p className="font-headline text-3xl font-bold leading-none text-primary tabular-nums">
                               {streak}
                             </p>

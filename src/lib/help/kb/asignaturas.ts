@@ -1,24 +1,20 @@
-import type { HelpEntry } from '../search';
+import type { HelpEntry } from '../areas';
 
 type Entry = Omit<HelpEntry, 'area'>;
 
-// Asignaturas: cursos, colecciones, horario del mes, clases y recursos.
+// Asignaturas: cursos, colecciones y recursos.
 // (Estilo de las respuestas: ver basico.ts.)
 export const ASIGNATURAS: Entry[] = [
   {
     id: 'asig-intro',
     title: 'La interfaz Asignaturas',
-    q: ['qué es la interfaz asignaturas', 'para qué sirve asignaturas', 'asignaturas', 'mis asignaturas'],
-    k: ['cursos', 'colecciones'],
-    a: '**Asignaturas** es donde viven tus cursos. Lo encuentras en el menú de la izquierda, al inicio del segundo bloque.\n\nCada curso aparece como una **tarjeta con imagen**. Si tienes varios cursos parecidos, puedes agruparlos en **colecciones** (por ejemplo, «Ciencias» con Física, Química y Biología).\n\nAl pulsar una asignatura entras a su página, donde están sus **tareas**, sus **clases** del mes, sus **recursos** (apuntes, enlaces y archivos) y sus **grabaciones**.',
+    a: '**Asignaturas** es donde viven tus cursos. Lo encuentras en el menú de la izquierda, al inicio del segundo bloque.\n\nCada curso aparece como una **tarjeta con imagen**. Si tienes varios cursos parecidos, puedes agruparlos en **colecciones** (por ejemplo, «Ciencias» con Física, Química y Biología).\n\nAl pulsar una asignatura entras a su página, donde están sus **tareas** y sus **recursos**: anotaciones, enlaces, archivos y grabaciones.',
     go: '/knowledge',
-    rel: ['asig-crear', 'asig-abrir', 'asig-horario-importar'],
+    rel: ['asig-crear', 'asig-abrir', 'asig-recursos'],
   },
   {
     id: 'asig-crear',
     title: 'Crear una asignatura',
-    q: ['cómo creo una asignatura', 'cómo agrego un curso', 'cómo añado una materia', 'dónde creo mis cursos', 'nueva asignatura', 'cómo creo varias asignaturas a la vez'],
-    k: ['crear asignatura', 'curso', 'materia', 'anadir', 'cneb', 'curriculo nacional'],
     a: 'Crear tus asignaturas es el primer paso para organizar todo en Frame.',
     steps: [
       'En el menú de la izquierda, entra en **Asignaturas** y pulsa **Añadir**, arriba a la derecha.',
@@ -33,8 +29,6 @@ export const ASIGNATURAS: Entry[] = [
   {
     id: 'asig-coleccion',
     title: 'Crear una colección de asignaturas',
-    q: ['qué es una colección', 'cómo agrupo mis asignaturas', 'cómo creo una carpeta de cursos', 'agrupar ciencias', 'colección nueva', 'juntar varias asignaturas', 'quiero juntar física química y biología', 'agrupar asignaturas por área'],
-    k: ['coleccion', 'grupo', 'agrupar', 'carpeta', 'juntar', 'fisica', 'quimica', 'biologia', 'ciencias', 'letras'],
     a: 'Una **colección** es como una carpeta que agrupa dos o más asignaturas parecidas, por ejemplo «Ciencias» con Física, Química y Biología. Así tu pantalla queda más ordenada.',
     steps: [
       'En **Asignaturas**, pulsa **Añadir**, arriba a la derecha.',
@@ -49,8 +43,6 @@ export const ASIGNATURAS: Entry[] = [
   {
     id: 'asig-mover-coleccion',
     title: 'Mover una asignatura a otra colección',
-    q: ['cómo cambio una asignatura de colección', 'cómo saco una asignatura de una colección', 'cómo meto una asignatura en una colección'],
-    k: ['coleccion', 'mover', 'sin coleccion'],
     a: 'Pasa el ratón por la tarjeta de la asignatura: arriba a la derecha aparece el botón de las **capas** (Colección de esta asignatura). Púlsalo y elige la colección a la que quieres moverla, o **Sin colección** si prefieres dejarla suelta.',
     go: '/knowledge',
     rel: ['asig-coleccion'],
@@ -58,16 +50,12 @@ export const ASIGNATURAS: Entry[] = [
   {
     id: 'asig-coleccion-renombrar',
     title: 'Abrir o renombrar una colección',
-    q: ['cómo entro a una colección', 'cómo cambio el nombre de una colección', 'renombrar colección'],
-    k: ['coleccion', 'nombre', 'abrir'],
     a: '**Pulsa la tarjeta de la colección** para ver las asignaturas que tiene dentro.\n\nAhí, junto a su nombre, está el **lápiz** para cambiarle el nombre. Para salir, pulsa **Volver a Asignaturas**.',
     go: '/knowledge',
   },
   {
     id: 'asig-imagen',
     title: 'Poner una imagen a una asignatura o colección',
-    q: ['cómo pongo una imagen a mi asignatura', 'cómo cambio la portada del curso', 'cómo pongo foto a la colección', 'fondo de la asignatura'],
-    k: ['imagen', 'portada', 'camara', 'galeria', 'encuadre'],
     a: 'Ponerle una imagen a cada asignatura hace que la reconozcas de un vistazo.\n\nPasa el ratón por su tarjeta y pulsa el botón de la **cámara**, arriba a la derecha (también está en la cabecera de la asignatura). Puedes elegir una de las **89 imágenes** de la galería de Frame (ciudades, monumentos, paisajes, espacio y otras) o **subir una tuya**. Después, la encuadras como quieras.',
     tip: 'Si no eliges imagen, la tarjeta muestra unas olas animadas. Si entraste con una cuenta, la imagen también aparece en tu celular.',
     go: '/knowledge',
@@ -76,10 +64,8 @@ export const ASIGNATURAS: Entry[] = [
   {
     // 1.6.4
     id: 'asig-alto-imagen',
-    title: 'El alto de la imagen de las tarjetas',
-    q: ['cómo cambio el alto de la imagen de las tarjetas', 'quiero las imágenes de las asignaturas más grandes', 'hacer más pequeñas las portadas de las asignaturas', 'para qué es el engranaje de asignaturas'],
-    k: ['alto', 'altura', 'imagen', 'portada', 'tarjetas', 'engranaje', 'tamano'],
-    a: '¿Quieres que las imágenes de tus asignaturas se vean más grandes o más pequeñas? Puedes elegirlo tú.\n\nEn **Asignaturas**, pulsa el **engranaje**, arriba a la derecha. En **Alto de las imágenes**, mueve la barra: la parte de imagen de **todas** las tarjetas de colecciones y asignaturas cambia a la vez, también donde eliges una asignatura (al crear una tarea, una anotación o una grabación) y en tus sesiones de estudio.\n\nSi quieres volver al tamaño original, pulsa **Valor predeterminado**.',
+    title: 'La proporción de la imagen de las tarjetas',
+    a: '¿Quieres que las imágenes de tus asignaturas se vean más altas o más bajas? Puedes elegirlo tú.\n\nEn **Asignaturas**, pulsa el **engranaje**, arriba a la derecha. En **Alto de las imágenes**, mueve la barra: la parte de imagen de **todas** las tarjetas de colecciones y asignaturas cambia a la vez, también donde eliges una asignatura (al crear una tarea, una anotación o una grabación) y en tus sesiones de estudio.\n\nFrame guarda la **proporción** de la imagen, no su altura: si la ventana es más ancha o más estrecha, la tarjeta se ve igual de equilibrada.\n\nSi quieres volver a la proporción original, pulsa **Valor predeterminado**.',
     tip: 'Este ajuste se recuerda en este equipo.',
     go: '/knowledge',
     rel: ['asig-imagen', 'encuadre-imagen'],
@@ -87,36 +73,29 @@ export const ASIGNATURAS: Entry[] = [
   {
     id: 'encuadre-imagen',
     title: 'Encuadrar una imagen',
-    q: ['cómo recorto la imagen', 'cómo hago zoom a la foto', 'la imagen sale cortada', 'cómo muevo la imagen dentro del marco'],
-    k: ['encuadre', 'recortar', 'zoom', 'acercar'],
-    a: 'Cuando eliges una imagen, Frame te deja **encuadrarla** antes de guardarla, para que se vea justo la parte que quieres.\n\n**Arrastra la imagen** para moverla dentro del marco y **acércala o aléjala** con la rueda del ratón o con la barra deslizante. Lo que quede dentro del marco es lo que se verá.',
+    a: 'Cuando eliges una imagen, Frame te deja **encuadrarla** antes de guardarla, para que se vea justo la parte que quieres.\n\nVerás la **imagen completa** con un **recuadro** encima: lo de dentro es lo que se usará y lo de fuera queda más oscuro. **Arrastra el recuadro** para elegir la parte que quieres y **acerca** con la rueda del ratón o con la barra deslizante. Cuando te guste, pulsa **Guardar**.',
+    tip: 'En la foto de perfil el recuadro es redondo, igual que se verá tu foto.',
     rel: ['asig-imagen', 'perfil-foto'],
   },
   {
     id: 'asig-abrir',
     title: 'Qué hay dentro de una asignatura',
-    q: ['qué hay dentro de una asignatura', 'cómo entro a una asignatura', 'qué significan los números de la asignatura', 'panel de la asignatura'],
-    k: ['asignatura', 'detalle', 'cabecera', 'estadisticas'],
-    a: 'En **Asignaturas**, **pulsa la tarjeta** de un curso para entrar a su página.\n\nArriba verás su imagen y cuatro datos: tareas culminadas, tareas pendientes, tiempo de estudio y número de sesiones. A los lados están los botones para editarla, eliminarla, cambiar su imagen y ver sus archivados.\n\nDebajo puedes ver sus **Tareas** o sus **Clases** del mes, y a la derecha, sus **recursos**.',
+    a: 'En **Asignaturas**, **pulsa la tarjeta** de un curso para entrar a su página.\n\nArriba verás su imagen y cuatro datos: tareas culminadas, tareas pendientes, tiempo de estudio y número de sesiones. A los lados están los botones para editarla, eliminarla, cambiar su imagen y ver sus archivados.\n\nDebajo, cambia entre **Tareas** y **Recursos** con las pestañas.',
     go: '/knowledge',
-    rel: ['asig-recursos', 'asig-clases', 'asig-archivados'],
+    rel: ['asig-recursos', 'asig-archivados'],
   },
   {
     id: 'asig-editar',
     title: 'Renombrar o eliminar una asignatura',
-    q: ['cómo cambio el nombre de una asignatura', 'cómo borro una asignatura', 'cómo elimino un curso', 'cambiar el profesor de la asignatura'],
-    k: ['editar', 'eliminar', 'renombrar', 'profesor'],
     a: 'Entra a la asignatura pulsando su tarjeta. En su cabecera encontrarás el **lápiz** (Editar asignatura) para cambiar su nombre o el de su profesor, y la **papelera** (Eliminar asignatura) para borrarla.',
-    tip: 'Ojo: eliminar una asignatura borra también sus tareas, recursos y clases. Si fue sin querer, presiona Ctrl + Z en los segundos siguientes.',
+    tip: 'Ojo: eliminar una asignatura borra también sus tareas y recursos. Si fue sin querer, presiona Ctrl + Z en los segundos siguientes.',
     go: '/knowledge',
     rel: ['deshacer'],
   },
   {
     id: 'asig-recursos',
-    title: 'Recursos de una asignatura (notas, enlaces y archivos)',
-    q: ['cómo guardo un link en mi asignatura', 'cómo subo un pdf a mi curso', 'cómo agrego apuntes a una asignatura', 'qué es un recurso', 'dónde guardo mis materiales', 'cómo guardo apuntes en un curso', 'dónde pongo los materiales del profe', 'subir un archivo a una asignatura'],
-    k: ['recurso', 'enlace', 'link', 'archivo', 'pdf', 'apuntes', 'material', 'apuntes', 'materiales', 'subir archivo'],
-    a: 'Cada asignatura tiene un espacio para guardar sus materiales, llamados **recursos**.\n\nEntra a la asignatura y, a la derecha, busca el recuadro **Nuevo recurso**. Puedes guardar tres tipos: un **texto** (una nota rápida), un **enlace** a una página web o un **archivo** (PDF, Word, Excel o una imagen).\n\nLos archivos se abren dentro de Frame o con su programa habitual.',
+    title: 'Los recursos de una asignatura',
+    a: 'Cada asignatura guarda sus materiales en la pestaña **Recursos**. Ahí están ordenados en bloques: **Anotaciones**, **Enlaces**, **Archivos** y, al final, sus **grabaciones**.\n\nPara añadir uno, busca el recuadro **Nuevo recurso**, a la derecha. Puedes guardar un **texto** (una nota rápida), un **enlace** a una página web o un **archivo** (PDF, Word, Excel o una imagen).\n\nDentro de cada bloque puedes **arrastrar** las tarjetas para ordenarlas como prefieras.',
     tip: 'Para cambiar o borrar un recurso, usa «Editar o eliminar recursos». Los que borras se guardan en los archivados de la asignatura.',
     go: '/knowledge',
     rel: ['asig-archivados'],
@@ -124,43 +103,14 @@ export const ASIGNATURAS: Entry[] = [
   {
     id: 'asig-archivados',
     title: 'Archivados de una asignatura',
-    q: ['dónde están las tareas culminadas de una asignatura', 'qué es archivados en la asignatura', 'recursos eliminados', 'cómo vacío el archivo'],
-    k: ['archivados', 'culminadas', 'recursos eliminados', 'registro'],
     a: 'Dentro de cada asignatura, el botón de la **caja**, en su cabecera, abre su **registro de archivados**: las tareas que culminaste (con el tiempo que les dedicaste y si las entregaste a tiempo) y los recursos que eliminaste.',
     tip: 'Este registro no se puede vaciar, porque con él se arman tus informes de rendimiento.',
     go: '/knowledge',
     rel: ['tarea-archivadas'],
   },
   {
-    id: 'asig-horario-importar',
-    title: 'Importar el horario del mes',
-    q: ['cómo importo mi horario', 'cómo paso el horario del colegio a frame', 'cómo creo las clases de cada asignatura', 'horario del mes con chatgpt', 'convertir foto del horario en clases', 'tengo la foto del horario que nos dio el colegio', 'convertir el horario en clases', 'horario que reparte el tutor'],
-    k: ['horario', 'importar', 'clases', 'chatgpt', 'gemini', 'mes', 'tutor', 'reparte', 'colegio', 'tabla'],
-    a: '¿Tu colegio te da el horario del mes como una imagen? Frame puede convertirlo en **clases** dentro de cada asignatura, con la ayuda de ChatGPT o Gemini. Se hace en tres pasos:',
-    steps: [
-      'En **Asignaturas**, pulsa el botón **Horario**, arriba a la derecha, y luego **Copiar instrucciones**.',
-      'Abre ChatGPT o Gemini, pega esas instrucciones y adjunta la foto de tu horario.',
-      'Copia la respuesta que te da, pégala en Frame, revisa la vista previa y pulsa **Guardar y crear clases**.',
-    ],
-    tip: 'Si alguna asignatura del horario todavía no existe en Frame, te avisará para que la crees primero.',
-    go: '/knowledge',
-    rel: ['asig-clases', 'horario-subir'],
-  },
-  {
-    id: 'asig-clases',
-    title: 'Las clases de una asignatura',
-    q: ['qué es la pestaña clases', 'cómo anoto lo que vimos en clase', 'cómo veo mis clases del mes', 'tema de la clase', 'cómo quito una clase', 'cómo anoto el tema que vimos hoy en clase', 'qué vimos en la clase pasada', 'ver las clases de la semana'],
-    k: ['clases', 'tema', 'linea de tiempo', 'mes', 'tema visto', 'clase pasada'],
-    a: 'Dentro de una asignatura, cambia de **Tareas** a **Clases** para ver todas sus clases del mes, ordenadas como una línea de tiempo.\n\nEn cada clase puedes **anotar el tema** que vieron o el que toca, y ver los recursos y tareas que salieron ese día. Así, antes de un examen, sabes exactamente qué se vio en cada clase.',
-    tip: 'Las clases aparecen cuando importas el horario del mes. Si una clase no se dio, puedes quitarla con «Quitar esta clase».',
-    go: '/knowledge',
-    rel: ['asig-horario-importar', 'tarea-crear-rapida'],
-  },
-  {
     id: 'asig-grabaciones',
     title: 'Grabaciones dentro de una asignatura',
-    q: ['cómo guardo una grabación en una asignatura', 'audios de una asignatura'],
-    k: ['grabacion', 'asignatura', 'audio'],
     a: 'Cuando terminas una grabación, en el recuadro **Guardar grabación** verás las tarjetas de tus asignaturas. **Pulsa la de la asignatura** a la que pertenece el audio y guárdalo: aparecerá dentro de esa asignatura.\n\nSi no eliges ninguna, la grabación queda en **Inicio**. Si marcaste una por error, púlsala otra vez para desmarcarla.',
     tip: 'Más adelante puedes cambiarla de asignatura desde los detalles de la grabación.',
     rel: ['grabar-nota', 'grabacion-detalles'],

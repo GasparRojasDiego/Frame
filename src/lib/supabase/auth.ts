@@ -1,5 +1,5 @@
 import type { Session, User, AuthChangeEvent } from '@supabase/supabase-js';
-import { getSupabase } from './client';
+import { getRecoveryClient, getSupabase } from './client';
 
 const siteUrl =
   import.meta.env.VITE_SITE_URL ||
@@ -87,6 +87,20 @@ export async function signInWithEmail(email: string, password: string): Promise<
 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   return { user: data.user, session: data.session, error: error?.message ?? null };
+}
+
+/** Página de la web donde se elige la contraseña nueva. */
+export const PASSWORD_RECOVERY_URL = 'https://gasparrojasdiego.github.io/frame-app/recuperar/';
+
+/**
+ * Envía el correo para elegir una contraseña nueva. Supabase no dice si el
+ * correo tiene cuenta (para no revelarlo): la respuesta es la misma.
+ */
+export async function requestPasswordReset(email: string): Promise<{ error: string | null }> {
+  const supabase = getRecoveryClient();
+  if (!supabase) return { error: 'Supabase no está configurado.' };
+  const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: PASSWORD_RECOVERY_URL });
+  return { error: error?.message ?? null };
 }
 
 export async function signInWithGoogle(): Promise<{ error: string | null }> {

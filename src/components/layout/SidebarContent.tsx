@@ -43,6 +43,9 @@ interface NavItem {
   /** Rutas hijas que también deben marcar esta interfaz como activa
    *  (p. ej. /cursos pertenece a Asignaturas, /playlists a Música). */
   activeFor?: string[];
+  /** Rutas hijas que tienen su PROPIO botón en el menú (las playlists): con
+   *  ellas abiertas, esta interfaz queda en azul fantasma, no sólida (1.6.6). */
+  ghostFor?: string[];
   /** Bloque al que pertenece: entre un bloque y el siguiente va una línea fina. */
   group: number;
 }
@@ -60,7 +63,7 @@ const navItems: NavItem[] = [
   { href: '/youtube', label: 'YouTube', icon: YoutubeNavIcon, group: 2 },
   { href: '/gmail', label: 'Gmail', icon: GmailNavIcon, group: 2 },
   { href: '/classroom', label: 'Classroom', icon: ClassroomNavIcon, group: 2 },
-  { href: '/music', label: 'Música', icon: Music, activeFor: ['/playlists'], group: 3 },
+  { href: '/music', label: 'Música', icon: Music, ghostFor: ['/playlists'], group: 3 },
 ];
 
 /**
@@ -208,6 +211,7 @@ export function SidebarContent({
                   : normalizedPath === route || normalizedPath.startsWith(`${route}/`);
               const isActive =
                 matchesRoute(normalizedHref) || (item.activeFor ?? []).some(matchesRoute);
+              const isGhost = !isActive && (item.ghostFor ?? []).some(matchesRoute);
 
               const Icon = item.icon;
               const showTimerAlert = item.href === '/temporizador' && showAlert;
@@ -217,7 +221,7 @@ export function SidebarContent({
                   {/* Línea fina entre un bloque y el siguiente. */}
                   {newGroup && <Separator className="my-2" />}
                   <Button
-                    variant={isActive ? 'default' : 'ghost'}
+                    variant={isActive ? 'default' : isGhost ? 'fantasma' : 'ghost'}
                     className={cn('text-xs', collapsed ? 'justify-center px-0' : 'justify-start gap-3')}
                     asChild
                   >

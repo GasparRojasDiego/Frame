@@ -317,7 +317,7 @@ export default function CompetencyMatrix() {
                 <Pencil className="h-4 w-4" />
               </Button>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-4">
               {hasEnough ? (
                 <>
                   {/* Una fila por asignatura: nombre a la izquierda (con

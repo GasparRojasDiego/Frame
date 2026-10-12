@@ -219,18 +219,18 @@ function htmlBlock(block: DocBlock): string {
       const meta = block.meta
         .map(
           (item) => `<td style="padding:7px 10px 6px 0;vertical-align:top;">
-      <div style="font-size:7pt;letter-spacing:.16em;text-transform:uppercase;color:#${COLOR.muted};">${escapeHtml(item.label)}</div>
+      <div style="font-size:7pt;color:#${COLOR.muted};">${escapeHtml(item.label)}</div>
       <div style="font-size:9.5pt;color:#${COLOR.ink};margin-top:1px;">${escapeHtml(item.value)}</div>
     </td>`
         )
         .join('');
       return `<div class="fig" style="margin-bottom:6px;">
   <table cellpadding="0" cellspacing="0" style="margin-bottom:14px;"><tr>
-    <td style="font-family:${SERIF_HTML};font-size:11pt;letter-spacing:.30em;color:#${COLOR.accent};">FRAME</td>
-    <td style="text-align:right;font-size:7.5pt;letter-spacing:.20em;text-transform:uppercase;color:#${COLOR.muted};">VT Asvent</td>
+    <td style="font-family:${SERIF_HTML};font-size:11pt;color:#${COLOR.accent};">Frame</td>
+    <td style="text-align:right;font-size:7.5pt;color:#${COLOR.muted};">VT Asvent</td>
   </tr></table>
   <div style="height:3px;background:#${COLOR.accent};"></div>
-  <div style="font-size:8pt;letter-spacing:.22em;text-transform:uppercase;color:#${COLOR.accent};margin-top:12px;">${escapeHtml(block.eyebrow)}</div>
+  <div style="font-size:8pt;color:#${COLOR.accent};margin-top:12px;">${escapeHtml(block.eyebrow)}</div>
   <h1 style="font-family:${SERIF_HTML};font-size:23pt;line-height:1.15;color:#${COLOR.ink};margin:5px 0 3px 0;font-weight:normal;">${escapeHtml(block.title)}</h1>
   <div style="font-size:11pt;color:#${COLOR.ink};">${escapeHtml(block.subtitle)}</div>
   <table cellpadding="0" cellspacing="0" style="margin-top:10px;border-top:1px solid #${RULE};border-bottom:1px solid #${RULE};"><tr>${meta}</tr></table>
@@ -279,7 +279,7 @@ function htmlBlock(block: DocBlock): string {
       return `<table class="fig" cellpadding="0" cellspacing="0" style="margin:8px 0 10px 0;"><tr>
   <td style="width:3px;background:#${COLOR[tone]};"></td>
   <td style="background:#${SOFT[tone]};padding:8px 11px;">
-    <div style="font-size:8pt;letter-spacing:.10em;text-transform:uppercase;color:#${COLOR[tone]};font-weight:600;">${escapeHtml(block.title)}</div>
+    <div style="font-size:8pt;color:#${COLOR[tone]};font-weight:600;">${escapeHtml(block.title)}</div>
     <div style="font-size:9.5pt;line-height:1.45;color:#${COLOR.ink};margin-top:3px;">${escapeHtml(block.text)}</div>
   </td>
 </tr></table>`;
@@ -296,7 +296,7 @@ function htmlBlock(block: DocBlock): string {
             `<tr>${row
               .map(
                 (kpi) => `<td style="padding:9px 11px;border:1px solid #${RULE};border-top:2.5px solid #${COLOR.accent};vertical-align:top;width:25%;background:#${PAPER};">
-      <div style="font-size:7.5pt;letter-spacing:.10em;text-transform:uppercase;color:#${COLOR.muted};">${escapeHtml(kpi.label)}</div>
+      <div style="font-size:7.5pt;color:#${COLOR.muted};">${escapeHtml(kpi.label)}</div>
       <div style="font-family:${SERIF_HTML};font-size:18pt;color:#${COLOR.accent};line-height:1.1;margin-top:3px;">${escapeHtml(kpi.value)}</div>
       ${kpi.note ? `<div style="font-size:7.5pt;color:#${COLOR.muted};margin-top:2px;">${escapeHtml(kpi.note)}</div>` : ''}
       ${
@@ -370,7 +370,7 @@ function htmlBlock(block: DocBlock): string {
       const head = `<tr><td style="width:40px;"></td>${block.dayLabels
         .map(
           (day) =>
-            `<td style="width:32px;text-align:center;font-size:7pt;letter-spacing:.08em;text-transform:uppercase;color:#${COLOR.muted};padding-bottom:3px;">${escapeHtml(day)}</td>`
+            `<td style="width:32px;text-align:center;font-size:7pt;color:#${COLOR.muted};padding-bottom:3px;">${escapeHtml(day)}</td>`
         )
         .join('')}</tr>`;
       const rows = block.rows
@@ -438,7 +438,7 @@ function htmlBlock(block: DocBlock): string {
       const head = block.head
         .map(
           (h, i) =>
-            `<th style="width:${weights[i]}%;text-align:${cellAlign(block.aligns, i)};padding:5px 8px;background:#${TRACK};border-bottom:1.5px solid #${RULE};font-size:7.5pt;letter-spacing:.08em;text-transform:uppercase;color:#${COLOR.muted};font-weight:600;">${escapeHtml(h)}</th>`
+            `<th style="width:${weights[i]}%;text-align:${cellAlign(block.aligns, i)};padding:5px 8px;background:#${TRACK};border-bottom:1.5px solid #${RULE};font-size:7.5pt;color:#${COLOR.muted};font-weight:600;">${escapeHtml(h)}</th>`
         )
         .join('');
       const body = block.rows
@@ -470,7 +470,7 @@ function htmlBlock(block: DocBlock): string {
 }
 
 const caption = (text: string): string =>
-  `<div style="font-size:7.5pt;letter-spacing:.08em;text-transform:uppercase;color:#${COLOR.muted};margin:6px 0 4px 0;">${escapeHtml(text)}</div>`;
+  `<div style="font-size:7.5pt;color:#${COLOR.muted};margin:6px 0 4px 0;">${escapeHtml(text)}</div>`;
 
 const legendHtml = (text: string): string =>
   `<div style="font-size:7.5pt;color:#${COLOR.muted};margin:-2px 0 8px 0;">${escapeHtml(text)}</div>`;
@@ -610,7 +610,7 @@ function barTable(width: number, percent: number, color: string, track = TRACK):
   return table(widths, `<w:tr>${trHeight(150)}${cells}</w:tr>`);
 }
 
-const CAPTION_STYLE: RunStyle = { color: COLOR.muted, size: 15, bold: true, spacing: 20, caps: true };
+const CAPTION_STYLE: RunStyle = { color: COLOR.muted, size: 15, bold: true };
 
 function docxBlock(block: DocBlock): string {
   switch (block.kind) {
@@ -619,11 +619,11 @@ function docxBlock(block: DocBlock): string {
       const half = Math.floor(CONTENT_WIDTH / 2);
       const brand = table(
         [half, CONTENT_WIDTH - half],
-        `<w:tr>${tableCell(half, para(serif('FRAME', { color: COLOR.accent, size: 22, spacing: 60 }), { after: 0 }), {
+        `<w:tr>${tableCell(half, para(serif('Frame', { color: COLOR.accent, size: 22 }), { after: 0 }), {
           pad: { top: 0, left: 0, bottom: 0, right: 0 },
         })}${tableCell(
           CONTENT_WIDTH - half,
-          para(run('VT ASVENT', { color: COLOR.muted, size: 15, spacing: 40 }), { align: 'right', after: 0 }),
+          para(run('VT Asvent', { color: COLOR.muted, size: 15 }), { align: 'right', after: 0 }),
           { pad: { top: 0, left: 0, bottom: 0, right: 0 } }
         )}</w:tr>`
       );
@@ -635,7 +635,7 @@ function docxBlock(block: DocBlock): string {
           .map((item) =>
             tableCell(
               metaWidth,
-              para(run(item.label.toUpperCase(), { color: COLOR.muted, size: 13, spacing: 30 }), { after: 20 }) +
+              para(run(item.label, { color: COLOR.muted, size: 13 }), { after: 20 }) +
                 para(run(item.value, { color: COLOR.ink, size: 18 }), { after: 0 }),
               { pad: { top: 100, left: 0, bottom: 100, right: 120 } }
             )
@@ -646,7 +646,7 @@ function docxBlock(block: DocBlock): string {
       return [
         brand,
         para('', { after: 0, rule: { color: COLOR.accent, size: 24 } }),
-        para(run(block.eyebrow.toUpperCase(), { color: COLOR.accent, size: 16, bold: true, spacing: 44 }), {
+        para(run(block.eyebrow, { color: COLOR.accent, size: 16, bold: true }), {
           before: 200,
           after: 40,
         }),
@@ -693,7 +693,7 @@ function docxBlock(block: DocBlock): string {
           [barW, bodyW],
           `<w:tr>${tableCell(barW, fillPara(), { fill: COLOR[tone], pad: { top: 0, left: 0, bottom: 0, right: 0 } })}${tableCell(
             bodyW,
-            para(run(block.title.toUpperCase(), { color: COLOR[tone], size: 15, bold: true, spacing: 24 }), { after: 40 }) +
+            para(run(block.title, { color: COLOR[tone], size: 15, bold: true }), { after: 40 }) +
               para(run(block.text, { color: COLOR.ink, size: 19 }), { after: 0, justify: true }),
             { fill: SOFT[tone], pad: { top: 120, left: 160, bottom: 120, right: 160 } }
           )}</w:tr>`
@@ -714,7 +714,7 @@ function docxBlock(block: DocBlock): string {
               .map((kpi) =>
                 tableCell(
                   width,
-                  para(run(kpi.label.toUpperCase(), { color: COLOR.muted, size: 14, bold: true, spacing: 20 }), { after: 20 }) +
+                  para(run(kpi.label, { color: COLOR.muted, size: 14, bold: true }), { after: 20 }) +
                     para(serif(kpi.value, { color: COLOR.accent, size: 32 }), { after: kpi.note || kpi.delta ? 20 : 0 }) +
                     (kpi.note ? para(run(kpi.note, { color: COLOR.muted, size: 14 }), { after: kpi.delta ? 20 : 0 }) : '') +
                     (kpi.delta
@@ -809,7 +809,7 @@ function docxBlock(block: DocBlock): string {
       const tail = filler > 0 ? tableCell(filler, para('')) : '';
       const head = `<w:tr>${tableCell(labelW, para(''), { pad: { top: 0, left: 0, bottom: 30, right: 0 } })}${block.dayLabels
         .map((day) =>
-          tableCell(cellW, para(run(day.toUpperCase(), { color: COLOR.muted, size: 13, bold: true }), { align: 'center', after: 0 }), {
+          tableCell(cellW, para(run(day, { color: COLOR.muted, size: 13, bold: true }), { align: 'center', after: 0 }), {
             pad: { top: 0, left: 0, bottom: 40, right: 0 },
           })
         )
@@ -922,7 +922,7 @@ function docxBlock(block: DocBlock): string {
         .map((h, i) =>
           tableCell(
             widths[i],
-            para(run(h.toUpperCase(), { bold: true, color: COLOR.muted, size: 14, spacing: 20 }), {
+            para(run(h, { bold: true, color: COLOR.muted, size: 14 }), {
               align: cellAlign(block.aligns, i),
               after: 0,
             }),

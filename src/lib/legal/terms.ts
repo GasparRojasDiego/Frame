@@ -18,7 +18,7 @@
 // que solo el titular puede rellenar.
 // ============================================================
 
-export const TERMS_VERSION = '4.7';
+export const TERMS_VERSION = '4.8';
 
 export function termsDocument({ appVersion, effectiveDate }: { appVersion: string; effectiveDate: string }): string {
   return `# Términos y Condiciones de Uso de Frame
@@ -173,8 +173,6 @@ A efectos de estos Términos, los siguientes términos tienen el significado que
 **10.3.** El Proveedor no controla la disponibilidad, el contenido, el funcionamiento, las condiciones ni las modificaciones de los Servicios de Terceros, y **no responde por su interrupción, alteración, degradación o cese**, ni por los daños que de ello se deriven.
 
 **10.4.** El cese o la modificación unilateral de un Servicio de Terceros puede determinar la desaparición de una función de la Aplicación. En tal caso será de aplicación la cláusula 12.3.
-
-**10.5.** La función de importación de horarios requiere que el Usuario emplee, por su propia cuenta y bajo su responsabilidad, un asistente de inteligencia artificial externo ajeno al Proveedor. Frame no transmite la imagen del horario a servicio alguno; es el Usuario quien decide qué entrega y a quién.
 
 ### Cláusula 11. Conducta del Usuario
 

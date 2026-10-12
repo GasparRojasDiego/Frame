@@ -22,6 +22,7 @@ import { useCourse } from '@/context/CourseContext';
 import { cn } from '@/lib/utils';
 import { buildDayIndex, dayKey, GOAL_DAY_KEYS } from '@/lib/academic-metrics';
 import { formatMinutes } from '@/lib/duration';
+import { EchoTileHeader } from '@/components/shared/EchoWord';
 
 /** Iniciales de los 7 días en el orden de la semana ISO (lunes primero). */
 const DAY_INITIALS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
@@ -142,13 +143,15 @@ export default function AcademicPulse() {
         {/* ---------------- Ritmo de la semana ---------------- */}
         <Card className="lg:col-span-2">
           <CardContent className="flex h-full flex-col gap-3 p-4">
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-                <TrendingUp className="h-4 w-4 text-primary" />
-                Ritmo de estudio
+            <EchoTileHeader word="Ritmo">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  Ritmo de estudio
+                </div>
+                <DeltaBadge value={minutesDelta} unit=" min" />
               </div>
-              <DeltaBadge value={minutesDelta} unit=" min" />
-            </div>
+            </EchoTileHeader>
 
             <div className="flex items-baseline gap-2">
               <p className="font-headline text-3xl font-bold text-primary">
@@ -220,11 +223,14 @@ export default function AcademicPulse() {
 
         {/* ---------------- Constancia ---------------- */}
         <Card>
-          <CardContent className="flex h-full flex-col items-center justify-center gap-2 p-4 text-center">
-            <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-              <CalendarCheck2 className="h-4 w-4 text-primary" />
-              Constancia
-            </div>
+          <CardContent className="flex h-full flex-col gap-2 p-4 text-center">
+            <EchoTileHeader word="Constancia">
+              <div className="flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground">
+                <CalendarCheck2 className="h-4 w-4 text-primary" />
+                Constancia
+              </div>
+            </EchoTileHeader>
+            <div className="flex flex-1 flex-col items-center justify-center gap-2">
             <div className="relative flex h-24 w-24 items-center justify-center">
               <svg viewBox="0 0 36 36" className="absolute inset-0 h-24 w-24 -rotate-90">
                 <circle cx="18" cy="18" r="15.5" fill="none" strokeWidth="3" className="stroke-secondary" />
@@ -250,21 +256,26 @@ export default function AcademicPulse() {
               {metrics.activeDays} de {metrics.elapsedDays}{' '}
               {metrics.elapsedDays === 1 ? 'día' : 'días'} con estudio
             </p>
+            </div>
           </CardContent>
         </Card>
 
         {/* ---------------- Tareas culminadas ---------------- */}
         <Card>
-          <CardContent className="flex h-full flex-col items-center justify-center gap-2 p-4 text-center">
-            <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-              <CheckCircle2 className="h-4 w-4 text-primary" />
-              Tareas culminadas
+          <CardContent className="flex h-full flex-col gap-2 p-4 text-center">
+            <EchoTileHeader word="Tareas">
+              <div className="flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground">
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+                Tareas culminadas
+              </div>
+            </EchoTileHeader>
+            <div className="flex flex-1 flex-col items-center justify-center gap-2">
+              <p className="font-headline text-4xl font-bold text-primary tabular-nums">
+                {metrics.tasksDone}
+              </p>
+              <DeltaBadge value={metrics.tasksDone - metrics.prevTasksDone} unit="" />
+              <p className="text-[11px] text-muted-foreground">frente a la semana pasada</p>
             </div>
-            <p className="font-headline text-4xl font-bold text-primary tabular-nums">
-              {metrics.tasksDone}
-            </p>
-            <DeltaBadge value={metrics.tasksDone - metrics.prevTasksDone} unit="" />
-            <p className="text-[11px] text-muted-foreground">frente a la semana pasada</p>
           </CardContent>
         </Card>
 

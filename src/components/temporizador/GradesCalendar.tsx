@@ -179,7 +179,7 @@ export default function GradesCalendar({
         >
           <ChevronLeft className="h-5 w-5" />
         </Button>
-        <h2 className="text-lg font-semibold text-primary font-headline uppercase tracking-wider text-center">
+        <h2 className="text-lg font-semibold text-primary font-headline first-letter:uppercase text-center">
           {format(currentDate, 'MMMM yyyy', { locale: es })}
         </h2>
         <Button
@@ -334,6 +334,13 @@ export default function GradesCalendar({
                         />
                       </div>
                     )}
+                    {/* La calificación, debajo de la barra (1.6.6). */}
+                    <p className="mt-2 text-xs">
+                      <span className="text-muted-foreground">Calificación </span>
+                      <span className="font-bold tabular-nums text-primary">
+                        {detailPerf ? `${detailPerf.score.toFixed(1)} ${detailPerf.grade}` : '—'}
+                      </span>
+                    </p>
                   </div>
 
                   {/* Divisoria fina, justo al medio de ambos bloques. */}
@@ -354,11 +361,6 @@ export default function GradesCalendar({
                           '—'
                         )
                       }
-                    />
-                    <Pair
-                      label="Calificación"
-                      accent
-                      value={detailPerf ? `${detailPerf.score.toFixed(1)} ${detailPerf.grade}` : '—'}
                     />
                   </dl>
                 </div>

@@ -1,4 +1,4 @@
-import { buildIndex, type HelpAreaId, type HelpEntry, type HelpIndex } from '../search';
+import type { HelpAreaId, HelpEntry } from '../areas';
 import { BASICO } from './basico';
 import { BARRA, INICIO } from './inicio';
 import { ENFOQUE } from './enfoque';
@@ -13,17 +13,12 @@ import { MAS } from './mas';
 import { CURIOSIDADES } from './curiosidades';
 
 export { CURIOSITY_IDS } from './curiosidades';
-import { VARIANTES } from './variantes';
 
 // ============================================================
-// Banco de respuestas de la barra de ayuda: una entrada por función.
+// Banco de respuestas del Centro de ayuda: una entrada por función.
 //
 // Al añadir o cambiar una función de Frame, su respuesta se escribe o se
-// corrige aquí en la misma versión. Reglas de redacción:
-//   · La respuesta (`a`) va primero y se entiende sola.
-//   · Los nombres de botones, entre «comillas», tal como se ven en pantalla.
-//   · Varias formas de preguntar en `q`, como las escribiría un estudiante.
-//   · Nada que la app no haga. Si algo es solo de Android, se dice.
+// corrige aquí en la misma versión. Reglas de redacción en kb/basico.ts.
 // ============================================================
 
 const SOURCES: [HelpAreaId, Omit<HelpEntry, 'area'>[]][] = [
@@ -47,11 +42,7 @@ const SOURCES: [HelpAreaId, Omit<HelpEntry, 'area'>[]][] = [
   ['sugerencias', SUGERENCIAS],
 ];
 
-/**
- * Respuestas principales de cada tema: ganan los empates de preguntas vagas
- * («grabar», «calendario», «música»). Solo desempatan: no tapan a una
- * respuesta que encaje mejor.
- */
+/** Las respuestas principales de cada tema van primero en su lista. */
 const PRIOR: Record<string, number> = {
   'grabar-nota': 0.05,
   'enfoque-iniciar': 0.04,
@@ -75,29 +66,17 @@ const PRIOR: Record<string, number> = {
   'nota-diaria': 0.03,
 };
 
-/** Cada respuesta con su área y TODAS sus formas de preguntar (las suyas y las de variantes.ts). */
+/** Cada respuesta con su área. */
 export const HELP_ENTRIES: HelpEntry[] = [...SOURCES, ...MAS].flatMap(([area, list]) =>
-  list.map((entry) => ({ ...entry, area, q: [...entry.q, ...(VARIANTES[entry.id] ?? [])], prior: PRIOR[entry.id] }))
+  list.map((entry) => ({ ...entry, area, prior: PRIOR[entry.id] }))
 );
 
-let cached: HelpIndex | null = null;
+export const HELP_BY_ID = new Map(HELP_ENTRIES.map((entry) => [entry.id, entry]));
 
-/** El índice se construye una sola vez, al primer uso. */
-export function helpIndex(): HelpIndex {
-  if (!cached) cached = buildIndex(HELP_ENTRIES);
-  return cached;
+/** Las relacionadas de una respuesta (las que nombra en `rel`). */
+export function relatedOf(entry: HelpEntry, limit = 4): HelpEntry[] {
+  return (entry.rel ?? [])
+    .map((id) => HELP_BY_ID.get(id))
+    .filter((e): e is HelpEntry => !!e && e.id !== entry.id)
+    .slice(0, limit);
 }
-
-/** Preguntas de ejemplo bajo la barra cuando está vacía. */
-export const STARTER_QUESTIONS = [
-  '¿Cómo empiezo una sesión de estudio?',
-  '¿Cómo se calcula mi nota del día?',
-  '¿Cómo importo mi música?',
-  '¿Cómo creo un hábito?',
-  '¿Cómo importo el horario del mes?',
-  '¿Cómo pongo un recordatorio a una tarea?',
-  '¿Cómo saco un informe en PDF?',
-  '¿Qué es la matriz de competencias?',
-  '¿Cómo vinculo mi cuenta de invitado?',
-  '¿Cómo pongo el reloj encima de otras ventanas?',
-];

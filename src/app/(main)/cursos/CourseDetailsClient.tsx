@@ -68,13 +68,11 @@ import { formatMinutes, sessionSeconds } from '@/lib/duration';
 import { TaskCard } from '@/components/tasks/TaskCard';
 import { CompletedTaskCard, minutesByTask } from '@/components/tasks/CompletedTasksView';
 import TaskComposer, { type TaskDraft } from '@/components/tasks/TaskComposer';
-import CourseSessionsView from '@/components/courses/CourseSessionsView';
 import { useCourse } from '@/context/CourseContext';
 import { getImage } from '@/lib/music-db';
 import { useStoredImage } from '@/hooks/use-stored-image';
 import WaveBackdrop from '@/components/courses/WaveBackdrop';
 import NameDriftBackdrop from '@/components/courses/NameDriftBackdrop';
-import { classSessionKey } from '@/lib/schedule';
 import RecordingsSection from '@/components/recordings/RecordingsSection';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -82,6 +80,7 @@ import { useToast } from '@/hooks/use-toast';
 import RichNoteView from '@/components/temporizador/RichNoteView';
 import { richNoteToLine } from '@/lib/rich-note';
 import { ExternalLink } from 'lucide-react';
+import { EchoHeader } from '@/components/shared/EchoWord';
 
 
 function fileToDataUrl(file: File): Promise<string> {
@@ -227,11 +226,13 @@ function NoteFileAttachment({ note }: { note: Note }) {
       {/* Visor integrado: imágenes y PDF se ven sin salir de Frame */}
       <Dialog open={isViewerOpen} onOpenChange={setViewerOpen}>
         <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle className="truncate pr-8 text-base text-primary">
-              {note.fileName || 'Archivo'}
-            </DialogTitle>
-          </DialogHeader>
+          <EchoHeader word="Archivo">
+            <DialogHeader>
+              <DialogTitle className="truncate pr-8 text-base text-primary">
+                {note.fileName || 'Archivo'}
+              </DialogTitle>
+            </DialogHeader>
+          </EchoHeader>
           {isImage && dataUrl && (
             <img
               src={dataUrl}
@@ -249,70 +250,6 @@ function NoteFileAttachment({ note }: { note: Note }) {
         </DialogContent>
       </Dialog>
     </>
-  );
-}
-
-/** Un recurso DENTRO de la tarjeta de su clase: compacto y se abre al tocarlo. */
-function ClassResourceItem({ note, onDelete }: { note: Note; onDelete: (noteId: string) => void }) {
-  const kind: NoteKind = note.kind ?? 'text';
-  const [expanded, setExpanded] = useState(false);
-
-  const remove = (
-    <Button
-      size="icon"
-      variant="ghost"
-      className="h-6 w-6 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover/res:opacity-100"
-      title="Eliminar el recurso (pasa a Archivados)"
-      onClick={() => {
-        if (window.confirm('¿Eliminar este recurso? Pasará a los Archivados de la asignatura.')) onDelete(note.id);
-      }}
-    >
-      <Trash2 className="h-3.5 w-3.5" />
-    </Button>
-  );
-
-  if (kind === 'file') {
-    return (
-      <div className="group/res flex items-center gap-1">
-        <div className="min-w-0 flex-1">
-          <NoteFileAttachment note={note} />
-        </div>
-        {remove}
-      </div>
-    );
-  }
-
-  if (kind === 'url') {
-    return (
-      <div className="group/res flex items-center gap-1">
-        <a
-          href={note.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex min-w-0 flex-1 items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-2.5 py-1.5 text-xs text-primary transition-colors hover:bg-primary/10"
-        >
-          <Link2 className="h-3.5 w-3.5 shrink-0" />
-          <span className="min-w-0 flex-1 truncate">{note.content || note.url}</span>
-        </a>
-        {remove}
-      </div>
-    );
-  }
-
-  return (
-    <div className="group/res flex items-start gap-1">
-      <button
-        type="button"
-        onClick={() => setExpanded((value) => !value)}
-        title={expanded ? 'Contraer' : 'Ver completo'}
-        className="min-w-0 flex-1 rounded-md border border-border/60 bg-card/70 px-2.5 py-1.5 text-left text-xs text-muted-foreground transition-colors hover:border-primary/40"
-      >
-        <span className={cn('block whitespace-pre-wrap break-words', !expanded && 'line-clamp-2')}>
-          {note.content || 'Recurso sin texto'}
-        </span>
-      </button>
-      {remove}
-    </div>
   );
 }
 
@@ -583,12 +520,14 @@ const ManageResourcesDialog = ({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-base text-primary">Editar recursos</DialogTitle>
-            <DialogDescription className="text-xs">
-              Modifica el contenido, el enlace o la descripción de cada recurso, o elimínalo.
-            </DialogDescription>
-          </DialogHeader>
+          <EchoHeader word="Recursos">
+            <DialogHeader>
+              <DialogTitle className="text-base text-primary">Editar recursos</DialogTitle>
+              <DialogDescription className="text-xs">
+                Modifica el contenido, el enlace o la descripción de cada recurso, o elimínalo.
+              </DialogDescription>
+            </DialogHeader>
+          </EchoHeader>
 
           {notes.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
@@ -790,24 +729,23 @@ export default function CourseDetailsClient({ id }: { id: string }) {
   // Se relee sola: también cuando la imagen llega de otro dispositivo.
   const [coverImage] = useStoredImage(id ? `courseImage_${id}` : null);
 
-  // Sección activa bajo el botón dual: tareas pendientes O recursos.
-  // Dos secciones: los recursos ya no tienen pestaña propia, viven DENTRO de la
-  // clase en la que se guardaron (ver src/lib/class-link.ts).
-  const [activeSection, setActiveSection] = useState<'tasks' | 'sessions'>('tasks');
-  const { classSessions } = useCourse();
-  const courseClassKeys = useMemo(
-    () => new Set((classSessions ?? []).filter((c) => c.courseId === id).map((c) => classSessionKey(c))),
-    [classSessions, id]
+  // Sección activa bajo el botón dual: tareas pendientes O recursos (1.6.6:
+  // «Recursos» sustituye a «Clases»; las clases del horario se retiraron).
+  const [activeSection, setActiveSection] = useState<'tasks' | 'resources'>('tasks');
+  /** Los recursos, ordenados por tipo: anotaciones, enlaces y archivos. */
+  const resourceGroups = useMemo(
+    () =>
+      (
+        [
+          ['text', 'Anotaciones'],
+          ['url', 'Enlaces'],
+          ['file', 'Archivos'],
+        ] as const
+      )
+        .map(([kind, label]) => ({ kind, label, items: notes.filter((note) => (note.kind ?? 'text') === kind) }))
+        .filter((group) => group.items.length > 0),
+    [notes]
   );
-  const hasClasses = courseClassKeys.size > 0;
-  /** Recursos sin clase (o cuya clase ya no existe): se listan aparte. */
-  const looseNotes = useMemo(
-    () => notes.filter((note) => !note.classKey || !courseClassKeys.has(note.classKey)),
-    [notes, courseClassKeys]
-  );
-  /** Mes visible en la pestaña Sesiones. Vive aquí porque el botón "Añadir"
-   *  se dibuja alineado con el conmutador, fuera de la propia vista. */
-  const [sessionsMonth, setSessionsMonth] = useState(() => format(new Date(), 'yyyy-MM'));
   // Vista de Archivados (tareas culminadas + recursos eliminados).
   const [showArchived, setShowArchived] = useState(false);
 
@@ -1103,7 +1041,8 @@ export default function CourseDetailsClient({ id }: { id: string }) {
       try {
         const date = parseISO(task.archivedAt);
         key = format(date, 'yyyy-MM');
-        label = format(date, "MMMM 'de' yyyy", { locale: es });
+        const monthLabel = format(date, "MMMM 'de' yyyy", { locale: es });
+        label = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
       } catch {
         continue;
       }
@@ -1164,7 +1103,7 @@ export default function CourseDetailsClient({ id }: { id: string }) {
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar esta asignatura?</AlertDialogTitle>
             <AlertDialogDescription>
-              Se eliminará «{course.name}» con sus tareas, recursos y clases. Puedes deshacerlo unos segundos con Ctrl+Z.
+              Se eliminará «{course.name}» con sus tareas y recursos. Puedes deshacerlo unos segundos con Ctrl+Z.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1297,19 +1236,19 @@ export default function CourseDetailsClient({ id }: { id: string }) {
           {courseArchivedTasks.length > 0 && (
             <Card className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-4">
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Tareas culminadas</p>
+                <p className="text-[10px] text-muted-foreground">Tareas culminadas</p>
                 <p className="font-headline text-2xl font-bold tabular-nums text-primary">
                   {archiveSummary.total}
                 </p>
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Tiempo dedicado</p>
+                <p className="text-[10px] text-muted-foreground">Tiempo dedicado</p>
                 <p className="font-headline text-2xl font-bold tabular-nums text-foreground">
                   {archiveSummary.minutes > 0 ? formatMinutes(Math.round(archiveSummary.minutes)) : '—'}
                 </p>
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Entregadas a tiempo</p>
+                <p className="text-[10px] text-muted-foreground">Entregadas a tiempo</p>
                 <p className="font-headline text-2xl font-bold tabular-nums text-foreground">
                   {archiveSummary.withDeadline > 0
                     ? `${archiveSummary.onTime}/${archiveSummary.withDeadline}`
@@ -1317,7 +1256,7 @@ export default function CourseDetailsClient({ id }: { id: string }) {
                 </p>
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Recursos archivados</p>
+                <p className="text-[10px] text-muted-foreground">Recursos archivados</p>
                 <p className="font-headline text-2xl font-bold tabular-nums text-foreground">
                   {courseArchivedNotes.length}
                 </p>
@@ -1338,7 +1277,7 @@ export default function CourseDetailsClient({ id }: { id: string }) {
               {archiveByMonth.map(({ key, label, tasks: monthTasks }) => (
                 <div key={key} className="space-y-2.5">
                   <div className="flex flex-wrap items-baseline gap-x-3">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                    <h4 className="text-xs font-bold text-foreground">
                       {label}
                     </h4>
                     <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">
@@ -1361,7 +1300,7 @@ export default function CourseDetailsClient({ id }: { id: string }) {
               {courseArchivedNotes.length > 0 && (
                 <div className="space-y-2.5">
                   <div className="flex flex-wrap items-baseline gap-x-3">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                    <h4 className="text-xs font-bold text-foreground">
                       Recursos archivados
                     </h4>
                     <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
@@ -1413,7 +1352,7 @@ export default function CourseDetailsClient({ id }: { id: string }) {
 
         {/* Tarjeta de nuevo RECURSO (antes "Nota"): siempre visible a la derecha */}
         <Card className="lg:col-span-3" data-tour="asig-recurso">
-          <CardHeader className="flex flex-row items-center justify-between p-4 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between p-4 pb-3">
             <CardTitle className="text-base">Nuevo recurso</CardTitle>
             <Button
               variant="ghost"
@@ -1426,7 +1365,7 @@ export default function CourseDetailsClient({ id }: { id: string }) {
               <SquarePen className="h-4 w-4" />
             </Button>
           </CardHeader>
-          <CardContent className="space-y-3 p-4 pt-2">
+          <CardContent className="space-y-3 p-4 pt-3">
             <div className="flex gap-1.5">
               {(['text', 'url', 'file'] as NoteKind[]).map((k) => (
                 <button
@@ -1532,7 +1471,7 @@ export default function CourseDetailsClient({ id }: { id: string }) {
             {(
               [
                 ['tasks', 'Tareas'],
-                ['sessions', 'Clases'],
+                ['resources', 'Recursos'],
               ] as const
             ).map(([value, label], index) => (
               <button
@@ -1556,31 +1495,16 @@ export default function CourseDetailsClient({ id }: { id: string }) {
 
       </div>
 
-      {activeSection === 'sessions' ? (
+      {activeSection === 'resources' ? (
         <div className="space-y-10">
-          <CourseSessionsView
-            courseId={id}
-            month={sessionsMonth}
-            onMonthChange={setSessionsMonth}
-            notes={notes}
-            tasks={tasks}
-            renderResource={(note) => <ClassResourceItem key={note.id} note={note} onDelete={handleDeleteNote} />}
-            onOpenTask={(task) => {
-              setActiveSection('tasks');
-              setTimeout(() => {
-                document.getElementById(`task-card-${task.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              }, 60);
-            }}
-          />
-
-          {/* Recursos que no pertenecen a ninguna clase: los anteriores a esta
-              versión y los de asignaturas sin horario importado. */}
-          {looseNotes.length > 0 && (
-            <div className="space-y-4">
+          {/* Cada tipo de recurso en su bloque, con una línea fina y su nombre
+              al centro; dentro de cada bloque se reordenan arrastrando. */}
+          {resourceGroups.map(({ kind, label, items }) => (
+            <div key={kind} className="space-y-4">
               <div className="flex items-center gap-3">
                 <span className="h-px flex-1 bg-border" />
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-                  {hasClasses ? 'Recursos sin clase' : 'Recursos'} · {looseNotes.length}
+                <h3 className="text-[11px] font-semibold text-muted-foreground">
+                  {label} · {items.length}
                 </h3>
                 <span className="h-px flex-1 bg-border" />
               </div>
@@ -1590,9 +1514,9 @@ export default function CourseDetailsClient({ id }: { id: string }) {
                 onDragEnd={handleNoteDragEnd}
                 modifiers={[restrictToParentElement]}
               >
-                <SortableContext items={looseNotes} strategy={rectSortingStrategy}>
+                <SortableContext items={items} strategy={rectSortingStrategy}>
                   <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                    {looseNotes.map((note) => (
+                    {items.map((note) => (
                       <SortableNoteCard
                         key={note.id}
                         note={note}
@@ -1609,6 +1533,14 @@ export default function CourseDetailsClient({ id }: { id: string }) {
                 </SortableContext>
               </DndContext>
             </div>
+          ))}
+
+          {resourceGroups.length === 0 && (
+            <Card className="flex h-24 items-center justify-center border-dashed">
+              <p className="text-sm text-muted-foreground">
+                Aún no hay recursos en esta asignatura. Guárdalos con «Nuevo recurso», arriba a la derecha.
+              </p>
+            </Card>
           )}
 
           {/* Grabaciones de voz asignadas a esta asignatura */}

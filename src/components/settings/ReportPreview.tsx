@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { LoaderCircle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 import { renderDocHtml, type DocModel } from '@/lib/report-doc';
 
 // ============================================================
@@ -42,7 +43,7 @@ function pagedHtml(html: string, page: number): string {
     .replace('</body>', '</div></body>');
 }
 
-export default function ReportPreview({ doc }: { doc: DocModel | null }) {
+export default function ReportPreview({ doc, fill = false }: { doc: DocModel | null; fill?: boolean }) {
   // El documento cambia con cada filtro: se espera a que el usuario pare de
   // tocar para no repaginar en cada clic.
   const [html, setHtml] = useState<string | null>(null);
@@ -91,10 +92,11 @@ export default function ReportPreview({ doc }: { doc: DocModel | null }) {
   );
 
   return (
-    <div className="relative">
+    <div className={cn('relative', fill && 'flex min-h-0 flex-1 flex-col')}>
       <iframe ref={probe} title="" aria-hidden tabIndex={-1} className="pointer-events-none fixed -left-[9999px] top-0 opacity-0"
         style={{ width: PAGE_W, height: PAGE_H }} />
-      <ScrollArea className="h-[min(30rem,60vh)] rounded-lg border border-border/70 bg-muted/40">
+      {/* `fill`: ocupa el alto que le deje su recuadro (Informes en Ajustes, 1.6.6). */}
+      <ScrollArea className={cn('rounded-lg border border-border/70 bg-muted/40', fill ? 'min-h-0 flex-1' : 'h-[min(30rem,60vh)]')}>
         <div ref={grid} className="grid grid-cols-2 gap-4 p-4" data-tour="informe-vista">
           {sources.length === 0 ? (
             <div className="col-span-2 flex h-60 items-center justify-center">

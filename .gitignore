@@ -35,3 +35,6 @@ website/
 src-tauri/bin/
 .claude/
 supabase/.temp/
+
+# Paquete de Microsoft Store (scripts/empaquetar-msix.ps1)
+/dist-msix

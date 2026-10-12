@@ -41,6 +41,7 @@ import { SUPPORT_VERSION, supportDocument } from '@/lib/legal/support';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 import { updateUsername } from '@/lib/supabase/auth';
 import StreakStatusCard from '@/components/settings/StreakStatusCard';
+import EchoWord from '@/components/shared/EchoWord';
 
 
 const daysOfWeek: { key: keyof StudyGoals; label: string }[] = [
@@ -418,7 +419,7 @@ export default function SettingsPage() {
             {/* --- Antigüedad de la cuenta --- */}
             <div className="flex flex-1 items-center">
               <div className="flex flex-col justify-center gap-1 rounded-lg border border-border/60 bg-gradient-to-b from-primary/[0.07] to-transparent px-4 py-3">
-                <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <span className="flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground">
                   <CalendarDays className="h-3.5 w-3.5 shrink-0 text-primary" />
                   Miembro desde
                 </span>
@@ -509,9 +510,9 @@ export default function SettingsPage() {
                 <ProfileStats userProfile={userProfile} />
             </div>
 
-            {/* Modo de medición + meta de racha a la izquierda; a la derecha,
-                si esa meta se está cumpliendo (la racha). El Centro de informes
-                que ocupaba este hueco pasó a la barra superior. */}
+            {/* Izquierda: modo de medición, meta de racha y, debajo, «Tu racha».
+                Derecha: «Informes», con el alto de toda la columna izquierda
+                (1.6.6). */}
             <div className="grid grid-cols-1 gap-6 items-stretch lg:grid-cols-2">
                 <div className="flex flex-col gap-4 h-full">
                     <Tabs value={selectionMode} onValueChange={(value) => setSelectionMode(value as 'rendimiento' | 'tiempo')} className="w-full">
@@ -534,7 +535,7 @@ export default function SettingsPage() {
                                 )}
                             </div>
                         </CardHeader>
-                        <CardContent className="p-4 pt-0 flex flex-col flex-grow items-center justify-center">
+                        <CardContent className="p-4 pt-3 flex flex-col flex-grow items-center justify-center">
                             {selectionMode === 'rendimiento' ? (
                                 <div className="flex items-center justify-center gap-4">
                                     <Button size="icon" variant="ghost" onClick={() => handleChangeGrade('prev')} disabled={!isEditingStreakGoal || editedStreakValue === 'B'} className="h-8 w-8">
@@ -568,21 +569,23 @@ export default function SettingsPage() {
                             )}
                         </CardContent>
                     </Card>
+                    <div data-tour="racha" className="flex flex-col"><StreakStatusCard /></div>
                 </div>
 
-                <div data-tour="racha" className="flex flex-col [&>*]:flex-1"><StreakStatusCard /></div>
+                {/* Informes: rendimiento y pendientes, con vista previa real. En
+                    pantallas anchas no empuja la fila: mide lo que la columna
+                    izquierda, y su vista previa se desplaza dentro. */}
+                <div className="relative min-h-[34rem] lg:min-h-0">
+                <Card className="flex flex-col lg:absolute lg:inset-0">
+                    <CardHeader className="p-4 pb-3">
+                        <CardTitle className="text-center text-lg font-bold text-primary">Informes</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex min-h-0 flex-1 flex-col p-4 pt-3">
+                        <ReportCenter userProfile={userProfile} />
+                    </CardContent>
+                </Card>
+                </div>
             </div>
-
-            {/* Informes: rendimiento y pendientes, con vista previa real. A todo
-                el ancho porque la vista previa enseña dos hojas A4 lado a lado. */}
-            <Card className="mt-6">
-                <CardHeader className="p-4 pb-2">
-                    <CardTitle className="text-center text-lg font-bold text-primary">Informes</CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 pt-2">
-                    <ReportCenter userProfile={userProfile} />
-                </CardContent>
-            </Card>
         </div>
 
         <p className="pt-12 text-xs text-center text-muted-foreground">
@@ -610,12 +613,14 @@ export default function SettingsPage() {
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="flex max-h-[88vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
-                  <DialogHeader className="shrink-0 border-b px-6 pb-4 pt-6">
+                  <DialogHeader className="shrink-0 px-6 pb-4 pt-6 relative overflow-hidden">
+                    <EchoWord word={title.split(' ')[0].replace(',', '')} />
                     <DialogTitle className="text-center text-xl font-bold text-primary">
                       {title}
                     </DialogTitle>
                     <p className="text-center text-[11px] text-muted-foreground">{subtitle}</p>
                   </DialogHeader>
+                  <div aria-hidden className="mx-6 h-px shrink-0 bg-border" />
                   {/* Scroll nativo, no ScrollArea: son documentos de decenas
                       de páginas y aquí hace falta una barra VISIBLE que diga
                       cuánto queda por leer. */}

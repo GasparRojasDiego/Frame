@@ -1,4 +1,4 @@
-import type { HelpEntry } from '../search';
+import type { HelpEntry } from '../areas';
 
 type Entry = Omit<HelpEntry, 'area'>;
 
@@ -13,8 +13,6 @@ export const CURIOSIDADES: Entry[] = [
   {
     id: 'reproductor-ocultar',
     title: 'Ocultar y mostrar el reproductor de música',
-    q: ['cómo oculto el reproductor de música', 'cómo escondo la barra de música', 'quitar la barra de abajo de la música', 'cómo vuelvo a mostrar el reproductor', 'desapareció la barra de música'],
-    k: ['ocultar', 'esconder', 'reproductor', 'barra inferior', 'flecha', 'mostrar'],
     a: '¿Quieres más espacio en la pantalla mientras escuchas música? Puedes esconder la **barra de reproducción** sin que la música se detenga.\n\nPasa el ratón por encima de la barra: en su **esquina superior derecha** aparecerá una **flecha hacia abajo**. Púlsala y la barra se ocultará, pero la canción seguirá sonando.\n\nPara volver a verla, lleva el ratón al **borde inferior de la pantalla, en el centro**: aparecerá una pequeña pestaña con una **flecha hacia arriba**. Púlsala y la barra regresará.',
     go: '/music',
     rel: ['musica-reproducir', 'reproductor-ir-playlist'],
@@ -22,8 +20,6 @@ export const CURIOSIDADES: Entry[] = [
   {
     id: 'reproductor-ir-playlist',
     title: 'Ir a la playlist que está sonando',
-    q: ['cómo voy a la playlist que suena', 'el nombre de la playlist del reproductor', 'ir a la canción que suena', 'dónde está la canción que está sonando'],
-    k: ['nombre de la playlist', 'reproductor', 'ir a', 'ubicar', 'cancion que suena'],
     a: 'Si te gusta lo que suena y quieres saber de qué playlist viene, la barra de reproducción te lleva directo a ella.\n\nEn la **parte derecha** de la barra, **debajo del volumen**, aparece el **nombre de la playlist** que está sonando (o «Música», si suena tu biblioteca). Púlsalo: Frame te llevará a esa playlist y la **canción que suena parpadeará** para que la encuentres al instante.',
     go: '/music',
     rel: ['reproductor-ocultar', 'musica-reproducir'],
@@ -31,17 +27,13 @@ export const CURIOSIDADES: Entry[] = [
   {
     id: 'grabar-atajo',
     title: 'Grabar al instante con el teclado',
-    q: ['hay un atajo para grabar', 'grabar rápido con el teclado', 'tecla para grabar'],
-    k: ['ctrl shift f', 'atajo', 'grabar', 'teclado', 'al instante'],
     a: '¡Sí! Presiona a la vez las teclas **Ctrl + Shift + F**, estés en la pantalla que estés.\n\nSe abrirá la grabadora y **empezará a grabar en el acto**, sin que tengas que pulsar nada más. Es ideal cuando el profesor empieza a explicar algo importante y no quieres perderte nada.',
     rel: ['grabar-nota', 'atajos'],
   },
   {
     id: 'figura-ayuda',
     title: 'La figura del Centro de ayuda',
-    q: ['qué es la figura que gira en la ayuda', 'por qué se mueve la figura de la ayuda', 'qué es el balón de la ayuda'],
-    k: ['figura', 'balon', 'pelota', 'futbol', 'pentagonos', 'hexagonos', 'gira', 'respira'],
-    a: 'Es un **balón de fútbol** dibujado con líneas: está hecho de **pentágonos y hexágonos**, como los balones clásicos.\n\nLo verás en el **Centro de ayuda** antes de hacer tu primera pregunta. Gira despacio y, mientras escribes, **«respira»** con cada tecla que pulsas. Desaparece cuando preguntas y vuelve al empezar una **Nueva conversación**.',
+    a: 'Es un **dodecaedro** dibujado con líneas: una figura de **doce caras**, y cada una es un **pentágono**.\n\nLa verás al abrir el **Centro de ayuda**, encima de los temas. Gira despacio de lado, un poco inclinada, con una de sus puntas justo en el centro.\n\nDebajo aparece una frase que cambia tres veces al día: a las **6 de la mañana**, a las **12 del mediodía** y a las **6 de la tarde**.',
     go: '/ayuda',
     rel: ['ayuda-barra'],
   },

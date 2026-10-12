@@ -109,7 +109,7 @@ function Selector<T extends string | number>({
 function Stat({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return (
     <div className="min-w-0">
-      <p className="truncate text-[9px] uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="truncate text-[9px] text-muted-foreground">{label}</p>
       <p className={cn('truncate text-sm font-bold tabular-nums', strong ? 'text-primary' : 'text-foreground')}>{value}</p>
     </div>
   );
@@ -191,7 +191,7 @@ export default function ReportCenter({ userProfile }: { userProfile: UserProfile
     kind === 'performance' ? `Frame-Rendimiento-${scope}-${stamp}` : pendingReportFileBase(new Date(), `${scope}-${stamp}`);
 
   return (
-    <div className="flex flex-col gap-3" data-tour="informes">
+    <div className="flex min-h-0 flex-1 flex-col gap-3" data-tour="informes">
       {/* Qué informe · tamaño del periodo · cuál. */}
       <div className="flex flex-wrap items-center gap-2" data-tour="informes-tipos">
         <Selector
@@ -239,7 +239,7 @@ export default function ReportCenter({ userProfile }: { userProfile: UserProfile
         ) : null}
       </div>
 
-      <ReportPreview doc={doc} />
+      <ReportPreview doc={doc} fill />
 
       <div className="grid grid-cols-2 gap-2">
         {FORMATS.map(({ format: fmt, label: name, icon: Icon, title }) => (

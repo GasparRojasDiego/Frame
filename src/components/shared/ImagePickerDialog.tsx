@@ -11,6 +11,7 @@ import {
   nativePictureToDataUrl,
   type NativePictureCategory,
 } from '@/lib/native-pictures';
+import { EchoHeader } from '@/components/shared/EchoWord';
 
 // ============================================================
 // Selector de imagen unificado de Frame: al presionar un botón de
@@ -100,11 +101,13 @@ export default function ImagePickerDialog({
       }}
     >
       <DialogContent className="max-w-2xl" onClick={(e) => e.stopPropagation()}>
-        <DialogHeader>
-          <DialogTitle className="text-xl text-primary font-bold text-center">
-            {cropSrc ? 'Encuadra la imagen' : title}
-          </DialogTitle>
-        </DialogHeader>
+        <EchoHeader word={cropSrc ? 'Encuadrar' : 'Imagen'}>
+          <DialogHeader>
+            <DialogTitle className="text-xl text-primary font-bold text-center">
+              {cropSrc ? 'Encuadra la imagen' : title}
+            </DialogTitle>
+          </DialogHeader>
+        </EchoHeader>
 
         {cropSrc && aspect ? (
           <ImageCropper

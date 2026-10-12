@@ -7,6 +7,7 @@ import { useCourse } from '@/context/CourseContext';
 import { cn } from '@/lib/utils';
 import { sessionSeconds, formatMinutes } from '@/lib/duration';
 import type { DailyPerformance } from '@/types';
+import { EchoTileHeader } from '@/components/shared/EchoWord';
 
 // ============================================================
 // Estado de la racha, junto a la meta que la define.
@@ -100,17 +101,19 @@ export default function StreakStatusCard() {
   return (
     <Card className="flex flex-col">
       <CardContent className="flex flex-1 flex-col gap-3 p-4">
-        <div className="flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground">
-          <Flame className={cn('h-4 w-4', data.current > 0 ? 'text-primary' : 'text-muted-foreground/60')} />
-          Tu racha
-        </div>
+        <EchoTileHeader word="Racha">
+          <div className="flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground">
+            <Flame className={cn('h-4 w-4', data.current > 0 ? 'text-primary' : 'text-muted-foreground/60')} />
+            Tu racha
+          </div>
+        </EchoTileHeader>
 
         <div className="grid grid-cols-2 gap-3 text-center">
           <div className="rounded-lg border border-primary/30 bg-primary/5 py-2">
             <p className="font-headline text-2xl font-bold tabular-nums text-primary">
               {data.current}
             </p>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            <p className="text-[10px] text-muted-foreground">
               {data.current === 1 ? 'día seguido' : 'días seguidos'}
             </p>
           </div>
@@ -119,13 +122,13 @@ export default function StreakStatusCard() {
               <Trophy className="h-4 w-4 text-primary" />
               {data.best}
             </p>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">mejor racha</p>
+            <p className="text-[10px] text-muted-foreground">mejor racha</p>
           </div>
         </div>
 
         {/* Últimos 14 días: cumplido o no, de un vistazo. */}
         <div className="space-y-1.5">
-          <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+          <p className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
             <Target className="h-3 w-3 text-primary" />
             Últimos {STRIP_DAYS} días · meta: {goalLabel}
           </p>

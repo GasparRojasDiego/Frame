@@ -127,7 +127,7 @@ export default function EditSessionDialog({
           <div className={cn('grid items-center gap-4 pt-2', isRendimiento ? 'sm:grid-cols-2' : 'grid-cols-1')}>
             <div className="space-y-0.5 text-center">
               <p
-                className="flex items-center justify-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground"
+                className="flex items-center justify-center gap-1 text-[10px] text-muted-foreground"
                 title="Lo mide el reloj: no se edita"
               >
                 Tiempo estudiado
@@ -147,7 +147,7 @@ export default function EditSessionDialog({
             {isRendimiento && (
               <div>
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="edit-perception" className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  <Label htmlFor="edit-perception" className="text-[10px] text-muted-foreground">
                     Nivel de enfoque
                   </Label>
                   <span
@@ -188,11 +188,11 @@ export default function EditSessionDialog({
               id="edit-session-notes-label"
               htmlFor="edit-session-notes"
               onClick={() => document.getElementById('edit-session-notes')?.focus()}
-              className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground"
+              className="flex items-center gap-1.5 text-[10px] text-muted-foreground"
             >
               <NotebookPen className="h-3.5 w-3.5 text-primary" />
               ¿Qué hiciste?
-              <span className="normal-case tracking-normal text-muted-foreground/70">(opcional)</span>
+              <span className="text-muted-foreground/70">(opcional)</span>
             </Label>
             {/* El mismo editor con formato del cierre de sesión. */}
             <NoteEditor

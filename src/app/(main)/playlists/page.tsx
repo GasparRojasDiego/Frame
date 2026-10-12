@@ -18,7 +18,7 @@ function PlaylistContent() {
               <Music /> Selecciona una playlist
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-4">
             <p className="text-sm text-muted-foreground">
               Por favor, selecciona una playlist de la barra lateral para ver sus canciones.
             </p>

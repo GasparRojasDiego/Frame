@@ -1,7 +1,8 @@
 import * as React from "react";
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
 
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils"
+import EchoWord from "@/components/shared/EchoWord";
 import { buttonVariants } from "@/components/ui/button";
 
 const AlertDialog = AlertDialogPrimitive.Root
@@ -43,18 +44,52 @@ const AlertDialogContent = React.forwardRef<
 ))
 AlertDialogContent.displayName = AlertDialogPrimitive.Content.displayName
 
+/**
+ * La palabra del eco: la primera del título («¿Eliminar esta asignatura?» →
+ * «Eliminar»), si el título es texto.
+ */
+function echoWordFrom(children: React.ReactNode): string | null {
+  let word: string | null = null
+  React.Children.forEach(children, (child) => {
+    if (word || !React.isValidElement(child)) return
+    const inner = (child.props as { children?: React.ReactNode }).children
+    const text = typeof inner === "string" ? inner : Array.isArray(inner) ? inner.filter((p) => typeof p === "string").join("") : ""
+    const first = text.replace(/[¿?¡!«»"]/g, "").trim().split(/\s+/)[0]
+    if (child.type === AlertDialogTitle && first) word = first
+  })
+  return word
+}
+
+/**
+ * Cabecera de los recuadros de confirmación (1.6.6): el título con su eco
+ * detrás (la primera palabra, o `echo`) y, debajo, una línea fina que la
+ * separa del resto, con aire a ambos lados. Ocupa todo el ancho del recuadro.
+ */
 const AlertDialogHeader = ({
   className,
+  children,
+  echo,
   ...props
-}: React.HTMLAttributes<HTMLDivElement>) => (
-  <div
-    className={cn(
-      "flex flex-col space-y-2 text-center sm:text-left",
-      className
-    )}
-    {...props}
-  />
-)
+}: React.HTMLAttributes<HTMLDivElement> & { echo?: string | false }) => {
+  const word = echo === false ? null : echo ?? echoWordFrom(children)
+  return (
+    <div className="-mx-6 -mt-6">
+      <div className="relative overflow-hidden px-6 pb-4 pt-6">
+        {word && <EchoWord word={word} />}
+        <div
+          className={cn(
+            "relative flex flex-col space-y-2 text-center sm:text-left",
+            className
+          )}
+          {...props}
+        >
+          {children}
+        </div>
+      </div>
+      <div aria-hidden className="mx-6 h-px bg-border" />
+    </div>
+  )
+}
 AlertDialogHeader.displayName = "AlertDialogHeader"
 
 const AlertDialogFooter = ({

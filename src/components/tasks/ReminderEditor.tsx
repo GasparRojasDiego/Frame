@@ -123,7 +123,7 @@ export default function ReminderEditor({
         <>
           <div>
             <div className="mb-1.5 flex items-center justify-between">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Días</span>
+              <span className="text-[10px] font-semibold text-muted-foreground">Días</span>
               <button
                 type="button"
                 onClick={() => onChange({ ...value, days: [] })}
@@ -170,7 +170,7 @@ export default function ReminderEditor({
           </div>
 
           <div>
-            <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="mb-1.5 block text-[10px] font-semibold text-muted-foreground">
               Volver a avisar ese día
             </span>
             <div className="grid grid-cols-3 gap-1">

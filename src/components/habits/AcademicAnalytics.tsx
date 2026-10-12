@@ -44,6 +44,7 @@ import { useCourse } from '@/context/CourseContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { EchoTileHeader } from '@/components/shared/EchoWord';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -192,12 +193,12 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <Card className={cn('bg-card/50', className)}>
+    <Card className={cn('overflow-hidden bg-card/50', className)}>
       <CardContent className="p-4 pt-5">
-        <div className="mb-4 text-center">
+        <EchoTileHeader word={title.split(' ')[0]} className="-mt-5 mb-4 pt-5 text-center">
           <h4 className="text-sm font-semibold text-primary">{title}</h4>
           {subtitle && <p className="text-[11px] text-muted-foreground">{subtitle}</p>}
-        </div>
+        </EchoTileHeader>
         {children}
       </CardContent>
     </Card>
@@ -238,8 +239,8 @@ export default function AcademicAnalytics() {
     const endMonth = format(end, 'MMMM', { locale: es });
     const range =
       startMonth === endMonth
-        ? `${format(start, 'd')} - ${format(end, 'd')} de ${capitalize(startMonth)}`
-        : `${format(start, 'd')} de ${capitalize(startMonth)} - ${format(end, 'd')} de ${capitalize(endMonth)}`;
+        ? `${format(start, 'd')} - ${format(end, 'd')} de ${startMonth}`
+        : `${format(start, 'd')} de ${startMonth} - ${format(end, 'd')} de ${endMonth}`;
     return `Semana ${getISOWeek(start)} · ${range}`;
   }, [scope, start, end]);
 

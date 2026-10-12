@@ -73,7 +73,7 @@ function Table({ head, rows }: { head: string[]; rows: Row[] }) {
             {head.map((cell, i) => (
               <th
                 key={i}
-                className="border-b border-border/70 px-2.5 py-1.5 text-left text-[10px] font-bold uppercase tracking-wide text-muted-foreground"
+                className="border-b border-border/70 px-2.5 py-1.5 text-left text-[10px] font-bold text-muted-foreground"
               >
                 {inline(cell, `th-${i}`)}
               </th>

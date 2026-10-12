@@ -21,6 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 import {
   describeAuthError,
+  requestPasswordReset,
   signInWithEmail,
   signUpWithEmail,
   signInWithGoogle,
@@ -30,6 +31,7 @@ import { googleSignIn, isGoogleConfigured } from '@/lib/google/auth';
 import { isTauri } from '@tauri-apps/api/core';
 import AuthShell, { PasswordInput, validateUsername } from '@/components/auth/AuthShell';
 import GoogleGlyph from '@/components/auth/GoogleGlyph';
+import { EchoHeader } from '@/components/shared/EchoWord';
 
 interface AuthFormProps {
   onAuthSuccess?: () => void;
@@ -172,6 +174,28 @@ export default function AuthForm({ linkGuest }: AuthFormProps) {
     }
   };
 
+  // «¿Olvidaste tu contraseña?»: usa el correo ya escrito arriba. El enlace
+  // lleva a la página de la web donde se elige la nueva (1.6.6).
+  const handleForgotPassword = async () => {
+    const address = email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) {
+      toast({ title: 'Escribe tu correo', description: 'Pon arriba el correo de tu cuenta y vuelve a pulsar «¿Olvidaste tu contraseña?».' });
+      return;
+    }
+    setIsLoading(true);
+    const { error } = await requestPasswordReset(address);
+    setIsLoading(false);
+    if (error) {
+      toast({ variant: 'destructive', title: 'No se pudo enviar el correo', description: describeAuthError(error) });
+      return;
+    }
+    toast({
+      title: 'Revisa tu correo',
+      description: `Si ${address} tiene una cuenta, te llegará un enlace para elegir una contraseña nueva (mira también en spam). Caduca en una hora.`,
+      duration: 12000,
+    });
+  };
+
   const handleGoogle = async () => {
     setIsLoading(true);
 
@@ -292,15 +316,17 @@ export default function AuthForm({ linkGuest }: AuthFormProps) {
   const resumeDialog = (
     <Dialog open={resumeCandidate !== null} onOpenChange={(open) => !open && setResumeCandidate(null)}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-center text-lg font-bold text-primary">Ya hay un invitado en este equipo</DialogTitle>
-          <DialogDescription className="text-center text-xs">
-            {resumeCandidate?.username && resumeCandidate.username !== GUEST_NAME
-              ? `Se usó Frame como invitado con el nombre «${resumeCandidate.username}». `
-              : 'Se usó Frame como invitado en este equipo. '}
-            Puedes seguir con ese perfil y todo lo que tiene, o empezar uno nuevo (el anterior no se borra).
-          </DialogDescription>
-        </DialogHeader>
+        <EchoHeader word="Invitado">
+          <DialogHeader>
+            <DialogTitle className="text-center text-lg font-bold text-primary">Ya hay un invitado en este equipo</DialogTitle>
+            <DialogDescription className="text-center text-xs">
+              {resumeCandidate?.username && resumeCandidate.username !== GUEST_NAME
+                ? `Se usó Frame como invitado con el nombre «${resumeCandidate.username}». `
+                : 'Se usó Frame como invitado en este equipo. '}
+              Puedes seguir con ese perfil y todo lo que tiene, o empezar uno nuevo (el anterior no se borra).
+            </DialogDescription>
+          </DialogHeader>
+        </EchoHeader>
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={() => enterAsGuest(null)}>
             Empezar uno nuevo
@@ -320,8 +346,7 @@ export default function AuthForm({ linkGuest }: AuthFormProps) {
 
   return (
     <AuthShell
-      title="FRAME"
-      spaced
+      title="Frame"
       inDialog={Boolean(linkGuest)}
     >
         {isSupabaseConfigured ? (
@@ -356,6 +381,18 @@ export default function AuthForm({ linkGuest }: AuthFormProps) {
                     autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
                     placeholder={mode === 'register' ? `Mínimo ${MIN_PASSWORD} caracteres` : undefined}
                   />
+                  {mode === 'login' && (
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => void handleForgotPassword()}
+                        disabled={isLoading}
+                        className="rounded px-1 text-[11px] text-muted-foreground transition-colors hover:text-primary disabled:opacity-50"
+                      >
+                        ¿Olvidaste tu contraseña?
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <TabsContent value="register" className="m-0 space-y-1.5">
                   <Label htmlFor="passwordAgain">Repite la contraseña</Label>

@@ -28,6 +28,7 @@ import {
   storeDroppedFiles,
   type StoredPick,
 } from '@/lib/file-handles';
+import EchoWord, { EchoHeader } from '@/components/shared/EchoWord';
 
 // ============================================================
 // Adjuntos de una tarea: documentos y enlaces.
@@ -149,7 +150,8 @@ function AttachmentViewer({
   return (
     <Dialog open={!!attachment} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="flex max-h-[88vh] max-w-3xl flex-col gap-0 overflow-hidden p-0">
-        <DialogHeader className="shrink-0 border-b px-5 py-3">
+        <DialogHeader className="shrink-0 px-5 py-3 relative overflow-hidden">
+          <EchoWord word="Adjunto" />
           <DialogTitle className="truncate pr-8 text-left text-base font-semibold text-foreground">
             {attachment?.label}
           </DialogTitle>
@@ -161,6 +163,7 @@ function AttachmentViewer({
             </p>
           )}
         </DialogHeader>
+        <div aria-hidden className="mx-5 h-px shrink-0 bg-border" />
 
         <div className="min-h-0 flex-1 overflow-auto bg-secondary/20">
           {state === 'loading' && (
@@ -305,12 +308,14 @@ export function AttachFileDialog({
       }}
     >
       <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-center text-xl font-bold text-primary">Adjuntar archivo</DialogTitle>
-          <DialogDescription className="sr-only">
-            Pulsa la zona para elegir archivos o arrástralos y suéltalos sobre ella.
-          </DialogDescription>
-        </DialogHeader>
+        <EchoHeader word="Adjuntar">
+          <DialogHeader>
+            <DialogTitle className="text-center text-xl font-bold text-primary">Adjuntar archivo</DialogTitle>
+            <DialogDescription className="sr-only">
+              Pulsa la zona para elegir archivos o arrástralos y suéltalos sobre ella.
+            </DialogDescription>
+          </DialogHeader>
+        </EchoHeader>
         <button
           type="button"
           onClick={() => void pick()}

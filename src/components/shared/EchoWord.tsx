@@ -4,8 +4,8 @@ import { cn } from '@/lib/utils';
 // ============================================================
 // Eco de una palabra detrás de un título.
 //
-// La palabra, en mayúsculas, repetida muchas veces y casi transparente,
-// deriva sin pausa de un lado a otro en dos filas a distinto ritmo. Da vida
+// La palabra (con mayúscula inicial: sin mayúsculas sostenidas desde la
+// 1.6.6), repetida muchas veces y casi transparente, deriva sin pausa de un lado a otro en dos filas a distinto ritmo. Da vida
 // a las cabeceras de los recuadros que, con un título corto, quedaban
 // vacías («Nueva playlist», «Crear»…). Es el mismo recurso que el nombre de
 // cada asignatura a la espalda de su cabecera, a escala de recuadro.
@@ -17,13 +17,23 @@ import { cn } from '@/lib/utils';
 /** Copias por mitad de pista: de sobra para el ancho de un recuadro. */
 const COPIES = 8;
 
-const ROWS: { seconds: number; reverse: boolean; size: string; opacity: string }[] = [
-  { seconds: 38, reverse: false, size: 'text-3xl', opacity: 'opacity-[0.045]' },
-  { seconds: 52, reverse: true, size: 'text-4xl', opacity: 'opacity-[0.03]' },
+const ROWS: { seconds: number; reverse: boolean; size: string; small: string; opacity: string }[] = [
+  { seconds: 38, reverse: false, size: 'text-3xl', small: 'text-xl', opacity: 'opacity-[0.045]' },
+  { seconds: 52, reverse: true, size: 'text-4xl', small: 'text-2xl', opacity: 'opacity-[0.03]' },
 ];
 
-export default function EchoWord({ word, className }: { word: string; className?: string }) {
-  const label = word.trim().toUpperCase();
+export default function EchoWord({
+  word,
+  className,
+  small = false,
+}: {
+  word: string;
+  className?: string;
+  /** Letra más pequeña, para las cabeceras bajas de los recuadros propios. */
+  small?: boolean;
+}) {
+  const trimmed = word.trim();
+  const label = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
   const copies = Array.from({ length: COPIES }, (_, index) => index);
 
   return (
@@ -39,7 +49,7 @@ export default function EchoWord({ word, className }: { word: string; className?
           key={rowIndex}
           className={cn(
             'frame-name-drift flex w-max whitespace-nowrap font-headline font-black leading-none tracking-tight text-primary',
-            row.size,
+            small ? row.small : row.size,
             row.opacity,
           )}
           style={{
@@ -86,6 +96,41 @@ export function EchoHeader({
         <div className="relative">{children}</div>
       </div>
       <div aria-hidden className="mx-6 h-px bg-border" />
+    </div>
+  );
+}
+
+/** Relleno de cada recuadro propio: la cabecera lo anula para ir de borde a borde. */
+const TILE_PAD = {
+  '3': { box: '-mx-3 -mt-3 px-3 pt-3', line: 'inset-x-3' },
+  '3.5': { box: '-mx-3.5 -mt-3.5 px-3.5 pt-3.5', line: 'inset-x-3.5' },
+  '4': { box: '-mx-4 -mt-4 px-4 pt-4', line: 'inset-x-4' },
+  '5': { box: '-mx-5 -mt-5 px-5 pt-5', line: 'inset-x-5' },
+} as const;
+
+/**
+ * Cabecera de un recuadro propio (sin `CardHeader`; 1.6.6, Diego: «todo
+ * recuadro que tenga encabezado»): el eco queda confinado a la cabecera y la
+ * cierra una divisoria fina con aire a los lados. Va como primer hijo del
+ * recuadro; `pad` es el relleno de ese recuadro.
+ */
+export function EchoTileHeader({
+  word,
+  pad = '4',
+  children,
+  className,
+}: {
+  word: string;
+  pad?: keyof typeof TILE_PAD;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const { box, line } = TILE_PAD[pad];
+  return (
+    <div className={cn('relative isolate shrink-0 self-stretch overflow-hidden pb-2.5', box, className)}>
+      <EchoWord word={word} small className="-z-10" />
+      {children}
+      <div aria-hidden className={cn('absolute bottom-0 h-px bg-border', line)} />
     </div>
   );
 }

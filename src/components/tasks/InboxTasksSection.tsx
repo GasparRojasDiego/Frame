@@ -15,6 +15,7 @@ import { TaskCard } from '@/components/tasks/TaskCard';
 import { useCourse } from '@/context/CourseContext';
 import { useToast } from '@/hooks/use-toast';
 import type { Task } from '@/types';
+import EchoWord from '@/components/shared/EchoWord';
 
 // ============================================================
 // Bandeja de tareas sin asignatura (final de Inicio).
@@ -61,7 +62,8 @@ function AssignDialog({
       }}
     >
       <DialogContent className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
-        <DialogHeader className="shrink-0 border-b px-6 pb-4 pt-6">
+        <DialogHeader className="shrink-0 px-6 pb-4 pt-6 relative overflow-hidden">
+          <EchoWord word="Colocar" />
           <DialogTitle className="text-center text-lg font-bold text-primary">
             Colocar en una asignatura
           </DialogTitle>
@@ -69,6 +71,7 @@ function AssignDialog({
             {task ? `«${task.name}»` : ''}
           </DialogDescription>
         </DialogHeader>
+        <div aria-hidden className="mx-6 h-px shrink-0 bg-border" />
 
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
           <SubjectPicker value={courseId} onChange={setCourseId} />

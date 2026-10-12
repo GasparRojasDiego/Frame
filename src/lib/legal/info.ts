@@ -12,7 +12,7 @@
 
 import { TERMS_VERSION } from './terms';
 
-export const INFO_VERSION = '4.7';
+export const INFO_VERSION = '4.8';
 
 export function infoDocument({
   appVersion,
@@ -63,7 +63,7 @@ Como pertenece a tu cuenta, es el mismo en todos los equipos donde inicies sesi�
 
 Frame distingue tres lugares de almacenamiento. Conocer la diferencia es lo que evita una pérdida irreversible.
 
-**En tu equipo, siempre.** Todo lo que registras se escribe primero en tu disco: asignaturas, colecciones, tareas, adjuntos, sesiones de estudio, calificaciones, hábitos, eventos del calendario local, horarios importados, recursos, imágenes, grabaciones de voz y biblioteca de música. Las grabaciones se conservan además como archivos de audio (M4A) en \`Documentos\\Frame\\Grabaciones\`, accesibles fuera de la aplicación.
+**En tu equipo, siempre.** Todo lo que registras se escribe primero en tu disco: asignaturas, colecciones, tareas, adjuntos, sesiones de estudio, calificaciones, hábitos, eventos del calendario local, recursos, imágenes, grabaciones de voz y biblioteca de música. Las grabaciones se conservan además como archivos de audio (M4A) en \`Documentos\\Frame\\Grabaciones\`, accesibles fuera de la aplicación.
 
 **En tu cuenta, si iniciaste sesión.** Tu **estado académico** —asignaturas, tareas, sesiones, calificaciones, hábitos, eventos, horarios y configuración— se replica en la nube y se fusiona entre equipos en segundos. Esta réplica es la que te permite cambiar de máquina, o usar el celular, sin perder nada. Tu **foto de perfil**, la **imagen del horario** y las imágenes de tus **playlists, asignaturas y colecciones** viajan también, en una carpeta privada de tu cuenta.
 
@@ -77,15 +77,15 @@ Frame distingue tres lugares de almacenamiento. Conocer la diferencia es lo que 
 
 ### 4.1 Ayuda
 
-El botón de las **dos estrellas**, a la izquierda de la barra superior, abre el **Centro de ayuda**, que ocupa todo el espacio entre el menú y la barra superior. Su barra responde cómo usar Frame con tus palabras. No es una inteligencia artificial: responde desde una guía escrita función por función, al instante, sin internet y sin inventar. Lo que no es sobre la app lo dice.
+El botón de las **dos estrellas**, a la izquierda de la barra superior, abre el **Centro de ayuda**, que ocupa todo el espacio entre el menú y la barra superior. Eliges un tema en sus tarjetas y luego la pregunta que te interesa. No es una inteligencia artificial: responde desde una guía escrita función por función, al instante y sin internet.
 
-Las respuestas están escritas para quien abre Frame por primera vez: explican en lenguaje sencillo qué hacer y dónde está cada botón. Cada vez que abres Frame empieza una conversación: tus preguntas de esa apertura quedan juntas en el **«Historial»** de la izquierda, ordenado por días —solo en este equipo y en tu perfil—.
+Las respuestas están escritas para quien abre Frame por primera vez: explican en lenguaje sencillo qué hacer y dónde está cada botón. No guarda lo que consultas.
 
 **Importar de Notion** (Ajustes → rueda de la cuenta) trae tus tareas y fechas desde la exportación de una base de datos de Notion (el .zip o el .csv), sin conectarse a tu cuenta.
 
 ### 4.2 Núcleo académico
 
-Asignaturas con imagen de portada, agrupables en colecciones, con profesor y estadísticas propias; clases del mes generadas desde tu horario, con el tema visto en cada una; recursos (notas, enlaces y archivos) y un registro permanente de lo culminado.
+Asignaturas con imagen de portada, agrupables en colecciones, con profesor y estadísticas propias; recursos (anotaciones, enlaces, archivos y grabaciones) ordenados en su propia pestaña, y un registro permanente de lo culminado.
 
 El botón **«+»** de la barra superior crea una tarea o una anotación sin ir hasta la asignatura; una anotación sin asignatura queda como tarjeta al final de Inicio. Tareas con descripción, asignatura, fecha de entrega, importancia, tipo, dificultad, tiempo estimado y porcentaje de avance, que puedes ajustar a mano o que sube solo con tus sesiones de estudio en proporción al tiempo estimado. Recordatorios tarea por tarea, con días, hora y repetición. Adjuntos enlazados al archivo original de tu disco —se eligen con un clic o se arrastran, uno o varios, al recuadro «Adjuntar archivo»—: si sigues editándolo, Frame ve siempre la versión actual.
 
@@ -125,7 +125,7 @@ La música, las grabaciones y los adjuntos no se respaldan en la nube.
 
 Si una canción no trae su letra, Frame la busca en internet al abrir «Reproduciendo»; si no la encuentra, vuelve a intentarlo pasadas dos semanas. Frame no descarga música ni vídeos.
 
-Las interfaces de Google requieren conexión y sesión iniciada en Google, y su funcionamiento depende íntegramente de Google. La importación de horarios usa un asistente de inteligencia artificial externo al que tú entregas la imagen; Frame no la envía a ningún servicio.
+Las interfaces de Google requieren conexión y sesión iniciada en Google, y su funcionamiento depende íntegramente de Google.
 
 ---
 
@@ -154,6 +154,8 @@ Se ofrece soporte para la versión estable vigente y para la inmediatamente ante
 ## 8 · Historial de versiones
 
 **${appVersion} — ${releaseDate}**
+
+*1.6.6:* **Centro de ayuda** por temas y preguntas, sin barra ni historial, con un **dodecaedro** que gira de lado y frases que cambian a las 6, a las 12 y a las 18 · **cada asignatura**: «Clases» pasa a ser **«Recursos»** (anotaciones, enlaces, archivos y grabaciones, en orden) y se retira el horario del mes · **encuadre** con la imagen completa a la vista y lo que no se usa, oscurecido · las tarjetas guardan la **proporción** de imagen que elijas · **Inicio**: «Ayer», «Promedio semanal», «Días de racha» y «Próxima tarea» rediseñados · **Ajustes**: «Tu racha» bajo Rendimiento y Tiempo, con **Informes** a su derecha · cabeceras con línea divisoria y palabra de fondo en todos los recuadros · textos sin mayúsculas sostenidas · formato de anotaciones sin subrayado, deshacer ni rehacer · Términos y Política de privacidad 4.8: se retira la cláusula de la importación de horarios.
 
 *1.6.5:* **las respuestas de la ayuda, reescritas** para quien empieza: cordiales, en párrafos, con negritas y diciendo dónde está cada botón; entiende más formas de preguntar · se retira «Mostrar cómo» · la figura de la ayuda es ahora un **balón de fútbol**, «Relacionado» se pliega y el botón estrena icono de **dos estrellas** · **«Anotación nueva»** y las grabaciones, con los botones de formato apilados a la izquierda · **tareas**: botones en el orden fecha, tipo, importancia, dificultad, tiempo estimado, recordatorio, documento y enlace; **«Adjuntar archivo»** con un clic o arrastrando varios archivos; el tiempo estimado se elige con ruedas de horas y minutos · las tarjetas de colecciones y asignaturas siguen el **alto de imagen** que elijas (hasta 200) en todas las pantallas · **detalle de cada sesión** con la imagen de su asignatura de borde a borde · Política de privacidad 4.7: deja de mencionar los recorridos «Descubrir», que ya no existen.
 

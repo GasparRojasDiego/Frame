@@ -54,7 +54,8 @@ export interface Task {
   reminderRepeatMinutes?: number;
   /** @deprecated Anterior a la 1.4.8 (repetición en horas). Ya no se usa. */
   reminderFrequencyHours?: number;
-  /** Clase en la que se dejó la tarea (clave estable, ver src/lib/class-link.ts). */
+  /** @deprecated Clase en la que se dejó la tarea (hasta la 1.6.5, cuando hubo
+   *  clases del horario). Se conserva en los datos antiguos; ya no se escribe. */
   classKey?: string;
   /** Tiempo estimado para culminar la tarea, en minutos. El avance por
    *  sesiones de estudio se calcula en proporción directa a este valor. */
@@ -86,51 +87,6 @@ export interface TaskAttachment {
   addedAt: string; // ISO 8601
 }
 
-/**
- * Una clase de la SEMANA TIPO, tal como viene del horario del mes.
- * `weekday` sigue la norma ISO: 1 = lunes … 7 = domingo.
- */
-export interface ScheduleSlot {
-  id: string;
-  courseId: string;
-  courseName: string;
-  weekday: number;
-  /** "HH:mm" en 24 horas. */
-  start: string;
-  end: string;
-  room?: string;
-  teacher?: string;
-}
-
-/** Horario de un mes concreto, importado desde la foto que reparte el colegio. */
-export interface MonthlySchedule {
-  /** "yyyy-MM"; es también la clave: un horario por mes. */
-  month: string;
-  importedAt: string; // ISO 8601
-  slots: ScheduleSlot[];
-  /** Días de ese mes SIN clase (feriados, aniversario…). */
-  skipDates?: string[]; // ["yyyy-MM-dd"]
-}
-
-/**
- * Una clase concreta en una fecha concreta: lo que el usuario ve como tarjeta.
- * No confundir con StudySession, que es el tiempo que el usuario dedicó por
- * su cuenta; esto es la clase que le toca según el horario.
- */
-export interface ClassSession {
-  id: string;
-  courseId: string;
-  date: string; // "yyyy-MM-dd"
-  weekday: number;
-  start: string; // "HH:mm"
-  end: string;
-  room?: string;
-  teacher?: string;
-  /** Lo que se vio en clase; lo escribe el usuario. */
-  topic?: string;
-  createdAt: string; // ISO 8601
-}
-
 export type NoteKind = 'text' | 'url' | 'file';
 
 export interface Note {
@@ -146,8 +102,7 @@ export interface Note {
   /** Para notas de tipo 'file': el archivo real vive en IndexedDB (music-db, clave `noteFile_<id>`). */
   fileName?: string;
   fileMime?: string;
-  /** Clase a la que pertenece (clave estable `asignatura|día|hora`, ver
-   *  src/lib/class-link.ts). Ausente = recurso sin clase. */
+  /** @deprecated Clase a la que pertenecía (hasta la 1.6.5). Ya no se escribe. */
   classKey?: string;
 }
 

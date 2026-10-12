@@ -3,16 +3,26 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Slider } from '@/components/ui/slider';
 import {
-  CARD_IMAGE_DEFAULT,
   CARD_IMAGE_MAX,
   CARD_IMAGE_MIN,
-  setCardImageHeight,
-  useCardImageHeight,
+  CARD_RATIO_DEFAULT,
+  heightAtReference,
+  setCardImageHeightAt,
+  setCardImageRatio,
+  useCardImageRatio,
+  useReferenceWidth,
 } from '@/lib/card-image-height';
 
-/** Engranaje de Asignaturas: el alto de la imagen de todas las tarjetas. */
+/**
+ * Engranaje de Asignaturas: el tamaño de la imagen de todas las tarjetas. Se
+ * elige como alto en píxeles de las tarjetas de esta interfaz; el resto de la
+ * app conserva esa misma proporción (lib/card-image-height.ts).
+ */
 export default function CardImageSettings() {
-  const height = useCardImageHeight();
+  const ratio = useCardImageRatio();
+  const width = useReferenceWidth();
+  const height = heightAtReference(ratio, width);
+  const isDefault = Math.abs(ratio - CARD_RATIO_DEFAULT) < 1e-6;
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -29,16 +39,16 @@ export default function CardImageSettings() {
           min={CARD_IMAGE_MIN}
           max={CARD_IMAGE_MAX}
           step={4}
-          value={[height]}
-          onValueChange={([value]) => setCardImageHeight(value)}
+          value={[Math.min(CARD_IMAGE_MAX, Math.max(CARD_IMAGE_MIN, height))]}
+          onValueChange={([value]) => setCardImageHeightAt(value, width)}
           aria-label="Alto de la imagen de las tarjetas"
         />
         <Button
           size="sm"
           variant="gris"
           className="w-full text-xs"
-          disabled={height === CARD_IMAGE_DEFAULT}
-          onClick={() => setCardImageHeight(CARD_IMAGE_DEFAULT)}
+          disabled={isDefault}
+          onClick={() => setCardImageRatio(CARD_RATIO_DEFAULT)}
         >
           <RotateCcw className="mr-2 h-3.5 w-3.5" />
           Valor predeterminado

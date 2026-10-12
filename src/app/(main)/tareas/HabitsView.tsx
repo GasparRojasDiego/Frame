@@ -449,7 +449,7 @@ export default function HabitsView({ weekOffset }: { weekOffset: number }) {
               return (
                 <Fragment key={habit.id}>
                   {startsGroup && (
-                    <div className="col-span-full flex items-center gap-2 border-b bg-primary/5 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-primary">
+                    <div className="col-span-full flex items-center gap-2 border-b bg-primary/5 px-4 py-1.5 text-[10px] font-bold text-primary">
                       <PhaseIcon className="h-3.5 w-3.5" />
                       {phaseLabel(habit.phase)}
                     </div>

@@ -18,7 +18,7 @@ function CourseContent() {
               <BookOpen /> Selecciona una asignatura
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-4">
             <p className="text-sm text-muted-foreground">
               Elige una asignatura en «Asignaturas» para ver su contenido y su progreso.
             </p>

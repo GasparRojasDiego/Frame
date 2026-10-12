@@ -25,8 +25,7 @@ import { cn } from '@/lib/utils';
 // Lo que se apuntó con el «+» de la barra sin elegir asignatura. Cada una es
 // una tarjeta comprimida a media anchura —sus primeras líneas y la fecha— y
 // un clic la abre entera, con lo único que se puede hacer con ella: colocarla
-// en su asignatura (pasa a ser una anotación de su clase de hoy o de la
-// última) o borrarla.
+// en su asignatura (pasa a sus recursos) o borrarla.
 //
 // Sin anotaciones, la sección no existe.
 // ============================================================
@@ -70,13 +69,12 @@ function LooseNoteDialog({ note, onClose }: { note: LooseNote | null; onClose: (
 
   const place = () => {
     if (!note || !course || !userProfile) return;
-    // Pasa a ser una anotación de la asignatura (en su clase de hoy o en la
-    // última, como las que se crean desde ella) y deja de estar suelta.
+    // Pasa a los recursos de la asignatura y deja de estar suelta.
     addNote(course.id, note.content, { kind: 'text' });
     deleteLooseNote(userProfile.id, note.id);
     toast({
       title: 'Anotación colocada',
-      description: `Queda en ${course.name}, dentro de su clase de hoy (o de la última).`,
+      description: `Queda en los recursos de ${course.name}.`,
     });
     onClose();
   };

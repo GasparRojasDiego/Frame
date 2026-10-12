@@ -68,7 +68,7 @@ function Column({
       ref={ref}
       className="flex flex-1 cursor-ns-resize select-none flex-col items-center gap-2 rounded-2xl border border-border/70 bg-card/60 px-3 py-4"
     >
-      <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{label}</span>
+      <span className="text-[10px] font-semibold text-muted-foreground">{label}</span>
       <button
         type="button"
         className={round}

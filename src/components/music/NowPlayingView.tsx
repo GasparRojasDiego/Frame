@@ -86,7 +86,7 @@ function LyricsPanel({ lyrics, loading }: { lyrics: SongLyrics | null; loading: 
   if (lines.length === 0) {
     return (
       <div className="hide-scrollbar h-full overflow-y-auto px-2 py-6">
-        <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/50">Letra sin sincronizar</p>
+        <p className="mb-4 text-[10px] font-semibold text-white/50">Letra sin sincronizar</p>
         <p className="whitespace-pre-wrap text-lg font-semibold leading-relaxed text-white/85">{lyrics.plain}</p>
       </div>
     );

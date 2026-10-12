@@ -928,7 +928,7 @@ export default function RecordingDialog({
                     <p className="font-headline text-3xl font-bold leading-none tabular-nums text-foreground">
                       {formatDuration(totalDuration)}
                     </p>
-                    <p className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <p className="mt-1 text-[10px] font-semibold text-muted-foreground">
                       duración
                     </p>
                   </div>

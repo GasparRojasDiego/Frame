@@ -1,4 +1,4 @@
-import type { HelpEntry } from '../search';
+import type { HelpEntry } from '../areas';
 
 type Entry = Omit<HelpEntry, 'area'>;
 
@@ -8,8 +8,6 @@ export const ENFOQUE: Entry[] = [
   {
     id: 'enfoque-intro',
     title: 'La interfaz Estudio',
-    q: ['qué es enfoque', 'para qué sirve enfoque', 'qué hay en enfoque', 'enfoque'],
-    k: ['estudio', 'temporizador'],
     a: '**Estudio** es la sección donde estudias con reloj. La encuentras en el menú de la izquierda, justo debajo de Inicio.\n\nA la izquierda está el **reloj**: puedes usarlo como temporizador (cuenta hacia atrás) o como cronómetro (cuenta hacia arriba). A la derecha ves tu **Tiempo de estudio** de hoy comparado con tu meta y tus **Métricas de hoy**, con cada sesión que hiciste.\n\nMás abajo está el **calendario de calificaciones**, con la nota de cada día, y al final tu **Progreso académico** de la semana o del mes.',
     go: '/temporizador',
     rel: ['enfoque-iniciar', 'nota-diaria', 'videos-estudio'],
@@ -17,8 +15,6 @@ export const ENFOQUE: Entry[] = [
   {
     id: 'enfoque-iniciar',
     title: 'Empezar una sesión de estudio',
-    q: ['cómo empiezo a estudiar', 'cómo inicio una sesión de estudio', 'cómo uso el temporizador', 'cómo uso el pomodoro', 'cómo mido mi tiempo de estudio', 'cómo prendo el reloj', 'quiero estudiar media hora', 'cómo cronometro cuánto estudio', 'quiero estudiar 25 minutos y descansar', 'puedo pausar y seguir después', 'cómo pauso la sesión', 'cómo reanudo el temporizador'],
-    k: ['enfoque', 'sesion', 'iniciar', 'temporizador', 'cronometro', 'minutos', 'descanso', 'descansar', 'estudiar', 'media hora', 'pausar', 'reanudar', 'seguir'],
     a: 'Estudiar con Frame es sencillo: el reloj mide tu tiempo y, al terminar, guarda la sesión para calcular tu nota del día.',
     steps: [
       'En el menú de la izquierda, entra en **Estudio**.',
@@ -34,8 +30,6 @@ export const ENFOQUE: Entry[] = [
   {
     id: 'enfoque-modos',
     title: 'Temporizador o cronómetro',
-    q: ['diferencia entre temporizador y cronómetro', 'qué es el cronómetro', 'cuenta atrás o cuenta hacia arriba', 'cuál uso temporizador o cronómetro'],
-    k: ['temporizador', 'cronometro', 'cuenta atras'],
     a: 'En **Estudio**, arriba del reloj, puedes elegir entre dos formas de medir tu tiempo:\n\nEl **Temporizador** cuenta **hacia atrás** desde el tiempo que fijas (por ejemplo, 45 minutos) y te avisa cuando llega a cero. Es ideal si quieres estudiar un tiempo exacto.\n\nEl **Cronómetro** cuenta **hacia arriba**, sin límite, hasta que tú decides terminar. Es ideal si no sabes cuánto te va a tomar.\n\nLos dos guardan la sesión de la misma forma.',
     tip: 'No se puede cambiar de uno a otro mientras una sesión está en marcha.',
     go: '/temporizador',
@@ -44,8 +38,6 @@ export const ENFOQUE: Entry[] = [
   {
     id: 'enfoque-duracion',
     title: 'Fijar la duración del temporizador',
-    q: ['cómo cambio el tiempo del temporizador', 'cómo pongo 45 minutos', 'cómo ajusto la duración', 'cómo pongo más de una hora', 'cómo giro el reloj'],
-    k: ['duracion', 'minutos', 'horas', 'dial', 'ajustar'],
     a: 'Antes de empezar una sesión con el **Temporizador**, puedes elegir cuánto tiempo quieres estudiar de dos formas:\n\n**Arrastra el punto** que está sobre el círculo del reloj, como si giraras una perilla. O **pulsa el número del centro** (dice «Pulsa para ajustar») y elige las horas y los minutos exactos; también puedes girar la rueda del ratón sobre cada número.',
     go: '/temporizador',
     rel: ['enfoque-iniciar'],
@@ -53,12 +45,10 @@ export const ENFOQUE: Entry[] = [
   {
     id: 'enfoque-finalizar',
     title: 'Terminar y registrar una sesión',
-    q: ['cómo termino una sesión', 'cómo guardo mi sesión de estudio', 'qué pongo al terminar la sesión', 'qué es el nivel de enfoque', 'cómo registro lo que estudié'],
-    k: ['finalizar', 'registrar', 'enfoque', 'nivel de enfoque', 'asignaturas', 'sesion terminada'],
     a: 'Cuando termines de estudiar, pulsa **Finalizar**, debajo del reloj en **Estudio**. Se abre el recuadro **Sesión terminada**, donde cuentas cómo te fue:',
     steps: [
       'Indica tu **nivel de enfoque**, del 1 al 20: cuánto te pudiste concentrar.',
-      'Si quieres, escribe qué hiciste. Puedes darle formato con los botones de arriba del cuadro, como en Word.',
+      'Si quieres, escribe qué hiciste. Puedes darle formato con los botones que están a la izquierda del cuadro, uno debajo de otro.',
       'Elige en qué estudiaste con las tarjetas: primero la **colección**, luego la **asignatura** y, si quieres, las **tareas** que avanzaste.',
       'Pulsa **Registrar sesión**.',
     ],
@@ -69,8 +59,6 @@ export const ENFOQUE: Entry[] = [
   {
     id: 'enfoque-descartar',
     title: 'Descartar una sesión',
-    q: ['cómo borro una sesión que empecé sin querer', 'cómo descarto una sesión', 'dejé el cronómetro corriendo', 'no quiero registrar esta sesión', 'olvidé parar el cronómetro', 'el reloj se quedó prendido toda la noche', 'empecé una sesión por error'],
-    k: ['descartar', 'cancelar', 'sin querer', 'olvide', 'parar', 'por error', 'prendido'],
     a: '¿Empezaste una sesión por error o dejaste el reloj corriendo? No pasa nada, puedes descartarla para que no cuente.\n\nPulsa **Finalizar**, debajo del reloj. En el recuadro **Sesión terminada**, abajo a la izquierda, pulsa **Descartar** y confirma. La sesión no se guarda: no suma tiempo de estudio ni avanza ninguna tarea.',
     go: '/temporizador',
     rel: ['enfoque-finalizar', 'enfoque-corregir'],
@@ -78,8 +66,6 @@ export const ENFOQUE: Entry[] = [
   {
     id: 'enfoque-avance-tareas',
     title: 'Que una sesión avance tus tareas',
-    q: ['cómo avanzo el progreso de una tarea al estudiar', 'cómo marco la tarea que avancé al terminar', 'el progreso de mi tarea sube solo', 'cómo funciona el tiempo estimado'],
-    k: ['tiempo estimado', 'progreso', 'avance', 'tarea'],
     a: 'Frame puede subir solo el avance de tus tareas según lo que estudies. Para eso, la tarea necesita un **tiempo estimado**: cuánto crees que te tomará hacerla.\n\nAl terminar una sesión, en el recuadro **Sesión terminada**, marca la asignatura: debajo aparecerán sus tareas. Marca las que avanzaste y su progreso subirá en proporción al tiempo que estudiaste. Por ejemplo, si estudiaste 60 minutos para una tarea estimada en 2 horas, su avance sube un **50 %**.',
     tip: 'El tiempo estimado se pone al crear o editar la tarea, con el botón del **reloj de arena**.',
     go: '/temporizador',
@@ -88,8 +74,6 @@ export const ENFOQUE: Entry[] = [
   {
     id: 'enfoque-anotar',
     title: 'Anotar avances durante la sesión',
-    q: ['cómo anoto lo que voy avanzando', 'cómo guardo notas sin parar el reloj', 'qué es anotar avance', 'apuntes durante la sesión'],
-    k: ['anotar avance', 'nota', 'apunte', 'sesion'],
     a: 'Mientras estudias, puedes ir apuntando lo que avanzas **sin detener el reloj**.\n\nCon una sesión en marcha, en **Estudio**, pulsa el botón de la **vista flotante** (el cuadrado pequeño junto a «Cronómetro») y elige **Anotar avance**. También está en la propia ventanita flotante, si la tienes abierta.\n\nEscribe lo que quieras, con negrita o listas si te ayuda. Debajo puedes elegir la asignatura y, si quieres, una de sus tareas. Cada anotación se guarda con el minuto de la sesión en que la escribiste.',
     tip: 'Pulsa Ctrl + Enter para guardar la anotación rápido. Las verás en «Avances anotados» al revisar la sesión.',
     go: '/temporizador',
@@ -99,18 +83,14 @@ export const ENFOQUE: Entry[] = [
   {
     id: 'anotacion-formato',
     title: 'Dar formato a una anotación',
-    q: ['cómo pongo negrita en una anotación', 'cómo hago una lista numerada en mis notas de estudio', 'cómo doy formato a lo que escribo en la sesión', 'viñetas en la anotación de la sesión'],
-    k: ['formato', 'negrita', 'cursiva', 'subrayado', 'vinetas', 'numerada', 'lista numerada', 'word'],
-    a: 'Donde escribes anotaciones en Frame hay unos **botones de formato**, como los de Word: negrita, cursiva, subrayado, lista con viñetas, lista numerada, deshacer y rehacer.\n\nPara usarlos, **selecciona el texto** y pulsa el botón que quieras. Si seleccionas varias líneas y pulsas un botón de lista, todas se convierten en lista; al pulsarlo otra vez, vuelven a ser texto normal.\n\nTambién puedes empezar una línea con «- » o con «1. » y la lista se crea sola.',
-    tip: 'Atajos: Ctrl + B (negrita), Ctrl + I (cursiva) y Ctrl + U (subrayado). Ctrl + Z deshace y Ctrl + Y rehace.',
+    a: 'Donde escribes anotaciones en Frame hay unos **botones de formato**, como los de Word: negrita, cursiva, lista con viñetas y lista numerada.\n\nPara usarlos, **selecciona el texto** y pulsa el botón que quieras. Si seleccionas varias líneas y pulsas un botón de lista, todas se convierten en lista; al pulsarlo otra vez, vuelven a ser texto normal.\n\nTambién puedes empezar una línea con «- » o con «1. » y la lista se crea sola.',
+    tip: 'Atajos: Ctrl + B (negrita) y Ctrl + I (cursiva). Ctrl + Z deshace y Ctrl + Y rehace.',
     go: '/temporizador',
     rel: ['enfoque-anotar', 'enfoque-finalizar'],
   },
   {
     id: 'vista-flotante',
     title: 'La vista flotante del reloj',
-    q: ['cómo pongo el reloj encima de otras ventanas', 'qué es la vista flotante', 'cómo veo el temporizador mientras uso otro programa', 'mini temporizador', 'cómo quito el reloj flotante', 'ver el tiempo mientras uso otro programa', 'que el reloj se vea mientras trabajo en word', 'reloj siempre visible'],
-    k: ['vista flotante', 'mini', 'ventana', 'encima', 'compacta', 'mediana', 'otro programa', 'word', 'mientras', 'minimizar'],
     a: 'Si estudias en otro programa (por ejemplo, haciendo un trabajo en Word), puedes tener el reloj de Frame **siempre a la vista**, en una ventanita que flota encima de todo.\n\nEn **Estudio**, pulsa el botón de la **vista flotante**: es el cuadrado pequeño que está junto a «Cronómetro», arriba del reloj. Elige **Mediana** o **Compacta**. Aparecerá una ventanita que puedes arrastrar a cualquier lugar de la pantalla.\n\nPara quitarla, abre el mismo botón y elige **Ocultar**.',
     tip: 'Desde la ventanita puedes pausar, finalizar y anotar avances. Si la cierras con su X, la sesión se pausa. Y cuando la sesión termina, Frame se pone delante para que la registres.',
     go: '/temporizador',
@@ -119,8 +99,6 @@ export const ENFOQUE: Entry[] = [
   {
     id: 'enfoque-hoy',
     title: 'Tiempo de estudio y métricas de hoy',
-    q: ['cuánto estudié hoy', 'cómo veo mis sesiones de hoy', 'qué es tiempo de estudio en enfoque', 'cuánto me falta para mi meta', 'cuánto llevo estudiado hoy', 'cuántas horas estudié hoy', 'cómo sé cuánto me falta para mi meta de hoy', 'cuánto me falta para cumplir mi meta'],
-    k: ['hoy', 'metricas', 'meta', 'tiempo de estudio', 'llevo', 'hoy', 'falta'],
     a: 'En **Estudio**, a la derecha del reloj, tienes dos recuadros para saber cómo va tu día:\n\n**Tiempo de estudio** muestra cuánto llevas estudiado hoy comparado con tu meta, con una barra que se va llenando.\n\n**Métricas de hoy** muestra cada sesión como una tarjeta, con la imagen y el nombre de su asignatura, el tiempo y el rendimiento. **Pulsa una tarjeta** para ver todo su detalle: el horario, el tipo de reloj, la nota del día, tus anotaciones y las tareas que avanzaste.',
     go: '/temporizador',
     rel: ['ajustes-metas', 'enfoque-corregir'],
@@ -128,8 +106,6 @@ export const ENFOQUE: Entry[] = [
   {
     id: 'enfoque-corregir',
     title: 'Corregir o eliminar una sesión',
-    q: ['cómo corrijo una sesión', 'me equivoqué de asignatura en la sesión', 'cómo cambio el enfoque de una sesión', 'cómo elimino una sesión de estudio', 'puedo editar el tiempo de una sesión', 'quiero cambiar mi nota de enfoque de la sesión de hoy', 'me equivoqué al registrar la sesión'],
-    k: ['corregir', 'editar', 'sesion', 'eliminar', 'equivoque', 'registrar mal'],
     a: 'Si te equivocaste al registrar una sesión de **hoy**, puedes corregirla.\n\nEn **Estudio**, en **Métricas de hoy**, pasa el ratón por la tarjeta de la sesión y pulsa el **lápiz** de su esquina superior derecha. Ahí puedes cambiar tu nivel de enfoque, las asignaturas y lo que escribiste. También puedes abrir la tarjeta y pulsar **Corregir**.\n\nPara **eliminarla**, abre la tarjeta y pulsa **Eliminar**, abajo a la izquierda.',
     tip: 'El tiempo lo mide el reloj y no se puede editar. Y las sesiones de días anteriores ya no se cambian ni se borran: son tu registro.',
     go: '/temporizador',
@@ -138,8 +114,6 @@ export const ENFOQUE: Entry[] = [
   {
     id: 'nota-diaria',
     title: 'Cómo se calcula la nota del día',
-    q: ['cómo se calcula mi nota', 'qué significa AD A B C', 'por qué saqué C', 'cómo subo mi calificación', 'qué es la calificación diaria', 'qué nota necesito para AD', 'por qué me salió B si estudié bastante', 'por qué saqué una nota baja', 'cómo saco AD', 'por qué mi nota es tan baja'],
-    k: ['nota', 'calificacion', 'ad', 'escala', 'vigesimal', 'baja', 'salio', 'saque', 'b', 'c', 'a'],
     a: 'Cada día que estudias, Frame te pone una **nota del 0 al 20** según dos cosas: **cuánto te pudiste concentrar** (el nivel de enfoque que indicas al terminar cada sesión) y **cuánto de tu meta del día cumpliste**.\n\nSe multiplican: tu enfoque promedio por la parte de la meta que lograste. Por ejemplo, si tu enfoque fue 16 y estudiaste 90 de los 120 minutos de tu meta (el 75 %), tu nota es 16 × 0,75 = **12 (B)**.\n\nAsí, para sacar una nota alta, necesitas estudiar con concentración **y** cumplir tu meta. Estas son las letras:',
     steps: ['**AD**: de 18 a 20.', '**A**: de 14 a 17,9.', '**B**: de 11 a 13,9.', '**C**: menos de 11.'],
     tip: 'Solo se califican los días que tienen una meta mayor que cero. Es una medida personal para ti, no una nota oficial.',
@@ -149,8 +123,6 @@ export const ENFOQUE: Entry[] = [
   {
     id: 'calendario-calificaciones',
     title: 'El calendario de calificaciones',
-    q: ['dónde veo mis notas de cada día', 'cómo veo lo que estudié un día', 'qué es el calendario de enfoque', 'cuándo estudié más', 'historial de sesiones', 'cuánto estudié el martes pasado', 'ver lo que estudié un día anterior', 'cómo veo la nota de un día pasado'],
-    k: ['calendario', 'calificaciones', 'dia', 'historial', 'manana tarde noche', 'pasado', 'anterior'],
     a: 'En **Estudio**, si bajas un poco, encontrarás un **calendario** donde cada día muestra la nota que sacaste. Con las flechas de arriba cambias de mes.\n\n**Pulsa cualquier día** para ver su resumen: el tiempo que estudiaste comparado con la meta, el número de sesiones, tu enfoque promedio y la calificación, además de en qué momento estudiaste (mañana, tarde o noche).\n\nDebajo aparecen las sesiones de ese día como tarjetas. Al pulsar una, ves su detalle; la flecha de arriba a la izquierda te devuelve al día.',
     go: '/temporizador',
     rel: ['nota-diaria', 'enfoque-corregir'],
@@ -158,8 +130,6 @@ export const ENFOQUE: Entry[] = [
   {
     id: 'progreso-academico',
     title: '«Progreso académico» (al final de Estudio)',
-    q: ['qué es progreso académico', 'cómo veo mis estadísticas de la semana', 'cómo comparo con la semana pasada', 'estadísticas de estudio', 'dónde veo mis estadísticas de la semana', 'cómo voy esta semana', 'comparar con la semana pasada'],
-    k: ['progreso academico', 'estadisticas', 'semana', 'mes', 'efectividad', 'puntualidad', 'como voy', 'comparar'],
     a: 'Al final de **Estudio**, debajo del calendario, está **Progreso académico**: un resumen de tu semana o de tu mes.\n\nAhí ves cuántas sesiones hiciste, cuántos días cumpliste tu meta, tu concentración promedio, tu mejor día, cuánto tiempo le dedicaste a cada tarea, si entregaste a tiempo y cómo repartiste el estudio entre tus asignaturas. Cada número se compara con el periodo anterior, para que sepas si vas mejorando.',
     tip: 'Usa las flechas para ver semanas o meses anteriores.',
     go: '/temporizador',
@@ -168,8 +138,6 @@ export const ENFOQUE: Entry[] = [
   {
     id: 'videos-estudio',
     title: 'Vídeos de estudio',
-    q: ['cómo pongo un vídeo de youtube para estudiar', 'música lofi para estudiar', 'cómo guardo vídeos de estudio', 'dónde están los vídeos de estudio', 'ver youtube en frame', 'quiero estudiar con música de youtube', 'poner un video mientras estudio', 'videos para concentrarme'],
-    k: ['videos', 'youtube', 'lofi', 'estudio', 'musica de youtube', 'concentrarme'],
     a: '¿Te gusta estudiar con un vídeo de fondo, como música lofi o una clase de YouTube? Puedes guardarlos en Frame y verlos sin salir de **Estudio**.\n\nEn el recuadro **Tiempo de estudio**, a la derecha del reloj, usa las **flechas** de su esquina superior derecha para cambiar a **Vídeos de estudio**. Pulsa **Añadir**, busca el vídeo en YouTube sin salir de Frame y guárdalo.',
     tip: 'Puedes guardar hasta 30 vídeos. Como vienen de YouTube, necesitan internet.',
     go: '/temporizador',
@@ -177,8 +145,6 @@ export const ENFOQUE: Entry[] = [
   {
     id: 'sesion-interrumpida',
     title: 'Si cierras Frame con una sesión en marcha',
-    q: ['cerré frame con el reloj corriendo', 'perdí mi sesión al cerrar', 'cómo retomo una sesión', 'qué pasa si apago la laptop estudiando', 'sesión interrumpida', 'se me cerró frame mientras estudiaba', 'se apagó la computadora en plena sesión', 'se cerró la app con el temporizador corriendo'],
-    k: ['interrumpida', 'retomar', 'cerrar', 'suspender', 'se cerro', 'se apago', 'apagon'],
     a: 'Tu sesión está protegida aunque cierres Frame.\n\nSi intentas cerrar Frame con una sesión en marcha, te preguntará qué prefieres: **pausarla y cerrar**, **registrarla ahora** o **seguir estudiando**. Si la pausas, cuando vuelvas a abrir Frame ese mismo día podrás **retomarla** donde la dejaste, registrarla o descartarla.',
     tip: 'Si Frame se cerró de golpe (un apagón o un reinicio), al volver te ofrecerá registrar o descartar el tiempo que alcanzó a guardar.',
     rel: ['enfoque-finalizar'],
@@ -186,8 +152,6 @@ export const ENFOQUE: Entry[] = [
   {
     id: 'reloj-menu',
     title: 'El reloj que gira en el menú',
-    q: ['por qué gira un reloj en el menú', 'qué es el relojito junto a estudio', 'qué es el relojito junto a enfoque'],
-    k: ['reloj', 'gira', 'icono'],
     a: 'Ese pequeño reloj junto a **Estudio**, en el menú de la izquierda, te avisa de que tienes una **sesión de estudio abierta**.\n\nGira mientras el reloj corre y se queda quieto cuando la sesión está en pausa. Así no olvidas un cronómetro en marcha.',
     rel: ['enfoque-iniciar'],
   },

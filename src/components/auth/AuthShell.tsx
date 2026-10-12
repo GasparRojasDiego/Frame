@@ -16,8 +16,6 @@ import { cn } from '@/lib/utils';
 
 interface AuthShellProps {
   title: string;
-  /** `spaced`: el título va con el interletrado de la marca («FRAME»). */
-  spaced?: boolean;
   description?: ReactNode;
   children: ReactNode;
   /** Dentro de un recuadro emergente (vincular la cuenta de un invitado): el
@@ -25,7 +23,7 @@ interface AuthShellProps {
   inDialog?: boolean;
 }
 
-export default function AuthShell({ title, spaced = false, description, children, inDialog = false }: AuthShellProps) {
+export default function AuthShell({ title, description, children, inDialog = false }: AuthShellProps) {
   const cardRef = useRef<HTMLDivElement>(null);
 
   const card = (
@@ -39,7 +37,7 @@ export default function AuthShell({ title, spaced = false, description, children
       {/* En el recuadro emergente, la X de cerrar ocupa la esquina derecha. */}
       <div
         className={cn(
-          'flex items-center justify-between px-5 pt-4 text-[10.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground/80',
+          'flex items-center justify-between px-5 pt-4 text-[10.5px] font-semibold text-muted-foreground/80',
           inDialog && 'pr-12'
         )}
       >
@@ -48,8 +46,7 @@ export default function AuthShell({ title, spaced = false, description, children
       </div>
       <CardHeader className="items-center pb-4 pt-3 text-center">
         <FrameLogo className="mb-3 h-14 w-14" />
-        {/* `pl` compensa el espaciado sobrante tras la última letra. */}
-        <CardTitle className={cn('text-2xl font-bold text-foreground', spaced && 'pl-[0.35em] tracking-[0.35em]')}>
+        <CardTitle className="text-2xl font-bold text-foreground">
           {title}
         </CardTitle>
         {description && <CardDescription>{description}</CardDescription>}

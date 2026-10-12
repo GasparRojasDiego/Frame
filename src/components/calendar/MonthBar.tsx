@@ -45,7 +45,7 @@ export default function MonthBar({
         </Button>
         {/* Ancho fijo: las flechas no bailan al pasar de «Mayo» a «Septiembre». */}
         <h2
-          className="w-[12rem] text-center font-headline text-lg font-semibold uppercase leading-none tracking-wider text-primary"
+          className="w-[12rem] text-center font-headline text-lg font-semibold leading-none text-primary"
           aria-live="polite"
         >
           {monthName} {cursor.year}

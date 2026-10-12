@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
 import {
-  Award,
   CheckCircle2,
   Clock,
   Flame,
@@ -10,10 +9,11 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { EchoTileHeader } from '@/components/shared/EchoWord';
 import { cn } from '@/lib/utils';
 import { useCourse } from '@/context/CourseContext';
 import { sessionSeconds, formatMinutes, formatDurationLabel } from '@/lib/duration';
-import type { TaskDifficulty, TaskKind, UserProfile } from '@/types';
+import type { TaskDifficulty, UserProfile } from '@/types';
 
 // ============================================================
 // Expediente del usuario, en collage: las piezas NO miden todas lo mismo —
@@ -28,7 +28,6 @@ const DIFFICULTY_HEX: Record<TaskDifficulty, string> = {
   'Media': 'hsl(38 92% 50%)',
   'Difícil': 'hsl(0 72% 60%)',
 };
-const KIND_ORDER: TaskKind[] = ['Tarea', 'Examen', 'Proyecto', 'Actividad', 'Personal'];
 const DAY_INITIALS = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
 
 /** Cifra suelta, para la retícula de datos secundarios. El tinte baja de
@@ -48,13 +47,14 @@ const Metric = ({
 }) => (
   <div
     className={cn(
-      'flex flex-col justify-center gap-1 rounded-xl border border-border/60 bg-gradient-to-b to-transparent p-3',
-      accent ?? 'from-primary/[0.07]'
+      // Degradado de abajo hacia arriba y suave (1.6.6).
+      'flex flex-col justify-center gap-1 rounded-xl border border-border/60 bg-gradient-to-t to-transparent p-3',
+      accent ?? 'from-primary/[0.045]'
     )}
   >
     <div className="flex items-center gap-1.5">
       <Icon className="h-3.5 w-3.5 shrink-0 text-primary" />
-      <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <span className="truncate text-[10px] font-semibold text-muted-foreground">
         {label}
       </span>
     </div>
@@ -70,14 +70,16 @@ const SectionTitle = ({
   icon: React.ElementType;
   children: React.ReactNode;
 }) => (
-  <div className="mb-3 flex items-center gap-2">
-    <Icon className="h-4 w-4 text-primary" />
-    <h3 className="text-xs font-bold uppercase tracking-wide text-primary">{children}</h3>
-  </div>
+  <EchoTileHeader word={String(children).split(' ')[0]} className="mb-3">
+    <div className="flex items-center gap-2">
+      <Icon className="h-4 w-4 text-primary" />
+      <h3 className="text-xs font-bold text-primary">{children}</h3>
+    </div>
+  </EchoTileHeader>
 );
 
 export default function ProfileStats({ userProfile }: { userProfile: UserProfile | null }) {
-  const { studySessions, archivedTasks, dailyPerformances } = useCourse();
+  const { studySessions, archivedTasks } = useCourse();
 
   const stats = useMemo(() => {
     const sessions = studySessions ?? [];
@@ -122,12 +124,10 @@ export default function ProfileStats({ userProfile }: { userProfile: UserProfile
     }
 
 
-    // Tareas terminadas: complejidad, tipo, puntualidad y efectividad.
+    // Tareas terminadas: complejidad y puntualidad.
     const byDifficulty = new Map<TaskDifficulty, number>();
-    const byKind = new Map<TaskKind, number>();
     let withDue = 0;
     let onTime = 0;
-    const punctualityByCourse = new Map<string, { done: number; onTime: number }>();
 
     for (const task of archived) {
       const difficulty = DIFFICULTY_ORDER.includes(task.difficulty as TaskDifficulty)
@@ -135,12 +135,6 @@ export default function ProfileStats({ userProfile }: { userProfile: UserProfile
         : 'Media';
       byDifficulty.set(difficulty, (byDifficulty.get(difficulty) ?? 0) + 1);
 
-      const kind = KIND_ORDER.includes(task.kind as TaskKind) ? (task.kind as TaskKind) : 'Tarea';
-      byKind.set(kind, (byKind.get(kind) ?? 0) + 1);
-
-      const name = task.courseName || 'Sin asignatura';
-      const entry = punctualityByCourse.get(name) ?? { done: 0, onTime: 0 };
-      entry.done += 1;
 
       if (task.dueDate) {
         const due = Date.parse(task.dueDate);
@@ -155,28 +149,10 @@ export default function ProfileStats({ userProfile }: { userProfile: UserProfile
           doneDay.setHours(0, 0, 0, 0);
           if (doneDay.getTime() <= dueDay.getTime()) {
             onTime += 1;
-            entry.onTime += 1;
           }
         }
       }
-      punctualityByCourse.set(name, entry);
     }
-
-    // Efectividad = % de entregas a tiempo, con un mínimo de 3 tareas para
-    // que una sola entrega puntual no corone a una asignatura.
-    let bestCourse: { name: string; ratio: number; done: number } | null = null;
-    for (const [name, entry] of punctualityByCourse) {
-      if (entry.done < 3) continue;
-      const ratio = entry.onTime / entry.done;
-      if (!bestCourse || ratio > bestCourse.ratio) bestCourse = { name, ratio, done: entry.done };
-    }
-
-    const perfs = dailyPerformances ?? [];
-    const avgScore = perfs.length > 0 ? perfs.reduce((a, p) => a + p.score, 0) / perfs.length : null;
-    const bestDay = perfs.reduce<{ date: string; score: number } | null>(
-      (acc, p) => (!acc || p.score > acc.score ? { date: p.date, score: p.score } : acc),
-      null
-    );
 
     // Racha histórica más larga (días consecutivos con estudio).
     const sortedDays = [...minutesByDay.keys()].sort();
@@ -204,13 +180,9 @@ export default function ProfileStats({ userProfile }: { userProfile: UserProfile
         .slice(0, 5),
       tasksDone: archived.length,
       byDifficulty,
-      byKind,
       punctuality: withDue > 0 ? onTime / withDue : null,
-      bestCourse,
-      avgScore,
-      bestDay,
     };
-  }, [studySessions, archivedTasks, dailyPerformances]);
+  }, [studySessions, archivedTasks]);
 
   const stripMax = Math.max(30, ...stats.strip.map((d) => d.minutes));
   const difficultyData = DIFFICULTY_ORDER.map((level) => ({
@@ -240,7 +212,7 @@ export default function ProfileStats({ userProfile }: { userProfile: UserProfile
             />
             <div className="relative flex flex-wrap items-end justify-between gap-4">
               <div>
-                <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground">
                   <Clock className="h-3.5 w-3.5 text-primary" />
                   Tiempo de estudio acumulado
                 </p>
@@ -254,7 +226,7 @@ export default function ProfileStats({ userProfile }: { userProfile: UserProfile
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="text-[10px] font-semibold text-muted-foreground">
                   Últimas 3 semanas
                 </p>
               </div>
@@ -293,21 +265,21 @@ export default function ProfileStats({ userProfile }: { userProfile: UserProfile
             label="Tareas"
             value={String(stats.tasksDone)}
             hint="terminadas"
-            accent="from-emerald-500/10"
+            accent="from-emerald-500/[0.06]"
           />
           <Metric
             icon={Target}
             label="A tiempo"
             value={stats.punctuality !== null ? `${Math.round(stats.punctuality * 100)}%` : '—'}
             hint={stats.punctuality !== null ? 'de las que tenían fecha' : 'sin fechas que medir'}
-            accent="from-amber-500/10"
+            accent="from-amber-500/[0.06]"
           />
           <Metric
             icon={Flame}
             label="Mejor racha"
             value={stats.longestStreak > 0 ? `${stats.longestStreak} d` : '—'}
             hint="días seguidos"
-            accent="from-orange-500/10"
+            accent="from-orange-500/[0.06]"
           />
           <Metric
             icon={Timer}
@@ -352,7 +324,7 @@ export default function ProfileStats({ userProfile }: { userProfile: UserProfile
                     <span className="font-headline text-2xl font-bold leading-none text-foreground tabular-nums">
                       {difficultyTotal}
                     </span>
-                    <span className="text-[9px] uppercase tracking-wide text-muted-foreground">
+                    <span className="text-[9px] text-muted-foreground">
                       tareas
                     </span>
                   </div>
@@ -413,89 +385,6 @@ export default function ProfileStats({ userProfile }: { userProfile: UserProfile
                 Aún no hay tiempo de estudio repartido por asignatura.
               </p>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Asignatura más efectiva — pieza ancha y con carácter */}
-        <Card className="overflow-hidden lg:col-span-3">
-          <CardContent className="relative flex h-full items-center gap-4 p-4">
-            <div className="relative flex h-[86px] w-[86px] shrink-0 items-center justify-center">
-              <svg viewBox="0 0 36 36" className="absolute inset-0 h-full w-full -rotate-90">
-                <circle cx="18" cy="18" r="15.5" fill="none" strokeWidth="3.5" className="stroke-secondary" />
-                <circle
-                  cx="18"
-                  cy="18"
-                  r="15.5"
-                  fill="none"
-                  strokeWidth="3.5"
-                  strokeLinecap="round"
-                  strokeDasharray={2 * Math.PI * 15.5}
-                  strokeDashoffset={2 * Math.PI * 15.5 * (1 - (stats.bestCourse?.ratio ?? 0))}
-                  className="stroke-primary transition-[stroke-dashoffset] duration-1000 ease-out"
-                />
-              </svg>
-              <div className="relative text-center">
-                <p className="font-headline text-lg font-bold leading-none text-primary tabular-nums">
-                  {stats.bestCourse ? `${Math.round(stats.bestCourse.ratio * 100)}%` : '—'}
-                </p>
-              </div>
-            </div>
-            <div className="min-w-0">
-              <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                <Award className="h-3.5 w-3.5 text-primary" />
-                Mayor efectividad
-              </p>
-              <p className="truncate font-headline text-lg font-bold text-foreground">
-                {stats.bestCourse?.name ?? 'Sin datos suficientes'}
-              </p>
-              <p className="text-[11px] leading-snug text-muted-foreground">
-                {stats.bestCourse
-                  ? `${stats.bestCourse.done} tareas entregadas, la mayoría antes de la fecha límite.`
-                  : 'Hacen falta 3 tareas con fecha en una misma asignatura.'}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Nota media + tipos de pendiente */}
-        <Card className="lg:col-span-3">
-          <CardContent className="flex h-full flex-col gap-3 p-4">
-            <div className="flex items-end justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Nota media histórica
-                </p>
-                <p className="font-headline text-3xl font-bold leading-none text-primary tabular-nums">
-                  {stats.avgScore !== null ? stats.avgScore.toFixed(1) : '—'}
-                  <span className="text-sm text-muted-foreground">/20</span>
-                </p>
-              </div>
-              {stats.bestDay && (
-                <p className="text-right text-[10px] leading-snug text-muted-foreground">
-                  Mejor día
-                  <br />
-                  <span className="font-semibold text-foreground tabular-nums">
-                    {stats.bestDay.score.toFixed(1)}
-                  </span>{' '}
-                  el {stats.bestDay.date}
-                </p>
-              )}
-            </div>
-            <ul className="mt-auto grid grid-cols-5 gap-1.5">
-              {KIND_ORDER.map((kind) => (
-                <li
-                  key={kind}
-                  className="rounded-lg border border-border/60 bg-secondary/40 p-1.5 text-center"
-                >
-                  <p className="font-headline text-base font-bold leading-none text-foreground tabular-nums">
-                    {stats.byKind.get(kind) ?? 0}
-                  </p>
-                  <p className="mt-0.5 truncate text-[8px] uppercase tracking-wide text-muted-foreground">
-                    {kind}
-                  </p>
-                </li>
-              ))}
-            </ul>
           </CardContent>
         </Card>
 

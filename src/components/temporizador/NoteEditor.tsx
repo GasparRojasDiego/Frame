@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { Bold, Italic, List, ListOrdered, Redo2, Underline, Undo2, type LucideIcon } from 'lucide-react';
+import { Bold, Italic, List, ListOrdered, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   parseRichNote,
@@ -574,6 +574,12 @@ export default function NoteEditor({
       return;
     }
     const key = event.key.toLowerCase();
+    // Sin subrayado desde la 1.6.6: Ctrl+U no hace nada (lo ya subrayado se
+    // sigue viendo).
+    if (mod && !event.altKey && key === 'u') {
+      event.preventDefault();
+      return;
+    }
     if (mod && !event.altKey && (key === 'z' || key === 'y')) {
       event.preventDefault();
       travel(key === 'y' || event.shiftKey ? 'redo' : 'undo');
@@ -671,15 +677,13 @@ export default function NoteEditor({
             toolbarSide && 'flex-col self-start'
           )}
         >
+          {/* 1.6.6: sin subrayado, deshacer ni rehacer (Diego). Ctrl+Z y Ctrl+Y
+              siguen funcionando con teclado. */}
           {tool('bold', 'Negrita (Ctrl+B)', Bold, active.bold)}
           {tool('italic', 'Cursiva (Ctrl+I)', Italic, active.italic)}
-          {tool('underline', 'Subrayado (Ctrl+U)', Underline, active.underline)}
           {divider}
           {tool('insertUnorderedList', 'Lista con viñetas', List, active.insertUnorderedList)}
           {tool('insertOrderedList', 'Lista numerada', ListOrdered, active.insertOrderedList)}
-          {divider}
-          {tool('undo', 'Deshacer (Ctrl+Z)', Undo2, undefined, !canUndo)}
-          {tool('redo', 'Rehacer (Ctrl+Y)', Redo2, undefined, !canRedo)}
         </div>
         {!toolbarSide &&
           (toolbarEnd ??

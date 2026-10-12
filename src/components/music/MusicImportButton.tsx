@@ -66,7 +66,7 @@ export default function MusicImportButton({ variant = 'button' }: { variant?: 'b
           description:
             next.existing.size > 0
               ? 'Todo lo elegido ya estaba en tu biblioteca.'
-              : 'Frame importa MP3, M4A, AAC, OGG, OPUS, FLAC, WAV y WEBM.',
+              : 'Frame importa MP3, M4A, AAC, OGG, Opus, FLAC, WAV y WEBM.',
         });
         return;
       }

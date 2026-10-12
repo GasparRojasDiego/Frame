@@ -238,7 +238,7 @@ function Kpi({
           <Icon className="h-4 w-4" />
         </span>
         <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</p>
+          <p className="text-[10px] font-bold text-muted-foreground">{label}</p>
           <p className="font-headline text-2xl font-bold tabular-nums text-foreground">{value}</p>
           {hint && <p className="text-[11px] text-muted-foreground">{hint}</p>}
         </div>
@@ -262,10 +262,10 @@ function RankList({
   const max = Math.max(1, ...rows.map((r) => r.value));
   return (
     <Card className="border-border/70">
-      <CardHeader className="pb-2">
+      <CardHeader className="pb-3">
         <CardTitle className="text-sm font-headline text-muted-foreground">{title}</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-2 pt-3">
         {rows.length === 0 ? (
           <p className="py-4 text-center text-xs text-muted-foreground">{empty}</p>
         ) : (
@@ -434,7 +434,7 @@ function StudentsCard({ data }: { data: Overview }) {
 
   return (
     <Card className="border-border/70">
-      <CardHeader className="space-y-3 pb-3">
+      <CardHeader className="space-y-3 pb-3" echo="Estudiantes">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <CardTitle className="text-sm font-headline text-muted-foreground">Estudiantes · última vez que abrieron Frame</CardTitle>
           <div className="flex items-center gap-2">
@@ -470,13 +470,13 @@ function StudentsCard({ data }: { data: Overview }) {
         </div>
         <SplitBar segments={segments} active={recency} onSelect={setRecency} />
       </CardHeader>
-      <CardContent className="p-0">
+      <CardContent className="p-0 pt-3">
         {rows.length === 0 ? (
           <p className="p-8 text-center text-xs text-muted-foreground">Nadie en este grupo</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
-              <thead className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              <thead className="text-[10px] text-muted-foreground">
                 <tr className="border-y border-border/60 bg-secondary/30">
                   <th className="px-4 py-2 text-left font-bold">Estudiante</th>
                   <th className="px-2 py-2 text-left font-bold">Última vez</th>
@@ -501,7 +501,7 @@ function StudentsCard({ data }: { data: Overview }) {
                           <span className="font-mono text-muted-foreground">{u.id}</span>
                           <span
                             className={cn(
-                              'rounded px-1.5 py-px text-[9px] font-bold uppercase tracking-wide',
+                              'rounded px-1.5 py-px text-[9px] font-bold',
                               u.guest ? 'bg-amber-500/15 text-amber-500' : 'bg-primary/15 text-primary'
                             )}
                           >
@@ -780,10 +780,10 @@ function UsagePanel() {
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card className="border-border/70">
-              <CardHeader className="pb-2">
+              <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-headline text-muted-foreground">Estudiantes activos por día</CardTitle>
               </CardHeader>
-              <CardContent className="h-56">
+              <CardContent className="h-56 pt-3">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={daily} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
                     <defs>
@@ -803,10 +803,10 @@ function UsagePanel() {
             </Card>
 
             <Card className="border-border/70">
-              <CardHeader className="pb-2">
+              <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-headline text-muted-foreground">Minutos de estudio y sesiones por día</CardTitle>
               </CardHeader>
-              <CardContent className="h-56">
+              <CardContent className="h-56 pt-3">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={daily} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
                     <CartesianGrid stroke="hsl(var(--foreground))" strokeDasharray="3 3" strokeOpacity={0.12} />
@@ -844,10 +844,10 @@ function UsagePanel() {
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <Card className="border-border/70 lg:col-span-2">
-              <CardHeader className="pb-2">
+              <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-headline text-muted-foreground">Últimas semanas</CardTitle>
               </CardHeader>
-              <CardContent className="h-48">
+              <CardContent className="h-48 pt-3">
                 {data.weekly.length === 0 ? (
                   <p className="py-10 text-center text-xs text-muted-foreground">Sin semanas registradas todavía</p>
                 ) : (
@@ -866,10 +866,10 @@ function UsagePanel() {
             </Card>
 
             <Card className="border-border/70">
-              <CardHeader className="pb-2">
+              <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-headline text-muted-foreground">Estudio acumulado por estudiante</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 pt-3">
                 <SplitBar
                   segments={[
                     { id: 'none', label: 'Sin estudio', value: data.study_buckets.none, className: 'bg-muted-foreground/40' },
@@ -881,12 +881,12 @@ function UsagePanel() {
                 />
                 <div className="grid grid-cols-2 gap-3 border-t border-border/60 pt-3 text-xs">
                   <div>
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Desde el inicio</p>
+                    <p className="text-[10px] text-muted-foreground">Desde el inicio</p>
                     <p className="font-semibold tabular-nums">{minutesLabel(t.study_minutes_all)}</p>
                     <p className="text-[11px] text-muted-foreground">{t.sessions_all} sesiones</p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Informes</p>
+                    <p className="text-[10px] text-muted-foreground">Informes</p>
                     <p className="font-semibold tabular-nums">{data.reports.reduce((acc, r) => acc + r.count, 0)}</p>
                     <p className="text-[11px] text-muted-foreground">
                       {data.reports.length > 0 ? data.reports.map((r) => `${r.count} ${r.format.toUpperCase()}`).join(' · ') : 'ninguno en el periodo'}
@@ -896,12 +896,12 @@ function UsagePanel() {
                 {guests && (guests.started_period > 0 || guests.guests_total > 0) && (
                   <div className="grid grid-cols-2 gap-3 border-t border-border/60 pt-3 text-xs">
                     <div>
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Entraron como invitado</p>
+                      <p className="text-[10px] text-muted-foreground">Entraron como invitado</p>
                       <p className="font-semibold tabular-nums">{guests.started_period}</p>
                       <p className="text-[11px] text-muted-foreground">{guests.guests_active_7d} activos en 7 días</p>
                     </div>
                     <div>
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Vincularon Google</p>
+                      <p className="text-[10px] text-muted-foreground">Vincularon Google</p>
                       <p className="font-semibold tabular-nums">{guests.linked_period}</p>
                       <p className="text-[11px] text-muted-foreground">
                         {guests.started_period > 0 ? `${Math.round((guests.linked_period / guests.started_period) * 100)} % de los invitados` : 'en el periodo'}

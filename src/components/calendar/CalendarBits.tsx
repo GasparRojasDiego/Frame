@@ -144,7 +144,7 @@ export function PanelHeader({
 export function SectionLabel({ children, end }: { children: React.ReactNode; end?: React.ReactNode }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{children}</span>
+      <span className="text-[10px] font-bold text-muted-foreground">{children}</span>
       <span aria-hidden className="h-px flex-1 bg-border" />
       {end}
     </div>

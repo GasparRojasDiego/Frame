@@ -14,10 +14,8 @@ import SessionDetailDialog from '@/components/temporizador/SessionDetailDialog';
 import SessionNotesList, { SessionNotesHeading } from '@/components/temporizador/SessionNotesList';
 import AcademicAnalytics from '@/components/habits/AcademicAnalytics';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { YoutubeLogo } from '@/components/integrations/YoutubeIcon';
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { CARD_IMAGE_DEFAULT, useCardImageHeight } from '@/lib/card-image-height';
 import { useCourse } from '@/context/CourseContext';
 import { sessionSeconds, formatHMS } from '@/lib/duration';
 import { addDays, isBefore, parseISO, startOfToday, format, isSameDay, isToday } from 'date-fns';
@@ -53,9 +51,22 @@ export default function TimerPage() {
   } = useCourse();
 
   const [dailyStudySeconds, setDailyStudySeconds] = useState(0);
-  /** Las tarjetas de «Métricas de hoy» llevan el alto de imagen del usuario:
-   *  el recuadro crece o encoge lo mismo, así una fila siempre cabe entera. */
-  const cardImageHeight = useCardImageHeight();
+  /** Alto de una tarjeta de «Métricas de hoy» (su imagen guarda la proporción
+   *  elegida en Asignaturas): el recuadro se ajusta para que una fila quepa
+   *  entera. */
+  const metricsGridRef = useRef<HTMLDivElement>(null);
+  const [metricsRowHeight, setMetricsRowHeight] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const grid = metricsGridRef.current;
+    const first = grid?.firstElementChild as HTMLElement | null;
+    if (!first || typeof ResizeObserver === 'undefined') {
+      setMetricsRowHeight(null);
+      return;
+    }
+    const observer = new ResizeObserver(() => setMetricsRowHeight(Math.round(first.getBoundingClientRect().height)));
+    observer.observe(first);
+    return () => observer.disconnect();
+  });
   const [recentSessions, setRecentSessions] = useState<StudySession[]>([]);
   const [todayPerformance, setTodayPerformance] = useState<DailyPerformance | null>(null);
   /** Cara visible de la tarjeta: las métricas del día o los vídeos de estudio.
@@ -278,16 +289,16 @@ export default function TimerPage() {
           {/* Un único recuadro, EXACTAMENTE tan alto como la pila que sustituye
               (de la cabecera de «Tiempo de estudio» al pie de «Métricas de hoy»). */}
           <Card className="flex w-full flex-col" style={{ height: stackHeight ?? 440 }}>
-            <CardHeader className="pb-3 pt-4">
+            <CardHeader className="pb-3 pt-4" echo="Vídeos">
               <div className="flex items-center justify-between gap-2">
                 <Button
                   size="sm"
-                  variant="outline"
-                  className="h-7 shrink-0 gap-1.5 border-primary/60 px-2.5 text-[11px] text-primary hover:bg-primary/10 hover:text-primary"
+                  variant="fantasma"
+                  className="h-7 shrink-0 gap-1.5 px-2.5 text-[11px]"
                   onClick={() => setVideoPickerOpen(true)}
                   title="Buscar en YouTube sin salir de Estudio"
                 >
-                  <YoutubeLogo className="h-3.5 w-auto" />
+                  <Plus className="h-3.5 w-3.5" />
                   Añadir
                 </Button>
                 <CardTitle className="text-center font-headline text-sm tracking-wider text-muted-foreground">
@@ -296,7 +307,7 @@ export default function TimerPage() {
                 {faceArrows}
               </div>
             </CardHeader>
-            <CardContent className="flex min-h-0 flex-1 flex-col">
+            <CardContent className="flex min-h-0 flex-1 flex-col pt-3">
               <StudyVideosPanel pickerOpen={videoPickerOpen} onPickerOpenChange={setVideoPickerOpen} />
             </CardContent>
           </Card>
@@ -304,7 +315,7 @@ export default function TimerPage() {
         ) : (
         <div ref={stackRef} className="lg:col-span-3 flex flex-col gap-6 self-start">
           <Card className="w-full">
-            <CardHeader className="relative pt-4 pb-0">
+            <CardHeader className="relative pt-4 pb-3">
               <CardTitle className="text-center font-headline tracking-wider text-muted-foreground text-sm">
                 Tiempo de estudio
               </CardTitle>
@@ -338,12 +349,12 @@ export default function TimerPage() {
 
           {/* Cada sesión de hoy, como tarjeta: la de su asignatura arriba y lo
               que dejó (tiempo y rendimiento) debajo. Dos por fila, cada una la
-              mitad del recuadro; si no caben, el recuadro desplaza. Mide
-              280 px con el alto de imagen por defecto y sigue al que elija el
-              usuario (1.6.5): una fila de tarjetas siempre cabe entera. */}
+              mitad del recuadro; si no caben, el recuadro desplaza. Su alto
+              es el de una fila de tarjetas (más cabecera y márgenes): sigue al
+              tamaño de imagen que elija el usuario (1.6.6). */}
           <Card
             className="w-full flex flex-col"
-            style={{ height: 280 + cardImageHeight - CARD_IMAGE_DEFAULT }}
+            style={{ height: metricsRowHeight ? metricsRowHeight + 104 : 292 }}
             data-tour="enfoque-metricas"
           >
             <CardHeader className="pb-3 pt-4">
@@ -351,11 +362,11 @@ export default function TimerPage() {
                 Métricas de hoy
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 flex flex-col min-h-0 pb-4">
+            <CardContent className="flex-1 flex flex-col min-h-0 pb-4 pt-3">
               {recentSessions.length > 0 ? (
                 <ScrollArea className="-mr-3 flex-1 pr-3">
                   {/* p-px: el realce de la tarjeta al pasar el ratón no se recorta. */}
-                  <div className="grid grid-cols-2 gap-3 p-px pb-1">
+                  <div ref={metricsGridRef} className="grid grid-cols-2 gap-3 p-px pb-1">
                     {recentSessions.map((session) => (
                       <SessionCard
                         key={session.id}

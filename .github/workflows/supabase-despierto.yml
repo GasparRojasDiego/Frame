@@ -1,0 +1,36 @@
+# Mantiene despierto el proyecto de Supabase de Frame.
+#
+# En el plan gratuito, Supabase pausa un proyecto tras 7 días sin actividad y
+# las cuentas dejan de funcionar hasta que alguien lo reanuda a mano. Esto
+# hace una consulta inofensiva cada 3 días: con la clave pública (rol «anon»,
+# la misma que viaja dentro de la app y en la página de la contraseña nueva) y
+# las políticas RLS, la respuesta es una lista vacía, pero cuenta como
+# actividad de la base de datos. Esa clave sola no da acceso a ningún dato.
+name: Supabase despierto
+
+on:
+  schedule:
+    - cron: '17 13 */3 * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Consulta mínima
+        env:
+          SUPABASE_URL: https://egshmkkmvtsrgrfwpzog.supabase.co
+          SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnc2hta2ttdnRzcmdyZndwem9nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1MDM4MzQsImV4cCI6MjEwMDA3OTgzNH0.CeBBseWj0jJzWgl6heBMFuHQJETw_svCD7knKRPvY3M
+        run: |
+          for intento in 1 2 3; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' \
+              -H "apikey: $SUPABASE_ANON_KEY" -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+              "$SUPABASE_URL/rest/v1/profiles?select=id&limit=1")
+            echo "Respuesta: $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 20
+          done
+          exit 1

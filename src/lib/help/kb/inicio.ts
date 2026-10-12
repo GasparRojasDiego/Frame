@@ -1,4 +1,4 @@
-import type { HelpEntry } from '../search';
+import type { HelpEntry } from '../areas';
 
 type Entry = Omit<HelpEntry, 'area'>;
 
@@ -7,8 +7,6 @@ export const INICIO: Entry[] = [
   {
     id: 'inicio-que-muestra',
     title: 'Qué muestra Inicio',
-    q: ['qué hay en inicio', 'para qué sirve la pantalla de inicio', 'qué significan los recuadros de inicio', 'qué es el panel principal'],
-    k: ['resumen', 'dashboard', 'panel principal'],
     a: '**Inicio** es la primera sección del menú de la izquierda y funciona como el resumen de tu día: de un vistazo sabes cómo vas.\n\nArriba verás el **clima** y la foto de **tu horario**. Debajo, el recuadro **Rendimiento académico** con tu nota de ayer, tu promedio de la semana, tu próxima tarea y tus días de racha. Más abajo, **Tu semana en datos** y la **matriz de competencias**, un gráfico con la carga de cada asignatura.\n\nAl final aparece lo que apuntaste sin elegir asignatura: tareas, grabaciones de voz y anotaciones, esperando a que las ordenes.',
     go: '/',
     rel: ['inicio-rendimiento', 'anotaciones-sueltas', 'clima-ubicacion'],
@@ -16,8 +14,6 @@ export const INICIO: Entry[] = [
   {
     id: 'clima-ubicacion',
     title: 'Cambiar la ciudad del clima',
-    q: ['cómo cambio la ciudad del clima', 'el clima muestra otra ciudad', 'cómo pongo mi ubicación', 'el clima está mal', 'no detecta mi ubicación'],
-    k: ['clima', 'ubicacion', 'ciudad', 'gps', 'tiempo atmosferico'],
     a: 'El clima de Inicio se puede ajustar a tu ciudad en un momento. Frame intenta adivinar dónde estás, pero si se equivoca, puedes elegirla tú:',
     steps: [
       'En **Inicio**, pulsa el **recuadro del clima**, arriba de todo.',
@@ -31,8 +27,6 @@ export const INICIO: Entry[] = [
   {
     id: 'clima-pronostico',
     title: 'Pronóstico por horas y por días',
-    q: ['cómo veo el pronóstico', 'va a llover', 'clima de mañana', 'pronóstico del clima por horas'],
-    k: ['pronostico', 'lluvia', 'horas', 'clima'],
     a: 'El **recuadro del clima**, arriba de todo en **Inicio**, no solo muestra el tiempo de ahora: también trae el pronóstico de las **próximas horas** y de los **próximos días**, con la probabilidad de lluvia de cada uno.\n\nPasa el ratón por encima de cada hora o de cada día para ver su detalle.',
     go: '/',
     rel: ['clima-ubicacion'],
@@ -40,18 +34,14 @@ export const INICIO: Entry[] = [
   {
     id: 'horario-subir',
     title: 'Subir la foto de tu horario',
-    q: ['cómo subo mi horario', 'dónde pongo mi horario de clases', 'cómo cambio la imagen del horario', 'mi horario', 'subir foto del horario'],
-    k: ['horario', 'imagen', 'foto', 'clases'],
     a: '¿Tienes tu horario de clases en una foto o una captura? Puedes tenerlo siempre a mano en Frame.\n\nEn **Inicio**, pulsa el recuadro **Mi horario** y elige la imagen de tu horario desde tu computadora. Si más adelante cambia, vuelve a pulsar el recuadro y elige la nueva.',
     tip: 'Si entraste con una cuenta, la imagen de tu horario también aparece en tu celular.',
     go: '/',
-    rel: ['horario-vistazo', 'asig-horario-importar'],
+    rel: ['horario-vistazo'],
   },
   {
     id: 'horario-vistazo',
     title: 'Ver tu horario encima de cualquier ventana',
-    q: ['cómo veo mi horario rápido', 'el horario aparece al mover el ratón a la izquierda', 'ver el horario sin abrir frame', 'qué es el vistazo del horario'],
-    k: ['vistazo', 'borde', 'esquina', 'horario', 'raton'],
     a: 'Este es uno de los trucos más útiles de Frame: puedes ver tu horario **sin salir de lo que estás haciendo**, aunque estés en otro programa.\n\nLleva el ratón al **borde izquierdo de la pantalla** y déjalo quieto un momento (casi un segundo): tu horario aparecerá flotando encima de todo. Cuando apartes el ratón, se esconde solo.',
     tip: 'Para que funcione, primero sube la foto de tu horario en Inicio, en «Mi horario», y deja Frame abierta (aunque sea minimizada).',
     rel: ['horario-subir'],
@@ -59,8 +49,6 @@ export const INICIO: Entry[] = [
   {
     id: 'inicio-rendimiento',
     title: 'Los recuadros de «Rendimiento académico»',
-    q: ['qué significa rendimiento académico', 'qué es la nota de ayer', 'qué es el promedio semanal', 'qué significan los números de inicio'],
-    k: ['rendimiento', 'ayer', 'promedio', 'semanal', 'medidor'],
     a: 'En **Inicio**, el recuadro **Rendimiento académico** reúne cuatro casillas que te dicen cómo vas con tus estudios.\n\nA la izquierda están la **calificación de ayer** (con un medidor y las horas que estudiaste) y tu **promedio de la semana**, con la tendencia de los últimos 7 días. A la derecha, arriba, tu **próxima tarea** por entregar y, abajo, tus **días de racha**: cuántos días seguidos has cumplido tu meta.',
     tip: 'Si prefieres ver minutos en lugar de notas, cambia al modo «Tiempo» en tus Ajustes.',
     go: '/',
@@ -69,8 +57,6 @@ export const INICIO: Entry[] = [
   {
     id: 'inicio-proxima-tarea',
     title: 'La casilla «Próxima tarea»',
-    q: ['qué es próxima tarea', 'cómo veo mi siguiente entrega', 'qué tarea vence primero', 'qué significa la píldora de días en próxima tarea'],
-    k: ['proxima', 'siguiente', 'entrega', 'vence', 'cuanto falta'],
     a: 'La casilla **Próxima tarea**, arriba a la derecha del recuadro «Rendimiento académico» de **Inicio**, te muestra la tarea pendiente que **vence primero**, para que nunca se te pase.\n\nVerás su nombre y su avance, la asignatura, cuánto falta para entregarla (esa pequeña etiqueta se pone **roja** cuando la fecha se acerca), la fecha de entrega, su importancia y su dificultad.\n\nSi la pulsas, puedes ir a la **Galería de tareas** o a la **asignatura** de esa tarea.',
     go: '/',
     rel: ['tarea-crear', 'notificaciones'],
@@ -78,8 +64,6 @@ export const INICIO: Entry[] = [
   {
     id: 'semana-en-datos',
     title: '«Tu semana en datos»',
-    q: ['qué es tu semana en datos', 'qué es el ritmo de estudio', 'qué significa constancia en inicio', 'cómo veo mi semana'],
-    k: ['semana', 'ritmo', 'constancia', 'anillo'],
     a: 'En **Inicio**, debajo del rendimiento académico, está **Tu semana en datos**: un resumen de cómo te fue en los últimos días.\n\nAhí ves tu **ritmo de estudio** día a día comparado con tu meta, tu **constancia** dibujada como un anillo que se completa, las **tareas culminadas** comparadas con la semana pasada, cómo repartiste el tiempo entre tus **asignaturas** y hasta la **canción** que más escuchaste.',
     go: '/',
     rel: ['ajustes-metas'],
@@ -87,8 +71,6 @@ export const INICIO: Entry[] = [
   {
     id: 'matriz-competencias',
     title: 'La matriz de competencias (radar)',
-    q: ['qué es la matriz de competencias', 'qué significa el radar', 'cómo funciona el gráfico de araña', 'qué mide el radar de asignaturas', 'por qué baja mi nivel'],
-    k: ['matriz', 'competencias', 'radar', 'dominio', 'nivel'],
     a: 'En **Inicio** hay un gráfico con forma de telaraña llamado **matriz de competencias**. Cada punta es una de tus asignaturas y te muestra, en la escala de 0 a 20, **cuánto tienes pendiente** en cada una.\n\nFunciona así: cada asignatura empieza en 20 y baja un punto por cada tarea pendiente. Por ejemplo, con 2 tareas pendientes queda en 18 (AD); con 6, en 14 (A); con 10, en 10 (C).\n\nAsí ves de un vistazo en qué curso se te está acumulando el trabajo.',
     tip: 'Mide lo que te falta por hacer, no cuánto sabes. Al culminar tareas, el área del gráfico vuelve a crecer.',
     go: '/',
@@ -97,12 +79,10 @@ export const INICIO: Entry[] = [
   {
     id: 'matriz-elegir',
     title: 'Elegir las asignaturas del radar',
-    q: ['cómo cambio las asignaturas del radar', 'cómo configuro la matriz', 'quitar una asignatura del radar', 'mi matriz está sin configurar'],
-    k: ['matriz', 'radar', 'elegir asignaturas', 'lapiz', 'nivel por asignatura'],
     a: 'Tú decides qué asignaturas aparecen en la matriz de competencias de **Inicio**. Necesitas tener al menos **tres asignaturas** creadas.',
     steps: [
       'En **Inicio**, junto al gráfico, pulsa el **lápiz** de «Nivel por asignatura» (o el botón **Elegir asignaturas** si todavía no lo configuraste).',
-      'En el recuadro que se abre, entra en una colección y **marca las tarjetas** de las asignaturas que quieres ver. También puedes buscarlas por su nombre.',
+      'En el recuadro que se abre verás todas tus asignaturas, agrupadas bajo el nombre de su colección. **Marca las tarjetas** de las que quieres ver.',
       'Elige entre 3 y 10 asignaturas y pulsa **Guardar**. El gráfico se actualiza al instante.',
     ],
     tip: 'Si guardas sin ninguna asignatura marcada, la matriz se quita de Inicio.',
@@ -112,8 +92,6 @@ export const INICIO: Entry[] = [
   {
     id: 'inicio-sin-asignatura',
     title: 'Tareas «Sin asignatura» en Inicio',
-    q: ['qué son las tareas sin asignatura', 'cómo pongo una tarea en una asignatura', 'mis tareas no tienen asignatura', 'colocar en una asignatura'],
-    k: ['sin asignatura', 'colocar', 'bandeja'],
     a: 'Cuando apuntas una tarea con el botón **+** de arriba sin elegir asignatura, no se pierde: queda guardada al final de **Inicio**, en el bloque de tareas **Sin asignatura**.\n\nAhí puedes editarla y, cuando sepas a qué curso pertenece, usar **Colocar en una asignatura** para moverla a su lugar.',
     go: '/',
     rel: ['tarea-crear-rapida'],
@@ -121,8 +99,6 @@ export const INICIO: Entry[] = [
   {
     id: 'inicio-grabaciones',
     title: 'Grabaciones en Inicio',
-    q: ['dónde están mis grabaciones', 'dónde aparecen los audios', 'dónde veo mis notas de voz'],
-    k: ['grabaciones', 'audios', 'notas de voz'],
     a: 'Tus grabaciones de voz se guardan en dos lugares, según cómo las guardaste:\n\nLas que guardaste **sin asignatura** aparecen al final de **Inicio**, de la más reciente a la más antigua. Las que asignaste a un curso las encuentras **dentro de esa asignatura**, en la sección **Asignaturas**.',
     go: '/',
     rel: ['grabar-nota', 'grabacion-detalles'],
@@ -131,14 +107,12 @@ export const INICIO: Entry[] = [
   {
     id: 'anotaciones-sueltas',
     title: 'Las anotaciones de Inicio',
-    q: ['dónde quedó la anotación que apunté sin asignatura', 'qué son las anotaciones de inicio', 'cómo paso una anotación de inicio a una asignatura', 'cómo borro una anotación de inicio'],
-    k: ['anotaciones', 'sin asignatura', 'colocar', 'sueltas', 'tarjeta', 'notas sueltas'],
     a: 'Las anotaciones que escribes con el botón **+** de arriba sin elegir asignatura se guardan al final de **Inicio**, en el bloque **Anotaciones**, junto a tus grabaciones.\n\nCada una aparece como una tarjeta con sus primeras líneas. **Pulsa una para leerla entera**. Desde ahí puedes:',
     steps: [
       'Usar **Colocar en una asignatura**: eliges la tarjeta del curso y pulsas **Colocar**.',
       'O pulsar **Borrar**, que te pide un segundo clic para confirmar.',
     ],
-    tip: 'Al colocarla en una asignatura, la anotación queda dentro de su clase de hoy (o de la última que tuviste).',
+    tip: 'Al colocarla en una asignatura, la anotación pasa a sus **Recursos**, en el bloque Anotaciones.',
     go: '/',
     rel: ['tarea-crear-rapida', 'inicio-sin-asignatura', 'inicio-grabaciones'],
   },
@@ -149,8 +123,6 @@ export const BARRA: Entry[] = [
   {
     id: 'barra-superior',
     title: 'La barra superior',
-    q: ['qué hay en la barra de arriba', 'para qué son los botones de arriba', 'qué es el botón más', 'para qué sirve el micrófono de arriba'],
-    k: ['barra superior', 'botones', 'arriba'],
     a: 'La barra de arriba te acompaña en todas las secciones de Frame. Tiene esto:\n\nA la **izquierda**, el botón **+** para apuntar una tarea o una anotación desde cualquier lugar, y a su lado el botón de las **dos estrellas**, que abre el Centro de ayuda.\n\nEn el **centro** aparecen frases con tus datos recientes, que cambian solas.\n\nA la **derecha**, el **micrófono** para grabar una nota de voz y la **campana** con tus notificaciones.',
     tip: 'Cada botón se pinta de azul entero mientras su recuadro está abierto.',
     rel: ['tarea-crear-rapida', 'ayuda-barra', 'frase-personal', 'grabar-nota'],
@@ -159,8 +131,6 @@ export const BARRA: Entry[] = [
     // 1.6.2: ya no se escribe una frase propia; salen solas de los datos.
     id: 'frase-personal',
     title: 'Las frases de la barra superior',
-    q: ['qué son las frases de arriba', 'por qué cambia el texto de la barra', 'de dónde salen las frases del centro', 'cómo cambio la frase de arriba', 'puedo escribir mi propia frase'],
-    k: ['frase', 'frases', 'cita', 'motivacion', 'lema', 'saludo', 'texto del centro'],
     a: 'Las frases que ves en el **centro de la barra de arriba** salen de lo que haces en Frame: cuánto estudiaste hoy o ayer, tu meta del día, las tareas que culminaste, tu próxima entrega, tus hábitos, tus días de racha o tu asignatura de la semana.\n\nCambian solas cada minuto y medio. Si quieres leer una con calma, **pon el ratón encima** y se quedará quieta.',
     tip: 'No hace falta escribirlas ni editarlas: Frame las arma sola. Si todavía no tienes datos, simplemente te saluda.',
     rel: ['barra-superior', 'enfoque-hoy'],
@@ -168,8 +138,6 @@ export const BARRA: Entry[] = [
   {
     id: 'notificaciones',
     title: 'La campana de notificaciones',
-    q: ['qué es la campana', 'cómo veo mis notificaciones', 'qué significan los avisos', 'cómo marco las notificaciones como vistas', 'por qué tengo un número en la campana', 'cómo silencio las notificaciones', 'cómo borro las notificaciones', 'historial de notificaciones', 'quitar el sonido de las notificaciones'],
-    k: ['campana', 'avisos', 'vencida', 'vence hoy', 'proxima', 'sonido', 'silenciar', 'engranaje', 'historial', 'leido'],
     a: 'La **campana**, arriba a la derecha, guarda todas tus notificaciones con su hora: tareas vencidas o que vencen pronto, recordatorios, el fin de tus sesiones de estudio, actualizaciones de Frame y avisos de conexión. El **número** sobre la campana indica cuántas no has leído.',
     steps: [
       'Pulsa la **campana** para ver la lista. Pulsa una notificación para ir directo a lo que avisa.',
@@ -181,8 +149,6 @@ export const BARRA: Entry[] = [
   {
     id: 'sin-conexion-aviso',
     title: 'El aviso «Sin conexión»',
-    q: ['qué significa sin conexión', 'me sale sin conexión', 'sin conexión con tu cuenta', 'se cerró mi sesión en la nube', 'por qué aparece sin conexión abajo'],
-    k: ['sin conexion', 'internet', 'sesion', 'nube'],
     a: 'Cuando tu computadora se queda sin internet, Frame te avisa con un mensaje breve **Sin conexión**, abajo a la izquierda, que luego se guarda en la campana.\n\nNo pasa nada: puedes **seguir trabajando con normalidad**. Todo se guarda en tu equipo y se sincroniza solo cuando vuelve la conexión.',
     tip: 'Si en la campana dice «Sin conexión con tu cuenta», significa que tu sesión en la nube se cerró. Pulsa ese aviso para volver a entrar; tus datos siguen intactos.',
     rel: ['sin-internet', 'sync-como-funciona'],

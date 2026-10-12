@@ -29,7 +29,7 @@ import { pushToCloud } from '@/lib/supabase/sync';
 import { cn } from '@/lib/utils';
 import type { UserProfile } from '@/types';
 
-const CONFIRM_WORD = 'ELIMINAR';
+const CONFIRM_WORD = 'eliminar';
 const SUPPORT_EMAIL = 'vt.asvent@gmail.com';
 
 const WHAT_IS_LOST = [
@@ -86,7 +86,7 @@ export default function AccountMenu({ userProfile }: { userProfile: UserProfile 
   const isCloud = !!userProfile && !userProfile.isGuest && isSupabaseConfigured;
   /** Invitado con servicio de cuentas disponible: puede vincular Google. */
   const canLink = !!userProfile && userProfile.isGuest && isSupabaseConfigured;
-  const canDelete = confirmText.trim().toUpperCase() === CONFIRM_WORD && understood;
+  const canDelete = confirmText.trim().toLowerCase() === CONFIRM_WORD && understood;
 
   /** Cada opción cierra el menú antes de abrir lo suyo. */
   const pick = (action: () => void) => () => {

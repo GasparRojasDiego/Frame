@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { FileBarChart2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { EchoTileHeader } from '@/components/shared/EchoWord';
 import { PHASE_ICON } from '@/components/habits/HabitPhases';
 import { HABIT_PHASES, phaseStarted } from '@/lib/habit-phases';
 import { isScheduled } from '@/lib/habit-schedule';
@@ -130,6 +131,7 @@ function PhaseRings({
   return (
     <Card className="relative flex min-h-[330px] flex-col overflow-hidden bg-card/60 p-4">
       {/* Cabecera: la fase y el botón que da la vuelta al recuadro. */}
+      <EchoTileHeader word={info.label}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-primary/40 bg-primary/10 text-primary">
@@ -154,6 +156,7 @@ function PhaseRings({
           </Button>
         )}
       </div>
+      </EchoTileHeader>
 
       {rows.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center">
@@ -251,8 +254,8 @@ function PhaseRings({
             <text x={CENTER} y={CENTER - 4} textAnchor="middle" className="fill-foreground text-[22px] font-bold">
               {rate === null ? '—' : `${rate}%`}
             </text>
-            <text x={CENTER} y={CENTER + 13} textAnchor="middle" className="fill-muted-foreground text-[8px] font-semibold uppercase tracking-wider">
-              semana
+            <text x={CENTER} y={CENTER + 13} textAnchor="middle" className="fill-muted-foreground text-[8px] font-semibold">
+              Semana
             </text>
           </svg>
           {hidden > 0 && (

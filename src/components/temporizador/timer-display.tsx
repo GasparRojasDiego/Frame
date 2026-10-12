@@ -494,7 +494,7 @@ export default function TimerDisplay({ onSessionComplete, disabled = false }: Ti
               )}
               <span className="font-mono text-5xl font-bold text-foreground tabular-nums">{dialClock}</span>
               {dialHours > 0 && (
-                <span className="mt-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <span className="mt-1.5 text-[10px] font-semibold text-muted-foreground">
                   min : s
                 </span>
               )}

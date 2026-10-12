@@ -90,7 +90,7 @@ export default function QuickCreateButton() {
       addNote(course.id, text, { kind: 'text' });
       toast({
         title: 'Anotación guardada',
-        description: `Queda en ${course.name}, dentro de su clase de hoy (o de la última).`,
+        description: `Queda en los recursos de ${course.name}.`,
       });
     } else {
       // Sin asignatura: tarjeta en Inicio hasta que se coloque o se borre.
@@ -247,7 +247,7 @@ export default function QuickCreateButton() {
                 {mode === 'task' ? (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      <span className="text-[10px] font-bold text-muted-foreground">
                         La tarea
                       </span>
                       <span className="h-px flex-1 bg-border" />
@@ -257,7 +257,7 @@ export default function QuickCreateButton() {
                 ) : (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      <span className="text-[10px] font-bold text-muted-foreground">
                         La anotación
                       </span>
                       <span className="h-px flex-1 bg-border" />

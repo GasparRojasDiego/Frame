@@ -106,7 +106,7 @@ function Pill({ active, onClick, children }: { active: boolean; onClick: () => v
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{title}</p>
+      <p className="text-[10px] font-semibold text-muted-foreground">{title}</p>
       <div className="flex flex-wrap gap-1.5">{children}</div>
     </div>
   );

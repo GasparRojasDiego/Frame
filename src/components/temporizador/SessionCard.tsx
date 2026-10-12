@@ -8,7 +8,7 @@ import { formatDurationLabel, sessionSeconds } from '@/lib/duration';
 import { isSessionEditable } from '@/lib/session-edit';
 import { cn } from '@/lib/utils';
 import { sessionHasFocus, sessionSubjects } from '@/components/temporizador/session-info';
-import { useCardImageHeight } from '@/lib/card-image-height';
+import { useCardImageStyle } from '@/lib/card-image-height';
 import type { StudySession } from '@/types';
 
 // ============================================================
@@ -176,8 +176,8 @@ export default function SessionCard({
   onEdit?: () => void;
   className?: string;
 }) {
-  // La portada mide lo que el usuario eligió en Asignaturas (1.6.5).
-  const imageHeight = useCardImageHeight();
+  // La portada guarda la proporción elegida en Asignaturas (1.6.6).
+  const imageStyle = useCardImageStyle();
   const { courses } = useCourse();
   const reducedMotion = usePrefersReducedMotion();
 
@@ -210,7 +210,7 @@ export default function SessionCard({
         className="block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
       >
         {/* --- Tarjeta de la asignatura: portada y nombre --- */}
-        <span className="relative block" style={{ height: imageHeight }}>
+        <span className="relative block" style={imageStyle}>
           <SessionCover images={images} active={active} split={reducedMotion} className="h-full w-full" />
 
           {/* Qué portada se ve, cuando se alternan. */}

@@ -312,7 +312,7 @@ export const TaskCard = ({
 
       {/* Tarea incompleta: una franja ámbar la distingue de un vistazo. */}
       {isIncomplete && (
-        <div className="flex items-center justify-center gap-1.5 border-b border-amber-500/30 bg-amber-500/15 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-amber-600 dark:text-amber-400">
+        <div className="flex items-center justify-center gap-1.5 border-b border-amber-500/30 bg-amber-500/15 py-1 text-[10px] font-bold text-amber-600 dark:text-amber-400">
           <CircleSlash className="h-3 w-3" />
           Tarea incompleta
         </div>
@@ -329,7 +329,7 @@ export const TaskCard = ({
             )}
           >
             {showCourseName && (
-              <p className="truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-primary/80">
+              <p className="truncate text-[10px] font-semibold text-primary/80">
                 {task.courseName}
               </p>
             )}

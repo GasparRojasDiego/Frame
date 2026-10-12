@@ -1,4 +1,4 @@
-import type { HelpEntry } from '../search';
+import type { HelpEntry } from '../areas';
 
 type Entry = Omit<HelpEntry, 'area'>;
 
@@ -8,8 +8,6 @@ export const MUSICA: Entry[] = [
   {
     id: 'musica-intro',
     title: 'La interfaz Música',
-    q: ['qué es la interfaz música', 'para qué sirve música', 'música', 'reproductor de música'],
-    k: ['biblioteca', 'canciones'],
     a: 'Frame tiene su propio reproductor de música, para que estudies con tus canciones favoritas sin abrir otro programa.\n\nEn el menú de la izquierda, pulsa **Música**: ahí está tu **biblioteca**, con las canciones que traes desde tu computadora, cada una con su portada y su letra. Puedes marcar **favoritas** y armar **playlists**, que aparecen debajo de Música en el menú.\n\nCuando pones una canción, aparece un **reproductor** en la parte de abajo de la pantalla, y la música sigue sonando mientras usas el resto de Frame.',
     go: '/music',
     rel: ['musica-anadir', 'musica-reproducir', 'playlist-crear'],
@@ -17,8 +15,6 @@ export const MUSICA: Entry[] = [
   {
     id: 'musica-anadir',
     title: 'Añadir tus canciones («Importar»)',
-    q: ['cómo agrego canciones', 'cómo pongo música en frame', 'cómo importo mi música', 'cómo subo mis canciones', 'añadir música', 'cómo agrego una carpeta de música', 'cómo descargo una canción', 'cómo paso mi música de spotify'],
-    k: ['importar', 'anadir cancion', 'carpeta', 'archivo', 'mp3', 'descargar', 'spotify'],
     a: 'Frame reproduce **tu propia música**: las canciones que ya tienes guardadas en tu computadora. Para traerlas:',
     steps: [
       'En el menú de la izquierda, entra en **Música** y pulsa **Importar**, arriba.',
@@ -33,8 +29,6 @@ export const MUSICA: Entry[] = [
   {
     id: 'musica-reproducir',
     title: 'Reproducir música',
-    q: ['cómo pongo una canción', 'cómo reproduzco música', 'reproducir al azar'],
-    k: ['reproducir', 'pausar', 'siguiente', 'anterior', 'aleatorio', 'reproductor'],
     a: 'En **Música** (o dentro de una playlist), **pulsa cualquier canción** y empezará a sonar. Abajo de la pantalla aparecerá el **reproductor**.\n\nEn el centro del reproductor están los controles: aleatorio, anterior, reproducir o pausar, siguiente y repetir, con la barra para adelantar o retroceder. A la derecha está el **volumen** y el **corazón** para marcarla como favorita.',
     tip: 'La música sigue sonando aunque cambies de sección. Si quieres escuchar algo al azar, usa el botón de aleatorio que está junto al buscador de la biblioteca.',
     go: '/music',
@@ -43,8 +37,6 @@ export const MUSICA: Entry[] = [
   {
     id: 'musica-repetir',
     title: 'Repetir una canción',
-    q: ['cómo repito una canción', 'cómo pongo una canción en bucle', 'repetir tres veces', 'cómo quito la repetición', 'que una canción suene una y otra vez', 'volver a poner la misma canción', 'escuchar la misma canción varias veces'],
-    k: ['repetir', 'bucle', 'loop', 'otra vez', 'suene', 'misma cancion', 'de nuevo'],
     a: 'El botón de **repetir**, en el centro del reproductor de abajo, tiene un truco curioso:\n\n**Cada clic seguido suma una repetición**: si lo pulsas tres veces, la canción se repetirá 3 veces. Y si lo **mantienes pulsado** casi un segundo, la canción se repetirá sin fin.\n\nPara quitar la repetición, pulsa el botón una vez más cuando ya esté activo.',
     go: '/music',
     rel: ['musica-reproducir'],
@@ -52,16 +44,12 @@ export const MUSICA: Entry[] = [
   {
     id: 'musica-favoritas',
     title: 'Canciones favoritas',
-    q: ['cómo marco una canción como favorita', 'cómo veo mis favoritas', 'me gusta una canción', 'corazón de la canción', 'cómo pongo una canción en favoritos', 'ver solo mis canciones favoritas'],
-    k: ['favorita', 'corazon', 'me gusta', 'favoritos'],
     a: 'Mientras suena una canción que te encanta, pulsa el **corazón** del reproductor, a la derecha, junto al volumen: quedará guardada como favorita.\n\nPara ver solo tus favoritas, en la biblioteca de **Música** pulsa el botón del **corazón**: alterna entre ver todas las canciones o solo tus favoritas.',
     go: '/music',
   },
   {
     id: 'musica-buscar',
     title: 'Buscar en tu biblioteca',
-    q: ['cómo busco una canción en mi biblioteca', 'no encuentro una canción', 'buscar por artista', 'cuántas canciones tengo'],
-    k: ['buscar', 'biblioteca', 'artista', 'lupa', 'contador', 'cuantas canciones'],
     a: 'En **Música**, arriba, está la barra de la **lupa** («Buscar canciones o artistas…»). Escribe el nombre de la canción o del artista y la lista se filtra al instante; no importan las tildes ni el orden de las palabras.\n\nDentro de la barra, a la derecha, verás **cuántas canciones** tienes (o cuántas coinciden con tu búsqueda).',
     tip: 'Si tienes muchas canciones, la biblioteca se divide en grupos de 100: usa las flechas para pasar de un grupo a otro.',
     go: '/music',
@@ -69,8 +57,6 @@ export const MUSICA: Entry[] = [
   {
     id: 'musica-eliminar',
     title: 'Eliminar una canción',
-    q: ['cómo borro una canción', 'cómo elimino música', 'quitar canción de la biblioteca'],
-    k: ['eliminar', 'cancion', 'papelera'],
     a: 'En la biblioteca de **Música**, pasa el ratón por la canción: en su esquina aparecerá una **papelera**. Púlsala y confirma.\n\nLa canción se borra de Frame y de todas tus playlists (el archivo original de tu computadora no se toca).',
     tip: 'Si solo quieres quitarla de una playlist, hazlo desde dentro de esa playlist.',
     go: '/music',
@@ -79,8 +65,6 @@ export const MUSICA: Entry[] = [
   {
     id: 'musica-reproduciendo',
     title: 'La vista «Reproduciendo» con la letra',
-    q: ['cómo veo la letra de la canción', 'cómo pongo la canción en pantalla completa', 'karaoke', 'letra sincronizada'],
-    k: ['reproduciendo', 'letra', 'pantalla completa', 'karaoke'],
     a: 'Frame te permite ver la **letra de tus canciones sincronizada**, como en Spotify: los versos se van iluminando al ritmo de la música.\n\nCon una canción sonando, mira el reproductor de abajo: en su **esquina inferior derecha** hay un icono pequeño de **dos flechas**. Púlsalo y se abrirá una pantalla con la portada grande y la letra. Si pulsas un verso, la canción salta a ese momento.\n\nPara cerrarla, pulsa la **flecha hacia abajo** de su esquina superior derecha (o la tecla **Esc**).',
     tip: 'Si la letra va un poco adelantada o atrasada, puedes ajustarla desde esa misma pantalla.',
     go: '/music',
@@ -89,8 +73,6 @@ export const MUSICA: Entry[] = [
   {
     id: 'musica-letras',
     title: 'Las letras de tus canciones',
-    q: ['la canción no tiene letra', 'por qué no aparece la letra', 'cómo pongo la letra a una canción', 'letras sin internet', 'cómo agrego una letra sincronizada', 'qué es un archivo lrc'],
-    k: ['letras', 'lrc', 'sincronizada', 'sin letra'],
     a: 'Frame te permite ver la letra de tus canciones favoritas de forma **sincronizada**, al igual que plataformas como Spotify o Deezer.\n\nPara verla, pon una canción de tu biblioteca: abajo aparecerá la **barra de reproducción**. En su **esquina inferior derecha** encontrarás un icono pequeño de **dos flechas**: púlsalo y verás una pantalla con la letra, que avanza junto con la música.\n\nSi la canción no traía su letra, Frame la **busca sola en internet** la primera vez que abres esa pantalla, y la guarda para que después la veas aunque no tengas conexión.',
     tip: 'Es posible que algunas canciones no tengan letra disponible. Si no la encuentra, Frame lo volverá a intentar más adelante.',
     go: '/music',
@@ -99,8 +81,6 @@ export const MUSICA: Entry[] = [
   {
     id: 'playlist-crear',
     title: 'Crear una playlist',
-    q: ['cómo creo una playlist', 'cómo hago una lista de canciones', 'nueva playlist', 'añadir playlist'],
-    k: ['playlist', 'crear', 'lista'],
     a: 'Una **playlist** es una lista con las canciones que tú elijas, por ejemplo «Para estudiar» o «Para concentrarme».\n\nEn el menú de la izquierda, debajo de **Música**, pulsa **Añadir playlist**. Escribe su nombre y pulsa el **+** de cada canción que quieras incluir: se añade al instante.',
     tip: 'Si no recuerdas una canción, pulsa su portada en ese recuadro y sonará para que la reconozcas.',
     rel: ['playlist-editar', 'playlist-ordenar'],
@@ -108,24 +88,18 @@ export const MUSICA: Entry[] = [
   {
     id: 'playlist-editar',
     title: 'Editar una playlist',
-    q: ['cómo agrego canciones a una playlist', 'cómo cambio el nombre de una playlist', 'cómo borro una playlist', 'cómo quito una canción de una playlist', 'cómo pongo imagen a una playlist', 'cómo le cambio la foto a una playlist', 'renombrar una playlist', 'quitar una canción de la lista'],
-    k: ['playlist', 'editar', 'nombre', 'imagen', 'eliminar', 'anadir canciones', 'foto', 'renombrar'],
     a: 'Abre la playlist pulsándola en el menú de la izquierda, debajo de Música. Dentro puedes:\n\nPulsar **Añadir canciones** para sumar más, cambiarle el **nombre** o la **imagen** de cabecera, **buscar** dentro de ella, reproducirla en orden **aleatorio**, **quitar** canciones o **eliminar** la playlist entera.',
     rel: ['playlist-ordenar', 'playlist-crear'],
   },
   {
     id: 'playlist-ordenar',
     title: 'Ordenar playlists y canciones',
-    q: ['cómo ordeno mis playlists', 'cómo muevo una playlist', 'cómo cambio el orden de las canciones de una playlist', 'cómo cambio el orden de mis playlists', 'subir una playlist arriba'],
-    k: ['ordenar', 'mover', 'playlist', 'arrastrar', 'orden'],
     a: 'Puedes poner tus playlists y tus canciones en el orden que prefieras:\n\nEn el menú de la izquierda, **mantén pulsada una playlist** y arrástrala a su nuevo lugar.\n\nDentro de una playlist, **arrastra las tarjetas de las canciones** para cambiar el orden en que suenan.',
     rel: ['playlist-editar'],
   },
   {
     id: 'musica-celular',
     title: 'Tu música en el celular',
-    q: ['cómo paso mi música al celular', 'llevar música a android', 'la música no aparece en el celular', 'se sincroniza la música', 'respaldar mi música'],
-    k: ['celular', 'android', 'tablet', 'sincronizar', 'musica'],
     a: 'Tu música **no viaja por la nube**: vive en cada equipo, porque las canciones pesan mucho.\n\nPara tenerla en tu celular o tablet, primero copia tus archivos de música al dispositivo (por ejemplo, con un cable USB). Después, en Frame para Android, entra en **Música** y toca **Importar**: elige tus canciones o la carpeta donde las copiaste.',
     tip: 'Lo demás (tareas, hábitos, asignaturas…) sí se sincroniza solo con tu cuenta.',
     rel: ['musica-anadir', 'nube-que-se-guarda'],
@@ -133,8 +107,6 @@ export const MUSICA: Entry[] = [
   {
     id: 'musica-al-cerrar',
     title: 'La música al cerrar Frame',
-    q: ['la música sigue sonando al cerrar', 'cómo dejo música en segundo plano', 'la música se para al cerrar la ventana'],
-    k: ['segundo plano', 'cerrar', 'musica'],
     a: 'Si cierras la ventana de Frame, la app se cierra y la música se detiene.\n\nPara seguir escuchando mientras usas otros programas, deja Frame abierta: puedes **minimizarla** con el botón de la raya, arriba a la derecha de la ventana, y la música seguirá sonando.',
   },
 ];
