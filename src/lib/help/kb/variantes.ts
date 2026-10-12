@@ -682,7 +682,7 @@ export const VARIANTES: Record<string, string[]> = {
 
   // ---------------- 1.6.5: formas coloquiales ----------------
   'grabar-atajo': [
-    'cómo grabo sin usar el ratón', 'combinación de teclas para grabar', 'empezar a grabar de inmediato', 'atajo de teclado de la grabadora', 'grabar rapidito sin abrir nada',
+    'cómo grabo sin usar el ratón', 'combinación de teclas para grabar', 'empezar a grabar de inmediato', 'atajo de teclado de la grabadora',
   ],
   'figura-ayuda': [
     'qué es la pelota que da vueltas', 'el dibujo que gira en la ayuda', 'por qué hay un balón en la ayuda', 'la figura se mueve cuando escribo', 'qué significa la esfera de la ayuda',

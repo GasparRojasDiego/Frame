@@ -57,7 +57,7 @@ export const ENFOQUE: Entry[] = [
     k: ['finalizar', 'registrar', 'enfoque', 'nivel de enfoque', 'asignaturas', 'sesion terminada'],
     a: 'Cuando termines de estudiar, pulsa **Finalizar**, debajo del reloj en **Estudio**. Se abre el recuadro **Sesión terminada**, donde cuentas cómo te fue:',
     steps: [
-      'Indica tu **nivel de enfoque**, del 1 al 20: qué tan concentrado estuviste.',
+      'Indica tu **nivel de enfoque**, del 1 al 20: cuánto te pudiste concentrar.',
       'Si quieres, escribe qué hiciste. Puedes darle formato con los botones de arriba del cuadro, como en Word.',
       'Elige en qué estudiaste con las tarjetas: primero la **colección**, luego la **asignatura** y, si quieres, las **tareas** que avanzaste.',
       'Pulsa **Registrar sesión**.',
@@ -140,7 +140,7 @@ export const ENFOQUE: Entry[] = [
     title: 'Cómo se calcula la nota del día',
     q: ['cómo se calcula mi nota', 'qué significa AD A B C', 'por qué saqué C', 'cómo subo mi calificación', 'qué es la calificación diaria', 'qué nota necesito para AD', 'por qué me salió B si estudié bastante', 'por qué saqué una nota baja', 'cómo saco AD', 'por qué mi nota es tan baja'],
     k: ['nota', 'calificacion', 'ad', 'escala', 'vigesimal', 'baja', 'salio', 'saque', 'b', 'c', 'a'],
-    a: 'Cada día que estudias, Frame te pone una **nota del 0 al 20** según dos cosas: **qué tan concentrado estuviste** (el nivel de enfoque que indicas al terminar cada sesión) y **cuánto de tu meta del día cumpliste**.\n\nSe multiplican: tu enfoque promedio por la parte de la meta que lograste. Por ejemplo, si tu enfoque fue 16 y estudiaste 90 de los 120 minutos de tu meta (el 75 %), tu nota es 16 × 0,75 = **12 (B)**.\n\nAsí, para sacar una nota alta, necesitas estudiar concentrado **y** cumplir tu meta. Estas son las letras:',
+    a: 'Cada día que estudias, Frame te pone una **nota del 0 al 20** según dos cosas: **cuánto te pudiste concentrar** (el nivel de enfoque que indicas al terminar cada sesión) y **cuánto de tu meta del día cumpliste**.\n\nSe multiplican: tu enfoque promedio por la parte de la meta que lograste. Por ejemplo, si tu enfoque fue 16 y estudiaste 90 de los 120 minutos de tu meta (el 75 %), tu nota es 16 × 0,75 = **12 (B)**.\n\nAsí, para sacar una nota alta, necesitas estudiar con concentración **y** cumplir tu meta. Estas son las letras:',
     steps: ['**AD**: de 18 a 20.', '**A**: de 14 a 17,9.', '**B**: de 11 a 13,9.', '**C**: menos de 11.'],
     tip: 'Solo se califican los días que tienen una meta mayor que cero. Es una medida personal para ti, no una nota oficial.',
     go: '/temporizador',
