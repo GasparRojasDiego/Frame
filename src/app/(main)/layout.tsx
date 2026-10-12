@@ -38,7 +38,6 @@ import ConstellationBackdrop from '@/components/layout/ConstellationBackdrop';
 import InterfaceErrorBoundary from '@/components/layout/InterfaceErrorBoundary';
 import NotionImportDialog from '@/components/extensions/NotionImportDialog';
 import UpdateDialog from '@/components/layout/UpdateDialog';
-import TourHost from '@/components/help/TourHost';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 import { getActiveSession, onAuthChange, tidyName, updatePersonNames, updateUsername } from '@/lib/supabase/auth';
 import { pushToCloud, pullFromCloud } from '@/lib/supabase/sync';
@@ -370,8 +369,6 @@ function MainApp({ children, userProfile }: { children: ReactNode; userProfile: 
       <NotionImportDialog />
       {/* Recuadro de actualización: lo abren el testigo junto al perfil y la campana. */}
       <UpdateDialog />
-      {/* Recorrido «Descubrir» de la ayuda: vive aquí para sobrevivir a los cambios de interfaz. */}
-      <TourHost />
       {interruptedSession && (
         <InterruptedSessionManager
           session={interruptedSession}

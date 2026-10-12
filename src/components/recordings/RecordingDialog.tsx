@@ -985,7 +985,7 @@ export default function RecordingDialog({
               )}
               <div className="space-y-2">
                 <Label htmlFor="recDesc" className="text-xs">Descripción (opcional)</Label>
-                {/* Botones de formato (como en Word) y, separado, el recuadro. */}
+                {/* Botones de formato (como en Word) apilados y, separado, el recuadro. */}
                 <div className={cn(phase === 'saving' && 'pointer-events-none opacity-60')}>
                   <NoteEditor
                     id="recDesc"
@@ -994,7 +994,7 @@ export default function RecordingDialog({
                     placeholder="¿De qué trata este audio?"
                     ariaLabel="Descripción de la grabación"
                     rows={3}
-                    className="gap-2"
+                    toolbarSide
                   />
                 </div>
               </div>

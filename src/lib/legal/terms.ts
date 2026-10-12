@@ -18,7 +18,7 @@
 // que solo el titular puede rellenar.
 // ============================================================
 
-export const TERMS_VERSION = '4.6';
+export const TERMS_VERSION = '4.7';
 
 export function termsDocument({ appVersion, effectiveDate }: { appVersion: string; effectiveDate: string }): string {
   return `# Términos y Condiciones de Uso de Frame
@@ -351,7 +351,7 @@ Correo electrónico, nombres y apellidos, nombre de usuario, imagen de perfil si
 
 ### 3.4 Datos de diagnóstico
 
-Identificador seudónimo de instalación, versión de la Aplicación, plataforma, país aproximado (el de la ubicación que tú fijaste para el clima), marca temporal, registros técnicos de error (nombre y mensaje del fallo, la pantalla donde ocurrió y su posición dentro del código de la Aplicación) e **indicadores agregados de uso**: que la Aplicación se abrió ese día, qué pantallas se abrieron, qué respuestas de la Ayuda se mostraron (nunca lo que escribiste en ella) y qué recorridos guiados «Descubrir» se siguieron y hasta qué paso, cuántas sesiones de estudio y minutos se registraron, cuántas tareas se terminaron, cuántos informes se generaron y los totales acumulados de asignaturas, hábitos, playlists y canciones. También la **serie diaria y semanal** de esos mismos recuentos —minutos y sesiones de estudio, el enfoque medio que tú marcaste, cuántas tareas culminaste, cuántas eran de prioridad alta y cuántas a tiempo, y tu constancia de hábitos como porcentaje—, y la forma de cada tarea creada o culminada (tipo, prioridad, si tenía fecha). Estos indicadores se envían también en modo invitado. **No incluyen el contenido de tus tareas, notas, grabaciones ni documentos, ni los nombres de tus asignaturas.**
+Identificador seudónimo de instalación, versión de la Aplicación, plataforma, país aproximado (el de la ubicación que tú fijaste para el clima), marca temporal, registros técnicos de error (nombre y mensaje del fallo, la pantalla donde ocurrió y su posición dentro del código de la Aplicación) e **indicadores agregados de uso**: que la Aplicación se abrió ese día, qué pantallas se abrieron, qué respuestas de la Ayuda se mostraron (nunca lo que escribiste en ella), cuántas sesiones de estudio y minutos se registraron, cuántas tareas se terminaron, cuántos informes se generaron y los totales acumulados de asignaturas, hábitos, playlists y canciones. También la **serie diaria y semanal** de esos mismos recuentos —minutos y sesiones de estudio, el enfoque medio que tú marcaste, cuántas tareas culminaste, cuántas eran de prioridad alta y cuántas a tiempo, y tu constancia de hábitos como porcentaje—, y la forma de cada tarea creada o culminada (tipo, prioridad, si tenía fecha). Estos indicadores se envían también en modo invitado. **No incluyen el contenido de tus tareas, notas, grabaciones ni documentos, ni los nombres de tus asignaturas.**
 
 ### 3.5 Datos que tratamos cuando nos escribes
 

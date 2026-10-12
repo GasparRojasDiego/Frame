@@ -136,6 +136,114 @@ export async function pickAndStoreFile(attachmentId: string): Promise<PickedFile
   });
 }
 
+/** Guarda un manejador vivo ya obtenido (selector múltiple o arrastre). */
+export async function storeHandle(attachmentId: string, handle: FileSystemFileHandle): Promise<PickedFile> {
+  const file = await handle.getFile();
+  await put({ key: attachmentKey(attachmentId), kind: 'handle', handle });
+  return { fileName: file.name, mime: file.type, live: true };
+}
+
+/** Guarda una copia congelada del archivo (cuando no hay manejador vivo). */
+export async function storeCopy(attachmentId: string, file: File): Promise<PickedFile> {
+  await put({
+    key: attachmentKey(attachmentId),
+    kind: 'copy',
+    blob: file,
+    fileName: file.name,
+    lastModified: file.lastModified,
+  });
+  return { fileName: file.name, mime: file.type, live: false };
+}
+
+export interface StoredPick {
+  id: string;
+  picked: PickedFile;
+}
+
+/**
+ * Elige UNO O VARIOS archivos (1.6.5) y deja cada uno asociado a un id nuevo.
+ * Lista vacía si el usuario cerró el selector.
+ */
+export async function pickAndStoreFiles(): Promise<StoredPick[]> {
+  if (supportsLiveFiles()) {
+    try {
+      const handles: FileSystemFileHandle[] = await (window as any).showOpenFilePicker({ multiple: true });
+      const out: StoredPick[] = [];
+      for (const handle of handles) {
+        const id = crypto.randomUUID();
+        out.push({ id, picked: await storeHandle(id, handle) });
+      }
+      return out;
+    } catch (error: any) {
+      if (error?.name === 'AbortError') return [];
+      // Cualquier otro tropiezo cae al camino de la copia.
+    }
+  }
+  const files = await new Promise<File[]>((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+    input.style.display = 'none';
+    document.body.appendChild(input);
+    let settled = false;
+    const finish = (value: File[]) => {
+      if (settled) return;
+      settled = true;
+      input.remove();
+      resolve(value);
+    };
+    input.onchange = () => finish(Array.from(input.files ?? []));
+    input.addEventListener('cancel', () => finish([]));
+    window.addEventListener(
+      'focus',
+      () => setTimeout(() => { if (!input.files?.length) finish([]); }, 800),
+      { once: true }
+    );
+    input.click();
+  });
+  const out: StoredPick[] = [];
+  for (const file of files) {
+    const id = crypto.randomUUID();
+    try {
+      out.push({ id, picked: await storeCopy(id, file) });
+    } catch {
+      /* sin espacio para la copia: se omite ese archivo */
+    }
+  }
+  return out;
+}
+
+/**
+ * Archivos SOLTADOS sobre la zona de adjuntar. Hay que leer el
+ * `DataTransfer` durante el propio evento (después se vacía), así que esta
+ * función toma lo necesario en el acto y devuelve una promesa con el resto.
+ * Con manejador vivo, el adjunto queda enlazado al archivo real.
+ */
+export function storeDroppedFiles(transfer: DataTransfer): Promise<StoredPick[]> {
+  const items = Array.from(transfer.items ?? []).filter((item) => item.kind === 'file');
+  const pending = items.map((item) => ({
+    handle: typeof (item as any).getAsFileSystemHandle === 'function' ? ((item as any).getAsFileSystemHandle() as Promise<any>) : null,
+    file: item.getAsFile(),
+  }));
+  return (async () => {
+    const out: StoredPick[] = [];
+    for (const { handle, file } of pending) {
+      const id = crypto.randomUUID();
+      try {
+        const resolved = handle ? await handle.catch(() => null) : null;
+        if (resolved && resolved.kind === 'file') {
+          out.push({ id, picked: await storeHandle(id, resolved as FileSystemFileHandle) });
+        } else if (file) {
+          out.push({ id, picked: await storeCopy(id, file) });
+        }
+      } catch {
+        /* un archivo que no se pudo guardar no impide los demás */
+      }
+    }
+    return out;
+  })();
+}
+
 export interface ResolvedFile {
   file: File;
   live: boolean;

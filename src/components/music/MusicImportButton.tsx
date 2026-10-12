@@ -99,8 +99,7 @@ export default function MusicImportButton({ variant = 'button' }: { variant?: 'b
 
   return (
     <>
-      {/* No modal: así el recorrido «Descubrir» ve el clic en «Importar» y
-          puede iluminar el menú ya abierto. */}
+      {/* No modal: abrir el menú no bloquea el resto de la pantalla. */}
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           {variant === 'empty' ? (

@@ -409,7 +409,7 @@ export type TelemetryEventName =
   | 'guest_linked'
   // Barra de ayuda de Inicio: qué respuesta se dio (o ninguna), nunca el texto.
   | 'help_asked'
-  // Recorrido «Descubrir» de una respuesta: cuál, si se completó y en qué paso quedó.
+  // Recorrido «Descubrir» de una respuesta (hasta la 1.6.4; ya no se envía).
   | 'help_tour'
   | 'error';
 

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ArrowLeft, BookOpen, ListChecks, NotebookPen, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, ListChecks, NotebookPen, Pencil, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -15,7 +15,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import EchoWord from '@/components/shared/EchoWord';
-import { SubjectCover } from '@/components/courses/SubjectPicker';
+import { SessionCover, useCourseImages } from '@/components/temporizador/SessionCard';
+import { useCardImageHeight } from '@/lib/card-image-height';
 import RichNoteView from '@/components/temporizador/RichNoteView';
 import SessionNotesList, { SessionNotesHeading } from '@/components/temporizador/SessionNotesList';
 import { sessionHasFocus, sessionRange, sessionSubjects } from '@/components/temporizador/session-info';
@@ -29,10 +30,11 @@ import type { DailyPerformance, StudySession } from '@/types';
 // ============================================================
 // El detalle de UNA sesión de estudio: lo que la tarjeta resume, entero.
 //
-// Cuándo empezó y terminó, cuánto duró, qué lugar ocupó en el día y cuánto
-// llevaba acumulado la jornada al cerrarla; sus asignaturas con su colección,
-// las tareas que avanzó, la nota del día y las anotaciones completas, con
-// los avances al minuto en que se escribieron.
+// Desde la 1.6.5: la portada de la asignatura de extremo a extremo (con el
+// alto elegido en Asignaturas) y, debajo, a la izquierda la duración, el
+// rendimiento con su barra y la nota del día; a la derecha el horario y el
+// tipo de reloj. Las anotaciones, en su propio recuadro, y las tareas que
+// avanzó la sesión.
 //
 // Se usa de dos formas: como ventana propia (Métricas de hoy) y como vista
 // dentro del recuadro de un día del calendario, que la muestra en su lugar
@@ -48,22 +50,12 @@ const dayKeyOf = (iso: string): string | null => {
 };
 
 /** Título de sección, con la forma de «Avances anotados». */
-function SectionHeading({ icon: Icon, children }: { icon: typeof BookOpen; children: React.ReactNode }) {
+function SectionHeading({ icon: Icon, children }: { icon: typeof NotebookPen; children: React.ReactNode }) {
   return (
     <p className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
       <Icon className="h-3.5 w-3.5 text-primary" />
       {children}
     </p>
-  );
-}
-
-/** Par etiqueta → dato, en una línea. */
-function Pair({ label, value, accent = false }: { label: string; value: React.ReactNode; accent?: boolean }) {
-  return (
-    <div className="flex items-baseline justify-between gap-3">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className={cn('font-semibold tabular-nums', accent ? 'text-primary' : 'text-foreground')}>{value}</dd>
-    </div>
   );
 }
 
@@ -91,6 +83,9 @@ export function SessionDetailView({
   const editable = isSessionEditable(session);
 
   const subjects = useMemo(() => sessionSubjects(session, courses ?? []), [session, courses]);
+  const images = useCourseImages(subjects.map((subject) => subject.course?.id ?? null));
+  // La portada mide lo que el usuario eligió en Asignaturas (1.6.5).
+  const imageHeight = useCardImageHeight();
 
   /** Colección de cada asignatura (la primera en la que aparece). */
   const collectionOf = (courseId: string | undefined): string | null =>
@@ -128,6 +123,11 @@ export function SessionDetailView({
     }
   })();
 
+  const subjectNames = subjects.length > 0 ? subjects.map((subject) => subject.name).join(' · ') : 'Sin asignatura';
+  const collections = [
+    ...new Set(subjects.map((subject) => collectionOf(subject.course?.id)).filter((name): name is string => Boolean(name))),
+  ].join(' · ');
+
   // Una anotación con solo una viñeta vacía o marcas sueltas no dice nada.
   const notes = isRichNoteEmpty(session.notes ?? '') ? '' : session.notes ?? '';
   const progress = session.progressNotes ?? [];
@@ -163,114 +163,109 @@ export function SessionDetailView({
       <div className="mx-6 h-px shrink-0 bg-border" />
 
       {/* ---------- Cuerpo: único carril de scroll ---------- */}
-      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-4">
-        {/* Duración a la izquierda; el resto de cifras, etiqueta → dato. */}
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-          <div className="text-center">
-            <p className="font-headline text-2xl font-bold tabular-nums text-primary">
-              {formatDurationLabel(seconds)}
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {/* La portada de la asignatura, de extremo a extremo y con el alto
+            elegido en Asignaturas. Se funde hacia abajo con el fondo del
+            recuadro; encima, el nombre centrado y su colección. */}
+        <div className="relative" style={{ height: imageHeight }}>
+          <SessionCover images={images} active={0} split className="h-full w-full" />
+          <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 px-6 pb-2 text-center">
+            <p className="truncate font-headline text-lg font-bold text-primary" title={subjectNames}>
+              {subjectNames}
             </p>
-            <p className="text-[11px] text-muted-foreground">
-              {dayContext && dayContext.total > 1
-                ? `Sesión ${dayContext.order} de ${dayContext.total} del día`
-                : 'Duración'}
-            </p>
+            {collections && <p className="truncate text-xs text-muted-foreground">{collections}</p>}
           </div>
-          <span className="w-px self-stretch bg-border" />
-          <dl className="mx-auto w-full max-w-[14rem] space-y-1 text-xs">
-            {range && (
-              <Pair label="Horario" value={`${format(range.start, 'HH:mm')} – ${format(range.end, 'HH:mm')}`} />
-            )}
-            {hasFocus && (
-              <Pair
-                label="Rendimiento"
-                accent
-                value={
-                  <>
-                    {session.perception}
-                    <span className="text-[10px] text-muted-foreground">/20</span>
-                  </>
-                }
-              />
-            )}
-            <Pair label="Reloj" value={session.sessionType} />
-            {dayContext && dayContext.total > 1 && (
-              <Pair label="Acumulado del día" value={formatDurationLabel(dayContext.running)} />
-            )}
-            {dayPerformance && (
-              <Pair
-                label="Nota del día"
-                accent
-                value={`${dayPerformance.score.toFixed(1)} ${dayPerformance.grade}`}
-              />
-            )}
-          </dl>
         </div>
 
-        {/* Asignaturas, con la estética de sus tarjetas. */}
-        <div className="space-y-2">
-          <SectionHeading icon={BookOpen}>
-            {subjects.length === 1 ? 'Asignatura' : 'Asignaturas'}
-          </SectionHeading>
-          {subjects.length === 0 ? (
-            <p className="text-xs italic text-muted-foreground">Sin asignatura declarada</p>
-          ) : (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {subjects.map((subject) => {
-                const collection = collectionOf(subject.course?.id);
-                return (
-                  <div key={subject.key} className="overflow-hidden rounded-lg border border-border/70 bg-card">
-                    <SubjectCover
-                      imageKeys={subject.course ? [`courseImage_${subject.course.id}`] : []}
-                      className="h-12 w-full"
-                    />
-                    <div className="border-t border-border/60 px-2 py-1">
-                      <p className="truncate text-center text-xs font-bold text-primary" title={subject.name}>
-                        {subject.name}
-                      </p>
-                      {collection && (
-                        <p className="truncate text-center text-[10px] text-muted-foreground">{collection}</p>
-                      )}
+        <div className="space-y-5 px-6 pb-5 pt-4">
+          {/* Mitad izquierda: duración y rendimiento (con su barra), y debajo
+              la nota del día. Mitad derecha: horario y tipo de reloj. */}
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-4">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+              <div className="row-span-2 self-center text-center">
+                <p className="font-headline text-2xl font-bold tabular-nums leading-tight text-foreground">
+                  {formatDurationLabel(seconds)}
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  {dayContext && dayContext.total > 1
+                    ? `Sesión ${dayContext.order} de ${dayContext.total} del día`
+                    : 'Duración'}
+                </p>
+              </div>
+              <div>
+                <p className="text-[11px] text-muted-foreground">Rendimiento</p>
+                {hasFocus ? (
+                  <>
+                    <p className="text-sm font-bold tabular-nums text-primary">
+                      {session.perception}
+                      <span className="text-[10px] font-semibold text-muted-foreground">/20</span>
+                    </p>
+                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                      <div
+                        className="h-full rounded-full bg-primary"
+                        style={{ width: `${Math.min(100, Math.max(0, (session.perception / 20) * 100))}%` }}
+                      />
                     </div>
-                  </div>
-                );
-              })}
+                  </>
+                ) : (
+                  <p className="text-sm font-semibold text-muted-foreground">Sin calificar</p>
+                )}
+              </div>
+              <div>
+                <p className="text-[11px] text-muted-foreground">Nota del día</p>
+                <p className="text-sm font-bold tabular-nums text-primary">
+                  {dayPerformance ? `${dayPerformance.score.toFixed(1)} ${dayPerformance.grade}` : '—'}
+                </p>
+              </div>
+            </div>
+
+            <span className="w-px self-stretch bg-border" />
+
+            <dl className="space-y-3 text-xs">
+              <div>
+                <dt className="text-[11px] text-muted-foreground">Horario</dt>
+                <dd className="text-sm font-semibold tabular-nums text-foreground">
+                  {range ? `${format(range.start, 'HH:mm')} – ${format(range.end, 'HH:mm')}` : '—'}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[11px] text-muted-foreground">Reloj</dt>
+                <dd className="text-sm font-semibold text-foreground">{session.sessionType}</dd>
+              </div>
+            </dl>
+          </div>
+
+          {/* Las anotaciones, dentro de su propio recuadro. */}
+          <div className="space-y-3 rounded-lg border border-border/70 bg-muted/30 p-3">
+            <SectionHeading icon={NotebookPen}>Anotaciones</SectionHeading>
+            {notes && <RichNoteView text={notes} className="text-sm leading-relaxed text-foreground" />}
+            {/* Lo anotado DURANTE la sesión, con el minuto en que se escribió. */}
+            {progress.length > 0 && (
+              <div className="space-y-1.5">
+                <SessionNotesHeading count={progress.length} />
+                <SessionNotesList notes={progress} />
+              </div>
+            )}
+            {!notes && progress.length === 0 && (
+              <p className="text-xs text-muted-foreground">Sin anotaciones en esta sesión.</p>
+            )}
+          </div>
+
+          {advanced.length > 0 && (
+            <div className="space-y-1.5">
+              <SectionHeading icon={ListChecks}>Tareas avanzadas</SectionHeading>
+              <ul className="space-y-1 text-xs text-foreground">
+                {advanced.map((name, index) => (
+                  <li key={`${name}-${index}`} className="flex items-start gap-2">
+                    <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-primary" />
+                    <span className="min-w-0">{name}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
         </div>
-
-        {advanced.length > 0 && (
-          <div className="space-y-1.5">
-            <SectionHeading icon={ListChecks}>Tareas avanzadas</SectionHeading>
-            <ul className="space-y-1 text-xs text-foreground">
-              {advanced.map((name, index) => (
-                <li key={`${name}-${index}`} className="flex items-start gap-2">
-                  <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-primary" />
-                  <span className="min-w-0">{name}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {notes && (
-          <div className="space-y-1.5">
-            <SectionHeading icon={NotebookPen}>Anotaciones</SectionHeading>
-            <RichNoteView text={notes} className="text-sm leading-relaxed text-foreground" />
-          </div>
-        )}
-
-        {/* Lo anotado DURANTE la sesión, con el minuto en que se escribió. */}
-        {progress.length > 0 && (
-          <div className="space-y-1.5">
-            <SessionNotesHeading count={progress.length} />
-            <SessionNotesList notes={progress} />
-          </div>
-        )}
-
-        {!notes && progress.length === 0 && (
-          <p className="text-center text-xs text-muted-foreground">Sin anotaciones en esta sesión.</p>
-        )}
       </div>
 
       {/* ---------- Pie: solo mientras la sesión es corregible (hoy) ---------- */}

@@ -6,6 +6,7 @@ import { useCourse } from '@/context/CourseContext';
 import { getImage } from '@/lib/music-db';
 import { cn } from '@/lib/utils';
 import WaveBackdrop from '@/components/courses/WaveBackdrop';
+import { useCardImageHeight } from '@/lib/card-image-height';
 import type { Course } from '@/types';
 
 // ============================================================
@@ -78,6 +79,8 @@ export function PickCard({
   disabled?: boolean;
   onSelect: () => void;
 }) {
+  // El alto de la imagen es el que el usuario eligió en Asignaturas (1.6.5).
+  const imageHeight = useCardImageHeight();
   return (
     <button
       type="button"
@@ -92,7 +95,7 @@ export function PickCard({
         disabled && 'cursor-not-allowed opacity-45 hover:border-border/70'
       )}
     >
-      <span className="relative block h-16">
+      <span className="relative block" style={{ height: imageHeight }}>
         <SubjectCover imageKeys={imageKeys} className="h-full w-full" />
         {selected !== undefined && (
           <span

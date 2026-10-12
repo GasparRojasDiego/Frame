@@ -1,7 +1,6 @@
 import { HELP_ENTRIES, helpIndex } from '../src/lib/help/kb/index';
 import { VARIANTES } from '../src/lib/help/kb/variantes';
 import { answer, normalize, suggest } from '../src/lib/help/search';
-import { allTours } from '../src/lib/help/tours';
 import { CASOS } from './ayuda-casos';
 
 const index = helpIndex();
@@ -168,7 +167,6 @@ for (const [id, list] of Object.entries(VARIANTES)) {
   if (!ids.has(id)) console.log('VARIANTE DE UN ID QUE NO EXISTE', id);
   for (const v of list) if (tests.has(normalize(v))) console.log('VARIANTE COPIADA DE LA PRUEBA', id, '|', v);
 }
-for (const tour of allTours()) if (!ids.has(tour.id)) console.log('RECORRIDO DE UN ID QUE NO EXISTE', tour.id);
 let held = 0;
 for (const [q, expected] of CASOS) {
   for (const one of [expected].flat()) if (one && !ids.has(one)) console.log('CASO CON ID INEXISTENTE', one);
@@ -178,6 +176,6 @@ for (const [q, expected] of CASOS) {
   if (pass) held++;
   else console.log(`MAL ${q.padEnd(48)} → ${String(got).padEnd(26)} (esperado ${expected})`);
 }
-console.log(`Preguntas nuevas: ${held}/${CASOS.length} correctas · ${HELP_ENTRIES.reduce((a, e) => a + e.q.length, 0)} formas de preguntar · ${allTours().length} recorridos`);
+console.log(`Preguntas nuevas: ${held}/${CASOS.length} correctas · ${HELP_ENTRIES.reduce((a, e) => a + e.q.length, 0)} formas de preguntar`);
 console.log('sugerencias «grab»:', suggest(index, 'grab').map((e) => e.id));
 console.log('sugerencias «como paso»:', suggest(index, 'como paso mi mus').map((e) => e.id));

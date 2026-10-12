@@ -3,18 +3,17 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
   Download,
-  ExternalLink,
   FileText,
   FileWarning,
   Link2,
   LoaderCircle,
   Music2,
-  Paperclip,
   Plus,
   RefreshCcw,
+  Upload,
   X,
 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,14 +23,18 @@ import { cn } from '@/lib/utils';
 import { isTauri } from '@tauri-apps/api/core';
 import type { TaskAttachment } from '@/types';
 import {
-  deleteAttachment,
-  pickAndStoreFile,
+  pickAndStoreFiles,
   readAttachment,
-  supportsLiveFiles,
+  storeDroppedFiles,
+  type StoredPick,
 } from '@/lib/file-handles';
 
 // ============================================================
-// Adjuntos de una tarea: enlaces y documentos.
+// Adjuntos de una tarea: documentos y enlaces.
+//
+// Desde la 1.6.5 los documentos entran por el recuadro «Adjuntar archivo»:
+// una zona que se pulsa (abre el explorador) o sobre la que se sueltan uno o
+// varios archivos arrastrados.
 //
 // Los documentos quedan ENLAZADOS al archivo del disco, no copiados: al
 // abrirlos, Frame lee lo que hay ahora mismo, así que el avance que el
@@ -239,254 +242,240 @@ function AttachmentViewer({
 }
 
 // ------------------------------------------------------------
-// Lista + acciones
+// «Adjuntar archivo»: recuadro con una zona para pulsar (abre el explorador)
+// o soltar uno o varios archivos arrastrados (1.6.5).
 // ------------------------------------------------------------
-export default function TaskAttachments({
-  attachments,
-  onChange,
-  variant = 'panel',
+export function AttachFileDialog({
+  open,
+  onOpenChange,
+  onAdd,
 }: {
-  attachments: TaskAttachment[];
-  onChange: (next: TaskAttachment[]) => void;
-  /** 'panel' = bloque con título y lista (editor de tarea).
-   *  'toolbar' = solo dos botones de icono, para la barra de la tarjeta de
-   *  creación; allí la lista se pinta aparte con <AttachmentChips>. */
-  variant?: 'panel' | 'toolbar';
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onAdd: (added: TaskAttachment[]) => void;
 }) {
   const { toast } = useToast();
-  const [urlOpen, setUrlOpen] = useState(false);
-  const [urlValue, setUrlValue] = useState('');
-  const [urlLabel, setUrlLabel] = useState('');
   const [busy, setBusy] = useState(false);
-  const [viewing, setViewing] = useState<TaskAttachment | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const depth = useRef(0);
 
-  const addUrl = () => {
-    const url = normalizeUrl(urlValue);
-    if (!url) return;
-    onChange([
-      ...attachments,
-      {
-        id: crypto.randomUUID(),
-        kind: 'url',
-        label: urlLabel.trim() || url.replace(/^https?:\/\//i, ''),
-        url,
-        addedAt: new Date().toISOString(),
-      },
-    ]);
-    setUrlValue('');
-    setUrlLabel('');
-    setUrlOpen(false);
+  const finish = (picks: StoredPick[]) => {
+    if (picks.length === 0) return;
+    const now = new Date().toISOString();
+    onAdd(
+      picks.map(({ id, picked }) => ({
+        id,
+        kind: 'file' as const,
+        label: picked.fileName,
+        mime: picked.mime,
+        live: picked.live,
+        addedAt: now,
+      }))
+    );
+    if (picks.some(({ picked }) => !picked.live)) {
+      toast({
+        title: 'Adjuntado como copia',
+        description: 'Los cambios que hagas después en ese archivo no se verán aquí.',
+      });
+    }
+    onOpenChange(false);
   };
 
-  const addFile = async () => {
+  const pick = async () => {
+    if (busy) return;
     setBusy(true);
     try {
-      const id = crypto.randomUUID();
-      const picked = await pickAndStoreFile(id);
-      if (!picked) return;
-      onChange([
-        ...attachments,
-        {
-          id,
-          kind: 'file',
-          label: picked.fileName,
-          mime: picked.mime,
-          live: picked.live,
-          addedAt: new Date().toISOString(),
-        },
-      ]);
-      if (!picked.live) {
-        toast({
-          title: 'Adjuntado como copia',
-          description:
-            'Este entorno no permite enlazar el archivo del disco, así que se guardó una copia: los cambios que hagas después no se reflejarán.',
-        });
-      }
+      finish(await pickAndStoreFiles());
     } finally {
       setBusy(false);
     }
   };
 
-  const remove = async (attachment: TaskAttachment) => {
-    if (attachment.kind === 'file') await deleteAttachment(attachment.id);
-    onChange(attachments.filter((a) => a.id !== attachment.id));
+  const hasFiles = (event: React.DragEvent) => Array.from(event.dataTransfer?.types ?? []).includes('Files');
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) {
+          depth.current = 0;
+          setDragging(false);
+        }
+        onOpenChange(next);
+      }}
+    >
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-center text-xl font-bold text-primary">Adjuntar archivo</DialogTitle>
+          <DialogDescription className="sr-only">
+            Pulsa la zona para elegir archivos o arrástralos y suéltalos sobre ella.
+          </DialogDescription>
+        </DialogHeader>
+        <button
+          type="button"
+          onClick={() => void pick()}
+          disabled={busy}
+          onDragEnter={(event) => {
+            if (!hasFiles(event)) return;
+            event.preventDefault();
+            depth.current += 1;
+            setDragging(true);
+          }}
+          onDragOver={(event) => {
+            if (!hasFiles(event)) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'copy';
+          }}
+          onDragLeave={() => {
+            depth.current = Math.max(0, depth.current - 1);
+            if (depth.current === 0) setDragging(false);
+          }}
+          onDrop={(event) => {
+            if (!hasFiles(event)) return;
+            event.preventDefault();
+            depth.current = 0;
+            setDragging(false);
+            const pending = storeDroppedFiles(event.dataTransfer);
+            setBusy(true);
+            void pending.then(finish).finally(() => setBusy(false));
+          }}
+          data-tour="adjuntar-zona"
+          className={cn(
+            'flex h-44 w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-6 text-center transition-colors',
+            dragging
+              ? 'border-primary bg-primary/10 text-primary'
+              : 'border-border bg-muted/30 text-muted-foreground hover:border-primary/60 hover:text-foreground'
+          )}
+        >
+          {busy ? <LoaderCircle className="h-7 w-7 animate-spin text-primary" /> : <Upload className="h-7 w-7" />}
+          <span className="text-sm font-semibold text-foreground">
+            {dragging ? 'Suelta los archivos aquí' : 'Haz clic para elegir archivos'}
+          </span>
+          <span className="text-xs">o arrástralos y suéltalos aquí</span>
+        </button>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Contenido del recuadro de enlace (dirección y nombre opcional). */
+function LinkForm({ onAdd }: { onAdd: (attachment: TaskAttachment) => void }) {
+  const [urlValue, setUrlValue] = useState('');
+  const [urlLabel, setUrlLabel] = useState('');
+  const add = () => {
+    const url = normalizeUrl(urlValue);
+    if (!url) return;
+    onAdd({
+      id: crypto.randomUUID(),
+      kind: 'url',
+      label: urlLabel.trim() || url.replace(/^https?:\/\//i, ''),
+      url,
+      addedAt: new Date().toISOString(),
+    });
+    setUrlValue('');
+    setUrlLabel('');
   };
+  return (
+    <div className="space-y-2">
+      <Label className="text-xs">Dirección</Label>
+      <Input
+        value={urlValue}
+        onChange={(e) => setUrlValue(e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && add()}
+        placeholder="classroom.google.com/…"
+        className="h-8 text-xs"
+        autoFocus
+      />
+      <Label className="text-xs">Nombre (opcional)</Label>
+      <Input
+        value={urlLabel}
+        onChange={(e) => setUrlLabel(e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && add()}
+        placeholder="Ej: rúbrica del profesor"
+        className="h-8 text-xs"
+      />
+      <Button size="sm" className="w-full" onClick={add} disabled={!urlValue.trim()}>
+        <Plus className="mr-1.5 h-3.5 w-3.5" />
+        Añadir enlace
+      </Button>
+    </div>
+  );
+}
 
-  const urlCount = attachments.filter((a) => a.kind === 'url').length;
+// ------------------------------------------------------------
+// Los dos botones: Documentos y Enlaces (en ese orden)
+// ------------------------------------------------------------
+export default function TaskAttachments({
+  attachments,
+  onChange,
+  variant = 'toolbar',
+  chipClassName,
+}: {
+  attachments: TaskAttachment[];
+  onChange: (next: TaskAttachment[]) => void;
+  /** 'toolbar' = botones de icono de la tarjeta de creación.
+   *  'chips' = fichas con texto para la fila de datos de una tarea en edición
+   *  (con `chipClassName` para que se vean como sus vecinas). */
+  variant?: 'toolbar' | 'chips';
+  chipClassName?: string;
+}) {
+  const [fileOpen, setFileOpen] = useState(false);
+  const [urlOpen, setUrlOpen] = useState(false);
   const fileCount = attachments.filter((a) => a.kind === 'file').length;
+  const urlCount = attachments.filter((a) => a.kind === 'url').length;
 
-  if (variant === 'toolbar') {
-    return (
-      <>
-        <Popover open={urlOpen} onOpenChange={setUrlOpen}>
-          <PopoverTrigger asChild>
+  const addFiles = (added: TaskAttachment[]) => onChange([...attachments, ...added]);
+  const addLink = (attachment: TaskAttachment) => onChange([...attachments, attachment]);
+
+  const fileTitle = fileCount > 0 ? `${fileCount} documento(s) adjunto(s)` : 'Adjuntar documentos';
+  const linkTitle = urlCount > 0 ? `${urlCount} enlace(s) adjunto(s)` : 'Adjuntar un enlace';
+
+  return (
+    <>
+      {variant === 'toolbar' ? (
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setFileOpen(true)}
+          title={fileTitle}
+          data-tour="tarea-documento"
+          className={cn('h-10 w-10 transition-colors', fileCount > 0 && 'border-primary bg-primary/15 text-primary')}
+        >
+          <FileText className="h-4 w-4" />
+        </Button>
+      ) : (
+        <button type="button" onClick={() => setFileOpen(true)} title={fileTitle} className={cn(chipClassName, 'gap-1')}>
+          <FileText className="h-3.5 w-3.5" />
+          {fileCount > 0 ? `${fileCount} doc.` : 'Documento'}
+        </button>
+      )}
+
+      <Popover open={urlOpen} onOpenChange={setUrlOpen}>
+        <PopoverTrigger asChild>
+          {variant === 'toolbar' ? (
             <Button
               variant="outline"
               size="icon"
-              title={urlCount > 0 ? `${urlCount} enlace(s) adjunto(s)` : 'Adjuntar un enlace'}
+              title={linkTitle}
+              data-tour="tarea-enlace"
               className={cn('h-10 w-10 transition-colors', urlCount > 0 && 'border-primary bg-primary/15 text-primary')}
             >
               <Link2 className="h-4 w-4" />
             </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-72 space-y-2" align="start">
-            <Label className="text-xs">Dirección</Label>
-            <Input
-              value={urlValue}
-              onChange={(e) => setUrlValue(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addUrl()}
-              placeholder="classroom.google.com/…"
-              className="h-8 text-xs"
-              autoFocus
-            />
-            <Label className="text-xs">Nombre (opcional)</Label>
-            <Input
-              value={urlLabel}
-              onChange={(e) => setUrlLabel(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addUrl()}
-              placeholder="Ej: rúbrica del profesor"
-              className="h-8 text-xs"
-            />
-            <Button size="sm" className="w-full" onClick={addUrl} disabled={!urlValue.trim()}>
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
-              Añadir enlace
-            </Button>
-            <p className="text-[10px] text-muted-foreground">
-              Puedes añadir tantos como quieras: el recuadro se queda abierto.
-            </p>
-          </PopoverContent>
-        </Popover>
-
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => void addFile()}
-          disabled={busy}
-          title={
-            fileCount > 0
-              ? `${fileCount} documento(s) adjunto(s)`
-              : supportsLiveFiles()
-                ? 'Adjuntar un documento: queda enlazado y Frame verá tus cambios'
-                : 'Adjuntar una copia del documento'
-          }
-          className={cn('h-10 w-10 transition-colors', fileCount > 0 && 'border-primary bg-primary/15 text-primary')}
-        >
-          {busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-        </Button>
-      </>
-    );
-  }
-
-  return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-          <Paperclip className="h-3.5 w-3.5 text-primary" />
-          Adjuntos
-        </span>
-
-        <Popover open={urlOpen} onOpenChange={setUrlOpen}>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="h-7 px-2 text-[11px]">
-              <Link2 className="mr-1 h-3.5 w-3.5" />
-              Enlace
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-72 space-y-2" align="start">
-            <Label className="text-xs">Dirección</Label>
-            <Input
-              value={urlValue}
-              onChange={(e) => setUrlValue(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addUrl()}
-              placeholder="classroom.google.com/…"
-              className="h-8 text-xs"
-              autoFocus
-            />
-            <Label className="text-xs">Nombre (opcional)</Label>
-            <Input
-              value={urlLabel}
-              onChange={(e) => setUrlLabel(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addUrl()}
-              placeholder="Ej: rúbrica del profesor"
-              className="h-8 text-xs"
-            />
-            <Button size="sm" className="w-full" onClick={addUrl} disabled={!urlValue.trim()}>
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
-              Añadir enlace
-            </Button>
-          </PopoverContent>
-        </Popover>
-
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-7 px-2 text-[11px]"
-          onClick={() => void addFile()}
-          disabled={busy}
-          title={
-            supportsLiveFiles()
-              ? 'El documento queda enlazado: si lo editas y lo guardas, Frame verá la versión nueva'
-              : 'Se guardará una copia del documento'
-          }
-        >
-          {busy ? (
-            <LoaderCircle className="mr-1 h-3.5 w-3.5 animate-spin" />
           ) : (
-            <FileText className="mr-1 h-3.5 w-3.5" />
+            <button type="button" title={linkTitle} className={cn(chipClassName, 'gap-1')}>
+              <Link2 className="h-3.5 w-3.5" />
+              {urlCount > 0 ? `${urlCount} enlace${urlCount === 1 ? '' : 's'}` : 'Enlace'}
+            </button>
           )}
-          Documento
-        </Button>
-      </div>
+        </PopoverTrigger>
+        <PopoverContent className="w-72" align="start">
+          <LinkForm onAdd={addLink} />
+        </PopoverContent>
+      </Popover>
 
-      {attachments.length > 0 && (
-        <ul className="space-y-1">
-          {attachments.map((attachment) => {
-            const Icon = attachmentIcon(attachment);
-            return (
-              <li
-                key={attachment.id}
-                className="group/att flex items-center gap-2 rounded-md border border-border/60 bg-card/60 px-2 py-1.5"
-              >
-                <Icon className="h-3.5 w-3.5 shrink-0 text-primary" />
-                <button
-                  type="button"
-                  onClick={() =>
-                    attachment.kind === 'url'
-                      ? void openExternal(attachment.url!)
-                      : setViewing(attachment)
-                  }
-                  className="min-w-0 flex-1 truncate text-left text-[11px] text-foreground hover:text-primary hover:underline"
-                  title={attachment.kind === 'url' ? attachment.url : 'Abrir el documento'}
-                >
-                  {attachment.label}
-                </button>
-                {attachment.kind === 'file' && attachment.live === false && (
-                  <span className="shrink-0 text-[9px] uppercase tracking-wide text-muted-foreground/70">
-                    copia
-                  </span>
-                )}
-                {attachment.kind === 'url' && (
-                  <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground/60" />
-                )}
-                <button
-                  type="button"
-                  onClick={() => void remove(attachment)}
-                  title="Quitar el adjunto (no borra nada de tu disco)"
-                  className={cn(
-                    'shrink-0 rounded p-0.5 text-muted-foreground transition-opacity hover:text-destructive',
-                    'opacity-0 group-hover/att:opacity-100 focus-visible:opacity-100'
-                  )}
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-
-      <AttachmentViewer attachment={viewing} onClose={() => setViewing(null)} />
-    </div>
+      <AttachFileDialog open={fileOpen} onOpenChange={setFileOpen} onAdd={addFiles} />
+    </>
   );
 }
 

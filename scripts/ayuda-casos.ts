@@ -287,7 +287,7 @@ export const CASOS: [string, string | string[] | null][] = [
   ['quiero la app en blanco', 'tema-claro-oscuro'],
   ['frame en ingles', 'idioma'],
   ['como funciona esta barra de preguntas', 'ayuda-barra'],
-  ['que hace la esfera', null],
+  ['que hace la esfera', 'figura-ayuda'], // 1.6.5: la figura de la Ayuda ya existe
   ['donde veo mis preguntas anteriores', 'ayuda-conversaciones'],
   ['que son las extensiones', 'ext-que-son'],
   ['importar de notion', 'ext-notion'],

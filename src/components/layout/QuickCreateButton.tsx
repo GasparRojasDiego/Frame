@@ -262,8 +262,8 @@ export default function QuickCreateButton() {
                       </span>
                       <span className="h-px flex-1 bg-border" />
                     </div>
-                    {/* Arriba, los botones de formato (como en Word); debajo y
-                        separado de ellos, el recuadro donde se escribe. */}
+                    {/* Los botones de formato (como en Word), apilados a la
+                        izquierda; a su derecha y separado, el recuadro. */}
                     <NoteEditor
                       id="quick-note"
                       value={noteText}
@@ -273,7 +273,7 @@ export default function QuickCreateButton() {
                       ariaLabel="La anotación"
                       rows={5}
                       autoFocus
-                      className="gap-3"
+                      toolbarSide
                     />
                     <div className="flex justify-end pt-2">
                       <Button

@@ -323,11 +323,15 @@ export default function NoteEditor({
   dense = false,
   hint = null,
   toolbarEnd,
+  toolbarSide = false,
   className,
   ariaLabel,
   ariaLabelledBy,
 }: {
   id?: string;
+  /** Botones de formato en columna, a la izquierda del recuadro (1.6.5): el
+   *  bloque queda compensado, sin una franja vacía a la derecha. */
+  toolbarSide?: boolean;
   value: string;
   onChange: (next: string) => void;
   onSubmit?: () => void;
@@ -649,15 +653,23 @@ export default function NoteEditor({
       <Icon className={dense ? 'h-3 w-3' : 'h-3.5 w-3.5'} />
     </button>
   );
-  const divider = <span aria-hidden className={cn('mx-0.5 w-px shrink-0 bg-border', dense ? 'h-3' : 'h-4')} />;
+  const divider = toolbarSide ? (
+    <span aria-hidden className="my-0.5 h-px w-4 shrink-0 bg-border" />
+  ) : (
+    <span aria-hidden className={cn('mx-0.5 w-px shrink-0 bg-border', dense ? 'h-3' : 'h-4')} />
+  );
 
   return (
-    <div className={cn('flex min-h-0 flex-col gap-1.5', className)}>
-      <div className="flex items-center justify-between gap-2">
+    <div className={cn('flex min-h-0', toolbarSide ? 'flex-row items-stretch gap-3' : 'flex-col gap-1.5', className)}>
+      <div className={cn(toolbarSide ? 'flex shrink-0' : 'flex items-center justify-between gap-2')}>
         <div
           role="toolbar"
           aria-label="Formato del texto"
-          className="inline-flex items-center gap-0.5 rounded-md border border-border bg-secondary/50 p-0.5"
+          aria-orientation={toolbarSide ? 'vertical' : 'horizontal'}
+          className={cn(
+            'inline-flex items-center gap-0.5 rounded-md border border-border bg-secondary/50 p-0.5',
+            toolbarSide && 'flex-col self-start'
+          )}
         >
           {tool('bold', 'Negrita (Ctrl+B)', Bold, active.bold)}
           {tool('italic', 'Cursiva (Ctrl+I)', Italic, active.italic)}
@@ -669,11 +681,12 @@ export default function NoteEditor({
           {tool('undo', 'Deshacer (Ctrl+Z)', Undo2, undefined, !canUndo)}
           {tool('redo', 'Rehacer (Ctrl+Y)', Redo2, undefined, !canRedo)}
         </div>
-        {toolbarEnd ??
-          (hint && <span className={cn('text-muted-foreground', dense ? 'text-[9px]' : 'text-[10px]')}>{hint}</span>)}
+        {!toolbarSide &&
+          (toolbarEnd ??
+            (hint && <span className={cn('text-muted-foreground', dense ? 'text-[9px]' : 'text-[10px]')}>{hint}</span>))}
       </div>
 
-      <div className="relative flex min-h-0 flex-1 flex-col">
+      <div className={cn('relative flex min-h-0 flex-1 flex-col', toolbarSide && 'min-w-0')}>
         <div
           id={id}
           ref={ref}

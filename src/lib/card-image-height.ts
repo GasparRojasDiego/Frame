@@ -8,7 +8,7 @@ import { useSyncExternalStore } from 'react';
 
 export const CARD_IMAGE_DEFAULT = 112; // el antiguo `h-28`
 export const CARD_IMAGE_MIN = 64;
-export const CARD_IMAGE_MAX = 240;
+export const CARD_IMAGE_MAX = 200;
 
 const KEY = 'frameCardImageHeight';
 const listeners = new Set<() => void>();

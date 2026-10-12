@@ -135,21 +135,3 @@
   to { transform: translateX(0); opacity: 1; }
 }
 
-/* Recorrido «Descubrir» (components/help/TourHost.tsx): el borde que late
-   alrededor del elemento resaltado y Apex flotando junto al globo. */
-@keyframes frame-tour-ring {
-  0%, 100% { box-shadow: 0 0 0 2px hsl(var(--primary)), 0 0 18px 2px hsl(var(--primary) / 0.55); }
-  50% { box-shadow: 0 0 0 3px hsl(var(--primary)), 0 0 30px 8px hsl(var(--primary) / 0.35); }
-}
-.tour-ring { animation: frame-tour-ring 1.6s ease-in-out infinite; }
-@keyframes frame-tour-bob {
-  0%, 100% { transform: translateY(0) rotate(-2deg); }
-  50% { transform: translateY(-9px) rotate(2deg); }
-}
-.tour-bob { animation: frame-tour-bob 2.6s ease-in-out infinite; }
-.tour-mascot { filter: drop-shadow(0 10px 14px rgb(0 0 0 / 0.45)); }
-@media (prefers-reduced-motion: reduce) {
-  .tour-ring, .tour-bob { animation: none !important; }
-}
-/* Lo que el recorrido señala se ve aunque normalmente solo asome al pasar el ratón. */
-[data-tour-active] { opacity: 1 !important; visibility: visible !important; }

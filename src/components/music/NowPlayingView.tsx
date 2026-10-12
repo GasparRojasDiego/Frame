@@ -30,7 +30,8 @@ import { cn } from '@/lib/utils';
 // línea salta a ese punto. El fondo es la propia portada, desenfocada.
 //
 // La letra es la que trajo la canción al importarla (sus etiquetas o un .lrc
-// con el mismo nombre): Frame no busca letras en internet.
+// con el mismo nombre) o, si no trajo ninguna, la que se reconoce en internet
+// (ver lyrics.ts).
 //
 // No tiene <audio> propio: el sonido sigue viviendo en la barra inferior; aquí
 // solo se lee su avance (playback-clock) y se le dan órdenes.
@@ -73,8 +74,9 @@ function LyricsPanel({ lyrics, loading }: { lyrics: SongLyrics | null; loading: 
         </p>
         {!lyrics?.instrumental && (
           <p className="max-w-xs text-xs leading-relaxed">
-            Frame muestra la letra que trae el archivo: en sus etiquetas o en un .lrc con el mismo nombre, junto a la
-            canción, al importarla.
+            {lyrics?.missing
+              ? 'No la encontramos en internet. Frame volverá a buscarla más adelante.'
+              : 'Conéctate a internet y Frame la buscará por ti.'}
           </p>
         )}
       </div>

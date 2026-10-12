@@ -6,14 +6,15 @@ type Entry = Omit<HelpEntry, 'area'>;
 // Ayuda (ya no existe): Notion, la única, viene incluida y se abre desde
 // Ajustes → rueda → «Importar de Notion» o con /notion. Las conversaciones
 // con la Ayuda pasaron a basico.ts, junto a la propia Ayuda.
+// (Estilo de las respuestas: ver basico.ts.)
 export const EXTENSIONES: Entry[] = [
   {
     id: 'ext-que-son',
     title: 'Las extensiones (Notion)',
     q: ['qué son las extensiones', 'dónde quedó el más de la barra de la ayuda', 'cómo añado una extensión', 'extensiones de frame'],
     k: ['extensiones', 'extension', 'notion', 'mas'],
-    a: 'Ya no hay extensiones que añadir: la única, Notion, viene incluida. Su importador se abre desde Ajustes → rueda → «Importar de Notion», o escribiendo /notion en la barra de la Ayuda.',
-    tip: 'El «+» que tenía antes la barra de la ayuda para añadirlas ya no existe.',
+    a: 'Ya no hace falta añadir extensiones: la única que había, la de **Notion**, ahora viene incluida en Frame.\n\nPara usarla, abre **Ajustes** (pulsa tu nombre, abajo del todo en el menú de la izquierda), pulsa la **rueda** que está arriba a la derecha, debajo de **Cuenta**, y elige **Importar de Notion**.',
+    tip: 'Un atajo: escribe /notion aquí, en la barra de preguntas, y se abrirá directamente.',
     go: '/settings',
     rel: ['ext-notion', 'ayuda-barra'],
   },
@@ -22,8 +23,16 @@ export const EXTENSIONES: Entry[] = [
     title: 'Importar tareas y fechas de Notion',
     q: ['cómo importo mis tareas de notion', 'pasar mis tareas de notion a frame', 'importar notion', 'traer fechas de notion'],
     k: ['notion', 'importar', 'csv', 'zip', 'exportar', 'importar de notion'],
-    a: 'En Ajustes, pulsa la rueda de la cuenta y elige «Importar de Notion». En Notion, abre tu base de datos de tareas → ••• → Exportar → «Markdown y CSV»; elige en Frame el .zip descargado (o el .csv) y marca qué filas importar, como tareas o como fechas del calendario.',
-    tip: 'Reconoce fechas, estado, prioridad, tipo y la asignatura (si coincide con una tuya). No se conecta a tu cuenta de Notion. Atajo: escribe /notion en la Ayuda.',
+    a: 'Si tenías tus tareas organizadas en **Notion**, puedes traerlas a Frame sin copiarlas una por una. Primero se descargan desde Notion y luego se abren en Frame:',
+    steps: [
+      'En **Notion**, abre la base de datos donde tienes tus tareas.',
+      'Pulsa los **tres puntos** (•••), arriba a la derecha, y elige **Exportar**.',
+      'Como formato, elige **Markdown y CSV** y pulsa **Exportar**: se descargará un archivo comprimido (.zip).',
+      'En **Frame**, abre **Ajustes**, pulsa la **rueda** de **Cuenta** (arriba a la derecha) y elige **Importar de Notion**.',
+      'Pulsa **Elegir el archivo de Notion** y selecciona el archivo que descargaste.',
+      'Marca qué filas quieres traer y si se guardan **como tareas** o **como fechas del calendario**. Luego pulsa **Importar**.',
+    ],
+    tip: 'Frame reconoce las fechas, el estado, la prioridad, el tipo y la asignatura (si se llama igual que una tuya). Todo ocurre en tu computadora: Frame no se conecta a tu cuenta de Notion.',
     go: '/settings',
     rel: ['ext-que-son', 'tarea-crear'],
   },
@@ -36,8 +45,8 @@ export const SUGERENCIAS: Entry[] = [
     title: 'Enviar una sugerencia o reportar un error',
     q: ['cómo envío una sugerencia', 'cómo propongo una mejora', 'dónde reporto un error', 'quiero dar mi opinión', 'cómo contacto a los creadores de frame'],
     k: ['sugerencias', 'mejora', 'opinion', 'error', 'correo', 'contacto'],
-    a: 'Escríbenos a vt.asvent@gmail.com con tu propuesta o con el error que viste (qué hacías y qué pasó). Leemos todos los correos.',
-    tip: 'Los errores que rompen una interfaz, además, se reportan solos, sin datos tuyos.',
+    a: '¡Nos encantará leerte! Escríbenos a **vt.asvent@gmail.com** con tu idea o con el error que encontraste.\n\nSi es un error, cuéntanos **qué estabas haciendo** y **qué pasó**: así podremos encontrarlo y corregirlo antes. Leemos todos los correos.',
+    tip: 'Cuando una pantalla de Frame falla, el error también se nos reporta solo, sin enviar tus datos.',
     rel: ['docs-info'],
   },
 ];

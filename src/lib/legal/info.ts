@@ -12,7 +12,7 @@
 
 import { TERMS_VERSION } from './terms';
 
-export const INFO_VERSION = '4.6';
+export const INFO_VERSION = '4.7';
 
 export function infoDocument({
   appVersion,
@@ -77,9 +77,9 @@ Frame distingue tres lugares de almacenamiento. Conocer la diferencia es lo que 
 
 ### 4.1 Ayuda
 
-El **botón redondo** de abajo a la derecha abre la **Ayuda**, que ocupa todo el espacio entre el menú y la barra superior. Su barra responde cómo usar Frame con tus palabras. No es una inteligencia artificial: responde desde una guía escrita función por función, al instante, sin internet y sin inventar. Lo que no es sobre la app lo dice.
+El botón de las **dos estrellas**, a la izquierda de la barra superior, abre el **Centro de ayuda**, que ocupa todo el espacio entre el menú y la barra superior. Su barra responde cómo usar Frame con tus palabras. No es una inteligencia artificial: responde desde una guía escrita función por función, al instante, sin internet y sin inventar. Lo que no es sobre la app lo dice.
 
-Cada vez que abres Frame empieza una conversación: tus preguntas de esa apertura quedan juntas y, al cerrar Frame, se guardan en **«Conversaciones»** —solo en este equipo y en tu perfil—. Cuando hay algo que pulsar, **«Descubrir»** lo enseña paso a paso: la pantalla se oscurece, solo queda iluminado el botón correcto y **Apex**, la mascota de VT Asvent, acompaña cada paso.
+Las respuestas están escritas para quien abre Frame por primera vez: explican en lenguaje sencillo qué hacer y dónde está cada botón. Cada vez que abres Frame empieza una conversación: tus preguntas de esa apertura quedan juntas en el **«Historial»** de la izquierda, ordenado por días —solo en este equipo y en tu perfil—.
 
 **Importar de Notion** (Ajustes → rueda de la cuenta) trae tus tareas y fechas desde la exportación de una base de datos de Notion (el .zip o el .csv), sin conectarse a tu cuenta.
 
@@ -87,7 +87,7 @@ Cada vez que abres Frame empieza una conversación: tus preguntas de esa apertur
 
 Asignaturas con imagen de portada, agrupables en colecciones, con profesor y estadísticas propias; clases del mes generadas desde tu horario, con el tema visto en cada una; recursos (notas, enlaces y archivos) y un registro permanente de lo culminado.
 
-El botón **«+»** de la barra superior crea una tarea o una anotación sin ir hasta la asignatura; una anotación sin asignatura queda como tarjeta al final de Inicio. Tareas con descripción, asignatura, fecha de entrega, importancia, tipo, dificultad, tiempo estimado y porcentaje de avance, que puedes ajustar a mano o que sube solo con tus sesiones de estudio en proporción al tiempo estimado. Recordatorios tarea por tarea, con días, hora y repetición. Adjuntos enlazados al archivo original de tu disco: si sigues editándolo, Frame ve siempre la versión actual.
+El botón **«+»** de la barra superior crea una tarea o una anotación sin ir hasta la asignatura; una anotación sin asignatura queda como tarjeta al final de Inicio. Tareas con descripción, asignatura, fecha de entrega, importancia, tipo, dificultad, tiempo estimado y porcentaje de avance, que puedes ajustar a mano o que sube solo con tus sesiones de estudio en proporción al tiempo estimado. Recordatorios tarea por tarea, con días, hora y repetición. Adjuntos enlazados al archivo original de tu disco —se eligen con un clic o se arrastran, uno o varios, al recuadro «Adjuntar archivo»—: si sigues editándolo, Frame ve siempre la versión actual.
 
 Archivo de tareas culminadas e incompletas, con tiempo dedicado y puntualidad; aviso diario de tareas vencidas para reprogramarlas, culminarlas o descartarlas.
 
@@ -123,7 +123,7 @@ El radar de competencias y las calificaciones diarias se calculan exclusivamente
 
 La música, las grabaciones y los adjuntos no se respaldan en la nube.
 
-Frame muestra la letra que trae cada archivo: una canción sin letra en sus etiquetas ni .lrc al lado se queda sin letra. Frame no descarga música ni vídeos.
+Si una canción no trae su letra, Frame la busca en internet al abrir «Reproduciendo»; si no la encuentra, vuelve a intentarlo pasadas dos semanas. Frame no descarga música ni vídeos.
 
 Las interfaces de Google requieren conexión y sesión iniciada en Google, y su funcionamiento depende íntegramente de Google. La importación de horarios usa un asistente de inteligencia artificial externo al que tú entregas la imagen; Frame no la envía a ningún servicio.
 
@@ -154,6 +154,8 @@ Se ofrece soporte para la versión estable vigente y para la inmediatamente ante
 ## 8 · Historial de versiones
 
 **${appVersion} — ${releaseDate}**
+
+*1.6.5:* **las respuestas de la ayuda, reescritas** para quien empieza: cordiales, en párrafos, con negritas y diciendo dónde está cada botón; entiende más formas de preguntar · se retira «Mostrar cómo» · la figura de la ayuda es ahora un **balón de fútbol**, «Relacionado» se pliega y el botón estrena icono de **dos estrellas** · **«Anotación nueva»** y las grabaciones, con los botones de formato apilados a la izquierda · **tareas**: botones en el orden fecha, tipo, importancia, dificultad, tiempo estimado, recordatorio, documento y enlace; **«Adjuntar archivo»** con un clic o arrastrando varios archivos; el tiempo estimado se elige con ruedas de horas y minutos · las tarjetas de colecciones y asignaturas siguen el **alto de imagen** que elijas (hasta 200) en todas las pantallas · **detalle de cada sesión** con la imagen de su asignatura de borde a borde · Política de privacidad 4.7: deja de mencionar los recorridos «Descubrir», que ya no existen.
 
 *1.6.4:* **Centro de ayuda** con «Historial» a la izquierda (por días), figura de pentágonos que respira al escribir, frases que rotan y tema nuevo **«Curiosidades»** · **la campana guarda el registro** de tus notificaciones, con su hora, y un engranaje para el sonido, activarlas o borrarlas · **«Anotación nueva»** y la descripción de las grabaciones con botones de formato como en Word · **«Guardar grabación»**: importancia y **tipo de audio** en desplegables · **vuelven las letras reconocidas en internet** · **89 imágenes nuevas** en la galería · engranaje en Asignaturas para el **alto de las imágenes** · los avisos de la esquina ya no se quedan clavados al minimizar · al terminar una sesión con la vista flotante, Frame se pone delante.
 

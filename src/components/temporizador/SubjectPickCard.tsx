@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import WaveBackdrop from '@/components/courses/WaveBackdrop';
 import { PickCard, groupImageKeys, useSubjectGroups } from '@/components/courses/SubjectPicker';
+import { useCardImageHeight } from '@/lib/card-image-height';
 import type { Course, Task } from '@/types';
 
 // ============================================================
@@ -54,6 +55,8 @@ export function SubjectCard({
   onToggle: () => void;
   onToggleTasks?: () => void;
 }) {
+  // El alto de la imagen es el que el usuario eligió en Asignaturas (1.6.5).
+  const imageHeight = useCardImageHeight();
   return (
     <div
       className={cn(
@@ -65,7 +68,7 @@ export function SubjectCard({
     >
       <button type="button" onClick={onToggle} aria-pressed={selected} className="block w-full text-left">
         {/* Portada de extremo a extremo (u olas si la asignatura no tiene). */}
-        <span className="relative block h-20">
+        <span className="relative block" style={{ height: imageHeight }}>
           <SubjectCover courseId={course.id} className="h-full w-full" />
           <span
             className={cn(

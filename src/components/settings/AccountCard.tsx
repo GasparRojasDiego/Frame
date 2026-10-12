@@ -57,9 +57,6 @@ interface DeleteOutcome {
  * Sustituye al antiguo recuadro «Ajustes de cuenta» (de ahí el nombre del
  * archivo): eran cuatro opciones metidas en un recuadro a pantalla completa.
  *
- * El menú NO es modal: así el recorrido «Descubrir» ve el clic en la rueda y
- * puede señalar sus botones con el menú ya abierto.
- *
  * Cierre de sesión con último respaldo; eliminación definitiva con
  * confirmación fuerte (casilla + palabra escrita). El flujo de borrado
  * termina SIEMPRE con una recarga dura de la ventana: si se desmontara

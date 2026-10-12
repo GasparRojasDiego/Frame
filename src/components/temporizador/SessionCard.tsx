@@ -1,15 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { format } from 'date-fns';
-import { NotebookPen, Pencil } from 'lucide-react';
+import { Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import WaveBackdrop from '@/components/courses/WaveBackdrop';
 import { useCourse } from '@/context/CourseContext';
 import { IMAGE_UPDATED_EVENT, getImage, type ImageUpdatedDetail } from '@/lib/music-db';
 import { formatDurationLabel, sessionSeconds } from '@/lib/duration';
 import { isSessionEditable } from '@/lib/session-edit';
-import { isRichNoteEmpty, richNoteToLine } from '@/lib/rich-note';
 import { cn } from '@/lib/utils';
-import { sessionHasFocus, sessionRange, sessionSubjects } from '@/components/temporizador/session-info';
+import { sessionHasFocus, sessionSubjects } from '@/components/temporizador/session-info';
+import { useCardImageHeight } from '@/lib/card-image-height';
 import type { StudySession } from '@/types';
 
 // ============================================================
@@ -55,7 +54,7 @@ function usePrefersReducedMotion(): boolean {
 }
 
 /** Portadas de varias asignaturas a la vez, al día si cambian (como useStoredImage). */
-function useCourseImages(courseIds: (string | null)[]): (string | null)[] {
+export function useCourseImages(courseIds: (string | null)[]): (string | null)[] {
   const signature = courseIds.map((id) => id ?? '').join('|');
   const [images, setImages] = useState<Record<string, string | null>>({});
 
@@ -169,17 +168,16 @@ export default function SessionCard({
   session,
   onOpen,
   onEdit,
-  /** Alto de la portada; las rejillas apretadas la quieren más baja. */
-  coverClassName = 'h-16',
   className,
 }: {
   session: StudySession;
   onOpen: () => void;
   /** Sin él no hay lápiz. Tampoco lo hay si la sesión ya no es corregible. */
   onEdit?: () => void;
-  coverClassName?: string;
   className?: string;
 }) {
+  // La portada mide lo que el usuario eligió en Asignaturas (1.6.5).
+  const imageHeight = useCardImageHeight();
   const { courses } = useCourse();
   const reducedMotion = usePrefersReducedMotion();
 
@@ -192,15 +190,6 @@ export default function SessionCard({
 
   const seconds = sessionSeconds(session);
   const hasFocus = sessionHasFocus(session);
-  const range = sessionRange(session);
-  const hasNotes = !isRichNoteEmpty(session.notes ?? '') || (session.progressNotes?.length ?? 0) > 0;
-  /** Vistazo a la anotación al pasar el ratón por el icono, en una línea. */
-  const notesPreview = (() => {
-    const line = richNoteToLine(session.notes ?? '');
-    if (line) return line.length > 160 ? `${line.slice(0, 157)}…` : line;
-    const count = session.progressNotes?.length ?? 0;
-    return count === 1 ? '1 avance anotado' : `${count} avances anotados`;
-  })();
   const canEdit = Boolean(onEdit) && isSessionEditable(session);
   const names = subjects.map((subject) => subject.name);
   const label = names.length > 0 ? names.join(' · ') : 'Sin asignatura';
@@ -211,7 +200,6 @@ export default function SessionCard({
         'relative overflow-hidden rounded-lg border border-border/70 bg-card transition-[border-color,box-shadow] duration-200 hover:border-primary/50 hover:shadow-[0_0_0_1px_hsl(var(--primary)/0.2)]',
         className
       )}
-      // Los recorridos de la Ayuda señalan la primera tarjeta de la página.
       data-tour="enfoque-sesion"
     >
       <button
@@ -222,19 +210,8 @@ export default function SessionCard({
         className="block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
       >
         {/* --- Tarjeta de la asignatura: portada y nombre --- */}
-        <span className={cn('relative block', coverClassName)}>
+        <span className="relative block" style={{ height: imageHeight }}>
           <SessionCover images={images} active={active} split={reducedMotion} className="h-full w-full" />
-
-          {range && (
-            <span className="absolute left-1.5 top-1.5 flex items-center gap-1 rounded-md bg-background/85 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-foreground backdrop-blur-sm">
-              {format(range.start, 'HH:mm')} – {format(range.end, 'HH:mm')}
-              {hasNotes && (
-                <span title={notesPreview} className="flex">
-                  <NotebookPen className="h-3 w-3 text-primary" aria-label="Con anotaciones" />
-                </span>
-              )}
-            </span>
-          )}
 
           {/* Qué portada se ve, cuando se alternan. */}
           {multiple && !reducedMotion && (
@@ -254,11 +231,11 @@ export default function SessionCard({
 
         <span className="block border-t border-border/60 px-3 py-1.5" title={label}>
           {names.length === 0 ? (
-            <span className="block truncate text-center text-xs font-bold text-muted-foreground">
+            <span className="block truncate text-center text-sm font-bold text-muted-foreground">
               Sin asignatura
             </span>
           ) : (
-            <span className="block truncate text-center text-xs font-bold">
+            <span className="block truncate text-center text-sm font-bold">
               {names.map((name, index) => (
                 <span key={subjects[index].key}>
                   {index > 0 && <span className="text-muted-foreground/60"> · </span>}
@@ -285,20 +262,20 @@ export default function SessionCard({
           )}
         >
           <span className="block text-center">
-            <span className="block text-sm font-bold tabular-nums leading-tight text-foreground">
+            <span className="block text-xs font-bold tabular-nums leading-tight text-foreground">
               {formatDurationLabel(seconds)}
             </span>
-            <span className="block text-[10px] leading-tight text-muted-foreground">Tiempo</span>
+            <span className="block text-[9px] leading-tight text-muted-foreground">Tiempo</span>
           </span>
           {hasFocus && (
             <>
               <span className="h-7 w-px bg-border/70" />
               <span className="block text-center">
-                <span className="block text-sm font-bold tabular-nums leading-tight text-primary">
+                <span className="block text-xs font-bold tabular-nums leading-tight text-primary">
                   {session.perception}
                   <span className="text-[10px] font-semibold text-muted-foreground">/20</span>
                 </span>
-                <span className="block text-[10px] leading-tight text-muted-foreground">Rendimiento</span>
+                <span className="block text-[9px] leading-tight text-muted-foreground">Rendimiento</span>
               </span>
             </>
           )}

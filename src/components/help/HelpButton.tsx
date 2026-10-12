@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { LifeBuoy } from 'lucide-react';
+import TwinStarsIcon from '@/components/help/TwinStarsIcon';
 import { Button } from '@/components/ui/button';
 import { usePathname, useRouter } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
@@ -40,7 +40,7 @@ export default function HelpButton({ className }: { className?: string }) {
       title={inHelp ? 'Cerrar el Centro de ayuda' : 'Centro de ayuda'}
       aria-label={inHelp ? 'Cerrar el Centro de ayuda' : 'Abrir el Centro de ayuda'}
     >
-      <LifeBuoy className="h-5 w-5" />
+      <TwinStarsIcon className="h-5 w-5" />
     </Button>
   );
 }

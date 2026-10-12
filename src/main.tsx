@@ -33,6 +33,21 @@ document.addEventListener('contextmenu', (event) => {
   event.preventDefault();
 });
 
+// Archivos arrastrados desde el explorador (1.6.5). La ventana principal deja
+// que el motor web reciba los soltados (`dragDropEnabled: false`) para que la
+// zona de «Adjuntar archivo» los enlace; fuera de esa zona, soltar un archivo
+// no debe hacer nada (el motor lo abriría y la app se iría de su página).
+const carriesFiles = (event: DragEvent) => Array.from(event.dataTransfer?.types ?? []).includes('Files');
+window.addEventListener('dragover', (event) => {
+  if (event.defaultPrevented || !carriesFiles(event)) return;
+  event.preventDefault();
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'none';
+});
+window.addEventListener('drop', (event) => {
+  if (event.defaultPrevented || !carriesFiles(event)) return;
+  event.preventDefault();
+});
+
 // Las ventanas auxiliares (la flotante de Enfoque y el vistazo al horario)
 // cargan este mismo bundle, pero solo montan su pieza: nada de router,
 // contextos ni datos.

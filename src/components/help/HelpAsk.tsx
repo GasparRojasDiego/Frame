@@ -42,8 +42,6 @@ import {
   useHelpConversations,
   type HelpConversation,
 } from '@/lib/help/history';
-import { startTour } from '@/lib/help/tour';
-import { tourFor } from '@/lib/help/tours';
 import { setNotionOpen, type ExtensionId } from '@/lib/extensions/registry';
 import { usePathname, useRouter } from '@/lib/navigation';
 import { trackEvent } from '@/lib/telemetry';
@@ -59,8 +57,10 @@ import { cn } from '@/lib/utils';
 //
 // No se intenta adivinar cada forma de preguntar: si la pregunta no encaja,
 // se ofrecen los TEMAS en tarjetas y, dentro de cada tema, sus preguntas.
-// Tras una respuesta, «Mostrar cómo» lanza el recorrido guiado
-// (lib/help/tours.ts).
+// Desde la 1.6.5 no hay recorridos guiados: las respuestas explican con
+// calma, en párrafos con negritas, dónde está cada cosa (Diego decidió quitar
+// «Mostrar cómo»: 118 recorridos imposibles de mantener sin fallos). La
+// primera respuesta de cada conversación saluda según la hora.
 //
 // Antes de la primera pregunta se ve la figura de pentágonos (respira con
 // cada tecla); desaparece al preguntar y vuelve con una conversación nueva.
@@ -153,6 +153,54 @@ function useTyped(text: string, key: string, instant: boolean): string {
   return shown;
 }
 
+/** Un tramo de texto: normal o en negrita. */
+interface Run {
+  text: string;
+  bold: boolean;
+}
+
+/** «Texto con **negrita**» → tramos. */
+function parseRuns(text: string): Run[] {
+  return text
+    .split(/(\*\*[^*]+\*\*)/g)
+    .filter(Boolean)
+    .map((part) => (part.startsWith('**') && part.endsWith('**') ? { text: part.slice(2, -2), bold: true } : { text: part, bold: false }));
+}
+
+/** Pinta los tramos hasta `limit` letras (para el efecto de escritura). */
+function renderRuns(runs: Run[], limit = Infinity) {
+  let left = limit;
+  const out: React.ReactNode[] = [];
+  runs.forEach((run, index) => {
+    if (left <= 0) return;
+    const text = run.text.slice(0, left);
+    left -= run.text.length;
+    out.push(
+      run.bold ? (
+        <strong key={index} className="font-semibold text-foreground">
+          {text}
+        </strong>
+      ) : (
+        <span key={index}>{text}</span>
+      )
+    );
+  });
+  return out;
+}
+
+/** Texto con formato en una línea (pasos, consejos). */
+function Rich({ text }: { text: string }) {
+  return <>{renderRuns(parseRuns(text))}</>;
+}
+
+/** Saludo según la hora: el de la primera respuesta de cada conversación. */
+function greetingFor(at: number): string {
+  const hour = new Date(at).getHours();
+  if (hour >= 5 && hour < 12) return '¡Buenos días!';
+  if (hour >= 12 && hour < 19) return '¡Buenas tardes!';
+  return '¡Buenas noches!';
+}
+
 /** «hoy, 14:05» o «10 de oct, 18:42». */
 function whenLabel(at: number): string {
   return isToday(at) ? `hoy, ${format(at, 'HH:mm')}` : format(at, "d 'de' MMM, HH:mm", { locale: es });
@@ -218,7 +266,7 @@ function QuestionCards({ entries, onPick, limit = 8 }: { entries: HelpEntry[]; o
 function UserBubble({ text, at }: { text: string; at?: number }) {
   return (
     <div className="group/bubble flex flex-col items-end">
-      <div className="max-w-[80%] rounded-2xl rounded-br-md border border-primary/25 bg-primary/10 px-4 py-2.5">
+      <div className="max-w-[80%] rounded-lg rounded-br-none border border-primary/25 bg-primary/10 px-4 py-2.5">
         <p className="whitespace-pre-wrap break-words text-sm text-foreground">{text}</p>
       </div>
       {at !== undefined && (
@@ -234,22 +282,30 @@ function UserBubble({ text, at }: { text: string; at?: number }) {
 function Answer({
   shown,
   instant,
+  greeting,
   onPick,
   onTopic,
-  onShowHow,
 }: {
   shown: Resolved;
   instant: boolean;
+  /** Saludo con que empieza la primera respuesta de la conversación. */
+  greeting?: string;
   onPick: (entry: HelpEntry) => void;
   onTopic: (key: string) => void;
-  onShowHow: (entry: HelpEntry) => void;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const entry = shown.kind === 'entry' ? shown.entry : null;
   const lead = shown.kind === 'entry' ? shown.entry.a : shown.text;
-  const typed = useTyped(lead, shown.question + lead, instant);
-  const done = typed.length >= lead.length;
+  // Párrafos (separados por una línea en blanco) con sus negritas; el saludo
+  // va primero, como su propio párrafo.
+  const paragraphs = useMemo(
+    () => [...(greeting ? [greeting] : []), ...lead.split(/\n\s*\n/)].map((paragraph) => parseRuns(paragraph.trim())),
+    [greeting, lead]
+  );
+  const total = paragraphs.reduce((sum, runs) => sum + runs.reduce((acc, run) => acc + run.text.length, 0), 0);
+  const typed = useTyped('x'.repeat(total), shown.question + lead, instant);
+  const done = typed.length >= total;
   const related = useMemo(() => {
     if (!entry || shown.kind !== 'entry') return [];
     const seen = new Set<string>([entry.id]);
@@ -261,54 +317,69 @@ function Answer({
   const topics = shown.kind === 'text' && shown.topics;
   const goTo = entry?.go && entry.go !== pathname ? entry.go : null;
   const goLabel = goTo ? (Object.values(HELP_AREAS).find((a) => a.route === goTo)?.label ?? 'la interfaz') : null;
-  const hasTour = !!entry && !!tourFor(entry.id);
+  const [relatedOpen, setRelatedOpen] = useState(false);
+
+  // Cuántas letras de cada párrafo se ven ya.
+  let left = typed.length;
+  const visible = paragraphs.map((runs) => {
+    const length = runs.reduce((acc, run) => acc + run.text.length, 0);
+    const shownChars = Math.max(0, Math.min(length, left));
+    left -= length;
+    return { runs, shownChars, length };
+  });
+  const lastVisible = visible.reduce((last, p, index) => (p.shownChars > 0 ? index : last), 0);
 
   return (
     <article className={cn('max-w-[46rem]', !instant && 'animate-in fade-in-0 duration-300')}>
       {entry && (
-        <p className="mb-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <p className="mb-2 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
           <span className="text-[15px] font-semibold text-foreground">{entry.title}</span>
           <span className="text-[10px] font-semibold uppercase tracking-wider text-primary/80">{HELP_AREAS[entry.area].label}</span>
         </p>
       )}
-      <p className="text-sm leading-relaxed text-foreground/90">
-        {typed}
-        {!done && <span className="ml-0.5 inline-block h-3.5 w-1.5 translate-y-0.5 animate-pulse rounded-sm bg-primary" />}
-      </p>
+      <div className="space-y-2.5 text-justify text-sm leading-relaxed text-foreground/90">
+        {visible.map((paragraph, index) =>
+          paragraph.shownChars > 0 || index === 0 ? (
+            <p key={index}>
+              {renderRuns(paragraph.runs, paragraph.shownChars)}
+              {!done && index === lastVisible && (
+                <span className="ml-0.5 inline-block h-3.5 w-1.5 translate-y-0.5 animate-pulse rounded-sm bg-primary" />
+              )}
+            </p>
+          ) : null
+        )}
+      </div>
       {done && entry?.steps && entry.steps.length > 0 && (
         <ol className="mt-3 space-y-2">
           {entry.steps.map((step, i) => (
             <li
               key={step}
-              className="flex animate-in fade-in-0 gap-2.5 text-sm text-foreground/90 fill-mode-both"
+              className="flex animate-in fade-in-0 gap-2.5 text-justify text-sm text-foreground/90 fill-mode-both"
               style={{ animationDelay: `${i * 60}ms` }}
             >
               <span className="mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[11px] font-bold text-primary">
                 {i + 1}
               </span>
-              <span className="leading-relaxed">{step}</span>
+              <span className="leading-relaxed">
+                <Rich text={step} />
+              </span>
             </li>
           ))}
         </ol>
       )}
       {done && entry?.tip && (
-        <p className="mt-3 flex animate-in fade-in-0 gap-2 rounded-lg border border-border/60 bg-muted/40 px-3 py-2.5 text-[13px] leading-relaxed text-muted-foreground">
+        <p className="mt-3 flex animate-in fade-in-0 gap-2 rounded-lg border border-border/60 bg-muted/40 px-3 py-2.5 text-justify text-[13px] leading-relaxed text-muted-foreground">
           <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-          {entry.tip}
+          <span>
+            <Rich text={entry.tip} />
+          </span>
         </p>
       )}
-      {done && entry && (hasTour || goTo) && (
+      {done && entry && goTo && (
         <div className="mt-4 flex animate-in fade-in-0 flex-wrap items-center gap-2">
-          {hasTour && (
-            <Button size="sm" className="h-8 gap-1.5 px-3 text-xs" onClick={() => onShowHow(entry)} data-tour="ayuda-mostrar">
-              Mostrar cómo
-            </Button>
-          )}
-          {goTo && (
-            <Button size="sm" variant="fantasma" className="h-8 gap-1.5 px-3 text-xs" onClick={() => router.push(goTo)}>
-              Ir a {goLabel} <ArrowRight className="h-3.5 w-3.5" />
-            </Button>
-          )}
+          <Button size="sm" variant="fantasma" className="h-8 gap-1.5 px-3 text-xs" onClick={() => router.push(goTo)}>
+            Ir a {goLabel} <ArrowRight className="h-3.5 w-3.5" />
+          </Button>
         </div>
       )}
       {done && options.length > 0 && (
@@ -323,8 +394,17 @@ function Answer({
       )}
       {done && related.length > 0 && (
         <div className="mt-5 animate-in fade-in-0">
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Relacionado</p>
-          <QuestionCards entries={related} onPick={onPick} />
+          {/* Plegado por defecto: un clic lo despliega. */}
+          <button
+            type="button"
+            onClick={() => setRelatedOpen((open) => !open)}
+            aria-expanded={relatedOpen}
+            className="mb-2 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:text-primary"
+          >
+            <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', relatedOpen && 'rotate-180')} />
+            Relacionado
+          </button>
+          {relatedOpen && <QuestionCards entries={related} onPick={onPick} />}
         </div>
       )}
     </article>
@@ -427,7 +507,8 @@ function HistorySidebar({
                         title={conversation.turns[0]?.q}
                       >
                         <span className="block truncate text-xs font-medium">{conversation.turns[0]?.q}</span>
-                        <span className="mt-0.5 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                        {/* Hora y preguntas: del tamaño de los enlaces del pie de Ajustes. */}
+                        <span className="mt-0.5 flex items-center gap-1.5 text-xs font-normal text-muted-foreground">
                           <span className="tabular-nums">{format(conversation.startedAt, 'HH:mm')}</span>
                           <span aria-hidden>·</span>
                           <span>{questionsLabel(conversation.turns.length)}</span>
@@ -477,7 +558,7 @@ function RotatingGreeting({ className }: { className?: string }) {
   const [index, setIndex] = useState(0);
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const id = window.setInterval(() => setIndex((i) => (i + 1) % GREETINGS.length), 3800);
+    const id = window.setInterval(() => setIndex((i) => (i + 1) % GREETINGS.length), 9000);
     return () => window.clearInterval(id);
   }, []);
   return (
@@ -633,14 +714,6 @@ export default function HelpAsk({ onExit }: { onExit: () => void }) {
     history.remove(id);
   };
 
-  const showHow = (entry: HelpEntry) => {
-    const tour = tourFor(entry.id);
-    if (!tour) return;
-    // Se sale de la ayuda (la conversación sigue al volver) y el recorrido
-    // toma la pantalla. Temporizador suelto: la ayuda se desmonta al salir.
-    onExit();
-    window.setTimeout(() => startTour(tour), 380);
-  };
 
   // Esc: de una conversación anterior vuelve a la de ahora; si no, sale.
   useEffect(() => {
@@ -683,7 +756,7 @@ export default function HelpAsk({ onExit }: { onExit: () => void }) {
     <div className="relative w-full">
       <div
         className={cn(
-          'rounded-md border bg-card py-2 pl-4 pr-2 shadow-sm transition-colors',
+          'rounded-lg border bg-card py-2 pl-4 pr-2 shadow-sm transition-colors',
           focused ? 'border-primary/60' : 'border-border'
         )}
       >
@@ -707,7 +780,7 @@ export default function HelpAsk({ onExit }: { onExit: () => void }) {
             title="Enviar (Enter)"
             aria-label="Enviar"
             className={cn(
-              'flex h-8 w-8 shrink-0 items-center justify-center rounded-[5px] transition-colors',
+              'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors',
               canSend ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'bg-muted text-muted-foreground'
             )}
           >
@@ -797,7 +870,7 @@ export default function HelpAsk({ onExit }: { onExit: () => void }) {
                     Conversación del {whenLabel(viewing.startedAt)} · lo que preguntes ahora va a la conversación en curso
                   </p>
                 )}
-                {turns.map((turn) => {
+                {turns.map((turn, turnIndex) => {
                   const shown = resolved.get(turn.id) ?? null;
                   const last = turn.id === lastId;
                   return (
@@ -809,7 +882,9 @@ export default function HelpAsk({ onExit }: { onExit: () => void }) {
                           instant={turn.id !== freshId}
                           onPick={(e) => showEntry(e)}
                           onTopic={showTopic}
-                          onShowHow={showHow}
+                          greeting={
+                            turnIndex === 0 || (shown.kind === 'text' && shown.hello) ? greetingFor(turn.at) : undefined
+                          }
                         />
                       ) : (
                         <p className="text-sm text-muted-foreground">Esta respuesta ya no está en la ayuda.</p>

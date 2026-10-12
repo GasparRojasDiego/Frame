@@ -10,7 +10,6 @@ import {
   RotateCcw,
   Clock,
   MoreVertical,
-  Paperclip,
   Pencil,
   Trash2,
   X,
@@ -27,6 +26,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import TaskAttachments, { AttachmentChips } from '@/components/tasks/TaskAttachments';
+import { deleteAttachment } from '@/lib/file-handles';
 import ReminderEditor, {
   describeReminder,
   reminderFromTask,
@@ -472,31 +472,53 @@ export const TaskCard = ({
           </div>
         )}
 
-        {/* ---- Datos: la misma fila en lectura y en edición ---- */}
+        {/* ---- Datos: la misma fila en lectura y en edición ----
+            Orden (1.6.5): fecha, tipo, importancia, dificultad, tiempo
+            estimado, recordatorio, documentos y enlaces. */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-border/60 pt-2.5 text-[11px] text-muted-foreground">
-          {/* Importancia */}
+          {/* Fecha de entrega */}
           {isEditing ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button type="button" title="Cambiar la importancia" className={cn(chip, chipEditable, 'font-medium', priorityMeta.text)}>
-                  <span className={cn('h-1.5 w-1.5 rounded-full', priorityMeta.dot)} />
-                  {shownPriority}
+            <Popover open={isCalendarOpen} onOpenChange={setCalendarOpen}>
+              <PopoverTrigger asChild>
+                <button type="button" title="Cambiar la fecha de entrega" className={cn(chip, chipEditable, 'gap-1', due ? due.tone : chipGhost)}>
+                  <CalendarIcon className="h-3.5 w-3.5" />
+                  {due ? due.label : 'Sin fecha'}
                 </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="min-w-[8rem]">
-                {(['Alta', 'Media', 'Baja'] as TaskPriority[]).map((p) => (
-                  <DropdownMenuItem key={p} onSelect={() => setEditedPriority(p)} className="text-xs">
-                    <span className={cn('mr-2 h-1.5 w-1.5 rounded-full', PRIORITY_META[p].dot)} />
-                    {p}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  locale={es}
+                  selected={editedDueDate}
+                  onSelect={(date) => {
+                    setEditedDueDate(date instanceof Date ? date : undefined);
+                    setCalendarOpen(false);
+                  }}
+                />
+                {editedDueDate && (
+                  <div className="border-t p-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full text-xs text-muted-foreground"
+                      onClick={() => {
+                        setEditedDueDate(undefined);
+                        setCalendarOpen(false);
+                      }}
+                    >
+                      Quitar fecha
+                    </Button>
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
           ) : (
-            <span className={cn(chip, 'font-medium', priorityMeta.text)} title={`Importancia ${shownPriority.toLowerCase()}`}>
-              <span className={cn('h-1.5 w-1.5 rounded-full', priorityMeta.dot)} />
-              {shownPriority}
-            </span>
+            due &&
+            shownDue && (
+              <span className={cn(chip, 'gap-1', due.tone)} title={format(shownDue, "d 'de' MMMM 'de' yyyy", { locale: es })}>
+                <CalendarIcon className="h-3.5 w-3.5" />
+                {due.label}
+              </span>
+            )
           )}
 
           {/* Tipo */}
@@ -524,6 +546,31 @@ export const TaskCard = ({
             <span className={chip} title={`Tipo: ${shownKind}`}>
               <KindIcon className="h-3.5 w-3.5" />
               {shownKind}
+            </span>
+          )}
+
+          {/* Importancia */}
+          {isEditing ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" title="Cambiar la importancia" className={cn(chip, chipEditable, 'font-medium', priorityMeta.text)}>
+                  <span className={cn('h-1.5 w-1.5 rounded-full', priorityMeta.dot)} />
+                  {shownPriority}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="min-w-[8rem]">
+                {(['Alta', 'Media', 'Baja'] as TaskPriority[]).map((p) => (
+                  <DropdownMenuItem key={p} onSelect={() => setEditedPriority(p)} className="text-xs">
+                    <span className={cn('mr-2 h-1.5 w-1.5 rounded-full', PRIORITY_META[p].dot)} />
+                    {p}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <span className={cn(chip, 'font-medium', priorityMeta.text)} title={`Importancia ${shownPriority.toLowerCase()}`}>
+              <span className={cn('h-1.5 w-1.5 rounded-full', priorityMeta.dot)} />
+              {shownPriority}
             </span>
           )}
 
@@ -558,126 +605,79 @@ export const TaskCard = ({
             )
           )}
 
-          <span className="ml-auto inline-flex flex-wrap items-center justify-end gap-x-2.5 gap-y-1.5">
-            {/* Tiempo estimado, en horas y minutos */}
-            {isEditing ? (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button type="button" title="Cambiar el tiempo estimado" className={cn(chip, chipEditable, 'gap-1', shownEstimate <= 0 && chipGhost)}>
-                    <Clock className="h-3.5 w-3.5" />
-                    {shownEstimate > 0 ? formatEstimate(shownEstimate) : 'Estimar'}
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-3" align="end">
-                  <EstimateEditor minutes={editedEstimate} onChange={setEditedEstimate} />
-                </PopoverContent>
-              </Popover>
-            ) : (
-              shownEstimate > 0 && (
-                <span className={cn(chip, 'gap-1')} title="Tiempo estimado: el avance sube con tus sesiones de estudio">
+          {/* Tiempo estimado, en horas y minutos */}
+          {isEditing ? (
+            <Popover>
+              <PopoverTrigger asChild>
+                <button type="button" title="Cambiar el tiempo estimado" className={cn(chip, chipEditable, 'gap-1', shownEstimate <= 0 && chipGhost)}>
                   <Clock className="h-3.5 w-3.5" />
-                  {formatEstimate(shownEstimate)}
-                </span>
-              )
-            )}
+                  {shownEstimate > 0 ? formatEstimate(shownEstimate) : 'Estimar'}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-3" align="start">
+                <EstimateEditor minutes={editedEstimate} onChange={setEditedEstimate} />
+              </PopoverContent>
+            </Popover>
+          ) : (
+            shownEstimate > 0 && (
+              <span className={cn(chip, 'gap-1')} title="Tiempo estimado: el avance sube con tus sesiones de estudio">
+                <Clock className="h-3.5 w-3.5" />
+                {formatEstimate(shownEstimate)}
+              </span>
+            )
+          )}
 
-            {/* Fecha de entrega */}
-            {isEditing ? (
-              <Popover open={isCalendarOpen} onOpenChange={setCalendarOpen}>
-                <PopoverTrigger asChild>
-                  <button type="button" title="Cambiar la fecha de entrega" className={cn(chip, chipEditable, 'gap-1', due ? due.tone : chipGhost)}>
-                    <CalendarIcon className="h-3.5 w-3.5" />
-                    {due ? due.label : 'Sin fecha'}
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                  <Calendar
-                    locale={es}
-                    selected={editedDueDate}
-                    onSelect={(date) => {
-                      setEditedDueDate(date instanceof Date ? date : undefined);
-                      setCalendarOpen(false);
-                    }}
-                  />
-                  {editedDueDate && (
-                    <div className="border-t p-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full text-xs text-muted-foreground"
-                        onClick={() => {
-                          setEditedDueDate(undefined);
-                          setCalendarOpen(false);
-                        }}
-                      >
-                        Quitar fecha
-                      </Button>
-                    </div>
-                  )}
-                </PopoverContent>
-              </Popover>
-            ) : (
-              due &&
-              shownDue && (
-                <span className={cn(chip, 'gap-1', due.tone)} title={format(shownDue, "d 'de' MMMM 'de' yyyy", { locale: es })}>
-                  <CalendarIcon className="h-3.5 w-3.5" />
-                  {due.label}
-                </span>
-              )
-            )}
-
-            {/* Recordatorio: apagado por defecto */}
-            {isEditing ? (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    title={describeReminder(shownReminder)}
-                    className={cn(chip, chipEditable, 'gap-1', shownReminder.enabled ? 'text-primary' : chipGhost)}
-                  >
-                    {shownReminder.enabled ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
-                    {shownReminder.enabled ? shownReminder.time : 'Recordar'}
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-3" align="end">
-                  <ReminderEditor value={editedReminder} onChange={setEditedReminder} />
-                </PopoverContent>
-              </Popover>
-            ) : (
-              shownReminder.enabled && (
-                <span className={cn(chip, 'gap-1 text-primary')} title={describeReminder(shownReminder)}>
-                  <Bell className="h-3 w-3" />
-                  {shownReminder.time}
-                </span>
-              )
-            )}
-          </span>
+          {/* Recordatorio: apagado por defecto */}
+          {isEditing ? (
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  title={describeReminder(shownReminder)}
+                  className={cn(chip, chipEditable, 'gap-1', shownReminder.enabled ? 'text-primary' : chipGhost)}
+                >
+                  {shownReminder.enabled ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
+                  {shownReminder.enabled ? shownReminder.time : 'Recordar'}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-3" align="start">
+                <ReminderEditor value={editedReminder} onChange={setEditedReminder} />
+              </PopoverContent>
+            </Popover>
+          ) : (
+            shownReminder.enabled && (
+              <span className={cn(chip, 'gap-1 text-primary')} title={describeReminder(shownReminder)}>
+                <Bell className="h-3 w-3" />
+                {shownReminder.time}
+              </span>
+            )
+          )}
+          {/* Documentos y enlaces: se guardan AL INSTANTE, no al pulsar el
+              visto: el archivo ya quedó enlazado y descartar la edición no
+              debería deshacer ese enlace. */}
+          {isEditing && (
+            <TaskAttachments
+              variant="chips"
+              chipClassName={cn(chip, chipEditable, chipGhost)}
+              attachments={task.attachments ?? []}
+              onChange={(next) => updateTask(task.id, { attachments: next })}
+            />
+          )}
         </div>
 
         {/* ---- Adjuntos ---- */}
-        {(isEditing || (task.attachments ?? []).length > 0) && (
-          <div className="flex flex-wrap items-center gap-1.5">
-            <AttachmentChips attachments={task.attachments ?? []} />
-            {isEditing && (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button type="button" className={cn(chip, chipEditable, chipGhost, 'gap-1 text-[11px]')}>
-                    <Paperclip className="h-3 w-3" />
-                    {(task.attachments ?? []).length > 0 ? 'Gestionar adjuntos' : 'Adjuntar'}
-                  </button>
-                </PopoverTrigger>
-                {/* Los adjuntos se guardan AL INSTANTE, no al pulsar el visto: el
-                    archivo ya quedó enlazado y descartar la edición no debería
-                    deshacer ese enlace. */}
-                <PopoverContent className="w-80 p-3" align="start">
-                  <TaskAttachments
-                    attachments={task.attachments ?? []}
-                    onChange={(next) => updateTask(task.id, { attachments: next })}
-                  />
-                </PopoverContent>
-              </Popover>
-            )}
-          </div>
+        {(task.attachments ?? []).length > 0 && (
+          <AttachmentChips
+            attachments={task.attachments ?? []}
+            onRemove={
+              isEditing
+                ? (attachment) => {
+                    if (attachment.kind === 'file') void deleteAttachment(attachment.id);
+                    updateTask(task.id, { attachments: (task.attachments ?? []).filter((a) => a.id !== attachment.id) });
+                  }
+                : undefined
+            }
+          />
         )}
 
         {/* ---- Avance ----

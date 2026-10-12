@@ -379,7 +379,7 @@ function RecordingDetailsDialog({
               placeholder="¿De qué trata este audio?"
               ariaLabel="Descripción de la grabación"
               rows={3}
-              className="gap-2"
+              toolbarSide
             />
           </div>
 

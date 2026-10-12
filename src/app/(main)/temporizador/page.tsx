@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { YoutubeLogo } from '@/components/integrations/YoutubeIcon';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { CARD_IMAGE_DEFAULT, useCardImageHeight } from '@/lib/card-image-height';
 import { useCourse } from '@/context/CourseContext';
 import { sessionSeconds, formatHMS } from '@/lib/duration';
 import { addDays, isBefore, parseISO, startOfToday, format, isSameDay, isToday } from 'date-fns';
@@ -52,6 +53,9 @@ export default function TimerPage() {
   } = useCourse();
 
   const [dailyStudySeconds, setDailyStudySeconds] = useState(0);
+  /** Las tarjetas de «Métricas de hoy» llevan el alto de imagen del usuario:
+   *  el recuadro crece o encoge lo mismo, así una fila siempre cabe entera. */
+  const cardImageHeight = useCardImageHeight();
   const [recentSessions, setRecentSessions] = useState<StudySession[]>([]);
   const [todayPerformance, setTodayPerformance] = useState<DailyPerformance | null>(null);
   /** Cara visible de la tarjeta: las métricas del día o los vídeos de estudio.
@@ -334,9 +338,14 @@ export default function TimerPage() {
 
           {/* Cada sesión de hoy, como tarjeta: la de su asignatura arriba y lo
               que dejó (tiempo y rendimiento) debajo. Dos por fila, cada una la
-              mitad del recuadro; si no caben, el recuadro desplaza. El alto
-              del recuadro no cambia: la pila sigue midiendo lo mismo. */}
-          <Card className="w-full flex flex-col h-[280px]" data-tour="enfoque-metricas">
+              mitad del recuadro; si no caben, el recuadro desplaza. Mide
+              280 px con el alto de imagen por defecto y sigue al que elija el
+              usuario (1.6.5): una fila de tarjetas siempre cabe entera. */}
+          <Card
+            className="w-full flex flex-col"
+            style={{ height: 280 + cardImageHeight - CARD_IMAGE_DEFAULT }}
+            data-tour="enfoque-metricas"
+          >
             <CardHeader className="pb-3 pt-4">
               <CardTitle className="text-center text-sm font-headline text-muted-foreground">
                 Métricas de hoy

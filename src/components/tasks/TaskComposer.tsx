@@ -169,6 +169,8 @@ export default function TaskComposer({
 
         <div className="flex items-center gap-2 pt-6">
           <div className="flex items-center gap-2">
+            {/* Orden (1.6.5): fecha, tipo, importancia, dificultad, tiempo
+                estimado, recordatorio, documentos y enlaces. */}
             <Popover open={isCalendarOpen} onOpenChange={setCalendarOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="icon" className="w-10 h-10" title="Fecha de entrega" data-tour="tarea-fecha">
@@ -190,6 +192,35 @@ export default function TaskComposer({
                 />
               </PopoverContent>
             </Popover>
+
+            {/* Tipo de pendiente: el icono cambia según lo elegido, así
+                se reconoce de un vistazo sin abrir el menú. */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  title={kind ? `Tipo: ${kind}` : 'Tipo de pendiente'} data-tour="tarea-tipo"
+                  className={cn('h-10 w-10 transition-colors', kind && 'border-primary bg-primary/15 text-primary')}
+                >
+                  {(() => {
+                    const KindIcon = TASK_KIND_META[kind ?? 'Tarea'].icon;
+                    return <KindIcon className="h-4 w-4" />;
+                  })()}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {TASK_KINDS.map((option) => {
+                  const KindIcon = TASK_KIND_META[option].icon;
+                  return (
+                    <DropdownMenuItem key={option} onSelect={() => setKind(option)}>
+                      <KindIcon className="mr-2 h-4 w-4 text-primary" />
+                      <span className="font-semibold">{option}</span>
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -224,38 +255,6 @@ export default function TaskComposer({
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Tipo de pendiente: el icono cambia según lo elegido, así
-                se reconoce de un vistazo sin abrir el menú. */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  title={kind ? `Tipo: ${kind}` : 'Tipo de pendiente'} data-tour="tarea-tipo"
-                  className={cn('h-10 w-10 transition-colors', kind && 'border-primary bg-primary/15 text-primary')}
-                >
-                  {(() => {
-                    const KindIcon = TASK_KIND_META[kind ?? 'Tarea'].icon;
-                    return <KindIcon className="h-4 w-4" />;
-                  })()}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                {TASK_KINDS.map((option) => {
-                  const KindIcon = TASK_KIND_META[option].icon;
-                  return (
-                    <DropdownMenuItem key={option} onSelect={() => setKind(option)}>
-                      <KindIcon className="mr-2 h-4 w-4 text-primary" />
-                      <span className="font-semibold">{option}</span>
-                      <span className="ml-2 text-[10px] text-muted-foreground">
-                        {TASK_KIND_META[option].hint}
-                      </span>
-                    </DropdownMenuItem>
-                  );
-                })}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
             {/* Dificultad: tres barras que se llenan según el nivel. */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -277,27 +276,6 @@ export default function TaskComposer({
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-
-            {/* Recordatorio: botón discreto → mini recuadro con reloj */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  title={describeReminder(reminder)}
-                  data-tour="tarea-recordatorio"
-                  className={cn(
-                    'w-10 h-10 transition-colors',
-                    reminder.enabled && 'bg-primary/20 text-primary border-primary'
-                  )}
-                >
-                  <Bell className="h-4 w-4" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-3" align="start">
-                <ReminderEditor value={reminder} onChange={setReminder} />
-              </PopoverContent>
-            </Popover>
 
             {/* Tiempo estimado: define el % de avance por sesión de estudio */}
             <Popover>
@@ -326,7 +304,28 @@ export default function TaskComposer({
               </PopoverContent>
             </Popover>
 
-            {/* Enlace y documento: adjuntar YA, sin tener que crear la
+            {/* Recordatorio: botón discreto → mini recuadro con reloj */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  title={describeReminder(reminder)}
+                  data-tour="tarea-recordatorio"
+                  className={cn(
+                    'w-10 h-10 transition-colors',
+                    reminder.enabled && 'bg-primary/20 text-primary border-primary'
+                  )}
+                >
+                  <Bell className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-3" align="start">
+                <ReminderEditor value={reminder} onChange={setReminder} />
+              </PopoverContent>
+            </Popover>
+
+            {/* Documentos y enlaces: adjuntar YA, sin tener que crear la
                 tarea primero y volver a entrar a editarla. */}
             <TaskAttachments variant="toolbar" attachments={attachments} onChange={setAttachments} />
           </div>

@@ -149,7 +149,7 @@ const EVENT_LABELS: Record<string, string> = {
   guest_started: 'Entradas como invitado',
   guest_linked: 'Invitados que vincularon Google',
   help_asked: 'Preguntas a la ayuda',
-  help_tour: 'Recorridos «Descubrir»',
+  help_tour: 'Recorridos «Descubrir» (hasta la 1.6.4)',
 };
 
 const SCREEN_LABELS: Record<string, string> = {

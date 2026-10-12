@@ -34,6 +34,8 @@ export interface HelpTurn {
   options?: string[];
   /** Tras el texto se ofrecen los temas en tarjetas. */
   topics?: boolean;
+  /** Respondía a un saludo: la Ayuda le antepone el suyo (1.6.5). */
+  hello?: boolean;
 }
 
 export interface HelpConversation {
@@ -162,7 +164,13 @@ export function turnFromResolved(result: Resolved): HelpTurn {
     return { ...base, entryId: result.entry.id, ...(alts.length > 0 ? { alts } : {}) };
   }
   if (result.kind === 'text')
-    return { ...base, text: result.text, options: result.options.map((o) => o.id), ...(result.topics ? { topics: true } : {}) };
+    return {
+      ...base,
+      text: result.text,
+      options: result.options.map((o) => o.id),
+      ...(result.topics ? { topics: true } : {}),
+      ...(result.hello ? { hello: true } : {}),
+    };
   return { ...base, text: result.text };
 }
 
@@ -176,7 +184,16 @@ export function resolvedFromTurn(turn: HelpTurn): Resolved | null {
     return entry ? { kind: 'entry', question: turn.q, entry, alternatives: pick(turn.alts) } : null;
   }
   if (turn.text) {
-    return { kind: 'text', question: turn.q, text: turn.text, options: pick(turn.options), topics: turn.topics };
+    // Hasta la 1.6.4 el saludo llevaba su propio «Hola.»: ahora lo pone la Ayuda.
+    const legacyHello = turn.text.startsWith('Hola. ');
+    return {
+      kind: 'text',
+      question: turn.q,
+      text: legacyHello ? turn.text.slice('Hola. '.length) : turn.text,
+      options: pick(turn.options),
+      topics: turn.topics,
+      hello: turn.hello || legacyHello,
+    };
   }
   return null;
 }

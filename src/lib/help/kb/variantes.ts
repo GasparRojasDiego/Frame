@@ -114,6 +114,7 @@ export const VARIANTES: Record<string, string[]> = {
   ],
   'inicio-grabaciones': [
     'grabaciones en la pantalla de inicio', 'notas de voz en inicio', 'las grabaciones de abajo de inicio',
+    'dónde quedó el audio que grabé', 'no encuentro mi grabación', 'dónde aparece lo que grabé', 'mis audios sin curso',
   ],
   'anotaciones-sueltas': [
     'anotaciones sin asignatura', 'anotaciones al final de inicio', 'colocar una anotación en una asignatura',
@@ -175,6 +176,7 @@ export const VARIANTES: Record<string, string[]> = {
   'enfoque-avance-tareas': [
     'las sesiones avanzan las tareas', 'vincular una sesión a una tarea', 'el estudio sube el progreso de la tarea',
     'cómo se reparte el tiempo entre tareas',
+    'estudié para una tarea y quiero que suba su avance', 'cómo sube el porcentaje de una tarea al estudiar', 'elegir la tarea que avancé al terminar de estudiar',
   ],
   'enfoque-anotar': [
     'anotar avance', 'tomar notas en la sesión', 'escribir lo que hice durante la sesión', 'notas de la sesión',
@@ -268,15 +270,19 @@ export const VARIANTES: Record<string, string[]> = {
   ],
   'tarea-estimado': [
     'tiempo estimado de una tarea', 'cuánto me tomará', 'estimar la duración de una tarea', 'reloj de arena de la tarea',
+    'cuánto me voy a demorar en la tarea', 'poner cuánto tiempo me toma una tarea', 'calcular el tiempo de una tarea', 'tiempo que necesito para terminar una tarea', 'poner horas y minutos a una tarea',
   ],
   'tarea-adjuntos': [
     'adjuntar archivos', 'añadir un enlace a una tarea', 'subir un documento a la tarea', 'poner un link en la tarea', 'archivo en la tarea',
+    'arrastrar archivos a una tarea', 'meter un documento en una tarea', 'agregar varios archivos a una tarea', 'subir un archivo a mi tarea', 'para qué sirve el botón documento de la tarea',
   ],
   'tarea-adjunto-roto': [
     'no se pudo abrir el archivo', 'el adjunto no abre', 'archivo adjunto roto', 'moví el archivo y ya no abre',
+    'no abre el documento de la tarea', 'el archivo adjunto ya no está', 'el adjunto dice que no existe', 'borré el archivo que adjunté',
   ],
   'tareas-vencidas': [
     'tareas vencidas', 'aviso de tareas atrasadas', 'tareas que pasaron su fecha', 'reprogramar una tarea vencida',
+    'se me pasó la fecha de una tarea', 'tareas que no entregué a tiempo',
   ],
   'tareas-google-calendar': [
     'tareas en google calendar', 'las tareas se copian a google', 'pasar mis tareas al calendario de google', 'ver mis entregas en google calendar',
@@ -285,6 +291,7 @@ export const VARIANTES: Record<string, string[]> = {
   // ---------------- Hábitos ----------------
   'habitos-intro': [
     'qué es hábitos', 'para qué sirven los hábitos', 'registro de hábitos', 'la interfaz hábitos',
+    'para qué me sirve la sección hábitos', 'qué puedo hacer en hábitos', 'cómo funciona hábitos',
   ],
   'habito-crear': [
     'crear un hábito', 'añadir un hábito', 'nuevo hábito', 'empezar un hábito', 'agregar rutina', 'hábito de leer', 'hábito diario',
@@ -294,15 +301,18 @@ export const VARIANTES: Record<string, string[]> = {
   ],
   'habito-semanas': [
     'semana anterior de hábitos', 'ver otra semana', 'flechas de la semana', 'hábitos de semanas pasadas',
+    'ver cómo me fue la semana pasada con mis hábitos', 'olvidé marcar un hábito ayer', 'retroceder una semana en hábitos',
   ],
   'habito-fases': [
     'hábito de la mañana', 'hábito de la noche', 'momento del día del hábito', 'cambiar la fase de un hábito',
+    'pasar un hábito a la noche', 'cambiar la hora de un hábito', 'hábito en la mañana o en la tarde',
   ],
   'habito-frecuencia': [
     'días del hábito', 'hábito algunos días', 'frecuencia del hábito', 'hábito entre semana', 'cada cuánto toca el hábito',
   ],
   'habito-renombrar': [
     'cambiar el nombre de un hábito', 'editar un hábito', 'corregir el nombre del hábito',
+    'me equivoqué al escribir un hábito', 'corregir el nombre de un hábito', 'cambiarle el título a una rutina',
   ],
   'habito-archivar': [
     'archivar un hábito', 'eliminar un hábito', 'borrar hábito', 'ya no quiero un hábito', 'ver hábitos archivados',
@@ -315,6 +325,7 @@ export const VARIANTES: Record<string, string[]> = {
   ],
   'habito-anillos': [
     'anillos de hábitos', 'círculos de hábitos', 'qué significan los anillos',
+    'qué son los círculos de colores de hábitos', 'para qué sirven los aros de colores', 'qué significa cada aro',
   ],
 
   // ---------------- Asignaturas ----------------
@@ -330,9 +341,11 @@ export const VARIANTES: Record<string, string[]> = {
   ],
   'asig-mover-coleccion': [
     'pasar una asignatura a otra colección', 'cambiar de colección', 'sacar un curso de una colección',
+    'pasar un curso a otra colección', 'cambiar de grupo una asignatura', 'sacar una asignatura de una colección',
   ],
   'asig-coleccion-renombrar': [
     'renombrar una colección', 'abrir una colección', 'cambiar el nombre del grupo de asignaturas',
+    'cambiarle el nombre a una colección', 'corregir el nombre de un grupo de cursos', 'renombrar un grupo de asignaturas',
   ],
   'asig-imagen': [
     'imagen de una asignatura', 'cambiar la portada del curso', 'foto de la materia', 'poner fondo a una colección',
@@ -361,6 +374,7 @@ export const VARIANTES: Record<string, string[]> = {
   ],
   'asig-grabaciones': [
     'grabaciones de una asignatura', 'audios de un curso',
+    'dónde están los audios de mi curso', 'ver las grabaciones de una asignatura', 'audios guardados en un curso',
   ],
 
   // ---------------- Calendario y Google ----------------
@@ -391,9 +405,11 @@ export const VARIANTES: Record<string, string[]> = {
   ],
   'cal-dia-lleno': [
     'más eventos en un día', 'ver todos los eventos de un día', 'el día dice más',
+    'no se ven todos los eventos del día', 'qué es el más que sale en un día', 'tengo muchos eventos y no caben',
   ],
   'cal-tareas': [
     'tareas en el calendario', 'fechas de entrega en el calendario', 'ver entregas por día',
+    'mis entregas aparecen en el calendario', 'ver las fechas de entrega en el calendario', 'qué hacen mis tareas en el calendario',
   ],
   'gcal-vincular': [
     'vincular google calendar', 'conectar mi calendario de google', 'usar google calendar en frame', 'cambiar la cuenta del calendario',
@@ -417,6 +433,7 @@ export const VARIANTES: Record<string, string[]> = {
     'añadir canciones', 'meter música a frame', 'agregar música', 'importar canciones', 'importar una carpeta de música',
     'subir mis mp3', 'traer mis canciones de la computadora', 'cómo consigo canciones', 'descargar canciones',
     'bajar canciones de youtube', 'pasar mi música de spotify', 'importar spotify', 'cargar mi música',
+    'tengo mi música en spotify', 'pasar mis listas de spotify a frame', 'importar playlists de spotify', 'poner mis canciones en frame', 'meter mis canciones de la laptop',
   ],
   'musica-reproducir': [
     'escuchar música', 'reproducir canciones', 'cómo suena una canción', 'poner play a una canción', 'canción al azar',
@@ -433,6 +450,7 @@ export const VARIANTES: Record<string, string[]> = {
   ],
   'musica-eliminar': [
     'borrar una canción', 'quitar música', 'eliminar canciones de la biblioteca',
+    'quitar una canción de frame', 'borrar música', 'eliminar canciones que ya no escucho', 'sacar una canción de mi biblioteca',
   ],
   'musica-reproduciendo': [
     'pantalla completa de la canción', 'vista reproduciendo', 'ver la portada grande', 'letra de la canción', 'karaoke en frame',
@@ -440,6 +458,7 @@ export const VARIANTES: Record<string, string[]> = {
   'musica-letras': [
     'canciones sin letra', 'letras sin conexión', 'por qué no hay letra', 'poner letra a una canción', 'archivo lrc',
     'letra sincronizada de mis canciones', 'descargar letras',
+    'quiero ver la letra mientras escucho', 'cantar con la letra de la canción', 'dónde aparece la letra de las canciones', 'la canción no tiene la letra',
   ],
   'playlist-crear': [
     'crear una playlist', 'nueva lista de reproducción', 'armar una playlist', 'añadir playlist', 'lista de canciones nueva',
@@ -457,6 +476,7 @@ export const VARIANTES: Record<string, string[]> = {
   ],
   'musica-al-cerrar': [
     'música en segundo plano', 'se para la música al cerrar', 'escuchar música con la app cerrada',
+    'sigue sonando la música si cierro frame', 'escuchar música con frame minimizado', 'la música se apaga cuando cierro la app',
   ],
 
   // ---------------- Grabaciones ----------------
@@ -464,6 +484,7 @@ export const VARIANTES: Record<string, string[]> = {
     'grabar una nota de voz', 'grabar audio', 'grabar la clase', 'usar el micrófono', 'grabadora', 'iniciar una grabación',
     'grabar lo que dice el profesor', 'ctrl shift f',
     'atajo de teclado para grabar', 'tecla para grabar', 'grabar mi voz', 'grabar un audio',
+    'quiero grabar lo que dice mi profe', 'grabar mi voz para acordarme de algo', 'cómo funciona el micrófono de arriba', 'dónde está el botón para grabar',
   ],
   'grabacion-donde': [
     'dónde están mis grabaciones', 'dónde se guardan los audios', 'encontrar una grabación', 'mis notas de voz',
@@ -474,6 +495,7 @@ export const VARIANTES: Record<string, string[]> = {
   'grabacion-duracion': [
     'duración máxima de la grabación', 'cuánto graba frame', 'grabación larga', 'grabar cuatro horas',
     'cambiar el máximo de la grabación', 'rueda de la grabación',
+    'mi grabación se detuvo sola', 'grabar más de una hora', 'por qué se paró la grabación', 'tiempo máximo para grabar',
   ],
   'grabacion-microfono': [
     'micrófono no disponible', 'no graba el micrófono', 'permiso del micrófono', 'frame no escucha mi voz',
@@ -485,12 +507,14 @@ export const VARIANTES: Record<string, string[]> = {
   ],
   'perfil-foto': [
     'cambiar foto de perfil', 'poner avatar', 'subir mi foto', 'imagen de perfil', 'quitar mi foto',
+    'poner una foto mía', 'cambiar la imagen de mi perfil', 'quitar el muñequito de mi perfil',
   ],
   'perfil-nombre': [
     'cambiar mi nombre', 'cambiar nombre de usuario', 'poner mi nombre real', 'editar mi perfil', 'nombres y apellidos',
   ],
   'perfil-id': [
     'id de mi cuenta', 'copiar mi id', 'código de mi cuenta', 'número de cuenta de frame',
+    'para qué sirve mi id', 'número de mi cuenta', 'copiar el código de mi cuenta',
   ],
   'ajustes-metas': [
     'metas diarias', 'cambiar mis metas de estudio', 'cuántos minutos estudiar por día', 'meta del lunes', 'objetivo diario de estudio',
@@ -504,6 +528,7 @@ export const VARIANTES: Record<string, string[]> = {
   ],
   expediente: [
     'tu expediente', 'estadísticas de mi perfil', 'mi historial de estudio', 'dónde va mi tiempo',
+    'cuántas horas he estudiado desde que empecé', 'mi historial completo de estudio', 'resumen de todo lo que he hecho',
   ],
   'ajustes-cuenta-rueda': [
     'rueda de cuenta', 'ajustes de la cuenta', 'engranaje de cuenta', 'opciones de mi cuenta', 'menú de la rueda de ajustes',
@@ -536,9 +561,11 @@ export const VARIANTES: Record<string, string[]> = {
   ],
   'invitado-que-es': [
     'qué es invitado', 'modo invitado', 'usar frame sin cuenta', 'entrar sin registrarme',
+    'qué pasa si uso frame sin registrarme', 'soy invitado qué significa',
   ],
   'invitado-vincular': [
     'vincular mi cuenta de invitado', 'pasar de invitado a cuenta', 'la g junto a mi perfil', 'guardar mis datos de invitado en una cuenta',
+    'quiero crear mi cuenta sin perder lo que hice', 'guardar en la nube lo que hice como invitado', 'qué es la letra g junto a mi nombre',
   ],
   'sync-como-funciona': [
     'cómo funciona la sincronización', 'sincronizar entre dispositivos', 'usar la misma cuenta en dos equipos', 'se sincroniza solo',
@@ -550,6 +577,7 @@ export const VARIANTES: Record<string, string[]> = {
   ],
   'eliminar-cuenta': [
     'eliminar mi cuenta', 'borrar mi cuenta', 'darme de baja', 'borrar todos mis datos',
+    'quiero borrar todo y empezar de cero', 'dejar de usar frame y borrar mis datos', 'eliminar mi perfil',
   ],
   'actualizar-frame': [
     'actualizar frame', 'nueva versión', 'cómo instalo la actualización', 'frame está desactualizada', 'buscar actualizaciones',
@@ -565,6 +593,7 @@ export const VARIANTES: Record<string, string[]> = {
   ],
   'problema-interfaz': [
     'esta interfaz no pudo abrirse', 'error en una pantalla', 'se rompió la pantalla', 'pantalla de error con reintentar',
+    'una sección no carga', 'aparece un mensaje de error en frame',
   ],
   'problema-lento': [
     'frame lenta', 'la app se congela', 'se cuelga frame', 'frame no responde', 'la aplicación va lenta',
@@ -572,9 +601,11 @@ export const VARIANTES: Record<string, string[]> = {
   ],
   'problema-espacio': [
     'sin espacio', 'disco lleno', 'no se pudo guardar por espacio',
+    'mi computadora está llena', 'disco lleno', 'no se guardan mis cambios por falta de espacio',
   ],
   'problema-correo-confirmar': [
     'no llega el correo de confirmación', 'confirmar mi correo', 'activar mi cuenta', 'el correo de frame no llega',
+    'no me llegó el correo para activar', 'dónde está el correo de frame', 'no encuentro el enlace de activación',
   ],
   'problema-datos-no-aparecen': [
     'no aparecen mis datos en otro dispositivo', 'otra laptop vacía', 'el celular no tiene mis tareas', 'mis cosas no se pasaron',
@@ -592,18 +623,22 @@ export const VARIANTES: Record<string, string[]> = {
   ],
   'notificaciones-no-llegan': [
     'no me llegan notificaciones', 'no salen las notificaciones', 'no me avisa', 'los recordatorios no suenan',
+    'frame no me avisa nada', 'no me salen los avisos de windows', 'los recordatorios no suenan',
   ],
   'temporizador-aviso': [
     'aviso al terminar el temporizador', 'sonido al acabar la sesión', 'alarma del pomodoro', 'cómo me avisa que terminó',
+    'no me di cuenta de que terminó el tiempo', 'frame avisa cuando acaba la sesión', 'suena una alarma al terminar',
   ],
   'frame-no-abre': [
     'la app no abre', 'no carga frame', 'pantalla en blanco', 'pantalla negra', 'frame no arranca',
   ],
   'clima-no-carga': [
     'el clima no se actualiza', 'el clima no aparece', 'no se ve el clima', 'el clima no funciona',
+    'no sale el clima', 'el tiempo no se actualiza en inicio', 'el clima no muestra mi ciudad',
   ],
   'google-no-entra': [
     'no logro iniciar con google', 'falla el inicio de sesión con google', 'google no carga', 'error al entrar con google',
+    'no puedo iniciar sesión con gmail', 'la ventana de google no abre', 'error al entrar con mi cuenta de google',
   ],
 
   // ---------------- Extensiones y conversaciones ----------------
@@ -643,5 +678,22 @@ export const VARIANTES: Record<string, string[]> = {
     'letra desfasada', 'ajustar la letra', 'letra adelantada', 'letra atrasada', 'la letra está equivocada',
     'la letra es de otra canción', 'letra incorrecta', 'la letra no corresponde',
     'la letra no es la correcta', 'la letra no coincide',
+  ],
+
+  // ---------------- 1.6.5: formas coloquiales ----------------
+  'grabar-atajo': [
+    'cómo grabo sin usar el ratón', 'combinación de teclas para grabar', 'empezar a grabar de inmediato', 'atajo de teclado de la grabadora', 'grabar rapidito sin abrir nada',
+  ],
+  'figura-ayuda': [
+    'qué es la pelota que da vueltas', 'el dibujo que gira en la ayuda', 'por qué hay un balón en la ayuda', 'la figura se mueve cuando escribo', 'qué significa la esfera de la ayuda',
+  ],
+  'asig-alto-imagen': [
+    'las fotos de mis cursos se ven muy chiquitas', 'agrandar las fotos de las asignaturas', 'hacer más altas las imágenes de los cursos', 'achicar las imágenes de las tarjetas', 'cambiar el tamaño de las fotos de las tarjetas', 'imágenes de las tarjetas más bajas',
+  ],
+  'reproductor-ir-playlist': [
+    'de qué playlist es la canción que suena', 'volver a la lista que estoy escuchando', 'qué lista se está reproduciendo', 'ir a la lista de la canción actual', 'para qué sirve el nombre que sale debajo del volumen',
+  ],
+  'reproductor-ocultar': [
+    'quitar el reproductor de abajo', 'la barra de música me tapa la pantalla', 'cómo minimizo el reproductor', 'esconder la música sin pararla', 'no encuentro el reproductor de música', 'cómo hago que vuelva el reproductor',
   ],
 };
