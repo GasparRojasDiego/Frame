@@ -171,8 +171,6 @@ export interface GridItem {
   start: string;
   end: string;
   label: string;
-  /** Emoji del tipo de evento. */
-  glyph?: string;
   /** "HH:mm" delante del título. */
   time?: string;
   /** Tinte del evento; sin él, estilo neutro (tareas y Google). */
@@ -437,13 +435,16 @@ export function planClear(
   events: LocalCalendarEvent[],
   dayColors: CalendarDayColor[],
   range: DayRange,
-  todayKey?: string
+  todayKey?: string,
+  /** Solo estos eventos y, con `colors: false`, sin tocar los colores (1.6.7: lista de marcar). */
+  only?: { eventIds: Set<string>; colors: boolean }
 ): ClearPlan {
   const { start: s, end: e } = range;
   const plan: ClearPlan = { remove: [], update: [], add: [], colorDays: [], eventCount: 0 };
   const single = (from: string, to: string) => (to > from ? to : undefined);
 
   for (const event of events) {
+    if (only && !only.eventIds.has(event.id)) continue;
     const a = event.date;
     const b = eventEnd(event);
     if (b < s || a > e) continue;
@@ -468,6 +469,14 @@ export function planClear(
       plan.add.push({ ...rest, ...(keepAfter ? before : after) });
     }
   }
-  for (const { id } of dayColors) if (id >= s && id <= e) plan.colorDays.push(id);
+  // Con la lista de marcar solo se olvidan los colores visibles: las marcas
+  // «sin color» que tapan a un evento que se queda deben seguir tapándolo.
+  for (const { id, color } of dayColors) {
+    if (id >= s && id <= e && (!only || (only.colors && color))) plan.colorDays.push(id);
+  }
   return plan;
 }
+
+/** Eventos que tocan algún día del rango. */
+export const eventsInRange = (events: LocalCalendarEvent[], { start, end }: DayRange): LocalCalendarEvent[] =>
+  events.filter((event) => eventEnd(event) >= start && event.date <= end);

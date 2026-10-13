@@ -10,36 +10,38 @@ import type { LocalCalendarEvent, LocalEventDisplay, LocalEventKind } from '@/ty
 
 export interface EventKindMeta {
   label: string;
-  /** Emoji que precede al título en la casilla: se lee de un vistazo y no
-   *  depende de cargar un icono dentro de una etiqueta de 10 píxeles. */
-  glyph: string;
-  hint: string;
-  /** Presentación por defecto al elegir este tipo (el usuario puede cambiarla). */
-  defaultDisplay: LocalEventDisplay;
-  /** Estos tipos suelen abarcar varios días: el formulario ofrece el rango. */
-  suggestsRange?: boolean;
 }
 
-/** Orden deliberado: primero lo que afecta al calendario escolar entero,
- *  después lo académico y al final lo personal. */
+/**
+ * Sin emojis (1.6.7, Diego). Los cuatro primeros son los que ofrece el
+ * formulario, más «Otro», cuyo nombre escribe el usuario (`kindLabel`). El
+ * resto viene de versiones anteriores: esos eventos se siguen viendo y
+ * editando con su nombre.
+ */
 export const EVENT_KIND_META: Record<LocalEventKind, EventKindMeta> = {
-  libre:        { label: 'Día libre',            glyph: '🏖', hint: 'Feriado o jornada sin clases', defaultDisplay: 'casilla', suggestsRange: true },
-  vacaciones:   { label: 'Vacaciones',           glyph: '🌴', hint: 'Periodo largo sin clases',     defaultDisplay: 'casilla', suggestsRange: true },
-  evento:       { label: 'Evento institucional', glyph: '🎓', hint: 'Aniversario, actuación, feria',defaultDisplay: 'actividad' },
-  examen:       { label: 'Evaluación',           glyph: '📝', hint: 'Examen, práctica calificada',  defaultDisplay: 'actividad' },
-  entrega:      { label: 'Entrega',              glyph: '📤', hint: 'Fecha tope de un trabajo',     defaultDisplay: 'actividad' },
-  reunion:      { label: 'Reunión',              glyph: '👥', hint: 'Padres, tutoría, asesoría',    defaultDisplay: 'actividad' },
-  salida:       { label: 'Salida de estudio',    glyph: '🚌', hint: 'Viaje o visita guiada',        defaultDisplay: 'actividad', suggestsRange: true },
-  cumple:       { label: 'Cumpleaños',           glyph: '🎂', hint: 'Tuyo o de alguien',            defaultDisplay: 'actividad' },
-  personal:     { label: 'Personal',             glyph: '🙂', hint: 'Cualquier cosa tuya',          defaultDisplay: 'actividad' },
-  recordatorio: { label: 'Recordatorio',         glyph: '🔔', hint: 'Un aviso y nada más',          defaultDisplay: 'actividad' },
+  entrega: { label: 'Entrega' },
+  evento: { label: 'Evento' },
+  examen: { label: 'Evaluación' },
+  personal: { label: 'Personal' },
+  otro: { label: 'Otro' },
+  libre: { label: 'Día libre' },
+  vacaciones: { label: 'Vacaciones' },
+  reunion: { label: 'Reunión' },
+  salida: { label: 'Salida de estudio' },
+  cumple: { label: 'Cumpleaños' },
+  recordatorio: { label: 'Recordatorio' },
 };
 
-export const EVENT_KINDS = Object.keys(EVENT_KIND_META) as LocalEventKind[];
+/** Los tipos del desplegable del formulario, en este orden; después, «Otro…». */
+export const EVENT_FORM_KINDS: LocalEventKind[] = ['entrega', 'evento', 'examen', 'personal'];
 
 /** Tipos que ya no existen o datos corruptos caen en "personal". */
 export const normalizeKind = (kind: string): LocalEventKind =>
   (EVENT_KIND_META as Record<string, EventKindMeta>)[kind] ? (kind as LocalEventKind) : 'personal';
+
+/** Nombre del tipo de un evento: el escrito por el usuario o el del catálogo. */
+export const kindLabelOf = (event: Pick<LocalCalendarEvent, 'kind' | 'kindLabel'>): string =>
+  (normalizeKind(event.kind) === 'otro' && event.kindLabel?.trim()) || EVENT_KIND_META[normalizeKind(event.kind)].label;
 
 /**
  * Paleta en tres filas: los MISMOS ocho tonos, cada fila más transparente.
@@ -76,7 +78,11 @@ export function colorAlpha(color: string): number {
 export const eventTextClass = (color: string): string =>
   colorAlpha(color) >= 0.75 ? 'text-neutral-800' : 'text-foreground';
 
-/** Presentación efectiva, rellenando los eventos guardados antes del campo. */
+/**
+ * Presentación efectiva. Desde la 1.6.7 la decide el formulario sin preguntar:
+ * un evento de todo el día pinta su casilla; uno con hora va como etiqueta.
+ * Los guardados antes del campo `display` se deducen como entonces.
+ */
 export const eventDisplay = (event: LocalCalendarEvent): LocalEventDisplay =>
   event.display ?? (event.kind === 'libre' || event.kind === 'vacaciones' ? 'casilla' : 'actividad');
 

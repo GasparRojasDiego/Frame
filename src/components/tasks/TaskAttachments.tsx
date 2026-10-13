@@ -363,8 +363,8 @@ export function AttachFileDialog({
   );
 }
 
-/** Contenido del recuadro de enlace (dirección y nombre opcional). */
-function LinkForm({ onAdd }: { onAdd: (attachment: TaskAttachment) => void }) {
+/** Contenido del recuadro de enlace (dirección y nombre opcional). También lo usan los recursos de un evento. */
+export function LinkForm({ onAdd }: { onAdd: (attachment: TaskAttachment) => void }) {
   const [urlValue, setUrlValue] = useState('');
   const [urlLabel, setUrlLabel] = useState('');
   const add = () => {

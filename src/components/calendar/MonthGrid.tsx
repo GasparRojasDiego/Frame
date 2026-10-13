@@ -344,7 +344,7 @@ export default function MonthGrid({
             role="columnheader"
             aria-label={weekday.long}
             className={cn(
-              'border-b-2 border-r-2 border-border bg-card/80 p-2 text-center text-xs font-bold',
+              'border-b border-r border-border bg-card/80 p-2 text-center text-xs font-bold',
               index >= 5 ? 'text-muted-foreground/70' : 'text-muted-foreground'
             )}
           >
@@ -374,7 +374,7 @@ export default function MonthGrid({
               ref={(el) => {
                 weekRefs.current[w] = el;
               }}
-              className="relative flex min-h-[6.5rem] flex-1"
+              className="relative flex h-20 shrink-0"
             >
               {week.map((day, c) => {
                 const inMonth = day.startsWith(monthPrefix);
@@ -401,7 +401,7 @@ export default function MonthGrid({
                     aria-label={label}
                     onFocus={() => setFocusDay(day)}
                     className={cn(
-                      'group relative min-w-0 flex-1 basis-0 cursor-pointer border-b-2 border-r-2 border-border bg-background outline-none',
+                      'group relative min-w-0 flex-1 basis-0 cursor-pointer border-b border-r border-border bg-background outline-none',
                       !fill && !inMonth && 'bg-muted/30',
                       fill && PAINT_TINT,
                       'focus-visible:z-[2] focus-visible:shadow-[inset_0_0_0_2px_hsl(var(--primary))]'
@@ -507,7 +507,6 @@ function Bar({ segment }: { segment: Segment }) {
           style={item.color ? { backgroundColor: item.color } : undefined}
         />
       )}
-      {item.glyph && <span className="shrink-0 text-[10px]">{item.glyph}</span>}
       {item.time && <span className="shrink-0 tabular-nums opacity-75">{item.time}</span>}
       <span className="min-w-0 truncate">{item.label}</span>
       {item.bell && <Bell className="ml-auto h-2.5 w-2.5 shrink-0 opacity-70" />}

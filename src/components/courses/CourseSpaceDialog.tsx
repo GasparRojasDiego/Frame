@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCourse } from '@/context/CourseContext';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { SubjectMultiPicker } from '@/components/courses/SubjectPicker';
 import { cn } from '@/lib/utils';
-import { CATALOG_NAME, CATALOG_SUBJECTS } from '@/lib/subjects';
+import { CATALOG_SUBJECTS } from '@/lib/subjects';
 
 // Diálogo unificado "Asignatura nueva / Categoría nueva".
 // Antes vivía en el sidebar; ahora se abre desde la interfaz Asignaturas.
@@ -116,7 +116,7 @@ export default function CourseSpaceDialog() {
                 value={newCourseName}
                 onChange={(e) => setNewCourseName(e.target.value)}
                 disabled={batch}
-                placeholder={batch ? `${marked.length} áreas del CNEB marcadas abajo` : 'Ej: Física Cuántica'}
+                placeholder={batch ? `${marked.length} predeterminadas marcadas abajo` : 'Ej: Física Cuántica'}
                 data-tour="asig-nombre"
                 className="bg-card border-primary"
               />
@@ -134,38 +134,50 @@ export default function CourseSpaceDialog() {
               />
             </div>
 
-            {/* Las áreas del CNEB ya no son un modo aparte: van debajo, tras
-                una línea fina. Una marcada escribe el nombre; con varias se
-                crean todas de una vez. Pulsar una marcada la quita. Las que ya
-                tienes no se ofrecen. */}
-            <div role="separator" className="mx-8 h-px bg-border/70" />
-            <div className="space-y-2" data-tour="asig-cneb">
-              <p className="text-center text-[11px] font-semibold text-muted-foreground">Del {CATALOG_NAME}</p>
-              <div className="flex flex-wrap justify-center gap-1.5">
-                {CATALOG_SUBJECTS.map((subject) => {
-                  const owned = existingNames.has(subject.toLowerCase());
-                  const chosen = !owned && marked.includes(subject);
-                  return (
-                    <button
-                      key={subject}
-                      type="button"
-                      disabled={owned}
-                      aria-pressed={chosen}
-                      title={owned ? 'Ya tienes esta asignatura' : undefined}
-                      onClick={() => toggleSubject(subject)}
+            {/* Las predeterminadas (áreas del CNEB) van debajo, tras una línea
+                fina con su nombre al centro: lista de marcar en 2 columnas; las
+                marcadas, en azul fantasma (1.6.7, Diego). Una marcada escribe
+                el nombre; con varias se crean todas de una vez. Las que ya
+                tienes se ven, pero no se pueden marcar. */}
+            <div role="separator" className="flex items-center gap-3 px-2 pt-3">
+              <span aria-hidden className="h-px flex-1 bg-border/70" />
+              <span className="text-[11px] font-semibold text-muted-foreground">Predeterminadas</span>
+              <span aria-hidden className="h-px flex-1 bg-border/70" />
+            </div>
+            <div className="grid grid-cols-2 gap-1.5" data-tour="asig-cneb">
+              {CATALOG_SUBJECTS.map((subject) => {
+                const owned = existingNames.has(subject.toLowerCase());
+                const chosen = !owned && marked.includes(subject);
+                return (
+                  <button
+                    key={subject}
+                    type="button"
+                    role="checkbox"
+                    disabled={owned}
+                    aria-checked={chosen}
+                    title={owned ? 'Ya tienes esta asignatura' : undefined}
+                    onClick={() => toggleSubject(subject)}
+                    className={cn(
+                      'flex min-w-0 items-center gap-2 rounded-md border px-2.5 py-1.5 text-left text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      chosen
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border/70 bg-card text-foreground hover:border-primary/60 hover:text-primary',
+                      owned && 'cursor-not-allowed opacity-40 hover:border-border/70 hover:text-foreground'
+                    )}
+                  >
+                    <span
+                      aria-hidden
                       className={cn(
-                        'rounded-md border px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                        chosen
-                          ? 'border-primary bg-primary text-primary-foreground'
-                          : 'border-border/70 bg-card text-foreground hover:border-primary/60 hover:bg-primary/10 hover:text-primary',
-                        owned && 'cursor-not-allowed opacity-40 hover:border-border/70 hover:bg-card hover:text-foreground'
+                        'flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border',
+                        chosen ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground/50'
                       )}
                     >
-                      {subject}
-                    </button>
-                  );
-                })}
-              </div>
+                      {chosen && <Check className="h-3 w-3" strokeWidth={3} />}
+                    </span>
+                    <span className="truncate">{subject}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         ) : (

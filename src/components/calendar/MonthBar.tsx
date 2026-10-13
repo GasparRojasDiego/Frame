@@ -4,68 +4,45 @@ import { Button } from '@/components/ui/button';
 import { MONTH_NAMES, type MonthCursor } from './calendar-model';
 
 // ============================================================
-// Fila del mes: ‹ Marzo 2026 › · Hoy a la izquierda y, a la derecha, lo que
+// Fila del mes: ‹ Marzo 2026 › centrado de verdad y, a la derecha, lo que
 // ponga quien la usa (la acción de crear).
 //
-// No es una barra aparte: es la cabecera del propio calendario, pegada a su
-// cuadrícula. Antes los botones vivían en una segunda franja encima, sin
-// relación con el mes que se estaba viendo.
+// 1.6.7 (Diego): las flechas van solas, sin botón alrededor, como en el
+// calendario de Estudio; fuera «Hoy» y el texto de ayuda de arrastrar. Tres
+// columnas (vacía · mes · acciones) para que el mes quede en el centro exacto
+// aunque a la derecha haya botones.
 // ============================================================
 
 export default function MonthBar({
   cursor,
   onPrev,
   onNext,
-  onToday,
-  status,
   children,
 }: {
   cursor: MonthCursor;
   onPrev: () => void;
   onNext: () => void;
-  onToday: () => void;
-  /** Aviso pequeño junto al mes (p. ej. «Sin conexión»). */
-  status?: React.ReactNode;
   /** Controles del extremo derecho. */
   children?: React.ReactNode;
 }) {
   const monthName = MONTH_NAMES[cursor.month];
+  const arrow = 'h-8 w-8 text-muted-foreground hover:bg-transparent hover:text-primary [&_svg]:size-5';
   return (
-    <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2">
-      <div className="flex items-center gap-1.5">
-        <Button
-          variant="fantasma"
-          size="icon"
-          className="h-8 w-8"
-          onClick={onPrev}
-          aria-label="Mes anterior"
-          title="Mes anterior (Re Pág)"
-        >
+    <div className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3">
+      <span aria-hidden />
+      <div className="flex items-center gap-1">
+        <Button variant="ghost" size="icon" className={arrow} onClick={onPrev} aria-label="Mes anterior" title="Mes anterior (Re Pág)">
           <ChevronLeft />
         </Button>
         {/* Ancho fijo: las flechas no bailan al pasar de «Mayo» a «Septiembre». */}
-        <h2
-          className="w-[12rem] text-center font-headline text-lg font-semibold leading-none text-primary"
-          aria-live="polite"
-        >
+        <h2 className="w-[12rem] text-center font-headline text-lg font-semibold leading-none text-primary" aria-live="polite">
           {monthName} {cursor.year}
         </h2>
-        <Button
-          variant="fantasma"
-          size="icon"
-          className="h-8 w-8"
-          onClick={onNext}
-          aria-label="Mes siguiente"
-          title="Mes siguiente (Av Pág)"
-        >
+        <Button variant="ghost" size="icon" className={arrow} onClick={onNext} aria-label="Mes siguiente" title="Mes siguiente (Av Pág)">
           <ChevronRight />
         </Button>
       </div>
-      <Button variant="fantasma" size="sm" className="h-8 px-3 text-xs" onClick={onToday}>
-        Hoy
-      </Button>
-      {status}
-      {children && <div className="ml-auto flex items-center gap-2">{children}</div>}
+      <div className="flex items-center justify-end gap-2">{children}</div>
     </div>
   );
 }

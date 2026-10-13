@@ -345,10 +345,7 @@ export default function AuthForm({ linkGuest }: AuthFormProps) {
   );
 
   return (
-    <AuthShell
-      title="Frame"
-      inDialog={Boolean(linkGuest)}
-    >
+    <AuthShell inDialog={Boolean(linkGuest)}>
         {isSupabaseConfigured ? (
           <CardContent className="space-y-4 pt-5">
             {googleButton}

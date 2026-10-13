@@ -235,8 +235,9 @@ export default function AccountMenu({ userProfile }: { userProfile: UserProfile 
               </>
             )}
 
+            {/* Botones normales, sin azul fantasma (1.6.7, Diego). */}
             <Button
-              variant="fantasma"
+              variant="outline"
               size="sm"
               className="w-full justify-start"
               onClick={pick(() => setLogoutOpen(true))}
@@ -247,7 +248,7 @@ export default function AccountMenu({ userProfile }: { userProfile: UserProfile 
             </Button>
 
             <Button
-              variant="fantasma"
+              variant="outline"
               size="sm"
               className="w-full justify-start"
               onClick={pick(() => setNotionOpen(true))}

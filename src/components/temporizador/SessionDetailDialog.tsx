@@ -30,16 +30,35 @@ import type { DailyPerformance, StudySession } from '@/types';
 // ============================================================
 // El detalle de UNA sesión de estudio: lo que la tarjeta resume, entero.
 //
-// Desde la 1.6.5: la portada de la asignatura de extremo a extremo (con el
-// alto elegido en Asignaturas) y, debajo, a la izquierda la duración, el
-// rendimiento con su barra y la nota del día; a la derecha el horario y el
-// tipo de reloj. Las anotaciones, en su propio recuadro, y las tareas que
-// avanzó la sesión.
+// La portada de la asignatura de extremo a extremo (con la proporción elegida
+// en Asignaturas) y, debajo, tres tercios exactos separados por líneas finas
+// (1.6.7, Diego): la duración (la unidad mayor en grande, el resto debajo) ·
+// el rendimiento con su nota a la derecha y su barra, y la nota del día · el
+// horario y el tipo de reloj. Las anotaciones, en su propio recuadro, y las
+// tareas que avanzó la sesión.
 //
 // Se usa de dos formas: como ventana propia (Métricas de hoy) y como vista
 // dentro del recuadro de un día del calendario, que la muestra en su lugar
 // con la flecha de volver arriba a la izquierda: un solo recuadro cada vez.
+// En las dos, corregir y eliminar solo existen para las sesiones de hoy
+// (session-edit.ts): las de un día pasado no los ofrecen.
 // ============================================================
+
+/** La duración con su unidad mayor en grande: «2 h» sobre «15 min 08 s», o «25 min» sobre «40 s». */
+function DurationFigure({ seconds }: { seconds: number }) {
+  const total = Math.max(0, Math.round(seconds));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const big = h > 0 ? `${h} h` : m > 0 ? `${m} min` : `${s} s`;
+  const small = h > 0 ? `${m} min ${String(s).padStart(2, '0')} s` : m > 0 ? `${s} s` : null;
+  return (
+    <div className="leading-none">
+      <p className="font-headline text-3xl font-bold tabular-nums text-foreground">{big}</p>
+      {small && <p className="mt-1.5 text-sm font-semibold tabular-nums text-muted-foreground">{small}</p>}
+    </div>
+  );
+}
 
 const dayKeyOf = (iso: string): string | null => {
   try {
@@ -179,40 +198,40 @@ export function SessionDetailView({
         </div>
 
         <div className="space-y-5 px-6 pb-5 pt-4">
-          {/* Mitad izquierda: duración y rendimiento (con su barra), y debajo
-              la nota del día. Mitad derecha: horario y tipo de reloj. */}
-          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-4">
-            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-              <div className="row-span-2 self-center text-center">
-                <p className="font-headline text-2xl font-bold tabular-nums leading-tight text-foreground">
-                  {formatDurationLabel(seconds)}
-                </p>
-                <p className="text-[11px] text-muted-foreground">
-                  {dayContext && dayContext.total > 1
-                    ? `Sesión ${dayContext.order} de ${dayContext.total} del día`
-                    : 'Duración'}
-                </p>
-              </div>
+          {/* Tres tercios exactos, con una línea fina entre cada uno. */}
+          <div className="grid grid-cols-3 divide-x divide-border">
+            <div className="flex min-w-0 flex-col items-center justify-center px-3 text-center">
+              <DurationFigure seconds={seconds} />
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                {dayContext && dayContext.total > 1
+                  ? `Sesión ${dayContext.order} de ${dayContext.total} del día`
+                  : 'Duración'}
+              </p>
+            </div>
+
+            <div className="flex min-w-0 flex-col justify-center gap-3 px-4">
               <div>
-                <p className="text-[11px] text-muted-foreground">Rendimiento</p>
-                {hasFocus ? (
-                  <>
+                <div className="flex items-baseline justify-between gap-2">
+                  <p className="text-[11px] text-muted-foreground">Rendimiento</p>
+                  {hasFocus ? (
                     <p className="text-sm font-bold tabular-nums text-primary">
                       {session.perception}
                       <span className="text-[10px] font-semibold text-muted-foreground">/20</span>
                     </p>
-                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
-                      <div
-                        className="h-full rounded-full bg-primary"
-                        style={{ width: `${Math.min(100, Math.max(0, (session.perception / 20) * 100))}%` }}
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-sm font-semibold text-muted-foreground">Sin calificar</p>
+                  ) : (
+                    <p className="text-xs font-semibold text-muted-foreground">Sin calificar</p>
+                  )}
+                </div>
+                {hasFocus && (
+                  <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                    <div
+                      className="h-full rounded-full bg-primary"
+                      style={{ width: `${Math.min(100, Math.max(0, (session.perception / 20) * 100))}%` }}
+                    />
+                  </div>
                 )}
               </div>
-              <div>
+              <div className="flex items-baseline justify-between gap-2">
                 <p className="text-[11px] text-muted-foreground">Nota del día</p>
                 <p className="text-sm font-bold tabular-nums text-primary">
                   {dayPerformance ? `${dayPerformance.score.toFixed(1)} ${dayPerformance.grade}` : '—'}
@@ -220,9 +239,7 @@ export function SessionDetailView({
               </div>
             </div>
 
-            <span className="w-px self-stretch bg-border" />
-
-            <dl className="space-y-3 text-xs">
+            <dl className="flex min-w-0 flex-col justify-center gap-3 px-4 text-xs">
               <div>
                 <dt className="text-[11px] text-muted-foreground">Horario</dt>
                 <dd className="text-sm font-semibold tabular-nums text-foreground">

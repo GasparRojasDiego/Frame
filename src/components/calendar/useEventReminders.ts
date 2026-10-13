@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { notify } from '@/lib/notify';
 import type { LocalCalendarEvent } from '@/types';
-import { EVENT_KIND_META, normalizeKind } from '@/lib/calendar-events';
+import { richNoteToLine } from '@/lib/rich-note';
 import { addDays, eventEnd, toKey } from './calendar-model';
 
 // ============================================================
@@ -85,10 +85,10 @@ export function useLocalEventReminders(events: LocalCalendarEvent[], scope: stri
           const mark = `${event.id}#${day}`;
           if (sent[mark] && sent[mark] >= fireAt) continue;
 
-          const meta = EVENT_KIND_META[normalizeKind(event.kind)];
+          const note = event.description ? richNoteToLine(event.description) : '';
           void notify({
-            title: `${meta.glyph} ${event.title}`,
-            body: `${whenText(at, now)}${event.description ? ` — ${event.description}` : ''}`,
+            title: event.title,
+            body: `${whenText(at, now)}${note ? ` — ${note}` : ''}`,
             kind: 'recordatorio',
             route: '/calendario',
           });

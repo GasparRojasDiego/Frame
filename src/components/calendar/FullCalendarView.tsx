@@ -17,11 +17,13 @@ import { useTodayKey } from '@/hooks/use-today';
 import { ensureNotificationPermission } from '@/lib/notify';
 import { cn } from '@/lib/utils';
 import type { LocalCalendarEvent, Task } from '@/types';
-import { EVENT_KIND_META, eventDisplay, normalizeKind } from '@/lib/calendar-events';
+import { eventDisplay, kindLabelOf } from '@/lib/calendar-events';
+import { richNoteToLine } from '@/lib/rich-note';
 import MonthBar from './MonthBar';
 import MonthGrid, { type GridSelection } from './MonthGrid';
 import SelectionBar from './SelectionBar';
 import DayEventsDialog, { type CalendarPanel } from './DayEventsDialog';
+import ClearDaysDialog, { type ClearDaysRequest } from './ClearDaysDialog';
 import type { EventPreset } from './LocalEventDialog';
 import {
   MONTH_NAMES,
@@ -32,6 +34,7 @@ import {
   daysBetween,
   daysOf,
   eventEnd,
+  eventsInRange,
   groupTasksByDay,
   inRange,
   monthKeyOf,
@@ -80,14 +83,12 @@ function buildItems(
   for (const event of events) {
     const end = eventEnd(event);
     if (end < first || event.date > last) continue;
-    const meta = EVENT_KIND_META[normalizeKind(event.kind)];
     const remind = event.time ? remindLabel(event.remindBefore) : null;
     items.push({
       id: event.id,
       start: event.date,
       end,
       label: event.title,
-      glyph: meta.glyph,
       time: event.time,
       color: event.color,
       variant: 'event',
@@ -96,11 +97,11 @@ function buildItems(
       openable: true,
       hint: [
         event.title,
-        meta.label,
+        kindLabelOf(event),
         event.time,
         end !== event.date ? rangeLabel({ start: event.date, end }) : '',
         remind ? `Aviso ${remind.toLowerCase()}` : '',
-        event.description ?? '',
+        event.description ? richNoteToLine(event.description) : '',
       ]
         .filter(Boolean)
         .join(' · '),
@@ -134,7 +135,7 @@ export default function FullCalendarView({
   const [dragging, setDragging] = useState(false);
   const [panel, setPanel] = useState<CalendarPanel | null>(null);
   const [pendingClear, setPendingClear] = useState<{ range: DayRange; plan: ClearPlan } | null>(null);
-  const [focusRequest, setFocusRequest] = useState<{ day: string; nonce: number } | null>(null);
+  const [clearList, setClearList] = useState<ClearDaysRequest | null>(null);
 
   // ---- Lo que se pinta: calculado una vez por mes y por cambio de datos ----
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -234,6 +235,13 @@ export default function FullCalendarView({
 
   const requestClear = useCallback(
     (target: DayRange) => {
+      // Varias actividades: se elige en una lista cuáles se van (1.6.7).
+      const touched = eventsInRange(localEvents, target);
+      if (touched.length >= 2) {
+        const colorDays = dayColors.filter((c) => c.color && c.id >= target.start && c.id <= target.end).length;
+        setClearList({ range: target, events: touched, colorDays });
+        return;
+      }
       const plan = planClear(localEvents, dayColors, target, todayKey);
       if (plan.eventCount === 0 && plan.colorDays.length === 0) {
         toast({ title: 'Nada que vaciar', description: 'Esos días no tienen eventos ni color.' });
@@ -244,15 +252,18 @@ export default function FullCalendarView({
     [localEvents, dayColors, todayKey, toast]
   );
 
-  const applyClear = () => {
-    if (!pendingClear) return;
-    const { plan } = pendingClear;
+  const runPlan = (plan: ClearPlan) => {
     plan.remove.forEach(deleteLocalEvent);
     plan.update.forEach(({ id, changes }) => updateLocalEvent(id, changes));
     plan.add.forEach(addLocalEvent);
     if (plan.colorDays.length) setDayColors(plan.colorDays, null);
-    setPendingClear(null);
     setSelection(null);
+  };
+
+  const applyClear = () => {
+    if (!pendingClear) return;
+    runPlan(pendingClear.plan);
+    setPendingClear(null);
   };
 
   const openForm = (preset: EventPreset, target?: DayRange) => {
@@ -260,14 +271,9 @@ export default function FullCalendarView({
     setPanel({ view: 'form', range: target ?? range ?? { start: fallback, end: fallback }, preset });
   };
 
-  const goToday = () => {
-    setCursor(cursorOf(todayKey));
-    setFocusRequest({ day: todayKey, nonce: Date.now() });
-  };
-
   // ---- Esc y Supr con la selección a la vista, aunque el foco esté fuera ----
   useEffect(() => {
-    if (!range || panel || pendingClear) return;
+    if (!range || panel || pendingClear || clearList) return;
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       if (target?.closest('input, textarea, select, [contenteditable="true"]')) return;
@@ -280,7 +286,7 @@ export default function FullCalendarView({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [range?.start, range?.end, panel, pendingClear, requestClear]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [range?.start, range?.end, panel, pendingClear, clearList, requestClear]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Lo que hará «Vaciar», separando lo que se borra de lo que solo se recorta
   // (un evento que sigue en otros días no se pierde).
@@ -308,15 +314,6 @@ export default function FullCalendarView({
         cursor={cursor}
         onPrev={() => setCursor((c) => shiftMonth(c, -1))}
         onNext={() => setCursor((c) => shiftMonth(c, 1))}
-        onToday={goToday}
-        status={
-          // Primer uso: lo único que no se descubre mirando es arrastrar.
-          localEvents.length === 0 && dayColors.length === 0 && !range ? (
-            <span className="hidden text-[11px] text-muted-foreground xl:inline">
-              Arrastra sobre varios días para marcarlos a la vez
-            </span>
-          ) : null
-        }
       >
         {trailing}
         <Button
@@ -332,7 +329,7 @@ export default function FullCalendarView({
         </Button>
       </MonthBar>
 
-      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-none border-l-2 border-t-2 border-border bg-background">
+      <div className="relative flex min-h-0 flex-col overflow-hidden rounded-none border-l border-t border-border bg-background">
         <MonthGrid
           weeks={weeks}
           cursor={cursor}
@@ -355,25 +352,26 @@ export default function FullCalendarView({
           }}
           onClearRequest={requestClear}
           onMonthChange={setCursor}
-          focusRequest={focusRequest}
           ariaLabel={`${MONTH_NAMES[cursor.month]} de ${cursor.year}`}
           tourId="cal-editar"
         />
-
-        {range && !dragging && !panel && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center px-4">
-            <SelectionBar
-              range={range}
-              currentColor={selectionColor}
-              onEvent={() => openForm('evento', range)}
-              onReminder={() => openForm('recordatorio', range)}
-              onPaint={(color) => paintDays(daysOf(range), color)}
-              onClear={() => requestClear(range)}
-              onDismiss={() => setSelection(null)}
-            />
-          </div>
-        )}
       </div>
+
+      {/* Debajo de la cuadrícula, no encima: con las celdas bajas (1.6.7) la
+          barra tapaba la última semana. */}
+      {range && !dragging && !panel && (
+        <div className="flex justify-center px-4">
+          <SelectionBar
+            range={range}
+            currentColor={selectionColor}
+            onEvent={() => openForm('evento', range)}
+            onReminder={() => openForm('recordatorio', range)}
+            onPaint={(color) => paintDays(daysOf(range), color)}
+            onClear={() => requestClear(range)}
+            onDismiss={() => setSelection(null)}
+          />
+        </div>
+      )}
 
       <DayEventsDialog
         panel={panel}
@@ -385,6 +383,20 @@ export default function FullCalendarView({
         onSave={saveEvent}
         onDelete={deleteEvent}
         onPaint={paintDays}
+      />
+
+      <ClearDaysDialog
+        request={clearList}
+        onClose={() => setClearList(null)}
+        onDelete={(eventIds, colors) => {
+          if (!clearList) return;
+          runPlan(planClear(localEvents, dayColors, clearList.range, todayKey, { eventIds, colors }));
+          setClearList(null);
+        }}
+        onEdit={(event) => {
+          setClearList(null);
+          setPanel({ view: 'form', event, range: { start: event.date, end: eventEnd(event) } });
+        }}
       />
 
       {/* Vaciar unos días: lo único irreversible del calendario, se confirma. */}

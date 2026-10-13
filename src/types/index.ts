@@ -269,7 +269,8 @@ export type LocalEventKind =
   | 'reunion'      // reunión de padres, tutoría, asesoría
   | 'salida'       // viaje o salida de estudio
   | 'cumple'       // cumpleaños
-  | 'recordatorio';// aviso suelto
+  | 'recordatorio' // aviso suelto
+  | 'otro';        // tipo escrito por el usuario (`kindLabel`), desde la 1.6.7
 
 /** Cómo se dibuja el evento en la cuadrícula del mes. */
 export type LocalEventDisplay =
@@ -296,6 +297,10 @@ export interface LocalCalendarEvent {
   /** Aviso nativo: minutos de antelación respecto a `time` (0 = a la hora).
    *  Ausente = sin aviso. En un rango de días avisa cada uno de ellos. */
   remindBefore?: number;
+  /** Nombre del tipo cuando el usuario lo escribe (`kind === 'otro'`, 1.6.7). */
+  kindLabel?: string;
+  /** Recursos del evento: enlaces y documentos, como los de una tarea (1.6.7). */
+  attachments?: TaskAttachment[];
 }
 
 /** Color de fondo de UNA casilla del calendario local, independiente de los
@@ -303,9 +308,9 @@ export interface LocalCalendarEvent {
 export interface CalendarDayColor {
   /** YYYY-MM-DD: el día ES la identidad (un color por casilla). */
   id: string;
-  /** Hex de la paleta. Vacío = casilla sin color aunque un evento con
-   *  «Pintar las casillas» la cubra (así se le quita el color a unos días
-   *  sueltos de un rango sin partir el evento). */
+  /** Hex de la paleta. Vacío = casilla sin color aunque un evento de todo el
+   *  día la cubra (así se le quita el color a unos días sueltos de un rango
+   *  sin partir el evento). */
   color: string;
 }
 

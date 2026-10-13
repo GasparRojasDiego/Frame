@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { useRouter } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 import type { LocalCalendarEvent, Task } from '@/types';
-import { EVENT_KIND_META, getEventsForDay, normalizeKind } from '@/lib/calendar-events';
+import { getEventsForDay, kindLabelOf } from '@/lib/calendar-events';
 import LocalEventForm, { type EventPreset } from './LocalEventDialog';
 import {
   EVENT_TINT,
@@ -114,13 +114,12 @@ function DayView({
             <SectionLabel>Eventos</SectionLabel>
             <ul className="space-y-1.5">
               {dayEvents.map((event) => {
-                const meta = EVENT_KIND_META[normalizeKind(event.kind)];
                 const end = eventEnd(event);
                 const multi = end !== event.date;
                 const past = end < todayKey;
                 const remind = event.time ? remindLabel(event.remindBefore) : null;
                 const details = [
-                  meta.label,
+                  kindLabelOf(event),
                   event.time ?? 'Todo el día',
                   multi ? rangeLabel({ start: event.date, end }) : '',
                   remind ? `Aviso ${remind.toLowerCase()}` : '',
@@ -171,9 +170,6 @@ function DayView({
                           style={tintVar(event.color)}
                           title="Editar"
                         >
-                          <span aria-hidden className="text-base leading-none">
-                            {meta.glyph}
-                          </span>
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-sm font-semibold">{event.title}</span>
                             <span className="block truncate text-[11px] opacity-75">{details}</span>

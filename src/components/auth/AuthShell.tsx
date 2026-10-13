@@ -1,34 +1,32 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import ConstellationBackdrop from '@/components/layout/ConstellationBackdrop';
-import CursorRing from '@/components/auth/CursorRing';
 import FrameLogo from '@/components/layout/FrameLogo';
 import { APP_VERSION } from '@/lib/version';
 import { cn } from '@/lib/utils';
 
 // ============================================================
 // Marco común de las pantallas de acceso (entrar, registrarse y completar
-// el perfil): constelación de fondo, el cursor de puntos de la página web
-// cuando el ratón sale del recuadro, y la franja de marca del recuadro.
+// el perfil): constelación de fondo y la franja de marca del recuadro. La
+// marca va como en el menú lateral: el logo y «FRAME» a su derecha. Sin
+// efectos que sigan al cursor (1.6.7, Diego).
 // ============================================================
 
 interface AuthShellProps {
-  title: string;
+  /** Título bajo la marca (p. ej. «Completa tu perfil»); sin él, la marca es el título. */
+  title?: string;
   description?: ReactNode;
   children: ReactNode;
   /** Dentro de un recuadro emergente (vincular la cuenta de un invitado): el
-   *  mismo recuadro de acceso, sin la pantalla de fondo ni el cursor. */
+   *  mismo recuadro de acceso, sin la pantalla de fondo. */
   inDialog?: boolean;
 }
 
 export default function AuthShell({ title, description, children, inDialog = false }: AuthShellProps) {
-  const cardRef = useRef<HTMLDivElement>(null);
-
   const card = (
     <Card
-      ref={cardRef}
       className={cn(
         'relative z-10 w-full max-w-md border-border/60 bg-card/95 shadow-2xl backdrop-blur-sm',
         inDialog && 'border-0 bg-transparent shadow-none backdrop-blur-none'
@@ -44,11 +42,12 @@ export default function AuthShell({ title, description, children, inDialog = fal
         <span>VT Asvent</span>
         <span>2026 · v{APP_VERSION}</span>
       </div>
-      <CardHeader className="items-center pb-4 pt-3 text-center">
-        <FrameLogo className="mb-3 h-14 w-14" />
-        <CardTitle className="text-2xl font-bold text-foreground">
-          {title}
-        </CardTitle>
+      <CardHeader echo={false} className="items-center pb-4 pt-3 text-center">
+        <div className="flex items-center justify-center gap-3">
+          <FrameLogo className="h-12 w-12" />
+          <span className="select-none text-3xl font-bold text-foreground">FRAME</span>
+        </div>
+        {title && <CardTitle className="pt-2 text-xl font-bold text-foreground">{title}</CardTitle>}
         {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
       {children}
@@ -62,8 +61,6 @@ export default function AuthShell({ title, description, children, inDialog = fal
     // (a -z-10) queda por encima del fondo de esta capa y por debajo del recuadro.
     <div className="relative isolate flex min-h-screen w-full items-center justify-center overflow-x-hidden overflow-y-auto bg-background px-4 py-8">
       <ConstellationBackdrop />
-      <CursorRing avoidRef={cardRef} />
-
       {card}
     </div>
   );

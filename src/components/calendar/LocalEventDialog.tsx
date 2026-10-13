@@ -1,24 +1,26 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { CalendarIcon, Clock, PaintBucket, Trash2, X } from 'lucide-react';
+import { CalendarIcon, Check, ChevronDown, FileText, Link2, Paperclip, Pencil, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { WheelColumn } from '@/components/ui/wheel-picker';
+import NoteEditor from '@/components/temporizador/NoteEditor';
+import ColorPickerDialog from '@/components/shared/ColorPickerDialog';
+import { AttachFileDialog, AttachmentChips, LinkForm } from '@/components/tasks/TaskAttachments';
+import { isRichNoteEmpty } from '@/lib/rich-note';
 import { cn } from '@/lib/utils';
-import type { LocalCalendarEvent, LocalEventKind } from '@/types';
+import type { LocalCalendarEvent, LocalEventKind, TaskAttachment } from '@/types';
 import {
   DEFAULT_EVENT_COLOR,
-  EVENT_KINDS,
+  EVENT_COLOR_ROWS,
+  EVENT_FORM_KINDS,
   EVENT_KIND_META,
-  eventDisplay,
+  kindLabelOf,
   normalizeKind,
 } from '@/lib/calendar-events';
-import { EVENT_TINT, PanelHeader, SectionLabel, Swatch } from './CalendarBits';
+import { EVENT_TINT, PAINT_TINT, PanelHeader, SectionLabel, eventInk, tintVar } from './CalendarBits';
 import {
-  PAINT_COLORS,
   REMIND_OPTIONS,
   eventEnd,
   fromKey,
@@ -29,19 +31,21 @@ import {
 } from './calendar-model';
 
 // ============================================================
-// Alta y edición de un evento del calendario LOCAL.
+// Alta y edición de un evento del calendario LOCAL (1.6.7, Diego).
 //
-// Es el contenido del recuadro del calendario (ver DayEventsDialog), no un
-// recuadro aparte: desde el día se entra aquí y la flecha de arriba a la
-// izquierda vuelve al día, sin un recuadro encima de otro.
+// Es el contenido del recuadro del calendario (ver DayEventsDialog): desde el
+// día se entra aquí y la flecha de arriba a la izquierda vuelve al día.
 //
-// Cuatro bloques, de lo que más se toca a lo que menos:
-//   · el título y el tipo (pastillas: un clic y listo);
-//   · cuándo: días, hora y aviso (un recordatorio es un evento con hora y aviso);
-//   · aspecto: el color y si pinta las casillas;
-//   · una nota opcional.
-// El título puede quedar vacío: entonces se usa el nombre del tipo
-// («Vacaciones», «Recordatorio»…), que es justo lo que uno escribiría.
+//   · Qué: el título y, debajo, dos desplegables: el tipo (Entrega, Evento,
+//     Evaluación, Personal u «Otro…», que escribe el usuario) y los recursos
+//     (enlaces y documentos, como los de una tarea).
+//   · Cuándo: «Desde» sobre «Hasta» (la mitad del ancho) y, a su derecha,
+//     «Todo el día» y «Color» (un cuarto cada uno, a la misma altura). El
+//     color abre el selector de color en un recuadro centrado.
+//   · Aspecto: cómo se verá. Ya no se pregunta si pinta las casillas: un
+//     evento de todo el día las pinta; uno con hora va como etiqueta.
+//   · Nota: con formato, como las anotaciones.
+// Sin emojis. El título puede quedar vacío: entonces se usa el tipo.
 // ============================================================
 
 export type EventPreset = 'evento' | 'recordatorio';
@@ -66,6 +70,10 @@ const pill = (active: boolean) =>
       ? 'border-primary bg-primary text-primary-foreground shadow-sm'
       : 'border-border/80 bg-card text-foreground/80 hover:border-primary/60 hover:text-foreground'
   );
+
+/** Botón desplegable con la forma de un campo. */
+const dropdownButton =
+  'h-10 w-full justify-between gap-2 border-border bg-card px-3 text-sm font-medium text-foreground hover:border-primary/60 hover:bg-card';
 
 /** Campo de fecha con su calendario desplegable (se cierra al elegir). */
 function DateField({
@@ -126,6 +134,181 @@ function DateField({
   );
 }
 
+/** Desplegable del tipo: los cuatro del catálogo y «Otro…», que se escribe. */
+function KindSelect({
+  kind,
+  customLabel,
+  onChange,
+}: {
+  kind: LocalEventKind;
+  customLabel: string;
+  onChange: (kind: LocalEventKind, customLabel: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [writing, setWriting] = useState(false);
+  const [draft, setDraft] = useState(customLabel);
+  const legacy = !EVENT_FORM_KINDS.includes(kind) && kind !== 'otro';
+  const current = kindLabelOf({ kind, kindLabel: customLabel });
+
+  const choose = (next: LocalEventKind) => {
+    onChange(next, '');
+    setOpen(false);
+  };
+  const commitCustom = () => {
+    const text = draft.trim();
+    if (!text) return;
+    onChange('otro', text);
+    setOpen(false);
+  };
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (next) {
+          setWriting(kind === 'otro');
+          setDraft(kind === 'otro' ? customLabel : '');
+        }
+      }}
+    >
+      <PopoverTrigger asChild>
+        <Button type="button" variant="outline" className={dropdownButton} aria-label={`Tipo: ${current}`}>
+          <span className="truncate">{current}</span>
+          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] min-w-[12rem] p-1.5">
+        <div role="listbox" aria-label="Tipo" className="flex flex-col">
+          {[...(legacy ? [kind] : []), ...EVENT_FORM_KINDS].map((option) => {
+            const selected = option === kind;
+            return (
+              <button
+                key={option}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                onClick={() => choose(option)}
+                className={cn(
+                  'flex items-center justify-between rounded-md px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-secondary',
+                  selected && 'text-primary'
+                )}
+              >
+                {EVENT_KIND_META[option].label}
+                {selected && <Check className="h-4 w-4" />}
+              </button>
+            );
+          })}
+          <div role="separator" className="mx-1 my-1 h-px bg-border" />
+          {writing ? (
+            <div className="flex items-center gap-1.5 p-1">
+              <Input
+                value={draft}
+                onChange={(event) => setDraft(event.target.value.slice(0, 30))}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    commitCustom();
+                  }
+                }}
+                placeholder="Escribe el tipo"
+                className="h-8 text-sm"
+                autoFocus
+              />
+              <Button type="button" size="icon" className="h-8 w-8 shrink-0" onClick={commitCustom} disabled={!draft.trim()} aria-label="Usar este tipo">
+                <Check className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setWriting(true)}
+              className="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Otro…
+            </button>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+/** Desplegable de recursos: un enlace o documentos (estos, en su propio recuadro). */
+function ResourcesMenu({
+  attachments,
+  onChange,
+}: {
+  attachments: TaskAttachment[];
+  onChange: (next: TaskAttachment[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [linking, setLinking] = useState(false);
+  const [filesOpen, setFilesOpen] = useState(false);
+  const count = attachments.length;
+  return (
+    <>
+      <Popover
+        open={open}
+        onOpenChange={(next) => {
+          setOpen(next);
+          if (next) setLinking(false);
+        }}
+      >
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            className={cn(dropdownButton, count > 0 && 'border-primary bg-primary/10 text-primary hover:bg-primary/10')}
+          >
+            <span className="flex min-w-0 items-center gap-2 truncate">
+              <Paperclip className="h-4 w-4 shrink-0" />
+              {count > 0 ? `${count} ${count === 1 ? 'recurso' : 'recursos'}` : 'Recursos'}
+            </span>
+            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-72 p-1.5">
+          {linking ? (
+            <div className="p-1.5">
+              <LinkForm
+                onAdd={(attachment) => {
+                  onChange([...attachments, attachment]);
+                  setOpen(false);
+                }}
+              />
+            </div>
+          ) : (
+            <div className="flex flex-col">
+              <button
+                type="button"
+                onClick={() => setLinking(true)}
+                className="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-secondary"
+              >
+                <Link2 className="h-4 w-4 text-primary" />
+                Enlace…
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  setFilesOpen(true);
+                }}
+                className="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-secondary"
+              >
+                <FileText className="h-4 w-4 text-primary" />
+                Documento…
+              </button>
+            </div>
+          )}
+        </PopoverContent>
+      </Popover>
+      <AttachFileDialog open={filesOpen} onOpenChange={setFilesOpen} onAdd={(added) => onChange([...attachments, ...added])} />
+    </>
+  );
+}
+
 export default function LocalEventForm({
   event,
   range,
@@ -149,28 +332,20 @@ export default function LocalEventForm({
   onDelete?: () => void;
 }) {
   const isEdit = Boolean(event);
-  const firstKind: LocalEventKind = event
-    ? normalizeKind(event.kind)
-    : preset === 'recordatorio'
-      ? 'recordatorio'
-      : 'personal';
+  const isReminder = event ? normalizeKind(event.kind) === 'recordatorio' : preset === 'recordatorio';
 
   const [title, setTitle] = useState(event?.title ?? '');
-  const [kind, setKind] = useState<LocalEventKind>(firstKind);
-  const [dates, setDates] = useState<DayRange>(() =>
-    event ? { start: event.date, end: eventEnd(event) } : range
-  );
+  const [kind, setKind] = useState<LocalEventKind>(event ? normalizeKind(event.kind) : 'personal');
+  const [customKind, setCustomKind] = useState(event?.kindLabel ?? '');
+  const [attachments, setAttachments] = useState<TaskAttachment[]>(event?.attachments ?? []);
+  const [dates, setDates] = useState<DayRange>(() => (event ? { start: event.date, end: eventEnd(event) } : range));
   const [timed, setTimed] = useState(event ? !!event.time : preset === 'recordatorio');
   const [time, setTime] = useState(event?.time ?? initialTime(range.start, todayKey));
   const [remind, setRemind] = useState<number | undefined>(
     event ? event.remindBefore : preset === 'recordatorio' ? 0 : undefined
   );
   const [color, setColor] = useState(event?.color || DEFAULT_EVENT_COLOR);
-  const [paint, setPaint] = useState(
-    event ? eventDisplay(event) === 'casilla' : EVENT_KIND_META[firstKind].defaultDisplay === 'casilla'
-  );
-  /** «Pintar las casillas» deja de seguir al tipo en cuanto se toca a mano. */
-  const [paintTouched, setPaintTouched] = useState(isEdit);
+  const [pickingColor, setPickingColor] = useState(false);
   const [description, setDescription] = useState(event?.description ?? '');
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -181,22 +356,10 @@ export default function LocalEventForm({
     return () => clearTimeout(timer);
   }, [confirmDelete]);
 
-  const meta = EVENT_KIND_META[kind];
-  const isReminder = kind === 'recordatorio';
-
-  const pickKind = (next: LocalEventKind) => {
-    setKind(next);
-    if (!paintTouched) setPaint(EVENT_KIND_META[next].defaultDisplay === 'casilla');
-    // Un recordatorio sin hora no avisa: se le pone hora y aviso de entrada.
-    if (next === 'recordatorio' && !timed) {
-      setTimed(true);
-      if (remind === undefined) setRemind(0);
-    }
-  };
-
-  const toggleTimed = (on: boolean) => {
-    setTimed(on);
-    if (!on) setRemind(undefined);
+  const toggleAllDay = () => {
+    const nextTimed = !timed;
+    setTimed(nextTimed);
+    if (!nextTimed) setRemind(undefined);
     else if (isReminder && remind === undefined) setRemind(0);
   };
 
@@ -205,29 +368,31 @@ export default function LocalEventForm({
   // La rueda va de 5 en 5: una hora heredada como 18:32 se muestra como 18:30.
   const safeMinute = Number.isFinite(minute) ? Math.min(55, Math.round(minute / 5) * 5) : 0;
 
-  const baseColors = PAINT_COLORS.map((c) => c.hex);
-  // Un color antiguo (las filas translúcidas) se conserva como una muestra más.
-  const colors = baseColors.includes(color)
-    ? PAINT_COLORS
-    : [...PAINT_COLORS, { hex: color, name: 'actual' }];
+  const kindName = kindLabelOf({ kind, kindLabel: customKind });
+  const shownTitle = title.trim() || kindName;
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     const { start, end } = orderRange(dates.start, dates.end);
     onSubmit({
-      title: title.trim() || meta.label,
+      title: shownTitle,
       kind,
-      display: paint ? 'casilla' : 'actividad',
+      kindLabel: kind === 'otro' ? customKind.trim() : undefined,
+      // Sin preguntar (1.6.7): todo el día pinta la casilla; con hora, etiqueta.
+      display: timed ? 'actividad' : 'casilla',
       date: start,
       endDate: end > start ? end : undefined,
       color,
-      description: description.trim() || undefined,
+      description: isRichNoteEmpty(description) ? undefined : description,
       time: timed ? `${two(safeHour)}:${two(safeMinute)}` : undefined,
       remindBefore: timed ? remind : undefined,
+      attachments: attachments.length > 0 ? attachments : undefined,
     });
   };
 
   const single = dates.start === dates.end;
+  const box =
+    'flex h-full min-h-[7rem] flex-col items-center justify-center gap-2 rounded-lg border px-2 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
   return (
     <form onSubmit={handleSubmit} className="contents">
@@ -239,7 +404,7 @@ export default function LocalEventForm({
 
       <div className="space-y-5">
         {/* ---------- Qué ---------- */}
-        <div className="space-y-3">
+        <div className="space-y-2">
           <label className="sr-only" htmlFor="local-event-title">
             Título
           </label>
@@ -247,53 +412,88 @@ export default function LocalEventForm({
             id="local-event-title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder={isReminder ? '¿Qué te recuerdo?' : kind === 'personal' ? 'Título del evento' : meta.label}
+            placeholder={isReminder ? '¿Qué te recuerdo?' : `Título (si lo dejas vacío: ${kindName})`}
             className="h-11 text-base font-semibold"
             autoFocus
             autoComplete="off"
           />
-          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Tipo">
-            {EVENT_KINDS.map((k) => (
-              <button
-                key={k}
-                type="button"
-                aria-pressed={kind === k}
-                onClick={() => pickKind(k)}
-                className={pill(kind === k)}
-              >
-                <span aria-hidden className="text-[11px]">
-                  {EVENT_KIND_META[k].glyph}
-                </span>
-                {EVENT_KIND_META[k].label}
-              </button>
-            ))}
+          <div className="grid grid-cols-2 gap-2">
+            <KindSelect
+              kind={kind}
+              customLabel={customKind}
+              onChange={(next, label) => {
+                setKind(next);
+                setCustomKind(label);
+              }}
+            />
+            <ResourcesMenu attachments={attachments} onChange={setAttachments} />
           </div>
+          <AttachmentChips
+            attachments={attachments}
+            onRemove={(attachment) => setAttachments(attachments.filter((a) => a.id !== attachment.id))}
+          />
         </div>
 
         {/* ---------- Cuándo ---------- */}
         <div className="space-y-3">
           <SectionLabel>Cuándo</SectionLabel>
-          <div className="grid grid-cols-2 gap-2">
-            <DateField
-              label="Desde"
-              value={dates.start}
-              onChange={(day) => setDates({ start: day, end: dates.end < day ? day : dates.end })}
-            />
-            <DateField
-              label="Hasta"
-              value={dates.end}
-              empty={single ? 'Un solo día' : undefined}
-              onChange={(day) => setDates(orderRange(dates.start, day))}
-              onClear={single ? undefined : () => setDates({ start: dates.start, end: dates.start })}
-            />
-          </div>
-
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-border/70 bg-card/60 px-3 py-2">
-            <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
-              <Clock className="h-3.5 w-3.5 text-primary" />
-              {timed ? 'A una hora' : 'Todo el día'}
-            </span>
-            <Switch checked={timed} onCheckedChange={toggleTimed} aria-label="Ponerle hora" />
+          <div className="grid grid-cols-4 items-stretch gap-2">
+            <div className="col-span-2 space-y-2">
+              <DateField
+                label="Desde"
+                value={dates.start}
+                onChange={(day) => setDates({ start: day, end: dates.end < day ? day : dates.end })}
+              />
+              <DateField
+                label="Hasta"
+                value={dates.end}
+                empty={single ? 'Un solo día' : undefined}
+                onChange={(day) => setDates(orderRange(dates.start, day))}
+                onClear={single ? undefined : () => setDates({ start: dates.start, end: dates.start })}
+              />
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={!timed}
+              onClick={toggleAllDay}
+              className={cn(
+                box,
+                !timed
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-border bg-card text-muted-foreground hover:border-primary/60 hover:text-foreground'
+              )}
+            >
+              <span
+                aria-hidden
+                className={cn(
+                  'flex h-5 w-5 items-center justify-center rounded-[5px] border',
+                  !timed ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground/50'
+                )}
+              >
+                {!timed && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+              </span>
+              <span className="text-xs font-semibold leading-tight">Todo el día</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setPickingColor(true)}
+              aria-label={`Color: ${color}`}
+              className={cn(box, 'border-border bg-card text-muted-foreground hover:border-primary/60 hover:text-foreground')}
+            >
+              {/* La paleta: el círculo cromático con el color elegido al centro. */}
+              <span
+                aria-hidden
+                className="relative h-9 w-9 rounded-full"
+                style={{ background: 'conic-gradient(#f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)' }}
+              >
+                <span
+                  className="absolute inset-[7px] rounded-full border-2 border-background"
+                  style={{ background: color }}
+                />
+              </span>
+              <span className="text-xs font-semibold leading-tight text-foreground">Color</span>
+            </button>
           </div>
 
           {timed && (
@@ -318,12 +518,7 @@ export default function LocalEventForm({
               <div className="space-y-1.5">
                 <span className="text-[11px] font-medium text-muted-foreground">Aviso</span>
                 <div className="flex flex-wrap gap-1.5" role="group" aria-label="Aviso">
-                  <button
-                    type="button"
-                    aria-pressed={remind === undefined}
-                    onClick={() => setRemind(undefined)}
-                    className={pill(remind === undefined)}
-                  >
+                  <button type="button" aria-pressed={remind === undefined} onClick={() => setRemind(undefined)} className={pill(remind === undefined)}>
                     Sin aviso
                   </button>
                   {REMIND_OPTIONS.map((option) => (
@@ -343,48 +538,36 @@ export default function LocalEventForm({
           )}
         </div>
 
-        {/* ---------- Aspecto ---------- */}
+        {/* ---------- Aspecto: cómo se verá en el calendario ---------- */}
         <div className="space-y-3">
           <SectionLabel>Aspecto</SectionLabel>
-          <div className="flex flex-wrap items-center gap-2.5" role="group" aria-label="Color">
-            {colors.map(({ hex, name }) => (
-              <Swatch
-                key={hex}
-                color={hex}
-                name={name}
-                tint={EVENT_TINT}
-                active={color === hex}
-                onClick={() => setColor(hex)}
-              />
-            ))}
-          </div>
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-border/70 bg-card/60 px-3 py-2">
-            <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
-              <PaintBucket className="h-3.5 w-3.5 text-primary" />
-              Pintar las casillas
+          <div className="flex items-center justify-center gap-3" aria-hidden>
+            <span
+              className={cn('relative h-14 w-16 shrink-0 border border-border bg-background', !timed && PAINT_TINT)}
+              style={!timed ? tintVar(color) : undefined}
+            >
+              <span className="absolute right-1 top-1 text-[10px] font-semibold text-foreground/85">
+                {fromKey(dates.start).getDate()}
+              </span>
+              {timed && (
+                <span
+                  className={cn('absolute inset-x-1 bottom-1.5 truncate rounded-sm px-1 text-[9px] font-semibold leading-4', EVENT_TINT, eventInk(color))}
+                  style={tintVar(color)}
+                >
+                  {two(safeHour)}:{two(safeMinute)} {shownTitle}
+                </span>
+              )}
             </span>
-            <Switch
-              checked={paint}
-              onCheckedChange={(on) => {
-                setPaint(on);
-                setPaintTouched(true);
-              }}
-              aria-label="Pintar las casillas de estos días con el color del evento"
-            />
+            <span className="text-xs text-muted-foreground">
+              {timed ? 'Etiqueta con su hora en el día' : single ? 'La casilla se pinta' : 'Las casillas se pintan'}
+            </span>
           </div>
         </div>
 
         {/* ---------- Nota ---------- */}
-        <div className="space-y-2">
+        <div className="space-y-3">
           <SectionLabel>Nota</SectionLabel>
-          <Textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Opcional"
-            rows={2}
-            className="resize-none text-xs"
-            aria-label="Nota"
-          />
+          <NoteEditor value={description} onChange={setDescription} toolbarSide rows={3} placeholder="Opcional" ariaLabel="Nota" />
         </div>
       </div>
 
@@ -398,9 +581,8 @@ export default function LocalEventForm({
           ) : (
             <Button
               type="button"
-              variant="ghost"
+              variant="gris"
               size="sm"
-              className="text-muted-foreground hover:bg-muted hover:text-foreground"
               onClick={() => setConfirmDelete(true)}
             >
               <Trash2 />
@@ -412,11 +594,18 @@ export default function LocalEventForm({
           <Button type="button" variant="gris" onClick={onCancel}>
             Cancelar
           </Button>
-          <Button type="submit">
-            {isEdit ? 'Guardar' : isReminder ? 'Crear recordatorio' : 'Crear evento'}
-          </Button>
+          <Button type="submit">{isEdit ? 'Guardar' : isReminder ? 'Crear recordatorio' : 'Crear evento'}</Button>
         </div>
       </div>
+
+      <ColorPickerDialog
+        open={pickingColor}
+        onOpenChange={setPickingColor}
+        value={color}
+        onChange={setColor}
+        presets={EVENT_COLOR_ROWS}
+        title="Color del evento"
+      />
     </form>
   );
 }

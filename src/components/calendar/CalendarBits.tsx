@@ -99,10 +99,10 @@ export function NoColorSwatch({
 }
 
 /**
- * Cabecera de un recuadro del calendario: la palabra a la deriva detrás
- * (EchoWord), degradado vertical suave, la flecha de «Atrás» en la esquina
- * superior izquierda —espejo de la X de cerrar— y la línea de cierre con
- * margen a los dos lados.
+ * Cabecera de un recuadro del calendario: la palabra de fondo (EchoWord), la
+ * flecha de «Atrás» en la esquina superior izquierda —espejo de la X de
+ * cerrar— y la línea de cierre con margen a los dos lados. Sin degradado
+ * (1.6.7, Diego).
  */
 export function PanelHeader({
   word,
@@ -116,7 +116,7 @@ export function PanelHeader({
   onBack?: () => void;
 }) {
   return (
-    <div className="relative -mx-6 -mt-6 overflow-hidden rounded-t-lg bg-gradient-to-b from-primary/10 to-transparent px-12 pb-4 pt-6">
+    <div className="relative -mx-6 -mt-6 overflow-hidden rounded-t-lg px-12 pb-4 pt-6">
       <EchoWord word={word} />
       {onBack && (
         <button
@@ -140,13 +140,13 @@ export function PanelHeader({
   );
 }
 
-/** Etiqueta de sección con su línea, como «La tarea» en Crear. */
-export function SectionLabel({ children, end }: { children: React.ReactNode; end?: React.ReactNode }) {
+/** Etiqueta de sección centrada en su línea fina (1.6.7): «—— Cuándo ——». */
+export function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-[10px] font-bold text-muted-foreground">{children}</span>
+    <div className="flex items-center gap-3">
       <span aria-hidden className="h-px flex-1 bg-border" />
-      {end}
+      <span className="text-[11px] font-bold text-muted-foreground">{children}</span>
+      <span aria-hidden className="h-px flex-1 bg-border" />
     </div>
   );
 }
