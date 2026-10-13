@@ -1,5 +1,5 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
-import { renderDocHtml, renderDocxBlob, type DocModel } from '@/lib/report-doc';
+import { renderDocHtml, renderDocMarkdown, renderDocxBlobPacked, type DocModel } from '@/lib/report-doc';
 import { tr } from '@/lib/i18n';
 
 // ============================================================
@@ -21,7 +21,7 @@ import { tr } from '@/lib/i18n';
 // Windows donde el usuario le diga.
 // ============================================================
 
-export type ReportFormat = 'pdf' | 'docx';
+export type ReportFormat = 'pdf' | 'docx' | 'md';
 
 interface ExportResult {
   fileName: string;
@@ -100,7 +100,7 @@ export async function exportReport(
     return { fileName: `${fileBase}.pdf`, path: null, viaPrintDialog: true };
   }
 
-  const blob = renderDocxBlob(doc);
+  const blob = format === 'md' ? new Blob([renderDocMarkdown(doc)], { type: 'text/markdown;charset=utf-8' }) : await renderDocxBlobPacked(doc);
   const fileName = `${fileBase}.${format}`;
 
   if (isTauri()) {

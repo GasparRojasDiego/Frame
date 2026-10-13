@@ -3,7 +3,7 @@ import { format, parseISO } from 'date-fns';
 import { collectLocalData } from '@/lib/storage-snapshot';
 import { pendingChanges } from '@/lib/sync-merge';
 import { getSyncStatus, subscribeSyncStatus } from '@/lib/sync-status';
-import { entityOfImage, imageRefsReport } from '@/lib/image-refs';
+import { IMAGE_REFS_EVENT, entityOfImage, imageRefsReport } from '@/lib/image-refs';
 import { describeSongKey, isSongKey, libraryIds } from '@/lib/song-keys';
 import { hasAttachment } from '@/lib/file-handles';
 import { listImageKeys } from '@/lib/music-db';
@@ -61,6 +61,14 @@ const WHERE: Record<string, { where: () => string; route: string; label: (row: R
   dailyPerformances: { where: () => tr('Estudio'), route: '/temporizador', label: (row) => tr('Nota del {day}', { day: dayLabel(String(row.date ?? row.id ?? '')) }) },
   playlists: { where: () => tr('Música'), route: '/music', label: (row) => String(row.name ?? '') },
   studyVideos: { where: () => tr('Estudio'), route: '/temporizador', label: (row) => String(row.title ?? '') },
+  songFavorites: {
+    where: () => tr('Música'),
+    route: '/music',
+    label: (row) => {
+      const { title, artist } = describeSongKey(String(row.id ?? ''));
+      return tr('Favorito: {song}', { song: artist ? `${title} — ${artist}` : title });
+    },
+  },
 };
 
 /** Valores sueltos: dónde se ven y cómo se llaman. */
@@ -305,6 +313,7 @@ export function startSyncCheck(uid: string): () => void {
   };
   const onEvent = () => schedule();
   window.addEventListener(CLOUD_APPLIED_EVENT, onEvent);
+  window.addEventListener(IMAGE_REFS_EVENT, onEvent);
   const stopStatus = subscribeSyncStatus(onEvent);
   const stopLang = subscribeLang(onEvent);
   const interval = window.setInterval(onEvent, 120_000);
@@ -313,6 +322,7 @@ export function startSyncCheck(uid: string): () => void {
     if (timer !== null) window.clearTimeout(timer);
     window.clearInterval(interval);
     window.removeEventListener(CLOUD_APPLIED_EVENT, onEvent);
+    window.removeEventListener(IMAGE_REFS_EVENT, onEvent);
     stopStatus();
     stopLang();
     issues = [];

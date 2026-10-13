@@ -1022,31 +1022,54 @@ function coreProps(title: string, isoDate: string): string {
 </cp:coreProperties>`;
 }
 
-/** Documento .docx listo para descargar. Word lo abre como documento nativo. */
-export function renderDocxBlob(doc: DocModel, generatedAt: Date = new Date()): Blob {
+function docxParts(doc: DocModel, generatedAt: Date): { name: string; data: Uint8Array<ArrayBuffer> }[] {
   const body = doc.blocks.map(docxBlock).join('');
   const sectPr = `<w:sectPr><w:pgSz w:w="${PAGE_WIDTH}" w:h="16838"/><w:pgMar w:top="1077" w:right="${MARGIN_X}" w:bottom="1077" w:left="${MARGIN_X}" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>`;
 
   const document = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}${sectPr}</w:body></w:document>`;
 
-  return zipStore(
-    [
-      { name: '[Content_Types].xml', text: CONTENT_TYPES },
-      { name: '_rels/.rels', text: ROOT_RELS },
-      { name: 'docProps/core.xml', text: coreProps(doc.title, generatedAt.toISOString().replace(/\.\d+Z$/, 'Z')) },
-      { name: 'word/_rels/document.xml.rels', text: DOCUMENT_RELS },
-      { name: 'word/styles.xml', text: STYLES.replace('__LANG__', intlLocale()) },
-      { name: 'word/document.xml', text: document },
-    ].map((part) => ({ name: part.name, data: utf8(part.text) })),
-    generatedAt
-  );
+  return [
+    { name: '[Content_Types].xml', text: CONTENT_TYPES },
+    { name: '_rels/.rels', text: ROOT_RELS },
+    { name: 'docProps/core.xml', text: coreProps(doc.title, generatedAt.toISOString().replace(/\.\d+Z$/, 'Z')) },
+    { name: 'word/_rels/document.xml.rels', text: DOCUMENT_RELS },
+    { name: 'word/styles.xml', text: STYLES.replace('__LANG__', intlLocale()) },
+    { name: 'word/document.xml', text: document },
+  ].map((part) => ({ name: part.name, data: utf8(part.text) }));
 }
 
-// --- Escritor ZIP (método "store": sin comprimir) ---------------------------
+/** Documento .docx listo para descargar. Word lo abre como documento nativo. */
+export function renderDocxBlob(doc: DocModel, generatedAt: Date = new Date()): Blob {
+  return zipStore(docxParts(doc, generatedAt), generatedAt);
+}
+
+/**
+ * El mismo .docx, comprimido (1.6.9). El Reporte del Panel de uso, con una
+ * ficha por estudiante, pasaba de 13 MB sin comprimir; el XML se reduce unas
+ * treinta veces. Sin `CompressionStream` (motores viejos) sale sin comprimir.
+ */
+export async function renderDocxBlobPacked(doc: DocModel, generatedAt: Date = new Date()): Promise<Blob> {
+  const entries = docxParts(doc, generatedAt);
+  const packed = await Promise.all(entries.map((entry) => deflateRaw(entry.data)));
+  if (packed.some((data) => data === null)) return zipStore(entries, generatedAt);
+  return zipStore(entries.map((entry, i) => ({ ...entry, packed: packed[i]! })), generatedAt);
+}
+
+async function deflateRaw(data: Uint8Array<ArrayBuffer>): Promise<Uint8Array<ArrayBuffer> | null> {
+  if (typeof CompressionStream === 'undefined') return null;
+  try {
+    const stream = new Blob([data]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  } catch {
+    return null;
+  }
+}
+
+// --- Escritor ZIP ("store" o, si llega ya comprimida, "deflate") --------------
 //
-// Un informe pesa unas decenas de KB; comprimir exigiría un deflate propio y no
-// cambiaría nada perceptible. Word acepta perfectamente entradas sin comprimir.
+// Un informe normal pesa unas decenas de KB y va sin comprimir; el Reporte del
+// Panel de uso (1.6.9) llega comprimido por el navegador (renderDocxBlobPacked).
 
 const CRC_TABLE = (() => {
   const table = new Uint32Array(256);
@@ -1072,7 +1095,7 @@ function utf8(text: string): Uint8Array<ArrayBuffer> {
   return bytes;
 }
 
-function zipStore(entries: { name: string; data: Uint8Array<ArrayBuffer> }[], stamp: Date): Blob {
+function zipStore(entries: { name: string; data: Uint8Array<ArrayBuffer>; packed?: Uint8Array<ArrayBuffer> }[], stamp: Date): Blob {
   const dosTime = ((stamp.getHours() << 11) | (stamp.getMinutes() << 5) | (stamp.getSeconds() >> 1)) & 0xffff;
   const dosDate =
     (((stamp.getFullYear() - 1980) << 9) | ((stamp.getMonth() + 1) << 5) | stamp.getDate()) & 0xffff;
@@ -1084,21 +1107,23 @@ function zipStore(entries: { name: string; data: Uint8Array<ArrayBuffer> }[], st
   for (const entry of entries) {
     const name = utf8(entry.name);
     const crc = crc32(entry.data);
+    const stored = entry.packed ?? entry.data;
+    const method = entry.packed ? 8 : 0; // 8 = deflate · 0 = sin compresión
 
     const local = new Uint8Array(30 + name.length);
     const lv = new DataView(local.buffer);
     lv.setUint32(0, 0x04034b50, true);
     lv.setUint16(4, 20, true);
     lv.setUint16(6, 0x0800, true); // nombres en UTF-8
-    lv.setUint16(8, 0, true); // sin compresión
+    lv.setUint16(8, method, true);
     lv.setUint16(10, dosTime, true);
     lv.setUint16(12, dosDate, true);
     lv.setUint32(14, crc, true);
-    lv.setUint32(18, entry.data.length, true);
+    lv.setUint32(18, stored.length, true);
     lv.setUint32(22, entry.data.length, true);
     lv.setUint16(26, name.length, true);
     local.set(name, 30);
-    parts.push(local, entry.data);
+    parts.push(local, stored);
 
     const cd = new Uint8Array(46 + name.length);
     const cv = new DataView(cd.buffer);
@@ -1106,18 +1131,18 @@ function zipStore(entries: { name: string; data: Uint8Array<ArrayBuffer> }[], st
     cv.setUint16(4, 20, true);
     cv.setUint16(6, 20, true);
     cv.setUint16(8, 0x0800, true);
-    cv.setUint16(10, 0, true);
+    cv.setUint16(10, method, true);
     cv.setUint16(12, dosTime, true);
     cv.setUint16(14, dosDate, true);
     cv.setUint32(16, crc, true);
-    cv.setUint32(20, entry.data.length, true);
+    cv.setUint32(20, stored.length, true);
     cv.setUint32(24, entry.data.length, true);
     cv.setUint16(28, name.length, true);
     cv.setUint32(42, offset, true);
     cd.set(name, 46);
     central.push(cd);
 
-    offset += local.length + entry.data.length;
+    offset += local.length + stored.length;
   }
 
   const centralSize = central.reduce((total, chunk) => total + chunk.length, 0);
@@ -1132,4 +1157,87 @@ function zipStore(entries: { name: string; data: Uint8Array<ArrayBuffer> }[], st
   return new Blob([...parts, ...central, end], {
     type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   });
+}
+
+// ------------------------------------------------------------
+// 3) Markdown (1.6.9) — el Reporte del Panel de uso también sale así: texto
+//    plano que se lee en cualquier editor y se pega donde haga falta. Las
+//    figuras de color pasan a tablas con su cifra (y una barra de bloques).
+// ------------------------------------------------------------
+
+const mdCell = (value: string) => String(value ?? '').replace(/\|/g, '\|').replace(/\s*\n\s*/g, ' ');
+const mdBar = (percent: number) => '█'.repeat(Math.round(clampPct(percent) / 10)) || '·';
+const HEAT_MARK = ['·', '░', '▒', '▓', '█'];
+
+function mdTable(head: string[], rows: string[][], aligns?: DocAlign[]): string[] {
+  const rule = head.map((_, i) => (aligns?.[i] === 'right' ? '---:' : aligns?.[i] === 'center' ? ':---:' : '---'));
+  return [`| ${head.map(mdCell).join(' | ')} |`, `| ${rule.join(' | ')} |`, ...rows.map((row) => `| ${row.map(mdCell).join(' | ')} |`), ''];
+}
+
+function mdBlock(block: DocBlock): string[] {
+  switch (block.kind) {
+    case 'cover':
+      return [
+        `# ${block.title}`,
+        '',
+        `*${block.eyebrow}*`,
+        '',
+        block.subtitle,
+        '',
+        ...block.meta.map((item) => `- **${item.label}:** ${item.value}`),
+        '',
+        ...(block.footnote ? [`> ${block.footnote}`, ''] : []),
+      ];
+    case 'section':
+      return [`## ${block.index ? `${block.index}. ` : ''}${block.title}`, '', ...(block.note ? [`*${block.note}*`, ''] : [])];
+    case 'subheading':
+      return [`${block.level === 2 ? '####' : '###'} ${block.text}`, '', ...(block.note ? [`*${block.note}*`, ''] : [])];
+    case 'paragraph':
+      return [block.text, ''];
+    case 'callout':
+      return [`> **${block.title}**`, '>', `> ${block.text}`, ''];
+    case 'kpis':
+      return mdTable(
+        [tr('Indicador'), tr('Valor'), tr('Nota')],
+        block.items.map((item) => [item.label, item.delta ? `${item.value} (${DELTA_MARK[item.delta.dir]} ${item.delta.text})` : item.value, item.note ?? '']),
+        ['left', 'right', 'left']
+      );
+    case 'bars':
+      return [
+        ...mdTable(
+          ['', tr('Valor'), ''],
+          block.items.map((item) => [item.note ? `${item.label} (${item.note})` : item.label, item.value, mdBar(item.percent)]),
+          ['left', 'right', 'left']
+        ),
+        ...(block.caption ? [`*${block.caption}*`, ''] : []),
+      ];
+    case 'stacked':
+      return [
+        ...mdTable(['', tr('Valor'), '%'], block.items.map((item) => [item.label, item.value, `${clampPct(item.percent)} %`]), ['left', 'right', 'right']),
+        ...(block.caption ? [`*${block.caption}*`, ''] : []),
+      ];
+    case 'heat':
+      return [
+        ...mdTable(['', ...block.dayLabels], block.rows.map((row) => [row.label, ...row.cells.map((cell) => cell.text ?? HEAT_MARK[cell.level])])),
+        ...(block.caption ? [`*${block.caption}*`, ''] : []),
+        ...(block.legend ? [`*${block.legend}*`, ''] : []),
+      ];
+    case 'funnel':
+      return mdTable(['', tr('Valor'), '%'], block.steps.map((step) => [step.note ? `${step.label} (${step.note})` : step.label, step.value, `${clampPct(step.percent)} %`]), ['left', 'right', 'right']);
+    case 'timeline':
+      return [...block.items.map((item) => `- **${item.when}** · ${item.title}${item.note ? ` — ${item.note}` : ''}`), ''];
+    case 'table':
+      return [
+        ...mdTable(block.head, block.rows.map((row) => row.map((cell) => (cell.note ? `${cell.text} (${cell.note})` : cell.text))), block.aligns),
+        ...(block.caption ? [`*${block.caption}*`, ''] : []),
+      ];
+    case 'pagebreak':
+      return ['---', ''];
+    case 'footer':
+      return [`*${block.text}*`, ''];
+  }
+}
+
+export function renderDocMarkdown(doc: DocModel): string {
+  return `${doc.blocks.flatMap(mdBlock).join('\n').replace(/\n{3,}/g, '\n\n').trim()}\n`;
 }

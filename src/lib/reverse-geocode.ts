@@ -25,6 +25,8 @@ interface ResolvedPlaceName {
   admin?: string;
   /** País. Ej: "Perú" */
   country?: string;
+  /** Código ISO del país, en mayúsculas. Ej: "PE" (1.6.9: para el Panel de uso). */
+  countryCode?: string;
   source: GeoSource;
 }
 
@@ -62,6 +64,12 @@ function clean(value: unknown): string | undefined {
   return s ? s : undefined;
 }
 
+/** Código ISO de dos letras, en mayúsculas, o nada. */
+export function cleanCountryCode(value: unknown): string | undefined {
+  const s = typeof value === 'string' ? value.trim().toUpperCase() : '';
+  return /^[A-Z]{2}$/.test(s) ? s : undefined;
+}
+
 /** Primer valor no vacío que además aporte información nueva frente a `name`. */
 function pickDetail(candidates: (string | undefined)[], name: string): string | undefined {
   return candidates.find((v): v is string => !!v && v !== name);
@@ -90,6 +98,7 @@ async function fromBigDataCloud(lat: number, lon: number): Promise<ResolvedPlace
     locality: pickDetail([clean(d?.locality), finest], name),
     admin: clean(d?.principalSubdivision),
     country: clean(d?.countryName),
+    countryCode: cleanCountryCode(d?.countryCode),
     source: 'bigdatacloud',
   };
 }
@@ -112,6 +121,7 @@ async function fromPhoton(lat: number, lon: number): Promise<ResolvedPlaceName |
     locality: pickDetail([clean(p.district), clean(p.locality)], name),
     admin: clean(p.state),
     country: clean(p.country),
+    countryCode: cleanCountryCode(p.countrycode),
     source: 'photon',
   };
 }
@@ -145,6 +155,7 @@ async function fromNominatim(lat: number, lon: number): Promise<ResolvedPlaceNam
     ),
     admin: clean(a.state),
     country: clean(a.country),
+    countryCode: cleanCountryCode(a.country_code),
     source: 'nominatim',
   };
 }

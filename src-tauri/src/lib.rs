@@ -1206,7 +1206,8 @@ fn save_report_file(
     file_name: String,
     data_base64: String,
 ) -> Result<String, String> {
-    const REPORT_EXTENSIONS: &[&str] = &[".docx", ".pdf", ".html", ".txt", ".csv"];
+    // «.md»: el Reporte del Panel de uso también sale en Markdown (1.6.9).
+    const REPORT_EXTENSIONS: &[&str] = &[".docx", ".pdf", ".md", ".html", ".txt", ".csv"];
     save_in_downloads(&app_handle, &file_name, &data_base64, Some(REPORT_EXTENSIONS), "Informe.docx")
 }
 

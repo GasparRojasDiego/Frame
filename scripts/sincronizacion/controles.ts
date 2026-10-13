@@ -12,6 +12,13 @@ interface Engine {
   collectLocalData: (uid: string) => Record<string, unknown>;
   rememberSongKeys?: (uid: string, songs: { id: string; title: string; artist?: string; fileName: string }[]) => void;
   localizePlaylists?: (uid: string) => boolean;
+  /** Imágenes de asignaturas, colecciones y playlists (image-refs.ts). */
+  images?: {
+    startImageRefs: (uid: string) => () => void;
+    setEntityImage: (uid: string, key: string, dataUrl: string | null, source?: { native: string; crop?: number[]; out?: number[] }) => Promise<void>;
+    getImageRecord: (key: string) => Promise<{ dataUrl: string; recipe?: string } | null>;
+    updatedEvent: string;
+  };
 }
 
 interface FakeDocument {
@@ -24,16 +31,29 @@ export function expose(engine: Engine) {
   const uid = g.__uid as string;
   const scoped = (name: string) => `${name}_${uid}`;
   let stop: (() => void) | null = null;
+  let stopImages: (() => void) | null = null;
+  /** Avisos de «cambió una imagen» que vio la interfaz (useStoredImage). */
+  const imageEvents: string[] = [];
+  if (engine.images) addEventListener(engine.images.updatedEvent, (event) => imageEvents.push((event as CustomEvent<{ key: string }>).detail.key));
 
   g.frame = {
     version: engine.version,
     start() {
       stop ??= engine.startLiveSync(uid);
+      // Como layout.tsx: las referencias de las imágenes, junto a la sincronización.
+      if (engine.images) stopImages ??= engine.images.startImageRefs(uid);
     },
     stop() {
       stop?.();
       stop = null;
+      stopImages?.();
+      stopImages = null;
     },
+    /** Elige una imagen como la interfaz (CoursesGrid, colecciones, playlists). */
+    setImage: (key: string, dataUrl: string | null, source?: { native: string; crop?: number[]; out?: number[] }) =>
+      engine.images?.setEntityImage(uid, key, dataUrl, source),
+    image: (key: string) => engine.images?.getImageRecord(key) ?? Promise.resolve(null),
+    imageEvents: () => [...imageEvents],
     sync: () => engine.pushToCloud(uid),
     /** Escribe como la interfaz: por localStorage (lo vigila la sincronización en vivo). */
     put(name: string, value: unknown) {

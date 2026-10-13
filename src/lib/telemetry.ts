@@ -9,6 +9,9 @@
 //     recalculado desde los datos locales. Es la base de las cifras de
 //     impacto: «semana 1 frente a semana 2», retención, etc. Se sube como
 //     mucho cada 6 h, a través de la función `telemetry_report`.
+//   · PERFIL (1.6.9, telemetry-profile.ts): lugar aproximado (el del clima),
+//     zona horaria, idioma, tipo de equipo, en qué horas estudia, rachas y
+//     cuántos elementos tiene de cada función. Viaja con la instantánea.
 //   · EVENTOS (telemetry_events): hechos con fecha —la app se abrió, se
 //     registró una sesión de estudio, se terminó una tarea, se generó un
 //     informe, falló una interfaz, se abrió una pantalla—. Son los que
@@ -28,6 +31,7 @@ import type { ArchivedTask, Habit, StudySession } from '@/types';
 // se quedó reportando 1.0.0 durante toda la vida de la app.
 import { APP_VERSION } from '@/lib/version';
 import { loadWeatherPlace } from '@/lib/weather';
+import { buildUsageProfile } from '@/lib/telemetry-profile';
 
 const SYNC_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 horas entre envíos
 
@@ -373,6 +377,8 @@ export async function syncTelemetry(
         },
         weeks: buildWeeks(snapshot, weekStart, weekTasks, weekSongsAdded),
         days: buildDays(snapshot),
+        // Lugar aproximado, cuándo estudia y cuánto usa cada función (1.6.9).
+        profile: buildUsageProfile(snapshot.userId, sessions),
       },
     });
     if (error) return false;

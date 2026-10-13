@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // ============================================================
-// Prueba de la sincronización entre dispositivos (1.6.8).
+// Prueba de la sincronización entre dispositivos (1.6.8, ampliada en la 1.6.9).
 //
 //   node scripts/probar-sincronizacion.mjs
 //   SEMILLA=7 node scripts/probar-sincronizacion.mjs     (otras latencias)
@@ -12,9 +12,13 @@
 // formato de Postgres) y cada petición y cada mensaje tardan lo que en una
 // red de verdad (10 a 50 ms, al azar pero reproducible).
 //
-// Un tercer tipo de dispositivo ejecuta el motor de la 1.6.7 (móvil 1.1.3),
-// copiado de git: comprueba que las dos versiones conviven mientras cada
-// equipo se actualiza.
+// Otros dos tipos de dispositivo ejecutan el motor de la 1.6.8 (móvil 1.1.4)
+// y el de la 1.6.7 (móvil 1.1.3), copiados de git: comprueban que las
+// versiones conviven mientras cada equipo se actualiza. Y uno escribe en la
+// nube una clave «del futuro» que ninguna versión desde la 1.6.9 puede perder.
+//
+// Desde la 1.6.9 también recorre las imágenes de la galería (con una base de
+// imágenes y un lienzo simulados) y el corazón de las canciones.
 //
 // No usa la red ni la nube real.
 // ============================================================
@@ -87,6 +91,11 @@ async function compile(entry, extra = {}) {
 
 const engines = {
   actual: await compile('dispositivo.ts'),
+  '1.6.8': await compile('dispositivo-1.6.8.ts', {
+    '@/lib/supabase/sync': path.join(dir, 'sync-1.6.8.ts'),
+    '@/lib/storage-snapshot': path.join(dir, 'storage-snapshot-1.6.8.ts'),
+    '@/lib/sync-merge': path.join(dir, 'sync-merge-1.6.8.ts'),
+  }),
   '1.6.7': await compile('dispositivo-1.6.7.ts', {
     '@/lib/supabase/sync': path.join(dir, 'sync-1.6.7.ts'),
     '@/lib/storage-snapshot': path.join(dir, 'storage-snapshot-1.6.7.ts'),
@@ -297,6 +306,7 @@ function device(name, version = 'actual', { clockOffset = 0 } = {}) {
     atob,
     Event,
     EventTarget,
+    CustomEvent,
     structuredClone,
     URL,
     performance,
@@ -520,7 +530,7 @@ const drop = (dev, key, id) => dev.frame.put(key, (dev.frame.get(key) ?? []).fil
 // ============================================================
 
 async function twoDevices() {
-  console.log('\n▶ Dos dispositivos con la 1.6.8 (laptop y tablet)');
+  console.log('\n▶ Dos dispositivos con la 1.6.9 (laptop y tablet)');
   resetWorld();
   const laptop = device('laptop');
   const tablet = device('tablet');
@@ -831,7 +841,7 @@ async function clockSkew() {
 }
 
 async function withOldVersion() {
-  console.log('\n▶ Convivencia: laptop con la 1.6.8 y tablet aún con la 1.6.7 (móvil 1.1.3)');
+  console.log('\n▶ Convivencia: laptop con la 1.6.9 y tablet aún con la 1.6.7 (móvil 1.1.3)');
   resetWorld();
   const laptop = device('laptop');
   const tablet = device('tablet-1.6.7', '1.6.7');
@@ -859,11 +869,11 @@ async function withOldVersion() {
 
   console.log('\n 2. Cambios en cada uno');
   before = counters();
-  add(laptop, 'tasks', { id: 't9', title: 'Desde la 1.6.8', courseId: 'c1' });
-  timing('1.6.8 → 1.6.7', await until(() => !!find(tablet, 'tasks', 't9')));
+  add(laptop, 'tasks', { id: 't9', title: 'Desde la 1.6.9', courseId: 'c1' });
+  timing('1.6.9 → 1.6.7', await until(() => !!find(tablet, 'tasks', 't9')));
   await settle(20_000);
   edit(tablet, 'tasks', 't1', { title: 'Desde la 1.6.7' });
-  timing('1.6.7 → 1.6.8', await until(() => find(laptop, 'tasks', 't1')?.title === 'Desde la 1.6.7'));
+  timing('1.6.7 → 1.6.9', await until(() => find(laptop, 'tasks', 't1')?.title === 'Desde la 1.6.7'));
   check(await settle(20_000), 'se calma');
   m = since(before);
   traffic('tráfico', m);
@@ -905,10 +915,166 @@ async function oldPair() {
   shutdown();
 }
 
+async function favorites() {
+  console.log('\n▶ El corazón de las canciones (1.6.9)');
+  resetWorld();
+  const laptop = device('laptop');
+  const tablet = device('tablet');
+  load(laptop, fixture());
+  laptop.frame.start();
+  await sleep(120);
+  tablet.frame.start();
+  check(await settle(), 'primer encuentro: se calma');
+
+  const alpha = 'k:alpha\u001fana';
+  const beta = 'k:beta\u001fbruno';
+  const has = (dev, key) => (dev.frame.get('songFavorites') ?? []).some((entry) => entry.id === key);
+
+  console.log('\n 1. Corazón en la laptop');
+  let before = counters();
+  laptop.frame.put('songFavorites', [{ id: alpha }]);
+  timing('corazón → tablet', await until(() => has(tablet, alpha)));
+  check(await settle(), 'se calma');
+  traffic('tráfico', since(before));
+
+  console.log('\n 2. Otro en la tablet y quitar el primero en la laptop');
+  before = counters();
+  tablet.frame.put('songFavorites', [...(tablet.frame.get('songFavorites') ?? []), { id: beta }]);
+  timing('corazón de la tablet → laptop', await until(() => has(laptop, beta)));
+  laptop.frame.put('songFavorites', (laptop.frame.get('songFavorites') ?? []).filter((entry) => entry.id !== alpha));
+  timing('corazón quitado → tablet', await until(() => !has(tablet, alpha)));
+  check(await settle(), 'se calma');
+  traffic('tráfico', since(before));
+  check(differences(laptop, tablet).length === 0, 'los dos tienen lo mismo');
+  check(has(tablet, beta) && !has(tablet, alpha), 'la tablet tiene el corazón nuevo y no el quitado');
+  shutdown();
+}
+
+async function withPrevious() {
+  console.log('\n▶ Convivencia: laptop con la 1.6.9 y tablet aún con la 1.6.8 (móvil 1.1.4)');
+  resetWorld();
+  const laptop = device('laptop');
+  const tablet = device('tablet-1.6.8', '1.6.8');
+  load(laptop, fixture());
+  load(tablet, fixture());
+  const alpha = 'k:alpha\u001fana';
+
+  console.log('\n 1. Arrancan los dos');
+  let before = counters();
+  tablet.frame.start();
+  await sleep(300);
+  laptop.frame.start();
+  check(await settle(20_000), 'se calma (sin escrituras de ida y vuelta entre versiones)');
+  traffic('tráfico', since(before));
+
+  console.log('\n 2. Corazón en la 1.6.9; la 1.6.8 sigue editando');
+  before = counters();
+  laptop.frame.put('songFavorites', [{ id: alpha }]);
+  check(await settle(20_000), 'se calma');
+  for (let i = 1; i <= 3; i++) {
+    edit(tablet, 'tasks', 't1', { title: `Desde la 1.6.8 (${i})` });
+    timing(`edición ${i} de la 1.6.8 → 1.6.9`, await until(() => find(laptop, 'tasks', 't1')?.title === `Desde la 1.6.8 (${i})`));
+    check(await settle(20_000), 'se calma');
+  }
+  const m = since(before);
+  traffic('tráfico', m);
+  const cloudFavorites = cloud.row?.data?.data?.songFavorites ?? [];
+  check(cloudFavorites.some((entry) => entry.id === alpha), 'el corazón sigue en la nube aunque la 1.6.8 suba sin conocerlo');
+  check((laptop.frame.get('songFavorites') ?? []).some((entry) => entry.id === alpha), 'y en la laptop');
+  // Por cada edición de la 1.6.8: ella sube sin el corazón, la 1.6.9 lo repone
+  // y la 1.6.8 vuelve a escribir para aplanar sus marcas (3 en vez de 1). El
+  // corazón nuevo: 2. Acotado, y se acaba en cuanto la tablet se actualiza.
+  check(m.writes <= 2 + 3 * 3, `escrituras acotadas (${m.writes} de 11 como mucho)`);
+
+  console.log('\n 3. Diez segundos sin tocar nada');
+  before = counters();
+  await sleep(10_000);
+  const quiet = since(before);
+  traffic('tráfico', quiet);
+  check(quiet.writes === 0, 'nadie escribe sin cambios');
+  shutdown();
+}
+
+async function futureKeys() {
+  console.log('\n▶ Una clave de una versión más nueva (desde la 1.6.9 nadie la pierde)');
+  resetWorld();
+  const laptop = device('laptop');
+  const tablet = device('tablet');
+  load(laptop, fixture());
+  laptop.frame.start();
+  await sleep(120);
+  tablet.frame.start();
+  check(await settle(), 'primer encuentro: se calma');
+
+  // Otro dispositivo, con una versión futura, escribió una colección nueva.
+  const row = cloud.row;
+  const at = new Date().toISOString();
+  row.data.data.futureThing = [{ id: 'f1', v: 1 }];
+  row.data.meta.collections.futureThing = { f1: { u: at }, f0: { d: at } };
+  row.updated_at = at;
+  laptop.frame.setVisible(false);
+  laptop.frame.setVisible(true); // al volver al frente, sonda: la nube cambió
+  check(await settle(), 'se calma');
+
+  const before = counters();
+  edit(laptop, 'tasks', 't1', { title: 'Subida sin bajar' });
+  check(await settle(), 'se calma');
+  edit(tablet, 'tasks', 't2', { title: 'Y otra desde la tablet' });
+  check(await settle(), 'se calma');
+  traffic('tráfico', since(before));
+  const after = cloud.row?.data;
+  check(canonical(after?.data?.futureThing) === canonical([{ id: 'f1', v: 1 }]), 'sus datos siguen en la nube');
+  check(canonical(after?.meta?.collections?.futureThing) === canonical({ f1: { u: at }, f0: { d: at } }), 'con sus marcas y su lápida intactas');
+  shutdown();
+}
+
+async function images() {
+  console.log('\n▶ Imágenes de la galería entre dos dispositivos (asignaturas, colecciones y playlists)');
+  resetWorld();
+  const laptop = device('laptop');
+  const tablet = device('tablet');
+  const data = fixture();
+  delete data.imageRefs;
+  load(laptop, data);
+  laptop.frame.start();
+  await sleep(120);
+  tablet.frame.start();
+  check(await settle(), 'primer encuentro: se calma');
+
+  const picture = '/native_pictures/ciudades/central-park.webp';
+  const crop = [0, 0.126, 1, 0.748];
+  const out = [1280, 494];
+  const sides = [
+    [laptop, tablet, 'courseImage_c1', 'asignatura'],
+    [tablet, laptop, 'spaceImage_sp1', 'colección'],
+    [laptop, tablet, 'playlistImage_p1', 'playlist'],
+  ];
+  for (const [from, to, key, what] of sides) {
+    console.log(`\n Imagen de ${what}: ${from.name} → ${to.name}`);
+    const before = counters();
+    await from.frame.setImage(key, 'data:image/jpeg;base64,ZWxlZ2lkYQ==', { native: picture, crop, out });
+    const ms = await until(() => to.frame.imageEvents().includes(key));
+    timing(`imagen de ${what} → ${to.name}`, ms);
+    const record = await to.frame.image(key);
+    const drawn = record ? JSON.parse(atob(record.dataUrl.split(',')[1])) : null;
+    check(!!record && JSON.stringify(drawn?.box) === JSON.stringify([0, 83, 1280, 494, 0, 0, 1280, 494]), `${to.name} rehace el mismo encuadre (${JSON.stringify(drawn)})`);
+    check(await settle(), 'se calma');
+    traffic('tráfico', since(before));
+  }
+
+  console.log('\n Quitar la imagen de la asignatura en la tablet');
+  await tablet.frame.setImage('courseImage_c1', null);
+  const gone = await until(() => laptop.frame.imageEvents().filter((key) => key === 'courseImage_c1').length >= 2);
+  timing('quitar imagen → laptop', gone);
+  check((await laptop.frame.image('courseImage_c1')) === null, 'la laptop también la quita');
+  check(await settle(), 'se calma');
+  shutdown();
+}
+
 const started = Date.now();
-// --solo=dos|tres|relojes|convivencia|referencia corre solo ese grupo.
+// --solo=dos|tres|relojes|convivencia|anterior|futuro|imagenes|corazon|referencia corre solo ese grupo.
 const only = process.argv.find((arg) => arg.startsWith('--solo='))?.slice('--solo='.length);
-const groups = { dos: twoDevices, tres: threeDevices, relojes: clockSkew, convivencia: withOldVersion, referencia: oldPair };
+const groups = { dos: twoDevices, tres: threeDevices, relojes: clockSkew, convivencia: withOldVersion, anterior: withPrevious, futuro: futureKeys, imagenes: images, corazon: favorites, referencia: oldPair };
 for (const [name, run] of Object.entries(groups)) {
   if (only ? only === name : name !== 'referencia' || !process.argv.includes('--sin-referencia')) await run();
 }

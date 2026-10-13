@@ -25,7 +25,7 @@
 // claves ni de filas) para no escribir en la nube lo que ya está allí.
 // ============================================================
 
-import { type LocalSnapshot } from '@/lib/storage-snapshot';
+import { KNOWN_KEYS, type LocalSnapshot } from '@/lib/storage-snapshot';
 
 /** Colecciones: arrays de registros identificados por `id`. Se fusionan uno a uno. */
 const COLLECTION_KEYS = [
@@ -54,6 +54,9 @@ const COLLECTION_KEYS = [
   // Imágenes de asignaturas, colecciones y playlists POR REFERENCIA (1.6.8):
   // la de la galería viaja como su código y su encuadre; la propia, no.
   'imageRefs',
+  // Canciones con corazón (1.6.9, id = la clave de la canción): quitar el
+  // corazón deja una lápida, así que también viaja.
+  'songFavorites',
 ] as const;
 
 /**
@@ -68,14 +71,39 @@ const COLLECTION_KEYS = [
 export const RETIRED_KEYS: ReadonlySet<string> = new Set(['classSessions', 'schedules', 'playHistory', 'headerQuote', 'school']);
 
 /**
- * Colecciones que la 1.6.7 (móvil 1.1.3) no conoce como tales: al escribir,
- * conserva sus registros pero pierde sus marcas (y les pone una suelta). La
- * huella del estado no cuenta esas marcas; sus registros, sí. Si las contara,
- * la 1.6.8 las restituiría tras cada escritura de la 1.6.7 y la 1.6.7 las
- * volvería a quitar: un reenvío sin fin entre las dos (lo encontró la prueba
- * de dos dispositivos, scripts/probar-sincronizacion.mjs).
+ * Colecciones que una versión anterior no conoce como tales (`studyVideos` e
+ * `imageRefs`: la 1.6.7 / móvil 1.1.3; `songFavorites`: también la 1.6.8 /
+ * 1.1.4): al escribir, conserva sus registros pero pierde sus marcas (y les
+ * pone una suelta). La huella del estado no cuenta esas marcas; sus
+ * registros, sí. Si las contara, la versión nueva las restituiría tras cada
+ * escritura de la anterior y la anterior las volvería a quitar: un reenvío
+ * sin fin entre las dos (lo encontró la prueba de dos dispositivos,
+ * scripts/probar-sincronizacion.mjs). Desde la 1.6.9 una versión conserva
+ * intacto lo que no conoce (ver `isForeign`): esta lista ya no crece.
  */
-const MARKS_LOST_BY_OLD = new Set(['studyVideos', 'imageRefs']);
+const MARKS_LOST_BY_OLD = new Set(['studyVideos', 'imageRefs', 'songFavorites']);
+
+/**
+ * Clave de la nube que esta versión no conoce: la añadió una versión más
+ * nueva. Desde la 1.6.9 viaja intacta (datos y marcas) aunque aquí no se use.
+ * Hasta la 1.6.8 el camino «solo subir» la borraba de la nube y la fusión le
+ * quitaba las marcas.
+ */
+const isForeign = (key: string): boolean => !KNOWN_KEYS.has(key) && !RETIRED_KEYS.has(key);
+const foreignKey = (uid: string) => `syncForeign_${uid}`;
+
+/**
+ * El estado con lo que este dispositivo guarda de la nube sin conocerlo. Sus
+ * marcas ya están en la contabilidad (la guarda `commitState`); aquí se
+ * añaden los datos.
+ */
+export function withForeign(uid: string, state: SyncState): SyncState {
+  const stored = readJson<LocalSnapshot | null>(foreignKey(uid), null);
+  if (!stored || typeof stored !== 'object') return state;
+  const data: LocalSnapshot = { ...state.data };
+  for (const [key, value] of Object.entries(stored)) if (isForeign(key) && !(key in data)) data[key] = value;
+  return { ...state, data };
+}
 
 /** Las lápidas se conservan dos meses: tiempo de sobra para que un
  *  dispositivo apagado se entere del borrado sin engordar el respaldo. */
@@ -400,6 +428,17 @@ export function mergeStates(local: SyncState, remote: SyncState, now: Iso): Sync
   for (const key of keys) {
     if (RETIRED_KEYS.has(key)) continue;
 
+    // De una versión más nueva: tal cual la tiene la nube (datos y marcas). Lo
+    // de aquí es la copia de la última vez; solo cuenta si la nube la perdió
+    // (la borró al subir un dispositivo con la 1.6.8 o anterior).
+    if (isForeign(key)) {
+      const source = key in remote.data ? remote : local;
+      merged[key] = source.data[key];
+      if (source.meta.collections[key]) meta.collections[key] = source.meta.collections[key];
+      if (source.meta.scalars[key]) meta.scalars[key] = source.meta.scalars[key];
+      continue;
+    }
+
     if (!isCollection(key)) {
       const localAt = local.meta.scalars[key];
       const remoteAt = remote.meta.scalars[key];
@@ -516,7 +555,7 @@ export function statePrint(state: SyncState): string {
 
 /** Huella del estado de ESTE dispositivo (sus datos en forma de nube y su contabilidad). */
 export function localStatePrint(uid: string, data: LocalSnapshot): string {
-  return statePrint({ data, meta: readJson<SyncMeta>(metaKey(uid), emptyMeta()), v: 2 });
+  return statePrint(withForeign(uid, { data, meta: readJson<SyncMeta>(metaKey(uid), emptyMeta()), v: 2 }));
 }
 
 /** Un cambio de este dispositivo que aún no está en la nube (para el verificador). */
@@ -613,6 +652,15 @@ export function commitState(uid: string, state: SyncState): void {
     localStorage.removeItem(editsKey(uid));
   } catch {
     /* sin espacio: se reintentará en el próximo ciclo */
+  }
+  // Lo que esta versión no conoce se guarda aparte para no quitárselo a la
+  // nube al subir sin bajar (withForeign).
+  try {
+    const foreign = Object.fromEntries(Object.entries(state.data).filter(([key]) => isForeign(key)));
+    if (Object.keys(foreign).length > 0) localStorage.setItem(foreignKey(uid), JSON.stringify(foreign));
+    else localStorage.removeItem(foreignKey(uid));
+  } catch {
+    /* sin espacio: la nube lo conserva igual; solo se perdería al subir sin bajar */
   }
   try {
     localStorage.setItem(baseKey(uid), JSON.stringify(compactBase(state.data)));

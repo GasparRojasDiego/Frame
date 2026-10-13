@@ -12,7 +12,7 @@
 
 import { TERMS_VERSION } from './terms';
 
-export const INFO_VERSION = '5.0';
+export const INFO_VERSION = '5.1';
 
 export function infoDocument({
   appVersion,
@@ -150,6 +150,8 @@ Se ofrece soporte para la versión estable vigente y para la inmediatamente ante
 ## 8 · Historial de versiones
 
 **${appVersion} — ${releaseDate}**
+
+*1.6.9:* las **imágenes de la galería** que pones a asignaturas, colecciones y playlists por fin aparecen en tus otros dispositivos (llegaban, pero no se dibujaban) · **el corazón de las canciones** también viaja entre tus dispositivos, por su título y artista · Frame guarda lo que una versión más nueva añada a tu respaldo, aunque no lo use · **Panel de uso** a fondo para el responsable de Frame: mapa del mundo, continentes, países y ciudades, una tarjeta por estudiante con su detalle, plazos de un día a un año o a elegir, en qué horas se estudia, qué funciones se usan, retención por cohortes y un **Reporte** en Word, PDF o Markdown · Términos y Política de privacidad 5.1: el perfil de uso que se envía (ciudad aproximada, zona horaria, idiomas, tipo de equipo, horas de estudio y cuántos elementos tienes de cada función, nunca su contenido).
 
 *1.6.8:* **sincronización a fondo**: cada cambio llega a tus otros dispositivos en menos de un segundo, cifrado, por el canal de tu cuenta, y la nube recibe solo lo necesario; el respaldo ya no se reenvía sin parar · ahora también viajan **el orden de las playlists y de sus canciones**, **el idioma**, **la proporción de las imágenes** de las tarjetas, la ciudad del clima elegida a mano, los **vídeos de estudio** y las imágenes de la galería de Frame en asignaturas, colecciones y playlists (como un código, no la imagen entera); las imágenes que subes tú se quedan en su dispositivo y Frame te explica por qué · **verificador de sincronización** en la campana: cuántas cosas no están igual en tus dispositivos, dónde y por qué · si dos dispositivos cambian lo mismo, gana el cambio más reciente, aunque uno estuviera sin conexión · **Gmail y Classroom** vuelven a dejarte iniciar sesión · **calendario**: el mes y sus flechas con más aire, y casillas que se adaptan al alto de la ventana; «Nuevo evento» más compacto, con la hora y **el mismo recordatorio que las tareas** · **Ajustes** en orden también con Frame a media pantalla; en Informes, selectores neutros, «PDF» en gris y «Word» en azul · fondo sin constelación · menú lateral con menos margen arriba y abajo · Términos y Política de privacidad 5.0: qué imágenes viajan y cuáles no.
 

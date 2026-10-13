@@ -49,6 +49,7 @@ import { foldName, isJunkTag } from '@/lib/song-names';
 import { activeProfileId, ownerForUnownedSongs } from '@/lib/profile-scope';
 import { songTitle } from '@/lib/music-search';
 import { localizePlaylists, rememberSongKeys, setLibraryIds, songKey } from '@/lib/song-keys';
+import { favoritesToApply, setSongFavorite } from '@/lib/song-favorites';
 import { emit as tauriEmit, listen as tauriListen } from '@tauri-apps/api/event';
 import { format, parseISO } from 'date-fns';
 import { isSessionEditable } from '@/lib/session-edit';
@@ -445,6 +446,20 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
   const nextSeqRef = React.useRef(0);
   const [areSongsLoading, setAreSongsLoading] = useState(true);
 
+  /** Pone el corazón de cada canción como dice la lista de favoritos (y lo guarda). */
+  const applyFavorites = useCallback((uid: string) => {
+    const changed = favoritesToApply(uid, songsRef.current);
+    if (changed.length === 0) return;
+    const favorite = new Map(changed.map((song) => [song.id, Boolean(song.isFavorite)]));
+    const patch = <T extends Song>(song: T): T => (favorite.has(song.id) ? { ...song, isFavorite: favorite.get(song.id) } : song);
+    songsRef.current = songsRef.current.map(patch);
+    setSongs(prev => prev.map(patch));
+    setPlaybackQueue(prev => prev.map(patch));
+    setCurrentSong(prev => (prev ? patch(prev) : prev));
+    for (const song of changed) void saveSongMetadata(song).catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Índice id → clave de cada canción (song-keys.ts): las playlists viajan por
   // la clave, igual en todos los dispositivos, y cada uno la traduce a su id.
   useEffect(() => {
@@ -455,8 +470,19 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     if (localizePlaylists(userProfile.id)) {
       setPlaylists(byOrder(getArrayFromLocalStorage<Playlist>(`playlists_${userProfile.id}`)));
     }
+    // El corazón de cada canción, al día con la lista que viaja (song-favorites.ts).
+    applyFavorites(userProfile.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userProfile?.id, songs, areSongsLoading]);
+  // Y cada vez que llega algo de otro dispositivo.
+  useEffect(() => {
+    if (!userProfile || areSongsLoading) return;
+    const uid = userProfile.id;
+    const onCloud = () => applyFavorites(uid);
+    window.addEventListener(CLOUD_APPLIED_EVENT, onCloud);
+    return () => window.removeEventListener(CLOUD_APPLIED_EVENT, onCloud);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfile?.id, areSongsLoading]);
   const [studyGoals, setStudyGoals] = useState<StudyGoals>(defaultStudyGoals);
   const [streakGoal, setStreakGoal] = useState<StreakGoal>(defaultStreakGoal);
   const [selectionMode, setSelectionModeState] = useState<SelectionMode>('rendimiento');
@@ -2642,6 +2668,9 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
       if (!base) return;
       const isFavorite = !base.isFavorite;
       const updatedSong: Song = { ...base, isFavorite };
+      // Primero la lista que viaja: así el corazón llega a los demás dispositivos.
+      const uid = userProfile?.id;
+      if (uid) setSongFavorite(uid, base, isFavorite);
       songsRef.current = songsRef.current.map(s => (s.id === id ? updatedSong : s));
 
       setSongs(prev => prev.map(s => (s.id === id ? { ...s, isFavorite } : s)));
@@ -2654,10 +2683,11 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
         // Sin guardado no hay favorito: se devuelve el corazón a como estaba
         // en vez de dejar en pantalla algo que no sobrevivirá al reinicio.
         console.error('No se pudo guardar el favorito', id, e);
+        if (uid) setSongFavorite(uid, base, !isFavorite);
         setSongs(prev => prev.map(s => (s.id === id ? { ...s, isFavorite: !isFavorite } : s)));
         setCurrentSong(prev => (prev?.id === id ? { ...prev, isFavorite: !isFavorite } : prev));
       }
-  }, []);
+  }, [userProfile?.id]);
 
   const playSong = useCallback((song: Song, options?: { context?: string, queue?: Song[], href?: string }) => {
       const newQueue = options?.queue || songs;

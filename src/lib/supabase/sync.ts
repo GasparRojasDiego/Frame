@@ -8,6 +8,7 @@ import {
   fingerprint,
   localStatePrint,
   statePrint,
+  withForeign,
   type SyncState,
 } from '@/lib/sync-merge';
 import { isAccountDeletionInProgress } from '@/lib/account-deletion';
@@ -155,7 +156,8 @@ async function syncOnce(uid: string): Promise<SyncResult> {
     // --- Solo subir: la nube sigue como la dejamos, así que lo local con sus
     //     marcas nuevas ES la fusión. No hace falta bajar nada. ---
     if (remoteUnchanged && cursor) {
-      const local = buildLocalState(uid, localData, now);
+      // Con lo que la nube tiene de versiones más nuevas: subir sin ello lo borraría.
+      const local = withForeign(uid, buildLocalState(uid, localData, now));
       const print = statePrint(local);
       // Lo de aquí solo cambió de forma (el orden de una lista, al reescribirla
       // la interfaz): la nube ya tiene exactamente esto.
@@ -186,7 +188,7 @@ async function syncOnce(uid: string): Promise<SyncResult> {
       .maybeSingle<RemoteRow>();
     if (readError) return { ok: false, applied: false, error: readError.message };
 
-    const local = buildLocalState(uid, localData, now);
+    const local = withForeign(uid, buildLocalState(uid, localData, now));
     const remote = row ? normalizeRemote(row.data, row.updated_at) : null;
     const merged: SyncState = remote ? mergeStates(local, remote, now) : local;
     // Lo fusionado ya es lo que hay en la nube: nada que escribir.

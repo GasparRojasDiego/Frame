@@ -58,7 +58,13 @@ export const SCOPED_KEYS = [
   // Clave que cifra los cambios que viajan por el canal en vivo (1.6.8,
   // sync-delta.ts). Solo la leen los dispositivos de la cuenta.
   'syncKey',
+  // Canciones con corazón (1.6.9, song-favorites.ts): una ficha por canción,
+  // identificada por su clave (título y artista), como en las playlists.
+  'songFavorites',
 ] as const;
+
+/** Las claves que esta versión conoce (lo demás de la nube es de una versión más nueva). */
+export const KNOWN_KEYS: ReadonlySet<string> = new Set(SCOPED_KEYS);
 
 export type LocalSnapshot = Record<string, unknown>;
 

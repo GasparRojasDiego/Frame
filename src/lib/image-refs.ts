@@ -157,6 +157,8 @@ export interface ImageRefsReport {
 
 let lastReport: ImageRefsReport = { ownElsewhere: [], missing: [] };
 export const imageRefsReport = () => lastReport;
+/** Cambió lo que el verificador de sincronización dice de las imágenes. */
+export const IMAGE_REFS_EVENT = 'frame:image-refs';
 
 /** Pone las imágenes de aquí al día con las referencias que llegaron. */
 export async function reconcileImageRefs(uid: string): Promise<ImageRefsReport> {
@@ -201,7 +203,10 @@ export async function reconcileImageRefs(uid: string): Promise<ImageRefsReport> 
       /* se volvería a avisar: mejor que no avisar */
     }
   }
+  const changed = JSON.stringify(report) !== JSON.stringify(lastReport);
   lastReport = report;
+  // El verificador se recalcula al momento, no en su vuelta de cada 2 min.
+  if (changed) window.dispatchEvent(new Event(IMAGE_REFS_EVENT));
   return report;
 }
 
@@ -217,7 +222,11 @@ export function startImageRefs(uid: string, onReport?: (report: ImageRefsReport)
     }
     running = true;
     try {
-      onReport?.(await reconcileImageRefs(uid));
+      // En dos pasos a propósito: `onReport?.(await …)` no evalúa su argumento
+      // si no hay `onReport`, y así (sin él, como lo llama layout.tsx) la 1.6.8
+      // nunca rehacía las imágenes que llegaban (Diego, 13-oct-2026).
+      const report = await reconcileImageRefs(uid);
+      onReport?.(report);
     } catch {
       /* el siguiente aviso lo reintenta */
     } finally {
@@ -235,7 +244,8 @@ export function startImageRefs(uid: string, onReport?: (report: ImageRefsReport)
       void run();
     }, delay);
   };
-  const onCloud = () => schedule(300);
+  // Lo que llega se rehace en cuanto llega (varios avisos seguidos: una sola vuelta).
+  const onCloud = () => schedule(60);
   window.addEventListener(CLOUD_APPLIED_EVENT, onCloud);
   schedule(1500);
   return () => {

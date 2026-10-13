@@ -5,7 +5,7 @@
 //
 // El NOMBRE del lugar detectado automáticamente lo resuelve
 // `@/lib/reverse-geocode` (Open-Meteo sólo hace geocoding directo).
-import { reverseGeocode, formatCoords, type GeoSource } from '@/lib/reverse-geocode';
+import { cleanCountryCode, reverseGeocode, formatCoords, type GeoSource } from '@/lib/reverse-geocode';
 import { activeProfileId, weatherCacheKey, weatherImagesKey, weatherPlaceKey } from '@/lib/profile-scope';
 import { getLang, tr, type Lang } from '@/lib/i18n';
 
@@ -53,6 +53,8 @@ export interface WeatherPlace {
   name: string;
   admin?: string;
   country?: string;
+  /** Código ISO del país (1.6.9). Los lugares guardados antes no lo tienen. */
+  countryCode?: string;
   latitude: number;
   longitude: number;
   /** true si la ubicación se detectó automáticamente (GPS o IP) */
@@ -138,6 +140,7 @@ async function buildAutoPlace(
     locality: named?.locality,
     admin: named?.admin,
     country: named?.country,
+    countryCode: named?.countryCode,
     latitude,
     longitude,
     accuracy: opts.accuracy,
@@ -173,6 +176,7 @@ export async function locatePlace(): Promise<WeatherPlace | null> {
           name: city || place.name,
           admin: typeof d.region === 'string' ? d.region : undefined,
           country: typeof d.country_name === 'string' ? d.country_name : undefined,
+          countryCode: cleanCountryCode(d.country_code),
           resolved: !!city,
         };
       }
@@ -226,7 +230,7 @@ export async function resolvePlaceName(place: WeatherPlace): Promise<WeatherPlac
   // Elegido a mano: el nombre es el que eligió la persona; solo se traducen
   // la región y el país.
   if (!place.auto) {
-    return { ...place, admin: named.admin ?? place.admin, country: named.country ?? place.country, lang: getLang(), langTriedAt: getLang(), resolvedAt: Date.now() };
+    return { ...place, admin: named.admin ?? place.admin, country: named.country ?? place.country, countryCode: named.countryCode ?? place.countryCode, lang: getLang(), langTriedAt: getLang(), resolvedAt: Date.now() };
   }
   return {
     ...place,
@@ -234,6 +238,7 @@ export async function resolvePlaceName(place: WeatherPlace): Promise<WeatherPlac
     locality: named.locality,
     admin: named.admin ?? place.admin,
     country: named.country ?? place.country,
+    countryCode: named.countryCode ?? place.countryCode,
     resolved: true,
     source: place.source === 'ip' ? 'ip' : named.source,
     resolvedAt: Date.now(),
@@ -252,6 +257,7 @@ export async function searchPlaces(query: string): Promise<WeatherPlace[]> {
     name: r.name,
     admin: r.admin1,
     country: r.country,
+    countryCode: cleanCountryCode(r.country_code),
     latitude: r.latitude,
     longitude: r.longitude,
     resolved: true,

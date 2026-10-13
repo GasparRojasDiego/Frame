@@ -22,6 +22,7 @@ import { errorText, tr } from '@/lib/i18n';
 const FORMAT_NOTE: Record<ReportFormat, string> = {
   get pdf() { return tr('Elige «Guardar como PDF» en el diálogo de impresión.'); },
   get docx() { return tr('Documento de Word, editable.'); },
+  get md() { return tr('Texto en Markdown, para cualquier editor.'); },
 };
 
 export function useReportExport() {

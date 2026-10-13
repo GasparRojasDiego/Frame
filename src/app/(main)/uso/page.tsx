@@ -1,21 +1,23 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { differenceInCalendarDays, format, formatDistanceToNowStrict, parseISO } from 'date-fns';
+import { formatDistanceToNowStrict, parseISO } from 'date-fns';
 import {
   Activity,
   AlertTriangle,
-  ArrowDownUp,
   CalendarDays,
-  ChevronLeft,
-  ChevronRight,
+  CheckCircle2,
   Clock3,
   Download,
   FileText,
+  Flame,
+  Globe2,
   LoaderCircle,
-  Monitor,
+  Repeat,
   RefreshCw,
-  Smartphone,
+  Sparkles,
+  Target,
   Users,
+  X,
 } from 'lucide-react';
 import {
   Area,
@@ -24,14 +26,16 @@ import {
   BarChart,
   CartesianGrid,
   ComposedChart,
+  Legend,
   Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,155 +44,141 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCourse } from '@/context/CourseContext';
 import { useReportExport } from '@/hooks/use-report-export';
 import { useToast } from '@/hooks/use-toast';
-import { buildImpactDoc, type ImpactData, type UsageSummary } from '@/lib/impact-report';
 import type { ReportFormat } from '@/lib/report-export';
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { isFrameOwner } from '@/lib/owner';
 import { cn } from '@/lib/utils';
-import { dateLocale, intlLocale, tr } from '@/lib/i18n';
+import { dateLocale, decimalText, tr } from '@/lib/i18n';
+import {
+  adoptionOf,
+  byCity,
+  byContinent,
+  byCountry,
+  cohortsOf,
+  continentOf,
+  countBy,
+  dormant,
+  hoursOf,
+  isoOfDay,
+  isOutdated,
+  naturalGrouping,
+  newestVersions,
+  peakWindow,
+  presetRange,
+  seriesOf,
+  seriesTotals,
+  stickinessSeries,
+  sum,
+  sumMatrices,
+  summarize,
+  weekdaysOf,
+  weekTwoReturn,
+  type Grouping,
+  type Preset,
+  type Range,
+  type UserDetail,
+  type UsageSnapshot,
+} from '@/lib/usage-model';
+import {
+  axisTick,
+  bucketLabel,
+  CONTINENT_LABEL,
+  countryName,
+  dayLabel,
+  DEVICE_LABEL,
+  Donut,
+  EVENT_LABEL,
+  FEATURE_LABEL,
+  hourLabel,
+  Kpi,
+  LANG_LABEL,
+  LEVEL_HINT,
+  LEVEL_LABEL,
+  hoursTick,
+  minutesLabel,
+  netError,
+  plural,
+  numberLabel,
+  Panel,
+  pctLabel,
+  PLATFORM_LABEL,
+  RankList,
+  SCREEN_LABEL,
+  tooltipStyle,
+  WeekHeat,
+  weekdayShort,
+} from '@/components/uso/UsageBits';
+import WorldMap from '@/components/uso/WorldMap';
+import StudentsTab from '@/components/uso/StudentsTab';
+import type { Continent } from '@/lib/world-map';
 
 // ============================================================
-// Panel de uso — solo para el responsable de Frame.
+// Panel de uso — solo para el responsable de Frame (1.6.9, a fondo).
 //
-// Responde a la pregunta de quien mantiene la app: ¿cuántos estudiantes la
-// usan, cuánto y con qué? Todo sale de `usage_overview` (Supabase), que
-// agrega en el servidor datos seudónimos (identificador aleatorio, nunca
-// nombres ni contenido), deja fuera la cuenta del propio responsable y solo
-// le responde a ella: cualquier otra sesión recibe «permiso denegado».
+// Pedido de Diego (13-oct-2026): con un público grande, reunir todo lo útil
+// para acreditar que Frame sirve de verdad y su impacto en varias
+// dimensiones, sin vulnerar la privacidad de nadie y sin castigar la base de
+// datos. Así:
 //
-// Desde la 1.5.7:
-//   · Los errores ya no se miran aquí: se agrupan solos en `error_log`
-//     (migración 0008) y se corrigen desde el código.
-//   · El antiguo apartado «Impacto» es un informe PDF/Word (botón de arriba).
-// Desde la 1.5.9 no hay «Institución» ni «Sugerencias»: los eventos y
-// pantallas que ya no existen no se listan.
+//   · El servidor calcula una FOTO del panel como mucho cada 6 h (o 12 o 24,
+//     a elegir; o al pulsar «Actualizar ahora»): `usage_snapshot`, migración
+//     0012. Este dispositivo guarda la última y la muestra al instante.
+//   · El plazo (de un día a un año, o el que se elija) y la agrupación (día,
+//     tres días, semana o mes) se calculan aquí, sin volver a preguntar
+//     (usage-model.ts). Igual el filtro por continente o país del mapa, que
+//     se aplica a todas las pestañas.
+//   · Cada estudiante tiene su tarjeta; su ficha (cuándo estudia, sus
+//     semanas, su actividad reciente) se pide solo al abrirla.
+//   · «Reporte»: todo esto en Word, PDF o Markdown (usage-report.ts).
 //
-// La interfaz no existe para el resto: la ruta redirige a Inicio.
+// La cuenta del responsable no cuenta en ninguna cifra. Para el resto, la
+// ruta no existe: redirige a Inicio (y el servidor responde «permiso
+// denegado» a cualquier otra cuenta).
 // ============================================================
 
-interface StudentRow {
-  id: string;
-  guest: boolean;
-  country: string | null;
-  version: string | null;
-  platform: string | null;
-  first_seen: string;
-  last_seen: string;
-  minutes: number | null;
-  sessions: number | null;
-  tasks: number | null;
-  courses: number | null;
-  habits: number | null;
-  songs: number | null;
-  active_days: number;
-}
+const CACHE_KEY = 'usagePanelSnapshot_v1';
+const HOURS_KEY = 'usagePanelHours';
+const HOURS_OPTIONS = [6, 12, 24] as const;
+type Hours = (typeof HOURS_OPTIONS)[number];
 
-interface Overview {
-  generated_at: string;
-  days: number;
-  since: string;
-  today: string;
-  totals: {
-    users_total: number;
-    accounts_total: number;
-    guests_total: number;
-    users_new: number;
-    active_today: number;
-    active_7d: number;
-    active_30d: number;
-    active_period: number;
-    sessions_period: number;
-    minutes_period: number;
-    tasks_period: number;
-    opens_period: number;
-    study_minutes_all: number;
-    sessions_all: number;
-    tasks_all: number;
-  };
-  retention: { this_week: number; prev_week: number; retained: number };
-  recency: { today: number; week: number; month: number; older: number };
-  study_buckets: { none: number; lt1h: number; h1_5: number; h5_20: number; h20: number };
-  daily: { date: string; active_users: number; sessions: number; minutes: number; tasks: number; opens: number }[];
-  versions: { version: string; platform: string; users: number }[];
-  countries: { country: string; users: number }[];
-  platforms: { platform: string; users: number }[];
-  screens: { screen: string; views: number; users: number }[];
-  events: { event: string; count: number; users: number }[];
-  reports: { format: string; count: number }[];
-  weekly: { week_start: string; users: number; sessions: number; minutes: number; tasks: number }[];
-  users: StudentRow[];
-}
+type Tab = 'summary' | 'students' | 'map' | 'when' | 'features' | 'retention' | 'quality';
 
-/** Resumen de invitados (función `guest_overview`, migración 0006). */
-interface GuestOverview {
-  started_period: number;
-  started_today: number;
-  resumed_period: number;
-  linked_period: number;
-  linked_today: number;
-  guests_total: number;
-  guests_active_7d: number;
-}
-
-type Period = 7 | 30 | 90;
-
-const EVENT_LABELS: Record<string, string> = {
-  get app_open() { return tr('Aperturas de la app'); },
-  get screen_view() { return tr('Interfaces abiertas'); },
-  get study_session_end() { return tr('Sesiones de estudio'); },
-  get task_created() { return tr('Tareas creadas'); },
-  get task_completed() { return tr('Tareas culminadas'); },
-  get task_incomplete() { return tr('Tareas no culminadas'); },
-  get habit_checked() { return tr('Hábitos marcados'); },
-  get report_generated() { return tr('Informes generados'); },
-  get account_signed_in() { return tr('Inicios de sesión'); },
-  get guest_started() { return tr('Entradas como invitado'); },
-  get guest_linked() { return tr('Invitados que vincularon Google'); },
-  get help_asked() { return tr('Preguntas a la ayuda (hasta la 1.6.6)'); },
-  get help_tour() { return tr('Recorridos «Descubrir» (hasta la 1.6.4)'); },
+const PRESET_LABEL: Record<Preset, () => string> = {
+  '1': () => tr('Hoy'),
+  '3': () => tr('3 días'),
+  '7': () => tr('7 días'),
+  '30': () => tr('30 días'),
+  '90': () => tr('90 días'),
+  '365': () => tr('1 año'),
+  custom: () => tr('Personalizado'),
 };
 
-const SCREEN_LABELS: Record<string, string> = {
-  get '/'() { return tr('Inicio'); },
-  get '/temporizador'() { return tr('Estudio'); },
-  get '/tareas'() { return tr('Tareas'); },
-  get '/habitos'() { return tr('Hábitos'); },
-  get '/cursos'() { return tr('Asignatura (detalle)'); },
-  get '/knowledge'() { return tr('Asignaturas'); },
-  get '/calendario'() { return tr('Calendario'); },
-  '/gmail': 'Gmail',
-  '/youtube': 'YouTube',
-  '/drive': 'Drive',
-  '/classroom': 'Classroom',
-  get '/music'() { return tr('Música'); },
-  get '/playlists'() { return tr('Playlists'); },
-  get '/settings'() { return tr('Ajustes'); },
-  get '/ayuda'() { return tr('Ayuda (hasta la 1.6.6)'); },
-  get '/presentacion'() { return tr('Presentación'); },
-  get '/uso'() { return tr('Uso'); },
+const GROUPING_LABEL: Record<Grouping, () => string> = {
+  day: () => tr('Por día'),
+  '3days': () => tr('Cada 3 días'),
+  week: () => tr('Por semana'),
+  month: () => tr('Por mes'),
 };
 
-const PLATFORM_LABEL: Record<string, string> = { windows: 'Windows', android: 'Android' };
-
-const minutesLabel = (minutes: number) => {
-  const m = Math.round(minutes);
-  const h = Math.floor(m / 60);
-  // Con cientos de horas los minutos sobran y rompen la línea del recuadro.
-  if (h >= 100) return `${h.toLocaleString(intlLocale())} h`;
-  return h > 0 ? `${h} h ${m % 60} min` : `${m} min`;
-};
-
-const dayLabel = (iso: string) => {
+function readCache(): UsageSnapshot | null {
   try {
-    return format(parseISO(iso), tr('d MMM'), { locale: dateLocale() });
+    const raw = localStorage.getItem(CACHE_KEY);
+    const parsed = raw ? (JSON.parse(raw) as UsageSnapshot) : null;
+    return parsed?.v === 1 ? parsed : null;
   } catch {
-    return iso;
+    return null;
   }
-};
+}
+
+function readHours(): Hours {
+  const value = Number(localStorage.getItem(HOURS_KEY));
+  return (HOURS_OPTIONS as readonly number[]).includes(value) ? (value as Hours) : 6;
+}
 
 const ago = (iso: string) => {
   try {
@@ -198,535 +188,203 @@ const ago = (iso: string) => {
   }
 };
 
-/** '1.5.10' frente a '1.5.9', por números. */
-const compareVersions = (a: string, b: string) => {
-  const pa = a.split('.').map((n) => Number(n) || 0);
-  const pb = b.split('.').map((n) => Number(n) || 0);
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    const diff = (pa[i] ?? 0) - (pb[i] ?? 0);
-    if (diff !== 0) return diff;
-  }
-  return 0;
+const dayFromInput = (value: string, snapshot: UsageSnapshot): number | null => {
+  const time = Date.parse(`${value}T12:00:00Z`);
+  if (Number.isNaN(time)) return null;
+  return Math.round((time - Date.parse(`${snapshot.epoch}T12:00:00Z`)) / 86_400_000);
 };
-
-const tooltipStyle = {
-  backgroundColor: 'hsl(var(--background))',
-  borderColor: 'hsl(var(--border))',
-  borderRadius: 8,
-  fontSize: 12,
-};
-
-// ------------------------------------------------------------
-// Piezas
-// ------------------------------------------------------------
-
-function Kpi({
-  icon: Icon,
-  label,
-  value,
-  hint,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  value: string | number;
-  hint?: string;
-}) {
-  return (
-    <Card className="border-border/70">
-      <CardContent className="flex items-start gap-3 p-4">
-        <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/15 text-primary">
-          <Icon className="h-4 w-4" />
-        </span>
-        <div className="min-w-0">
-          <p className="text-[10px] font-bold text-muted-foreground">{label}</p>
-          <p className="font-headline text-2xl font-bold tabular-nums text-foreground">{value}</p>
-          {hint && <p className="text-[11px] text-muted-foreground">{hint}</p>}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-/** Lista con barras proporcionales, para pantallas, actividad y versiones. */
-function RankList({
-  title,
-  rows,
-  empty,
-  limit = 8,
-}: {
-  title: string;
-  rows: { label: string; value: number; extra?: string; muted?: boolean }[];
-  empty: string;
-  limit?: number;
-}) {
-  const max = Math.max(1, ...rows.map((r) => r.value));
-  return (
-    <Card className="border-border/70">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-headline text-muted-foreground">{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2 pt-3">
-        {rows.length === 0 ? (
-          <p className="py-4 text-center text-xs text-muted-foreground">{empty}</p>
-        ) : (
-          rows.slice(0, limit).map((r) => (
-            <div key={r.label} className="space-y-0.5">
-              <div className="flex items-center justify-between gap-2 text-xs">
-                <span className={cn('truncate', r.muted ? 'text-muted-foreground' : 'text-foreground')}>{r.label}</span>
-                <span className="shrink-0 tabular-nums text-muted-foreground">
-                  {r.value}
-                  {r.extra && <span className="text-muted-foreground/70"> · {r.extra}</span>}
-                </span>
-              </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
-                <div
-                  className={cn('h-full rounded-full', r.muted ? 'bg-muted-foreground/40' : 'bg-primary/70')}
-                  style={{ width: `${(r.value / max) * 100}%` }}
-                />
-              </div>
-            </div>
-          ))
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-/** Barra apilada horizontal con leyenda: el reparto de un vistazo. */
-function SplitBar({
-  segments,
-  active,
-  onSelect,
-}: {
-  segments: { id: string; label: string; value: number; className: string }[];
-  active?: string | null;
-  onSelect?: (id: string | null) => void;
-}) {
-  const total = segments.reduce((acc, s) => acc + s.value, 0);
-  return (
-    <div className="space-y-2">
-      <div className="flex h-2.5 overflow-hidden rounded-full bg-secondary">
-        {total > 0 &&
-          segments.map((s) =>
-            s.value > 0 ? (
-              <div
-                key={s.id}
-                className={cn(s.className, 'transition-opacity', active && active !== s.id && 'opacity-30')}
-                style={{ width: `${(s.value / total) * 100}%` }}
-              />
-            ) : null
-          )}
-      </div>
-      <div className="flex flex-wrap gap-1.5">
-        {segments.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            disabled={!onSelect || s.value === 0}
-            onClick={() => onSelect?.(active === s.id ? null : s.id)}
-            className={cn(
-              'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] transition-colors',
-              active === s.id ? 'border-primary bg-primary/10 text-foreground' : 'border-border/70 text-muted-foreground',
-              onSelect && s.value > 0 && 'hover:border-primary/60',
-              s.value === 0 && 'opacity-50'
-            )}
-          >
-            <span className={cn('h-2 w-2 rounded-full', s.className)} />
-            {s.label}
-            <span className="font-semibold tabular-nums text-foreground">{s.value}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ------------------------------------------------------------
-// Estudiantes: tabla ordenable, filtrable y paginada
-// ------------------------------------------------------------
-
-type Recency = 'today' | 'week' | 'month' | 'older';
-type SortKey = 'last_seen' | 'minutes' | 'active_days' | 'tasks' | 'first_seen';
-
-const PAGE_SIZE = 8;
-
-const recencyOf = (iso: string): Recency => {
-  try {
-    const days = differenceInCalendarDays(new Date(), parseISO(iso));
-    if (days <= 0) return 'today';
-    if (days <= 6) return 'week';
-    if (days <= 29) return 'month';
-    return 'older';
-  } catch {
-    return 'older';
-  }
-};
-
-const RECENCY_DOT: Record<Recency, string> = {
-  today: 'bg-emerald-500',
-  week: 'bg-primary',
-  month: 'bg-amber-500',
-  older: 'bg-muted-foreground/50',
-};
-
-const SORT_LABEL: Record<SortKey, string> = {
-  get last_seen() { return tr('Última vez'); },
-  get minutes() { return tr('Estudio acumulado'); },
-  get active_days() { return tr('Días activos'); },
-  get tasks() { return tr('Tareas'); },
-  get first_seen() { return tr('Más recientes'); },
-};
-
-function StudentsCard({ data }: { data: Overview }) {
-  const [kind, setKind] = useState<'all' | 'account' | 'guest'>('all');
-  const [recency, setRecency] = useState<string | null>(null);
-  const [sort, setSort] = useState<SortKey>('last_seen');
-  const [page, setPage] = useState(0);
-
-  // La versión más nueva por sistema: quien no la tiene, va desactualizado.
-  const latest = useMemo(() => {
-    const out: Record<string, string> = {};
-    for (const v of data.versions) {
-      if (!v.version || v.version === '?') continue;
-      const current = out[v.platform];
-      if (!current || compareVersions(v.version, current) > 0) out[v.platform] = v.version;
-    }
-    return out;
-  }, [data.versions]);
-
-  const rows = useMemo(() => {
-    const filtered = data.users.filter(
-      (u) =>
-        (kind === 'all' || (kind === 'guest' ? u.guest : !u.guest)) &&
-        (!recency || recencyOf(u.last_seen) === recency)
-    );
-    const value = (u: StudentRow): number => {
-      switch (sort) {
-        case 'minutes':
-          return u.minutes ?? 0;
-        case 'active_days':
-          return u.active_days;
-        case 'tasks':
-          return u.tasks ?? 0;
-        case 'first_seen':
-          return Date.parse(u.first_seen) || 0;
-        default:
-          return Date.parse(u.last_seen) || 0;
-      }
-    };
-    return [...filtered].sort((a, b) => value(b) - value(a));
-  }, [data.users, kind, recency, sort]);
-
-  // Al cambiar el filtro, de vuelta a la primera página.
-  useEffect(() => setPage(0), [kind, recency, sort]);
-
-  const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-  const current = Math.min(page, pages - 1);
-  const visible = rows.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE);
-  const maxDays = Math.max(1, data.days);
-
-  const segments = [
-    { id: 'today', label: tr('Hoy'), value: data.recency.today, className: RECENCY_DOT.today },
-    { id: 'week', label: tr('Esta semana'), value: data.recency.week, className: RECENCY_DOT.week },
-    { id: 'month', label: tr('Este mes'), value: data.recency.month, className: RECENCY_DOT.month },
-    { id: 'older', label: tr('Hace más de un mes'), value: data.recency.older, className: RECENCY_DOT.older },
-  ];
-
-  return (
-    <Card className="border-border/70">
-      <CardHeader className="space-y-3 pb-3" echo={tr('Estudiantes')}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <CardTitle className="text-sm font-headline text-muted-foreground">{tr('Estudiantes · última vez que abrieron Frame')}</CardTitle>
-          <div className="flex items-center gap-2">
-            <Tabs value={kind} onValueChange={(v) => setKind(v as typeof kind)}>
-              <TabsList className="h-8">
-                <TabsTrigger value="all" className="h-6 px-2.5 text-xs">
-                  {tr('Todos')}{' '}{data.totals.users_total}
-                </TabsTrigger>
-                <TabsTrigger value="account" className="h-6 px-2.5 text-xs">
-                  {tr('Cuentas')}{' '}{data.totals.accounts_total}
-                </TabsTrigger>
-                <TabsTrigger value="guest" className="h-6 px-2.5 text-xs">
-                  {tr('Invitados')}{' '}{data.totals.guests_total}
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
-                  <ArrowDownUp className="h-3.5 w-3.5" /> {SORT_LABEL[sort]}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel className="text-xs">{tr('Ordenar por')}</DropdownMenuLabel>
-                {(Object.keys(SORT_LABEL) as SortKey[]).map((key) => (
-                  <DropdownMenuItem key={key} onSelect={() => setSort(key)} className={cn('text-xs', sort === key && 'text-primary')}>
-                    {SORT_LABEL[key]}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-        <SplitBar segments={segments} active={recency} onSelect={setRecency} />
-      </CardHeader>
-      <CardContent className="p-0 pt-3">
-        {rows.length === 0 ? (
-          <p className="p-8 text-center text-xs text-muted-foreground">{tr('Nadie en este grupo')}</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead className="text-[10px] text-muted-foreground">
-                <tr className="border-y border-border/60 bg-secondary/30">
-                  <th className="px-4 py-2 text-left font-bold">{tr('Estudiante')}</th>
-                  <th className="px-2 py-2 text-left font-bold">{tr('Última vez')}</th>
-                  <th className="px-2 py-2 text-left font-bold">{tr('Días activos')}</th>
-                  <th className="px-2 py-2 text-right font-bold">{tr('Estudio')}</th>
-                  <th className="px-2 py-2 text-right font-bold">{tr('Sesiones')}</th>
-                  <th className="px-2 py-2 text-right font-bold">{tr('Tareas')}</th>
-                  <th className="px-2 py-2 text-right font-bold">{tr('Asignaturas')}</th>
-                  <th className="px-4 py-2 text-left font-bold">{tr('Versión')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visible.map((u, i) => {
-                  const rec = recencyOf(u.last_seen);
-                  const PlatformIcon = u.platform === 'android' ? Smartphone : Monitor;
-                  const outdated = !!(u.version && u.platform && latest[u.platform] && compareVersions(u.version, latest[u.platform]) < 0);
-                  return (
-                    <tr key={`${u.id}-${i}`} className="border-b border-border/40 last:border-0 hover:bg-secondary/20">
-                      <td className="px-4 py-2">
-                        <div className="flex items-center gap-2">
-                          <PlatformIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-label={PLATFORM_LABEL[u.platform ?? ''] ?? tr('Sistema')} />
-                          <span className="font-mono text-muted-foreground">{u.id}</span>
-                          <span
-                            className={cn(
-                              'rounded px-1.5 py-px text-[9px] font-bold',
-                              u.guest ? 'bg-amber-500/15 text-amber-500' : 'bg-primary/15 text-primary'
-                            )}
-                          >
-                            {u.guest ? tr('Invitado') : tr('Cuenta')}
-                          </span>
-                        </div>
-                        <p className="mt-0.5 pl-[22px] text-[10px] text-muted-foreground/70">
-                          {u.country ?? tr('País desconocido')}{' '}{tr('· desde')}{' '}{dayLabel(u.first_seen)}
-                        </p>
-                      </td>
-                      <td className="px-2 py-2">
-                        <span className="flex items-center gap-1.5 whitespace-nowrap">
-                          <span className={cn('h-1.5 w-1.5 rounded-full', RECENCY_DOT[rec])} />
-                          {ago(u.last_seen)}
-                        </span>
-                      </td>
-                      <td className="px-2 py-2">
-                        <div className="flex items-center gap-2">
-                          <div className="h-1.5 w-16 overflow-hidden rounded-full bg-secondary">
-                            <div className="h-full rounded-full bg-primary/70" style={{ width: `${Math.min(100, (u.active_days / maxDays) * 100)}%` }} />
-                          </div>
-                          <span className="tabular-nums text-muted-foreground">{u.active_days}</span>
-                        </div>
-                      </td>
-                      <td className="px-2 py-2 text-right tabular-nums">{minutesLabel(u.minutes ?? 0)}</td>
-                      <td className="px-2 py-2 text-right tabular-nums">{u.sessions ?? 0}</td>
-                      <td className="px-2 py-2 text-right tabular-nums">{u.tasks ?? 0}</td>
-                      <td className="px-2 py-2 text-right tabular-nums">{u.courses ?? 0}</td>
-                      <td className="px-4 py-2">
-                        <span className={cn('tabular-nums', outdated ? 'text-amber-500' : 'text-muted-foreground')} title={outdated ? tr('Hay una más nueva: {p}', { p: latest[u.platform ?? ''] }) : undefined}>
-                          {u.version ?? '—'}
-                          {outdated && ' ↑'}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-        {rows.length > PAGE_SIZE && (
-          <div className="flex items-center justify-between border-t border-border/60 px-4 py-2 text-[11px] text-muted-foreground">
-            <span className="tabular-nums">
-              {current * PAGE_SIZE + 1}–{Math.min(rows.length, (current + 1) * PAGE_SIZE)}{' '}{tr('de')}{' '}{rows.length}
-            </span>
-            <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="h-7 w-7" disabled={current === 0} onClick={() => setPage(current - 1)} aria-label={tr('Página anterior')}>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="tabular-nums">
-                {current + 1} / {pages}
-              </span>
-              <Button variant="ghost" size="icon" className="h-7 w-7" disabled={current >= pages - 1} onClick={() => setPage(current + 1)} aria-label={tr('Página siguiente')}>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-// ------------------------------------------------------------
-// Página
-// ------------------------------------------------------------
 
 function UsagePanel() {
-  const { userProfile } = useCourse();
   const { toast } = useToast();
   const { run, busy } = useReportExport();
-  const [days, setDays] = useState<Period>(30);
-  const [data, setData] = useState<Overview | null>(null);
-  const [guests, setGuests] = useState<GuestOverview | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [snapshot, setSnapshot] = useState<UsageSnapshot | null>(readCache);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hours, setHours] = useState<Hours>(readHours);
+  const [preset, setPreset] = useState<Preset>('30');
+  const [custom, setCustom] = useState<{ from: string; to: string } | null>(null);
+  const [grouping, setGrouping] = useState<Grouping | null>(null);
+  const [tab, setTab] = useState<Tab>('summary');
+  const [continent, setContinent] = useState<Continent | '?' | null>(null);
+  const [country, setCountry] = useState<string | null>(null);
   const [preparing, setPreparing] = useState(false);
+  const details = useRef(new Map<string, UserDetail>());
 
-  const isOwner = isFrameOwner(userProfile) && isSupabaseConfigured;
-
-  const load = useCallback(async (period: Period) => {
+  const load = useCallback(async (force: boolean, maxAge: Hours) => {
     const supabase = getSupabase();
     if (!supabase) {
       setError(tr('Supabase no está configurado.'));
-      setLoading(false);
       return;
     }
     setLoading(true);
     setError(null);
-    const [{ data: result, error: rpcError }, guestReply] = await Promise.all([
-      supabase.rpc('usage_overview', { days: period }),
-      supabase.rpc('guest_overview', { days: period }),
-    ]);
-    // Los invitados son un extra: si su resumen falla, el panel sigue.
-    setGuests(guestReply.error ? null : (guestReply.data as GuestOverview));
+    const { data, error: rpcError } = await supabase.rpc('usage_snapshot', { max_age_hours: maxAge, force });
+    setLoading(false);
     if (rpcError) {
       setError(
         rpcError.code === '42501'
           ? tr('Solo la cuenta del responsable de Frame puede ver este panel. Inicia sesión con ella.')
-          : rpcError.message
+          : netError(rpcError.message)
       );
-      setData(null);
-    } else {
-      setData(result as Overview);
+      return;
     }
-    setLoading(false);
+    const next = data as UsageSnapshot;
+    setSnapshot(next);
+    if (force) details.current.clear();
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(next));
+    } catch {
+      /* sin espacio: se mostrará al cargar, como antes */
+    }
   }, []);
 
+  // Al abrir: lo guardado se ve ya, y el servidor dice si hay algo más nuevo
+  // (si su foto tiene menos de las horas elegidas, la devuelve sin recalcular).
   useEffect(() => {
-    if (!isOwner) return;
-    void load(days);
-  }, [isOwner, days, load]);
+    void load(false, hours);
+    const timer = window.setInterval(() => void load(false, hours), 30 * 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, [load, hours]);
 
-  const daily = useMemo(
-    () => (data?.daily ?? []).map((d) => ({ ...d, label: dayLabel(d.date), minutes: Math.round(d.minutes) })),
-    [data]
-  );
+  const range: Range | null = useMemo(() => {
+    if (!snapshot) return null;
+    if (preset !== 'custom' || !custom) return presetRange(snapshot, preset === 'custom' ? '30' : preset);
+    const from = dayFromInput(custom.from, snapshot);
+    const to = dayFromInput(custom.to, snapshot);
+    if (from === null || to === null) return presetRange(snapshot, '30');
+    const lo = Math.max(snapshot.since, Math.min(from, to));
+    const hi = Math.min(snapshot.today, Math.max(from, to));
+    return { from: lo, to: Math.max(lo, hi) };
+  }, [snapshot, preset, custom]);
 
-  const retentionPct = useMemo(() => {
-    const r = data?.retention;
-    if (!r || r.prev_week === 0) return null;
-    return Math.round((r.retained / r.prev_week) * 100);
-  }, [data]);
+  const groupingNow: Grouping = grouping ?? (range ? naturalGrouping(range) : 'day');
 
-  /** El informe de impacto: pide su serie al servidor y arma el documento. */
-  const downloadImpact = async (formatId: ReportFormat) => {
+  // El filtro del mapa vale para todas las pestañas.
+  const users = useMemo(() => {
+    if (!snapshot) return [];
+    return snapshot.users.filter(
+      (user) => (!country || (user.cc ?? '?') === country) && (!continent || (continentOf(user.cc) ?? '?') === continent)
+    );
+  }, [snapshot, country, continent]);
+
+  const loadDetail = useCallback(async (id: string): Promise<UserDetail> => {
+    const cached = details.current.get(id);
+    if (cached) return cached;
+    const supabase = getSupabase();
+    if (!supabase) throw new Error(tr('Supabase no está configurado.'));
+    const { data, error: rpcError } = await supabase.rpc('usage_user_detail', { targets: [id] });
+    if (rpcError) throw new Error(rpcError.message);
+    const detail = (data as Record<string, UserDetail>)[id];
+    if (!detail) throw new Error(tr('No hay detalle de este estudiante.'));
+    details.current.set(id, detail);
+    return detail;
+  }, []);
+
+  /** El Reporte: pide el detalle de todos (por tandas de 200) y arma el documento. */
+  const downloadReport = async (format: ReportFormat) => {
+    if (!snapshot || !range) return;
     const supabase = getSupabase();
     if (!supabase) return;
     setPreparing(true);
     try {
-      const { data: impact, error: rpcError } = await supabase.rpc('impact_overview');
-      if (rpcError || !impact) {
-        toast({ variant: 'destructive', title: tr('No se pudo preparar el informe'), description: rpcError?.message ?? tr('Sin respuesta del servidor.') });
-        return;
+      const missing = users.map((user) => user.id).filter((id) => !details.current.has(id));
+      for (let i = 0; i < missing.length; i += 200) {
+        const { data, error: rpcError } = await supabase.rpc('usage_user_detail', { targets: missing.slice(i, i + 200) });
+        if (rpcError) throw new Error(rpcError.message);
+        for (const [id, detail] of Object.entries(data as Record<string, UserDetail>)) details.current.set(id, detail);
       }
-      const usage: UsageSummary | null = data
-        ? {
-            days: data.days,
-            totals: data.totals,
-            retention: data.retention,
-            screens: data.screens.filter((s) => s.screen in SCREEN_LABELS).map((s) => ({ label: SCREEN_LABELS[s.screen], views: s.views, users: s.users })),
-            versions: data.versions,
-            platforms: data.platforms,
-          }
-        : null;
-      const report = impact as ImpactData;
-      await run(() => buildImpactDoc(report, usage), tr('Frame - Informe de impacto - {today}', { today: report.today }), formatId);
+      const { data: impact } = await supabase.rpc('impact_overview');
+      const { buildUsageReport } = await import('@/lib/usage-report');
+      const scope = country ? countryName(country) : continent ? CONTINENT_LABEL[continent]() : null;
+      await run(
+        () => buildUsageReport({ snapshot, users, range, grouping: groupingNow, details: details.current, impact: impact ?? null, scope }),
+        tr('Frame - Reporte de uso - {today}', { today: isoOfDay(snapshot.today) }),
+        format,
+        'reporte-de-uso'
+      );
+    } catch (reason) {
+      toast({ variant: 'destructive', title: tr('No se pudo preparar el reporte'), description: netError(reason instanceof Error ? reason.message : String(reason)) });
     } finally {
       setPreparing(false);
     }
   };
 
-  if (!isOwner) return <Navigate to="/" replace />;
-
-  const t = data?.totals;
-  const nothingYet = !!data && t?.users_total === 0;
   const reportBusy = preparing || busy !== null;
 
-  // Las versiones agrupadas por sistema, con la más nueva marcada.
-  const versionRows = (() => {
-    if (!data) return [];
-    const newest: Record<string, string> = {};
-    for (const v of data.versions) {
-      if (!newest[v.platform] || compareVersions(v.version, newest[v.platform]) > 0) newest[v.platform] = v.version;
-    }
-    return [...data.versions]
-      .sort((a, b) => a.platform.localeCompare(b.platform) || compareVersions(b.version, a.version))
-      .map((v) => ({
-        label: `${PLATFORM_LABEL[v.platform] ?? v.platform} ${v.version}${v.version === newest[v.platform] ? tr(' · la más nueva') : ''}`,
-        value: v.users,
-        extra: v.users === 1 ? tr('estudiante') : tr('estudiantes'),
-        muted: v.version !== newest[v.platform],
-      }));
-  })();
-
   return (
-    <div className="flex flex-col gap-6 p-6 md:p-8">
+    <div className="flex flex-col gap-5 p-6 md:p-8">
+      {/* --- Encabezado --- */}
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <h1 className="font-headline text-2xl font-bold text-foreground">{tr('Panel de uso')}</h1>
           <p className="text-sm text-muted-foreground">
-            {tr('Frame en manos de tus estudiantes · datos seudónimos, calculados en el servidor y sin contar tu propia cuenta')}
+            {tr('Cómo se usa Frame en el mundo · datos seudónimos, calculados en el servidor y sin contar tu propia cuenta')}
           </p>
-          {data && (
+          {snapshot && (
             <p className="mt-1 text-[11px] text-muted-foreground/70">
-              {tr('Actualizado')}{' '}{ago(data.generated_at)}{' '}{tr('· periodo')}{' '}{dayLabel(data.since)} – {dayLabel(data.today)}
+              {tr('Calculado {when} · se recalcula como mucho cada {hours} h', { when: ago(snapshot.generated_at), hours })}
             </p>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="default" size="sm" className="h-9 gap-2" disabled={reportBusy}>
+              <Button size="sm" className="h-9 gap-2" disabled={reportBusy || !snapshot}>
                 {reportBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                {tr('Informe de impacto')}
+                {tr('Reporte')}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-60">
+            <DropdownMenuContent align="end" className="w-64">
               <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-                {tr('Cifras citables, evolución por semana de uso y resumen del uso de la app')}
+                {tr('Todo lo que recoge el panel, con el plazo y el filtro elegidos')}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => void downloadImpact('pdf')}>
-                <FileText className="mr-2 h-4 w-4" />{' '}{tr('PDF')}
+              <DropdownMenuItem onSelect={() => void downloadReport('docx')}>
+                <FileText className="mr-2 h-4 w-4" /> {tr('Word (.docx)')}
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => void downloadImpact('docx')}>
-                <FileText className="mr-2 h-4 w-4" />{' '}{tr('Word (.docx)')}
+              <DropdownMenuItem onSelect={() => void downloadReport('pdf')}>
+                <FileText className="mr-2 h-4 w-4" /> {tr('PDF')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => void downloadReport('md')}>
+                <FileText className="mr-2 h-4 w-4" /> {tr('Markdown (.md)')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Tabs value={String(days)} onValueChange={(v) => setDays(Number(v) as Period)}>
-            <TabsList>
-              <TabsTrigger value="7">{tr('7 días')}</TabsTrigger>
-              <TabsTrigger value="30">{tr('30 días')}</TabsTrigger>
-              <TabsTrigger value="90">{tr('90 días')}</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <Button variant="outline" size="icon" onClick={() => void load(days)} disabled={loading} title={tr('Actualizar')}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 gap-1.5 text-xs">
+                <Clock3 className="h-3.5 w-3.5" /> {tr('Cada {hours} h', { hours })}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel className="text-xs">{tr('Recalcular el panel como mucho')}</DropdownMenuLabel>
+              {HOURS_OPTIONS.map((option) => (
+                <DropdownMenuItem
+                  key={option}
+                  className={cn('text-xs', option === hours && 'text-primary')}
+                  onSelect={() => {
+                    setHours(option);
+                    localStorage.setItem(HOURS_KEY, String(option));
+                  }}
+                >
+                  {tr('Cada {hours} horas', { hours: option })}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => void load(true, hours)} disabled={loading} title={tr('Actualizar ahora')}>
             <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
           </Button>
         </div>
       </div>
 
-      {error && (
+      {error && snapshot && (
+        <p className="-mt-3 flex items-center gap-1.5 text-[11px] text-amber-500">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+          {tr('{error}: se muestra lo último calculado ({when}).', { error, when: ago(snapshot.generated_at) })}
+        </p>
+      )}
+      {error && !snapshot && (
         <Card className="border-destructive/40">
           <CardContent className="flex items-center gap-3 p-4 text-sm">
             <AlertTriangle className="h-5 w-5 shrink-0 text-destructive" />
@@ -735,184 +393,581 @@ function UsagePanel() {
         </Card>
       )}
 
-      {loading && !data && (
+      {!snapshot && loading && (
         <div className="flex h-40 items-center justify-center">
           <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
         </div>
       )}
 
-      {nothingYet && (
+      {snapshot && snapshot.users.length === 0 && (
         <Card className="border-dashed">
           <CardContent className="p-8 text-center text-sm text-muted-foreground">
-            {tr('Todavía no hay datos. Aparecen en cuanto un estudiante abra Frame con conexión: primero la apertura del día, y después cada sesión de estudio, tarea terminada e informe generado.')}
+            {tr('Todavía no hay datos. Aparecen en cuanto un estudiante abra Frame con conexión: primero la apertura del día, y después cada sesión de estudio, tarea culminada e informe generado.')}
           </CardContent>
         </Card>
       )}
 
-      {data && t && !nothingYet && (
+      {snapshot && range && snapshot.users.length > 0 && (
         <>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Kpi
-              icon={Users}
-              label={tr('Estudiantes')}
-              value={t.users_total}
-              hint={tr('{accounts_total} con cuenta · {guests_total} invitados · {users_new} nuevos', { accounts_total: t.accounts_total, guests_total: t.guests_total, users_new: t.users_new })}
-            />
-            <Kpi icon={Activity} label={tr('Activos en 7 días')} value={t.active_7d} hint={tr('{active_today} hoy · {active_30d} en 30 días', { active_today: t.active_today, active_30d: t.active_30d })} />
-            <Kpi
-              icon={CalendarDays}
-              label={tr('Retención semanal')}
-              value={retentionPct === null ? '—' : `${retentionPct}%`}
-              hint={
-                data.retention.prev_week === 0
-                  ? tr('Sin semana anterior con la que comparar')
-                  : tr('{retained} de {prev_week} volvieron esta semana', { retained: data.retention.retained, prev_week: data.retention.prev_week })
-              }
-            />
-            <Kpi
-              icon={Clock3}
-              label={tr('Estudio en el periodo')}
-              value={minutesLabel(t.minutes_period)}
-              hint={tr('{sessions_period} sesiones · {tasks_period} tareas culminadas', { sessions_period: t.sessions_period, tasks_period: t.tasks_period })}
-            />
+          {/* --- Plazo, agrupación y filtro --- */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Tabs value={preset} onValueChange={(value) => {
+              setPreset(value as Preset);
+              setGrouping(null);
+              if (value === 'custom' && !custom) setCustom({ from: isoOfDay(range.from), to: isoOfDay(range.to) });
+            }}>
+              <TabsList className="h-9 flex-wrap">
+                {(Object.keys(PRESET_LABEL) as Preset[]).map((key) => (
+                  <TabsTrigger key={key} value={key} className="px-2.5 text-xs">
+                    {PRESET_LABEL[key]()}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+            {preset === 'custom' && custom && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Input type="date" className="h-9 w-[9.5rem] text-xs" value={custom.from} min={isoOfDay(snapshot.since)} max={isoOfDay(snapshot.today)} onChange={(e) => setCustom({ ...custom, from: e.target.value })} aria-label={tr('Desde')} />
+                <span>–</span>
+                <Input type="date" className="h-9 w-[9.5rem] text-xs" value={custom.to} min={isoOfDay(snapshot.since)} max={isoOfDay(snapshot.today)} onChange={(e) => setCustom({ ...custom, to: e.target.value })} aria-label={tr('Hasta')} />
+              </div>
+            )}
+            <Tabs value={groupingNow} onValueChange={(value) => setGrouping(value as Grouping)}>
+              <TabsList className="h-9">
+                {(Object.keys(GROUPING_LABEL) as Grouping[]).map((key) => (
+                  <TabsTrigger key={key} value={key} className="px-2.5 text-xs">
+                    {GROUPING_LABEL[key]()}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+            {(country || continent) && (
+              <Button variant="fantasma" size="sm" className="h-9 gap-1.5 text-xs" onClick={() => { setCountry(null); setContinent(null); }}>
+                <Globe2 className="h-3.5 w-3.5" />
+                {country ? countryName(country) : CONTINENT_LABEL[continent!]()}
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            )}
+            <span className="ml-auto text-[11px] text-muted-foreground">{bucketLabel(range.from, range.to)}</span>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <Card className="border-border/70">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-headline text-muted-foreground">{tr('Estudiantes activos por día')}</CardTitle>
-              </CardHeader>
-              <CardContent className="h-56 pt-3">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={daily} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="usoActivos" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.45} />
-                        <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.02} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid stroke="hsl(var(--foreground))" strokeDasharray="3 3" strokeOpacity={0.12} />
-                    <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} interval="preserveStartEnd" />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                    <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [v, tr('Activos')]} />
-                    <Area type="monotone" dataKey="active_users" stroke="hsl(var(--primary))" fill="url(#usoActivos)" strokeWidth={2} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+          <Tabs value={tab} onValueChange={(value) => setTab(value as Tab)} className="space-y-4">
+            <TabsList className="h-auto flex-wrap">
+              <TabsTrigger value="summary">{tr('Resumen')}</TabsTrigger>
+              <TabsTrigger value="students">{tr('Estudiantes')}</TabsTrigger>
+              <TabsTrigger value="map">{tr('Mapa')}</TabsTrigger>
+              <TabsTrigger value="when">{tr('Cuándo')}</TabsTrigger>
+              <TabsTrigger value="features">{tr('Funciones')}</TabsTrigger>
+              <TabsTrigger value="retention">{tr('Retención')}</TabsTrigger>
+              <TabsTrigger value="quality">{tr('Versiones y errores')}</TabsTrigger>
+            </TabsList>
 
-            <Card className="border-border/70">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-headline text-muted-foreground">{tr('Minutos de estudio y sesiones por día')}</CardTitle>
-              </CardHeader>
-              <CardContent className="h-56 pt-3">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={daily} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
-                    <CartesianGrid stroke="hsl(var(--foreground))" strokeDasharray="3 3" strokeOpacity={0.12} />
-                    <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} interval="preserveStartEnd" />
-                    <YAxis yAxisId="min" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                    <YAxis yAxisId="ses" orientation="right" allowDecimals={false} tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                    <Tooltip contentStyle={tooltipStyle} />
-                    <Bar yAxisId="min" dataKey="minutes" name="Minutos" fill="hsl(var(--primary))" fillOpacity={0.75} radius={[3, 3, 0, 0]} />
-                    <Line yAxisId="ses" type="monotone" dataKey="sessions" name="Sesiones" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={false} />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
-
-          <StudentsCard data={data} />
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <RankList
-              title={tr('Interfaces más abiertas')}
-              rows={data.screens.filter((s) => s.screen in SCREEN_LABELS).map((s) => ({
-                label: SCREEN_LABELS[s.screen],
-                value: s.views,
-                extra: `${s.users} est.`,
-              }))}
-              empty={tr('Sin interfaces registradas en el periodo')}
-            />
-            <RankList
-              title={tr('Actividad en el periodo')}
-              rows={data.events.filter((e) => e.event in EVENT_LABELS).map((e) => ({ label: EVENT_LABELS[e.event], value: e.count, extra: `${e.users} est.` }))}
-              empty={tr('Sin actividad en el periodo')}
-            />
-            <RankList title={tr('Versiones instaladas')} rows={versionRows} empty={tr('Sin instalaciones registradas')} />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <Card className="border-border/70 lg:col-span-2">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-headline text-muted-foreground">{tr('Últimas semanas')}</CardTitle>
-              </CardHeader>
-              <CardContent className="h-48 pt-3">
-                {data.weekly.length === 0 ? (
-                  <p className="py-10 text-center text-xs text-muted-foreground">{tr('Sin semanas registradas todavía')}</p>
-                ) : (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={data.weekly.map((w) => ({ ...w, label: dayLabel(w.week_start) }))} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
-                      <CartesianGrid stroke="hsl(var(--foreground))" strokeDasharray="3 3" strokeOpacity={0.12} />
-                      <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                      <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                      <Tooltip contentStyle={tooltipStyle} />
-                      <Bar dataKey="users" name="Estudiantes" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} />
-                      <Bar dataKey="sessions" name="Sesiones" fill="hsl(var(--chart-2))" radius={[3, 3, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="border-border/70">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-headline text-muted-foreground">{tr('Estudio acumulado por estudiante')}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4 pt-3">
-                <SplitBar
-                  segments={[
-                    { id: 'none', label: tr('Sin estudio'), value: data.study_buckets.none, className: 'bg-muted-foreground/40' },
-                    { id: 'lt1h', label: '< 1 h', value: data.study_buckets.lt1h, className: 'bg-primary/35' },
-                    { id: 'h1_5', label: '1–5 h', value: data.study_buckets.h1_5, className: 'bg-primary/60' },
-                    { id: 'h5_20', label: '5–20 h', value: data.study_buckets.h5_20, className: 'bg-primary/85' },
-                    { id: 'h20', label: tr('20 h o más'), value: data.study_buckets.h20, className: 'bg-primary' },
-                  ]}
-                />
-                <div className="grid grid-cols-2 gap-3 border-t border-border/60 pt-3 text-xs">
-                  <div>
-                    <p className="text-[10px] text-muted-foreground">{tr('Desde el inicio')}</p>
-                    <p className="font-semibold tabular-nums">{minutesLabel(t.study_minutes_all)}</p>
-                    <p className="text-[11px] text-muted-foreground">{t.sessions_all}{' '}{tr('sesiones')}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-muted-foreground">{tr('Informes')}</p>
-                    <p className="font-semibold tabular-nums">{data.reports.reduce((acc, r) => acc + r.count, 0)}</p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {data.reports.length > 0 ? data.reports.map((r) => `${r.count} ${r.format.toUpperCase()}`).join(' · ') : tr('ninguno en el periodo')}
-                    </p>
-                  </div>
-                </div>
-                {guests && (guests.started_period > 0 || guests.guests_total > 0) && (
-                  <div className="grid grid-cols-2 gap-3 border-t border-border/60 pt-3 text-xs">
-                    <div>
-                      <p className="text-[10px] text-muted-foreground">{tr('Entraron como invitado')}</p>
-                      <p className="font-semibold tabular-nums">{guests.started_period}</p>
-                      <p className="text-[11px] text-muted-foreground">{guests.guests_active_7d}{' '}{tr('activos en 7 días')}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-muted-foreground">{tr('Vincularon Google')}</p>
-                      <p className="font-semibold tabular-nums">{guests.linked_period}</p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {guests.started_period > 0 ? tr('{p} % de los invitados', { p: Math.round((guests.linked_period / guests.started_period) * 100) }) : tr('en el periodo')}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+            <TabsContent value="summary">
+              <SummaryTab snapshot={snapshot} users={users} range={range} grouping={groupingNow} />
+            </TabsContent>
+            <TabsContent value="students">
+              <StudentsTab snapshot={snapshot} users={users} range={range} newest={newestVersions(snapshot.users)} loadDetail={loadDetail} />
+            </TabsContent>
+            <TabsContent value="map">
+              <MapTab
+                snapshot={snapshot}
+                range={range}
+                continent={continent}
+                country={country}
+                onContinent={(value) => {
+                  setContinent(value);
+                  setCountry(null);
+                }}
+                onCountry={(code) => {
+                  setCountry(code);
+                  if (code) setContinent(null);
+                }}
+              />
+            </TabsContent>
+            <TabsContent value="when">
+              <WhenTab snapshot={snapshot} users={users} filtered={!!(country || continent)} />
+            </TabsContent>
+            <TabsContent value="features">
+              <FeaturesTab snapshot={snapshot} users={users} range={range} filtered={!!(country || continent)} />
+            </TabsContent>
+            <TabsContent value="retention">
+              <RetentionTab snapshot={snapshot} users={users} range={range} />
+            </TabsContent>
+            <TabsContent value="quality">
+              <QualityTab snapshot={snapshot} users={users} />
+            </TabsContent>
+          </Tabs>
         </>
       )}
+    </div>
+  );
+}
+
+// ------------------------------------------------------------
+// Resumen
+// ------------------------------------------------------------
+function SummaryTab({ snapshot, users, range, grouping }: { snapshot: UsageSnapshot; users: UsageSnapshot['users']; range: Range; grouping: Grouping }) {
+  const summary = useMemo(() => summarize(snapshot, range, users), [snapshot, range, users]);
+  const series = useMemo(
+    () => seriesOf(snapshot, range, grouping, users).map((point) => ({ ...point, label: bucketLabel(point.from, point.to) })),
+    [snapshot, range, grouping, users]
+  );
+  const a = summary.activity;
+  const levels = (Object.keys(summary.levels) as (keyof typeof summary.levels)[]).map((key) => ({ label: LEVEL_LABEL[key](), value: summary.levels[key], hint: LEVEL_HINT[key]() }));
+  const devices = countBy(users, (user) => (user.dv ? `${user.dv}` : user.pl === 'android' ? 'phone' : user.pl ? 'desktop' : null)).map((row) => ({
+    label: DEVICE_LABEL[row.key]?.() ?? tr('Sin dato'),
+    value: row.value,
+  }));
+  const langs = countBy(users, (user) => user.la).map((row) => ({ label: LANG_LABEL[row.key]?.() ?? tr('Sin dato'), value: row.value }));
+  const studyBuckets = summary.studyBuckets;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Kpi icon={Users} label={tr('Estudiantes')} value={numberLabel(summary.users)} hint={tr('{accounts} con cuenta · {guests} invitados · {fresh} nuevos en el plazo', { accounts: summary.accounts, guests: summary.guests, fresh: summary.newUsers })} />
+        <Kpi icon={Activity} label={tr('Activos en el plazo')} value={numberLabel(summary.active)} hint={tr('{today} hoy · {d7} en 7 días · {d30} en 30 días', { today: summary.activeToday, d7: summary.active7, d30: summary.active30 })} />
+        <Kpi icon={Repeat} label={tr('Uso diario')} value={decimalText(Math.round(summary.avgDaily * 10) / 10)} hint={tr('activos de media al día · {pct} de los activos del mes', { pct: pctLabel(summary.stickiness) })} />
+        <Kpi icon={Clock3} label={tr('Estudio en el plazo')} value={minutesLabel(a.minutes)} hint={tr('{sessions} sesiones · {per} por estudiante activo', { sessions: numberLabel(a.sessions), per: summary.minutesPerActive === null ? '—' : minutesLabel(summary.minutesPerActive) })} />
+        <Kpi icon={CheckCircle2} label={tr('Tareas culminadas')} value={numberLabel(a.tasks)} hint={tr('{pct} a tiempo · {high} de importancia alta', { pct: pctLabel(summary.onTimePct), high: a.high })} />
+        <Kpi icon={Target} label={tr('Constancia de hábitos')} value={pctLabel(summary.habitsPct)} hint={tr('{done} de {possible} marcas posibles', { done: a.habitsDone, possible: a.habitsPossible })} />
+        <Kpi icon={Sparkles} label={tr('Enfoque medio')} value={summary.focusAvg === null ? '—' : `${decimalText(summary.focusAvg)} / 20`} hint={tr('el que declaran al terminar una sesión')} />
+        <Kpi icon={Globe2} label={tr('Alcance')} value={tr('{n} países', { n: summary.countries })} hint={tr('{cities} ciudades · {opens} aperturas en el plazo', { cities: summary.cities, opens: numberLabel(a.opens) })} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Panel title={tr('Estudiantes activos y nuevos')} bodyClassName="h-60">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={series} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="usoActivos" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.45} />
+                  <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid stroke="hsl(var(--foreground))" strokeDasharray="3 3" strokeOpacity={0.12} />
+              <XAxis dataKey="label" tick={axisTick} interval="preserveStartEnd" />
+              <YAxis allowDecimals={false} tick={axisTick} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Area type="monotone" dataKey="active" name={tr('Activos')} stroke="hsl(var(--primary))" fill="url(#usoActivos)" strokeWidth={2} />
+              <Area type="monotone" dataKey="newUsers" name={tr('Nuevos')} stroke="hsl(var(--chart-2))" fill="hsl(var(--chart-2))" fillOpacity={0.15} strokeWidth={2} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </Panel>
+        <Panel title={tr('Minutos de estudio y sesiones')} bodyClassName="h-60">
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={series} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+              <CartesianGrid stroke="hsl(var(--foreground))" strokeDasharray="3 3" strokeOpacity={0.12} />
+              <XAxis dataKey="label" tick={axisTick} interval="preserveStartEnd" />
+              <YAxis yAxisId="min" tick={axisTick} tickFormatter={hoursTick} />
+              <YAxis yAxisId="ses" orientation="right" allowDecimals={false} tick={axisTick} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Bar yAxisId="min" dataKey="minutes" name={tr('Minutos')} fill="hsl(var(--primary))" fillOpacity={0.75} radius={[3, 3, 0, 0]} />
+              <Line yAxisId="ses" type="monotone" dataKey="sessions" name={tr('Sesiones')} stroke="hsl(var(--chart-2))" strokeWidth={2} dot={false} />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </Panel>
+        <Panel title={tr('Tareas culminadas y aperturas de Frame')} bodyClassName="h-60">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={series} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+              <CartesianGrid stroke="hsl(var(--foreground))" strokeDasharray="3 3" strokeOpacity={0.12} />
+              <XAxis dataKey="label" tick={axisTick} interval="preserveStartEnd" />
+              <YAxis allowDecimals={false} tick={axisTick} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Bar dataKey="tasks" name={tr('Tareas')} fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="opens" name={tr('Aperturas')} fill="hsl(var(--chart-4))" radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </Panel>
+        <Panel title={tr('Constancia de hábitos y enfoque')} bodyClassName="h-60">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={series} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+              <CartesianGrid stroke="hsl(var(--foreground))" strokeDasharray="3 3" strokeOpacity={0.12} />
+              <XAxis dataKey="label" tick={axisTick} interval="preserveStartEnd" />
+              <YAxis yAxisId="pct" domain={[0, 100]} tick={axisTick} />
+              <YAxis yAxisId="focus" orientation="right" domain={[0, 20]} tick={axisTick} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Line yAxisId="pct" type="monotone" dataKey="habitsPct" name={tr('Hábitos (%)')} stroke="hsl(var(--primary))" strokeWidth={2} dot={false} connectNulls />
+              <Line yAxisId="focus" type="monotone" dataKey="focus" name={tr('Enfoque (1–20)')} stroke="hsl(var(--chart-5))" strokeWidth={2} dot={false} connectNulls />
+            </LineChart>
+          </ResponsiveContainer>
+        </Panel>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <Panel title={tr('Nivel de actividad en el plazo')}>
+          <Donut rows={levels} empty={tr('Sin estudiantes')} center={String(summary.active)} />
+        </Panel>
+        <Panel title={tr('Cuentas e invitados')}>
+          <Donut rows={[{ label: tr('Con cuenta'), value: summary.accounts }, { label: tr('Invitados'), value: summary.guests }]} empty={tr('Sin estudiantes')} />
+        </Panel>
+        <Panel title={tr('Equipo')}>
+          <Donut rows={devices} empty={tr('Sin estudiantes')} />
+        </Panel>
+        <Panel title={tr('Idioma de Frame')}>
+          <Donut rows={langs} empty={tr('Sin estudiantes')} />
+        </Panel>
+      </div>
+
+      <Panel title={tr('Estudio acumulado por estudiante (desde el inicio)')}>
+        <RankList
+          rows={[
+            { label: tr('Sin estudio'), value: studyBuckets.none, muted: true },
+            { label: tr('Menos de 1 h'), value: studyBuckets.lt1h },
+            { label: tr('De 1 a 5 h'), value: studyBuckets.h1_5 },
+            { label: tr('De 5 a 20 h'), value: studyBuckets.h5_20 },
+            { label: tr('20 h o más'), value: studyBuckets.h20 },
+          ]}
+          empty={tr('Sin estudiantes')}
+        />
+        <p className="mt-3 text-[11px] text-muted-foreground">
+          {tr('Entre todos: {minutes} de estudio en {sessions} sesiones y {tasks} tareas culminadas desde que usan Frame.', {
+            minutes: minutesLabel(sum(users.map((user) => user.t[0] ?? 0))),
+            sessions: numberLabel(sum(users.map((user) => user.t[1] ?? 0))),
+            tasks: numberLabel(sum(users.map((user) => user.t[2] ?? 0))),
+          })}
+        </p>
+      </Panel>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------
+// Mapa
+// ------------------------------------------------------------
+function MapTab({
+  snapshot,
+  range,
+  continent,
+  country,
+  onContinent,
+  onCountry,
+}: {
+  snapshot: UsageSnapshot;
+  range: Range;
+  continent: Continent | '?' | null;
+  country: string | null;
+  onContinent: (value: Continent | '?' | null) => void;
+  onCountry: (value: string | null) => void;
+}) {
+  const all = snapshot.users;
+  const countries = useMemo(() => byCountry(all, range), [all, range]);
+  const values = useMemo(() => Object.fromEntries(countries.filter((group) => group.key !== '?').map((group) => [group.key, { users: group.users, active: group.active }])), [countries]);
+  const continents = useMemo(() => byContinent(all, range), [all, range]);
+  const inContinent = continent ? countries.filter((group) => (continentOf(group.key === '?' ? null : group.key) ?? '?') === continent) : countries;
+  const cityUsers = all.filter((user) => (!country || (user.cc ?? '?') === country) && (!continent || (continentOf(user.cc) ?? '?') === continent));
+  const cities = useMemo(() => byCity(cityUsers, range), [cityUsers, range]);
+
+  return (
+    <div className="space-y-4">
+      <Panel title={tr('Estudiantes por país')} note={tr('Según la ciudad del clima de Inicio de cada estudiante (aproximada; nunca su posición exacta).')}>
+        <WorldMap values={values} selected={country} onSelect={onCountry} />
+      </Panel>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Panel title={tr('Continentes')}>
+          <RankList
+            rows={continents.map((group) => ({ id: group.key, label: CONTINENT_LABEL[group.key as Continent | '?'](), value: group.users, extra: plural(group.active, tr('{n} activo'), tr('{n} activos')), muted: group.key === '?' }))}
+            empty={tr('Sin estudiantes')}
+            limit={8}
+            onSelect={(id) => onContinent(continent === id ? null : (id as Continent | '?'))}
+          />
+        </Panel>
+        <Panel title={continent ? tr('Países de {place}', { place: CONTINENT_LABEL[continent]() }) : tr('Países')}>
+          <RankList
+            rows={inContinent.map((group) => ({ id: group.key, label: countryName(group.key), value: group.users, extra: plural(group.active, tr('{n} activo'), tr('{n} activos')), muted: group.key === '?' }))}
+            empty={tr('Sin estudiantes')}
+            limit={25}
+            onSelect={(id) => onCountry(country === id ? null : id)}
+          />
+        </Panel>
+        <Panel title={country ? tr('Ciudades de {place}', { place: countryName(country) }) : tr('Ciudades')}>
+          <RankList
+            rows={cities.map((group) => ({ label: group.key === '?' ? tr('Sin ciudad') : group.key, value: group.users, extra: plural(group.active, tr('{n} activo'), tr('{n} activos')), muted: group.key === '?' }))}
+            empty={tr('Sin estudiantes')}
+            limit={25}
+          />
+        </Panel>
+      </div>
+      <Panel title={tr('Por país, en el plazo')} bodyClassName="p-0 pt-3">
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead className="text-[10px] text-muted-foreground">
+              <tr className="border-y border-border/60 bg-secondary/30">
+                <th className="px-4 py-2 text-left font-bold">{tr('País')}</th>
+                <th className="px-2 py-2 text-left font-bold">{tr('Continente')}</th>
+                <th className="px-2 py-2 text-right font-bold">{tr('Estudiantes')}</th>
+                <th className="px-2 py-2 text-right font-bold">{tr('Activos')}</th>
+                <th className="px-4 py-2 text-right font-bold">{tr('Estudio')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {countries.map((group) => (
+                <tr key={group.key} className="border-b border-border/40 last:border-0 hover:bg-secondary/20">
+                  <td className="px-4 py-1.5">{countryName(group.key)}</td>
+                  <td className="px-2 py-1.5 text-muted-foreground">{CONTINENT_LABEL[(continentOf(group.key === '?' ? null : group.key) ?? '?') as Continent | '?']()}</td>
+                  <td className="px-2 py-1.5 text-right tabular-nums">{group.users}</td>
+                  <td className="px-2 py-1.5 text-right tabular-nums">{group.active}</td>
+                  <td className="px-4 py-1.5 text-right tabular-nums">{minutesLabel(group.minutes)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------
+// Cuándo
+// ------------------------------------------------------------
+function WhenTab({ snapshot, users, filtered }: { snapshot: UsageSnapshot; users: UsageSnapshot['users']; filtered: boolean }) {
+  const study = useMemo(() => sumMatrices(users.map((user) => user.mx), 168), [users]);
+  const hours = hoursOf(study);
+  const weekdays = weekdaysOf(study);
+  const days = weekdayShort();
+  const peak = peakWindow(study);
+  const slen = sumMatrices(users.map((user) => user.sl), 5);
+  const focus = sumMatrices(users.map((user) => user.fo), 5);
+  const withProfile = users.filter((user) => user.mx).length;
+
+  return (
+    <div className="space-y-4">
+      {peak && (
+        <Card className="border-primary/40 bg-primary/5">
+          <CardContent className="flex items-center gap-3 p-4 text-sm">
+            <Flame className="h-5 w-5 shrink-0 text-primary" />
+            <span>
+              {tr('La franja con más estudio es de {from} a {to}: {share} % de todo el tiempo de estudio.', {
+                from: hourLabel(peak.start),
+                to: hourLabel((peak.start + 3) % 24),
+                share: peak.share,
+              })}
+            </span>
+          </CardContent>
+        </Card>
+      )}
+      <Panel title={tr('Cuándo estudian (minutos, hora local de cada estudiante)')} note={tr('Últimos 140 días · {n} estudiantes con la 1.6.9 o posterior', { n: withProfile })}>
+        <WeekHeat matrix={study} unit={minutesLabel} empty={tr('Aún nadie mandó estos datos (llegan con la 1.6.9)')} />
+      </Panel>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Panel title={tr('Por hora del día')} bodyClassName="h-56">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={hours.map((value, hour) => ({ label: hourLabel(hour), value: Math.round(value) }))} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
+              <CartesianGrid stroke="hsl(var(--foreground))" strokeDasharray="3 3" strokeOpacity={0.12} />
+              <XAxis dataKey="label" tick={axisTick} interval={2} />
+              <YAxis tick={axisTick} tickFormatter={hoursTick} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [minutesLabel(value), tr('Estudio')]} />
+              <Bar dataKey="value" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </Panel>
+        <Panel title={tr('Por día de la semana')} bodyClassName="h-56">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={weekdays.map((value, day) => ({ label: days[day], value: Math.round(value) }))} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
+              <CartesianGrid stroke="hsl(var(--foreground))" strokeDasharray="3 3" strokeOpacity={0.12} />
+              <XAxis dataKey="label" tick={axisTick} />
+              <YAxis tick={axisTick} tickFormatter={hoursTick} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [minutesLabel(value), tr('Estudio')]} />
+              <Bar dataKey="value" fill="hsl(var(--chart-2))" radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </Panel>
+        <Panel title={tr('Duración de las sesiones')}>
+          <RankList rows={[tr('< 15 min'), tr('15–30 min'), tr('30–60 min'), tr('1–2 h'), tr('2 h o más')].map((label, i) => ({ label, value: slen[i] }))} empty={tr('Sin sesiones registradas')} limit={5} />
+        </Panel>
+        <Panel title={tr('Enfoque que declaran (1–20)')}>
+          <RankList rows={['1–4', '5–8', '9–12', '13–16', '17–20'].map((label, i) => ({ label, value: focus[i] }))} empty={tr('Sin sesiones de rendimiento')} limit={5} />
+        </Panel>
+      </div>
+      <Panel title={tr('Cuándo abren Frame (aperturas del día, hora local)')} note={filtered ? tr('De todos los estudiantes: este dato no se separa por lugar') : tr('Últimos 400 días')}>
+        <WeekHeat matrix={snapshot.mx_open} unit={(n) => tr('{n} aperturas', { n })} empty={tr('Sin aperturas registradas')} />
+      </Panel>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------
+// Funciones
+// ------------------------------------------------------------
+function FeaturesTab({ snapshot, users, range, filtered }: { snapshot: UsageSnapshot; users: UsageSnapshot['users']; range: Range; filtered: boolean }) {
+  const adoption = useMemo(() => adoptionOf(users), [users]);
+  const screens = seriesTotals(snapshot.sc, range).filter((row) => row.key in SCREEN_LABEL);
+  const screenUsers = (screen: string) => users.filter((user) => (user.sc[screen] ?? 0) > 0).length;
+  const events = seriesTotals(snapshot.ev, range).filter((row) => row.key in EVENT_LABEL);
+  const reports = Object.entries(snapshot.reports).sort((a, b) => b[1] - a[1]);
+  const started = sum((snapshot.ev.guest_started ?? []).filter(([dn]) => dn >= range.from && dn <= range.to).map(([, n]) => n));
+  const linked = sum((snapshot.ev.guest_linked ?? []).filter(([dn]) => dn >= range.from && dn <= range.to).map(([, n]) => n));
+  const embeds = ['/gmail', '/classroom', '/youtube', '/drive'].map((screen) => ({ label: SCREEN_LABEL[screen](), value: screenUsers(screen) }));
+
+  return (
+    <div className="space-y-4">
+      <Panel title={tr('Qué usan: estudiantes con al menos uno')} note={tr('Porcentaje de los estudiantes que ya mandaron su perfil (1.6.9 o posterior) · entre paréntesis, el total de elementos')}>
+        <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+          <RankList rows={adoption.slice(0, Math.ceil(adoption.length / 2)).map((row) => ({ label: FEATURE_LABEL[row.key](), value: row.pct, display: `${row.pct} %`, extra: `${row.users} (${numberLabel(row.total)})` }))} empty={tr('Sin datos todavía')} limit={20} />
+          <RankList rows={adoption.slice(Math.ceil(adoption.length / 2)).map((row) => ({ label: FEATURE_LABEL[row.key](), value: row.pct, display: `${row.pct} %`, extra: `${row.users} (${numberLabel(row.total)})` }))} empty="" limit={20} />
+        </div>
+      </Panel>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <Panel title={tr('Interfaces más abiertas en el plazo')} note={filtered ? tr('Las veces son de todos; los estudiantes, del filtro') : tr('Veces (una por estudiante y día) · estudiantes que la usan')}>
+          <RankList rows={screens.map((row) => ({ label: SCREEN_LABEL[row.key](), value: row.count, extra: tr('{n} est.', { n: screenUsers(row.key) }) }))} empty={tr('Sin interfaces registradas en el plazo')} limit={15} />
+        </Panel>
+        <Panel title={tr('Actividad en el plazo')}>
+          <RankList rows={events.map((row) => ({ label: EVENT_LABEL[row.key](), value: row.count, extra: plural(row.days, tr('{n} día'), tr('{n} días')) }))} empty={tr('Sin actividad en el plazo')} limit={12} />
+        </Panel>
+        <div className="space-y-4">
+          <Panel title={tr('Google dentro de Frame')} note={tr('Estudiantes que lo abrieron alguna vez')}>
+            <RankList rows={embeds} empty={tr('Nadie todavía')} limit={4} />
+          </Panel>
+          <Panel title={tr('Informes generados (400 días)')}>
+            <RankList rows={reports.map(([format, count]) => ({ label: format.toUpperCase(), value: count }))} empty={tr('Ninguno todavía')} limit={4} />
+          </Panel>
+          <Panel title={tr('Invitados en el plazo')}>
+            <RankList
+              rows={[
+                { label: tr('Entraron como invitado'), value: started },
+                { label: tr('Vincularon Google'), value: linked, extra: started > 0 ? `${Math.round((linked / started) * 100)} %` : undefined },
+              ]}
+              empty=""
+              limit={2}
+            />
+          </Panel>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------
+// Retención
+// ------------------------------------------------------------
+function RetentionTab({ snapshot, users, range }: { snapshot: UsageSnapshot; users: UsageSnapshot['users']; range: Range }) {
+  const cohorts = useMemo(() => cohortsOf(snapshot, 12, users), [snapshot, users]);
+  const back = weekTwoReturn(snapshot, users);
+  const sleeping = dormant(snapshot, users);
+  const summary = useMemo(() => summarize(snapshot, range, users), [snapshot, range, users]);
+  const daily = useMemo(() => {
+    const from = Math.max(range.from, range.to - 364);
+    return stickinessSeries(snapshot, { from, to: range.to }, users).map((point) => ({ ...point, label: dayLabel(point.dn) }));
+  }, [snapshot, range, users]);
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Kpi icon={Repeat} label={tr('Vuelven la segunda semana')} value={pctLabel(back.pct)} hint={tr('{n} de {total} que ya cumplieron dos semanas', { n: back.returned, total: back.eligible })} />
+        <Kpi icon={Activity} label={tr('Uso diario sobre el mensual')} value={pctLabel(summary.stickiness)} hint={tr('activos de media al día / activos en 30 días')} />
+        <Kpi icon={CalendarDays} label={tr('Sin abrir Frame 14 días')} value={numberLabel(sleeping.d14)} hint={tr('{n} llevan 30 días o más', { n: sleeping.d30 })} />
+        <Kpi icon={Users} label={tr('Activos en 30 días')} value={numberLabel(summary.active30)} hint={tr('{n} en los últimos 7', { n: summary.active7 })} />
+      </div>
+      <Panel title={tr('Activos al día, en la semana y en el mes')} bodyClassName="h-60">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={daily} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+            <CartesianGrid stroke="hsl(var(--foreground))" strokeDasharray="3 3" strokeOpacity={0.12} />
+            <XAxis dataKey="label" tick={axisTick} interval="preserveStartEnd" />
+            <YAxis allowDecimals={false} tick={axisTick} />
+            <Tooltip contentStyle={tooltipStyle} />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Line type="monotone" dataKey="dau" name={tr('Del día')} stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+            <Line type="monotone" dataKey="wau" name={tr('De 7 días')} stroke="hsl(var(--chart-2))" strokeWidth={2} dot={false} />
+            <Line type="monotone" dataKey="mau" name={tr('De 30 días')} stroke="hsl(var(--chart-4))" strokeWidth={2} dot={false} />
+          </LineChart>
+        </ResponsiveContainer>
+      </Panel>
+      <Panel title={tr('Cohortes: de quienes empezaron cada semana, qué parte siguió activa')} note={tr('Fila: la semana en que empezaron (y cuántos eran) · columna: semanas después')} bodyClassName="p-0 pt-3">
+        <div className="overflow-x-auto">
+          <table className="w-full text-[11px]">
+            <thead className="text-[10px] text-muted-foreground">
+              <tr className="border-y border-border/60 bg-secondary/30">
+                <th className="px-3 py-1.5 text-left font-bold">{tr('Semana del')}</th>
+                <th className="px-2 py-1.5 text-right font-bold">{tr('Nuevos')}</th>
+                {cohorts[0]?.weeks.map((_, week) => (
+                  <th key={week} className="px-1 py-1.5 text-center font-bold tabular-nums">{week}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {cohorts.map((cohort) => (
+                <tr key={cohort.monday} className="border-b border-border/40 last:border-0">
+                  <td className="px-3 py-1">{dayLabel(cohort.monday)}</td>
+                  <td className="px-2 py-1 text-right tabular-nums">{cohort.size}</td>
+                  {cohort.weeks.map((value, week) => (
+                    <td key={week} className="px-0.5 py-0.5">
+                      {value !== null && cohort.size > 0 ? (
+                        <span className="flex h-6 items-center justify-center rounded-[3px] tabular-nums" style={{ backgroundColor: `hsl(var(--primary) / ${0.08 + (value / 100) * 0.8})`, color: value > 55 ? 'hsl(var(--primary-foreground))' : undefined }}>
+                          {value}
+                        </span>
+                      ) : null}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------
+// Versiones y errores
+// ------------------------------------------------------------
+function QualityTab({ snapshot, users }: { snapshot: UsageSnapshot; users: UsageSnapshot['users'] }) {
+  const newest = newestVersions(snapshot.users);
+  const versions = useMemo(() => {
+    const counts = new Map<string, { platform: string; version: string; users: number }>();
+    for (const user of users) {
+      const key = `${user.pl}|${user.ve}`;
+      const row = counts.get(key) ?? { platform: user.pl ?? '?', version: user.ve ?? '?', users: 0 };
+      row.users += 1;
+      counts.set(key, row);
+    }
+    return [...counts.values()].sort((a, b) => a.platform.localeCompare(b.platform) || b.users - a.users);
+  }, [users]);
+  const outdated = users.filter((user) => isOutdated(user, newest)).length;
+  const errors = snapshot.errors;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Kpi icon={CheckCircle2} label={tr('Con la versión más nueva')} value={pctLabel(users.length > 0 ? Math.round(((users.length - outdated) / users.length) * 100) : null)} hint={plural(outdated, tr('{n} con una versión anterior'), tr('{n} con una versión anterior'))} />
+        <Kpi icon={AlertTriangle} label={tr('Errores abiertos')} value={numberLabel(errors.open)} hint={`${plural(errors.fixed, tr('{n} corregido'), tr('{n} corregidos'))} · ${plural(errors.ignored, tr('{n} ignorado'), tr('{n} ignorados'))}`} />
+        <Kpi icon={Users} label="Windows" value={numberLabel(users.filter((user) => user.pl === 'windows').length)} hint={newest.windows ? tr('la más nueva: {v}', { v: newest.windows }) : undefined} />
+        <Kpi icon={Users} label="Android" value={numberLabel(users.filter((user) => user.pl === 'android').length)} hint={newest.android ? tr('la más nueva: {v}', { v: newest.android }) : undefined} />
+      </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Panel title={tr('Versiones instaladas')}>
+          <RankList
+            rows={versions.map((row) => ({
+              label: `${PLATFORM_LABEL[row.platform] ?? row.platform} ${row.version}${row.version === newest[row.platform] ? tr(' · la más nueva') : ''}`,
+              value: row.users,
+              extra: row.users === 1 ? tr('estudiante') : tr('estudiantes'),
+              muted: row.version !== newest[row.platform],
+            }))}
+            empty={tr('Sin instalaciones registradas')}
+            limit={20}
+          />
+        </Panel>
+        <Panel title={tr('Errores abiertos más repetidos')} note={tr('Se agrupan solos en el registro de errores; se corrigen desde el código')}>
+          {errors.top.length === 0 ? (
+            <p className="py-4 text-center text-xs text-muted-foreground">{tr('Ningún error abierto')}</p>
+          ) : (
+            <ul className="space-y-2 text-xs">
+              {errors.top.map((item, index) => (
+                <li key={index} className="rounded-md border border-border/60 p-2">
+                  <p className="font-medium text-foreground">{item.scope} · {item.name}</p>
+                  <p className="break-words text-muted-foreground">{item.message}</p>
+                  <p className="mt-1 text-[10px] text-muted-foreground/80">
+                    {tr('{n} veces · {users} estudiantes · {versions} · {when}', { n: item.n, users: item.users, versions: (item.versions ?? []).join(', '), when: ago(item.last) })}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+      </div>
     </div>
   );
 }
