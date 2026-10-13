@@ -8,11 +8,11 @@
 // oyente Rust venga de donde venga la ventana, y si la ventana no pudiera
 // crearse se cae al navegador: mejor un rodeo que quedarse fuera.
 //
-// Soporta VARIAS cuentas de Google a la vez: cada integración
-// (Classroom, Gmail) puede vincularse a una cuenta distinta
-// (p. ej. Classroom con la cuenta institucional). Los tokens se guardan
-// por cuenta y el refresh es automático → la sincronización es duradera:
-// solo se vuelve a pedir autorización si Google revoca el refresh token.
+// 1.6.7: solo la identidad (openid, email, profile) para entrar en Frame.
+// La vinculación por API de Gmail y Classroom se fue: pedía permisos
+// restringidos y sensibles que obligan a una auditoría de Google para
+// publicar el acceso. Gmail y Classroom siguen dentro de Frame con sus
+// páginas reales (GoogleEmbed), que no necesitan ningún permiso.
 // ============================================================
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { openUrl } from '@tauri-apps/plugin-opener';
@@ -28,19 +28,12 @@ const CLIENT_SECRET = import.meta.env.VITE_GOOGLE_CLIENT_SECRET as string | unde
 
 export const isGoogleConfigured = Boolean(CLIENT_ID);
 
-// Ámbitos por integración. Identidad siempre; el resto se pide al conectar
-// cada módulo (autorización incremental). Gmail usa "modify" para poder
-// archivar, marcar leído/no leído, destacar y enviar a la papelera.
-export const SCOPES = {
+// Ámbitos: solo la identidad (ver la cabecera).
+const SCOPES = {
   identity: ['openid', 'email', 'profile'],
-  classroom: [
-    'https://www.googleapis.com/auth/classroom.courses.readonly',
-    'https://www.googleapis.com/auth/classroom.coursework.me.readonly',
-  ],
-  gmail: ['https://www.googleapis.com/auth/gmail.modify'],
 } as const;
 
-export type IntegrationKey = keyof typeof SCOPES;
+type IntegrationKey = keyof typeof SCOPES;
 
 interface StoredTokens {
   accessToken: string;
@@ -83,7 +76,7 @@ const LEGACY_TOKENS_KEY = 'googleTokens';
 
 /** Sufijo del perfil activo ('' mientras aún no hay perfil, p. ej. en pleno
  *  acceso con Google: lo escrito entonces se adopta al primer uso con perfil). */
-export function profileSuffix(): string {
+function profileSuffix(): string {
   try {
     const id = (JSON.parse(localStorage.getItem('userProfile') ?? 'null') as { id?: string } | null)?.id;
     return id ? `_${id}` : '';
@@ -177,29 +170,6 @@ export function disconnectGoogle() {
     localStorage.removeItem(base);
   }
   localStorage.removeItem(LEGACY_TOKENS_KEY);
-}
-
-/** Cuenta asignada a una integración (o la principal como respaldo). */
-function accountFor(key: IntegrationKey): GoogleAccount | null {
-  const accounts = loadAccounts();
-  const bound = loadBindings()[key];
-  if (bound && accounts[bound]) return accounts[bound];
-  const primary = loadGoogleIdentity();
-  if (primary && accounts[primary.sub]) return accounts[primary.sub];
-  return null;
-}
-
-/** Identidad de la cuenta que atiende una integración (para mostrar en UI). */
-export function integrationAccount(key: IntegrationKey): GoogleIdentity | null {
-  return accountFor(key)?.identity ?? null;
-}
-
-/** ¿Están concedidos todos los ámbitos de la integración en su cuenta? */
-export function hasScopes(key: IntegrationKey): boolean {
-  const account = accountFor(key);
-  if (!account) return false;
-  const granted = new Set(account.tokens.scope.split(' '));
-  return SCOPES[key].every((s) => granted.has(s));
 }
 
 // --- PKCE ---
@@ -388,88 +358,6 @@ function saveAccount(identity: GoogleIdentity, tokens: StoredTokens): GoogleAcco
   accounts[identity.sub] = account;
   saveAccounts(accounts);
   return account;
-}
-
-/** Devuelve un access token válido para la integración, refrescándolo si expiró. */
-export async function getAccessToken(key: IntegrationKey = 'identity'): Promise<string> {
-  const account = accountFor(key);
-  if (!account) throw new Error(tr('Google no está conectado.'));
-  const { tokens, identity } = account;
-  if (Date.now() < tokens.expiresAt) return tokens.accessToken;
-
-  if (!tokens.refreshToken) {
-    throw new Error(tr('La sesión de Google expiró. Vuelve a conectar tu cuenta.'));
-  }
-  const form: Record<string, string> = {
-    client_id: CLIENT_ID!,
-    refresh_token: tokens.refreshToken,
-    grant_type: 'refresh_token',
-  };
-  if (CLIENT_SECRET) form.client_secret = CLIENT_SECRET;
-
-  let json: any;
-  try {
-    json = await invoke<any>('google_token_request', { form });
-  } catch (e: any) {
-    const msg = String(e?.message ?? e);
-    // Refresh token revocado o caducado (p. ej. app en modo Testing tras
-    // 7 días): se descarta para que el próximo Conectar pida consentimiento.
-    if (/invalid_grant|expired|revoked/i.test(msg)) {
-      saveAccount(identity, { ...tokens, refreshToken: undefined });
-      throw new Error(
-        tr('La autorización de Google para {email} caducó. Vuelve a conectar la cuenta.', { email: identity.email })
-      );
-    }
-    throw e;
-  }
-
-  const updated = saveAccount(identity, {
-    ...tokens,
-    accessToken: json.access_token,
-    expiresAt: Date.now() + (json.expires_in ?? 3600) * 1000 - 60_000,
-    scope: json.scope ?? tokens.scope,
-  });
-  return updated.tokens.accessToken;
-}
-
-interface ConnectOptions {
-  /**
-   * Muestra el selector de cuentas de Google (para vincular la integración
-   * a otra cuenta, p. ej. Classroom con la cuenta institucional).
-   */
-  selectAccount?: boolean;
-}
-
-/**
- * Conecta (o amplía ámbitos de) una integración concreta y devuelve la
- * identidad de la cuenta elegida.
- */
-export async function connectIntegration(
-  key: IntegrationKey,
-  options: ConnectOptions = {}
-): Promise<GoogleIdentity> {
-  const existing = accountFor(key);
-  const tokens = await authorize({
-    scopes: [...SCOPES.identity, ...SCOPES[key]],
-    // Con selector de cuenta no sabemos cuál elegirá el usuario → se fuerza
-    // consentimiento para garantizar refresh_token de esa cuenta.
-    prompt: options.selectAccount
-      ? 'select_account consent'
-      : existing?.tokens.refreshToken
-        ? undefined
-        : 'consent',
-    loginHint: options.selectAccount
-      ? undefined
-      : existing?.identity.email ?? loadGoogleIdentity()?.email,
-  });
-
-  const identity = await fetchIdentity(tokens.accessToken);
-  saveAccount(identity, tokens);
-
-  const bindings = loadBindings();
-  bindings[key] = identity.sub;
-  saveBindings(bindings);
-  return identity;
 }
 
 /**
