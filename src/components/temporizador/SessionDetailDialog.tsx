@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { format, parseISO } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { ArrowLeft, ListChecks, NotebookPen, Pencil, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import {
@@ -26,6 +25,8 @@ import { isSessionEditable } from '@/lib/session-edit';
 import { isRichNoteEmpty } from '@/lib/rich-note';
 import { cn } from '@/lib/utils';
 import type { DailyPerformance, StudySession } from '@/types';
+import { dateLocale, tr } from '@/lib/i18n';
+import { sessionTypeLabel } from '@/lib/enum-labels';
 
 // ============================================================
 // El detalle de UNA sesión de estudio: lo que la tarjeta resume, entero.
@@ -136,13 +137,13 @@ export function SessionDetailView({
   const dateLabel = (() => {
     try {
       // Solo la fecha: el horario va en las cifras, sin repetirlo aquí.
-      return format(parseISO(session.startTime), "EEEE d 'de' MMMM", { locale: es });
+      return format(parseISO(session.startTime), tr('EEEE d \'de\' MMMM'), { locale: dateLocale() });
     } catch {
       return '';
     }
   })();
 
-  const subjectNames = subjects.length > 0 ? subjects.map((subject) => subject.name).join(' · ') : 'Sin asignatura';
+  const subjectNames = subjects.length > 0 ? subjects.map((subject) => subject.name).join(' · ') : tr('Sin asignatura');
   const collections = [
     ...new Set(subjects.map((subject) => collectionOf(subject.course?.id)).filter((name): name is string => Boolean(name))),
   ].join(' · ');
@@ -157,7 +158,7 @@ export function SessionDetailView({
     <>
       {/* ---------- Cabecera: eco, flecha de volver y fecha ---------- */}
       <div className="relative shrink-0 overflow-hidden px-6 pb-4 pt-6">
-        <EchoWord word="Sesión" />
+        <EchoWord word={tr('Sesión')} />
         {onBack && (
           <Button
             type="button"
@@ -168,13 +169,13 @@ export function SessionDetailView({
             // La tarjeta pulsada desaparece al cambiar de vista: el foco
             // pasa aquí en lugar de perderse.
             autoFocus
-            title="Volver al día"
-            aria-label="Volver al día"
+            title={tr('Volver al día')}
+            aria-label={tr('Volver al día')}
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
         )}
-        <DialogTitle className="relative text-center text-lg font-bold text-primary">Sesión de estudio</DialogTitle>
+        <DialogTitle className="relative text-center text-lg font-bold text-primary">{tr('Sesión de estudio')}</DialogTitle>
         <DialogDescription className="relative mt-1 text-center text-xs text-muted-foreground first-letter:uppercase">
           {dateLabel}
         </DialogDescription>
@@ -204,22 +205,22 @@ export function SessionDetailView({
               <DurationFigure seconds={seconds} />
               <p className="mt-2 text-[11px] text-muted-foreground">
                 {dayContext && dayContext.total > 1
-                  ? `Sesión ${dayContext.order} de ${dayContext.total} del día`
-                  : 'Duración'}
+                  ? tr('Sesión {order} de {total} del día', { order: dayContext.order, total: dayContext.total })
+                  : tr('Duración')}
               </p>
             </div>
 
             <div className="flex min-w-0 flex-col justify-center gap-3 px-4">
               <div>
                 <div className="flex items-baseline justify-between gap-2">
-                  <p className="text-[11px] text-muted-foreground">Rendimiento</p>
+                  <p className="text-[11px] text-muted-foreground">{tr('Rendimiento')}</p>
                   {hasFocus ? (
                     <p className="text-sm font-bold tabular-nums text-primary">
                       {session.perception}
                       <span className="text-[10px] font-semibold text-muted-foreground">/20</span>
                     </p>
                   ) : (
-                    <p className="text-xs font-semibold text-muted-foreground">Sin calificar</p>
+                    <p className="text-xs font-semibold text-muted-foreground">{tr('Sin calificar')}</p>
                   )}
                 </div>
                 {hasFocus && (
@@ -232,7 +233,7 @@ export function SessionDetailView({
                 )}
               </div>
               <div className="flex items-baseline justify-between gap-2">
-                <p className="text-[11px] text-muted-foreground">Nota del día</p>
+                <p className="text-[11px] text-muted-foreground">{tr('Nota del día')}</p>
                 <p className="text-sm font-bold tabular-nums text-primary">
                   {dayPerformance ? `${dayPerformance.score.toFixed(1)} ${dayPerformance.grade}` : '—'}
                 </p>
@@ -241,21 +242,21 @@ export function SessionDetailView({
 
             <dl className="flex min-w-0 flex-col justify-center gap-3 px-4 text-xs">
               <div>
-                <dt className="text-[11px] text-muted-foreground">Horario</dt>
+                <dt className="text-[11px] text-muted-foreground">{tr('Horario')}</dt>
                 <dd className="text-sm font-semibold tabular-nums text-foreground">
                   {range ? `${format(range.start, 'HH:mm')} – ${format(range.end, 'HH:mm')}` : '—'}
                 </dd>
               </div>
               <div>
-                <dt className="text-[11px] text-muted-foreground">Reloj</dt>
-                <dd className="text-sm font-semibold text-foreground">{session.sessionType}</dd>
+                <dt className="text-[11px] text-muted-foreground">{tr('Reloj')}</dt>
+                <dd className="text-sm font-semibold text-foreground">{sessionTypeLabel(session.sessionType)}</dd>
               </div>
             </dl>
           </div>
 
           {/* Las anotaciones, dentro de su propio recuadro. */}
           <div className="space-y-3 rounded-lg border border-border/70 bg-muted/30 p-3">
-            <SectionHeading icon={NotebookPen}>Anotaciones</SectionHeading>
+            <SectionHeading icon={NotebookPen}>{tr('Anotaciones')}</SectionHeading>
             {notes && <RichNoteView text={notes} className="text-sm leading-relaxed text-foreground" />}
             {/* Lo anotado DURANTE la sesión, con el minuto en que se escribió. */}
             {progress.length > 0 && (
@@ -265,13 +266,13 @@ export function SessionDetailView({
               </div>
             )}
             {!notes && progress.length === 0 && (
-              <p className="text-xs text-muted-foreground">Sin anotaciones en esta sesión.</p>
+              <p className="text-xs text-muted-foreground">{tr('Sin anotaciones en esta sesión.')}</p>
             )}
           </div>
 
           {advanced.length > 0 && (
             <div className="space-y-1.5">
-              <SectionHeading icon={ListChecks}>Tareas avanzadas</SectionHeading>
+              <SectionHeading icon={ListChecks}>{tr('Tareas avanzadas')}</SectionHeading>
               <ul className="space-y-1 text-xs text-foreground">
                 {advanced.map((name, index) => (
                   <li key={`${name}-${index}`} className="flex items-start gap-2">
@@ -293,13 +294,13 @@ export function SessionDetailView({
             {canDelete && (
               <Button type="button" variant="gris" size="sm" className="gap-1.5" onClick={() => setConfirmDelete(true)}>
                 <Trash2 className="h-3.5 w-3.5" />
-                Eliminar
+                {tr('Eliminar')}
               </Button>
             )}
             {canEdit && (
               <Button type="button" variant="fantasma" size="sm" className="gap-1.5" onClick={() => onEdit?.(session)}>
                 <Pencil className="h-3.5 w-3.5" />
-                Corregir
+                {tr('Corregir')}
               </Button>
             )}
           </div>
@@ -309,15 +310,15 @@ export function SessionDetailView({
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar esta sesión de estudio?</AlertDialogTitle>
+            <AlertDialogTitle>{tr('¿Eliminar esta sesión de estudio?')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Se borrará la sesión de {formatDurationLabel(seconds)}
-              {subjects.length > 0 ? ` en ${subjects.map((subject) => subject.name).join(', ')}` : ''}. La
-              calificación de ese día se recalculará. Esta acción no se puede deshacer.
+              {subjects.length > 0
+                ? tr('Se borrará la sesión de {duration} en {subjects}. La calificación de ese día se recalculará. Esta acción no se puede deshacer.', { duration: formatDurationLabel(seconds), subjects: subjects.map((subject) => subject.name).join(', ') })
+                : tr('Se borrará la sesión de {duration}. La calificación de ese día se recalculará. Esta acción no se puede deshacer.', { duration: formatDurationLabel(seconds) })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{tr('Cancelar')}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
@@ -325,7 +326,7 @@ export function SessionDetailView({
                 onDelete?.(session.id);
               }}
             >
-              Eliminar
+              {tr('Eliminar')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -5,6 +5,7 @@ import {
   addDays,
   capitalize,
   cursorOf,
+  dayMonthShort,
   fromKey,
   inRange,
   layoutWeek,
@@ -18,6 +19,7 @@ import {
   type Segment,
 } from './calendar-model';
 import { EVENT_TINT, PAINT_TINT, eventInk, tintVar } from './CalendarBits';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Cuadrícula de un mes.
@@ -39,16 +41,14 @@ import { EVENT_TINT, PAINT_TINT, eventInk, tintVar } from './CalendarBits';
 // ============================================================
 
 const WEEKDAYS = [
-  { long: 'Lunes', short: 'Lun' },
-  { long: 'Martes', short: 'Mar' },
-  { long: 'Miércoles', short: 'Mié' },
-  { long: 'Jueves', short: 'Jue' },
-  { long: 'Viernes', short: 'Vie' },
-  { long: 'Sábado', short: 'Sáb' },
-  { long: 'Domingo', short: 'Dom' },
+  { get long() { return tr('Lunes'); }, get short() { return tr('Lun'); } },
+  { get long() { return tr('Martes'); }, get short() { return tr('Mar'); } },
+  { get long() { return tr('Miércoles'); }, get short() { return tr('Mié'); } },
+  { get long() { return tr('Jueves'); }, get short() { return tr('Jue'); } },
+  { get long() { return tr('Viernes'); }, get short() { return tr('Vie'); } },
+  { get long() { return tr('Sábado'); }, get short() { return tr('Sáb'); } },
+  { get long() { return tr('Domingo'); }, get short() { return tr('Dom'); } },
 ];
-
-const MONTH_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sept', 'oct', 'nov', 'dic'];
 
 /** Medidas de la capa de barras, en píxeles. */
 const HEAD_H = 30;
@@ -382,9 +382,9 @@ export default function MonthGrid({
                 const count = counts[c];
                 const label = [
                   capitalize(longDayLabel(day, todayKey)),
-                  isToday ? 'hoy' : '',
-                  count ? `${count} ${count === 1 ? 'elemento' : 'elementos'}` : '',
-                  fill ? 'con color' : '',
+                  isToday ? tr('hoy') : '',
+                  count ? (count === 1 ? tr('1 elemento') : tr('{count} elementos', { count })) : '',
+                  fill ? tr('con color') : '',
                 ]
                   .filter(Boolean)
                   .join(', ');
@@ -432,7 +432,7 @@ export default function MonthGrid({
                             : 'text-muted-foreground/55'
                       )}
                     >
-                      {date.getDate() === 1 ? `1 ${MONTH_SHORT[date.getMonth()]}` : date.getDate()}
+                      {date.getDate() === 1 ? dayMonthShort(1, date.getMonth()) : date.getDate()}
                     </span>
                   </div>
                 );
@@ -453,9 +453,9 @@ export default function MonthGrid({
                       key={`more-${c}`}
                       className="pointer-events-auto flex cursor-pointer items-center truncate px-2 text-[11px] font-semibold text-muted-foreground transition-colors hover:text-primary"
                       style={{ gridColumn: c + 1, gridRow: more.lane + 1 }}
-                      title="Ver todo el día"
+                      title={tr('Ver todo el día')}
                     >
-                      +{more.count} más
+                      +{more.count}{' '}{tr('más')}
                     </span>
                   ) : null
                 )}

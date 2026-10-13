@@ -1,3 +1,5 @@
+import { tr } from '@/lib/i18n';
+
 // ============================================================
 // Documento de informe: UN modelo, dos formatos.
 //
@@ -391,7 +393,7 @@ function htmlBlock(block: DocBlock): string {
       ).join(' ');
       return `<div class="fig">${block.caption ? caption(block.caption) : ''}
 <table cellpadding="0" cellspacing="0" style="width:auto;margin-bottom:5px;">${head}${rows}</table>
-<div style="font-size:7.5pt;color:#${COLOR.muted};margin-bottom:10px;">Menos ${scale} Más${
+<div style="font-size:7.5pt;color:#${COLOR.muted};margin-bottom:10px;">${escapeHtml(tr('Menos'))} ${scale} ${escapeHtml(tr('Más'))}${
         block.legend ? ` · ${escapeHtml(block.legend)}` : ''
       }</div></div>`;
     }
@@ -847,9 +849,9 @@ function docxBlock(block: DocBlock): string {
         (block.caption ? para(run(block.caption, CAPTION_STYLE), { before: 120, after: 60 }) : '') +
         table(widths, head + rows) +
         para(
-          run('Menos  ', { color: COLOR.muted, size: 14 }) +
+          run(`${tr('Menos')}  `, { color: COLOR.muted, size: 14 }) +
             scale +
-            run('  Más', { color: COLOR.muted, size: 14 }) +
+            run(`  ${tr('Más')}`, { color: COLOR.muted, size: 14 }) +
             (block.legend ? run(`   ·   ${block.legend}`, { color: COLOR.muted, size: 14 }) : ''),
           { before: 80, after: 100 }
         )

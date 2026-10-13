@@ -32,6 +32,7 @@ import {
   type CompetencyVertex,
 } from '@/lib/competency';
 import CompetencyCoursesDialog from './CompetencyCoursesDialog';
+import { tr } from '@/lib/i18n';
 
 /** Rampa monocroma sobre el color primario, cortada por los umbrales del
  *  sistema peruano: aprobado holgado, aprobado justo y desaprobado. */
@@ -39,7 +40,7 @@ const levelTone = (level: number) =>
   level >= 14 ? 'bg-primary' : level >= 11 ? 'bg-primary/60' : 'bg-destructive/70';
 
 const pluralPending = (pending: number) =>
-  pending === 1 ? '1 tarea pendiente' : `${pending} tareas pendientes`;
+  pending === 1 ? tr('1 tarea pendiente') : tr('{pending} tareas pendientes', { pending });
 
 interface TooltipProps {
   active?: boolean;
@@ -53,10 +54,10 @@ const CompetencyTooltip = ({ active, payload }: TooltipProps) => {
     <div className="rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl">
       <p className="font-semibold text-foreground">{vertex.name}</p>
       <p className="text-muted-foreground">
-        {vertex.pending === 0 ? 'Sin tareas pendientes' : pluralPending(vertex.pending)}
+        {vertex.pending === 0 ? tr('Sin tareas pendientes') : pluralPending(vertex.pending)}
       </p>
       <p className="text-primary font-semibold tabular-nums">
-        Dominio {vertex.level}/{COMPETENCY_MAX}{' '}
+        {tr('Dominio')}{' '}{vertex.level}/{COMPETENCY_MAX}{' '}
         <span className="text-[10px] font-bold">{competencyGrade(vertex.level)}</span>
       </p>
     </div>
@@ -196,24 +197,23 @@ export default function CompetencyMatrix() {
   const emptyState = !canConfigure ? (
     <div className="flex flex-col items-center justify-center gap-3 py-10 text-center text-muted-foreground">
       <Target className="h-9 w-9 opacity-60" />
-      <p className="text-sm font-semibold text-foreground">Aún no hay asignaturas suficientes</p>
+      <p className="text-sm font-semibold text-foreground">{tr('Aún no hay asignaturas suficientes')}</p>
       <p className="text-xs max-w-[240px]">
-        Crea al menos {MIN_COMPETENCY_COURSES} asignaturas para dibujar tu matriz de competencias.
+        {tr('Crea al menos')}{' '}{MIN_COMPETENCY_COURSES}{' '}{tr('asignaturas para dibujar tu matriz de competencias.')}
       </p>
       <Button size="sm" className="mt-1" onClick={() => router.push('/cursos')}>
-        Ir a Asignaturas
+        {tr('Ir a Asignaturas')}
       </Button>
     </div>
   ) : (
     <div className="flex flex-col items-center justify-center gap-3 py-10 text-center text-muted-foreground">
       <Target className="h-9 w-9 opacity-60" />
-      <p className="text-sm font-semibold text-foreground">Tu matriz está sin configurar</p>
+      <p className="text-sm font-semibold text-foreground">{tr('Tu matriz está sin configurar')}</p>
       <p className="text-xs max-w-[240px]">
-        Elige entre {MIN_COMPETENCY_COURSES} y {MAX_COMPETENCY_COURSES} asignaturas para dibujar tu
-        radar.
+        {tr('Elige entre {min} y {max} asignaturas para dibujar tu radar.', { min: MIN_COMPETENCY_COURSES, max: MAX_COMPETENCY_COURSES })}
       </p>
       <Button size="sm" className="mt-1" onClick={() => setPickerOpen(true)}>
-        Elegir asignaturas
+        {tr('Elegir asignaturas')}
       </Button>
     </div>
   );
@@ -221,7 +221,7 @@ export default function CompetencyMatrix() {
   return (
     <>
       <h1 className="text-2xl font-bold text-primary font-headline pt-8 pb-4 text-center">
-        Matriz de competencias
+        {tr('Matriz de competencias')}
       </h1>
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         <div className="lg:col-span-2">
@@ -282,7 +282,7 @@ export default function CompetencyMatrix() {
                 <div className="flex h-full flex-col items-center justify-center gap-4">
                   <GhostPolygon />
                   <p className="text-xs text-muted-foreground text-center max-w-[200px]">
-                    Aquí aparecerá tu radar en cuanto la matriz tenga asignaturas.
+                    {tr('Aquí aparecerá tu radar en cuanto la matriz tenga asignaturas.')}
                   </p>
                 </div>
               )}
@@ -290,7 +290,7 @@ export default function CompetencyMatrix() {
             {hasEnough && (
               <div className="flex items-center justify-center gap-2 pb-3 text-[11px] text-muted-foreground">
                 <span className="inline-block h-2 w-2 rounded-full bg-primary" />
-                Dominio actual · media{' '}
+                {tr('Dominio actual · media')}{' '}
                 <span className="font-semibold text-primary tabular-nums">
                   {average.toFixed(1)}
                 </span>
@@ -303,15 +303,15 @@ export default function CompetencyMatrix() {
         <div className="lg:col-span-3">
           <Card ref={adjustLevelsCardRef}>
             <CardHeader className="relative">
-              <CardTitle className="text-lg font-headline text-center">Nivel por asignatura</CardTitle>
+              <CardTitle className="text-lg font-headline text-center">{tr('Nivel por asignatura')}</CardTitle>
               <Button
                 variant="ghost"
                 size="icon"
                 className="absolute right-3 top-3 h-8 w-8 text-muted-foreground hover:text-primary"
                 onClick={() => setPickerOpen(true)}
                 disabled={!canConfigure}
-                aria-label="Elegir asignaturas de la matriz"
-                title="Elegir asignaturas"
+                aria-label={tr('Elegir asignaturas de la matriz')}
+                title={tr('Elegir asignaturas')}
               >
                 <Pencil className="h-4 w-4" />
               </Button>
@@ -339,7 +339,7 @@ export default function CompetencyMatrix() {
                               <p className="font-semibold">{vertex.name}</p>
                               <p className="text-muted-foreground">
                                 {vertex.pending === 0
-                                  ? 'Al día · sin tareas pendientes'
+                                  ? tr('Al día · sin tareas pendientes')
                                   : pluralPending(vertex.pending)}
                               </p>
                             </TooltipContent>
@@ -349,7 +349,7 @@ export default function CompetencyMatrix() {
                               se lee por cuánto avanza el relleno. */}
                           <div
                             className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-secondary"
-                            aria-label={`Dominio ${vertex.level} de ${COMPETENCY_MAX}`}
+                            aria-label={tr('Dominio {level} de {COMPETENCY_MAX}', { level: vertex.level, COMPETENCY_MAX })}
                           >
                             <div
                               className={cn(
@@ -374,7 +374,7 @@ export default function CompetencyMatrix() {
                       <Trophy
                         className={cn('h-4 w-4', isComplete && 'text-primary')}
                       />
-                      {isComplete ? 'Matriz completa: todo al día' : 'Dominio medio'}
+                      {isComplete ? tr('Matriz completa: todo al día') : tr('Dominio medio')}
                     </div>
                     <p className="font-headline text-2xl font-bold text-primary tabular-nums">
                       {average.toFixed(1)}

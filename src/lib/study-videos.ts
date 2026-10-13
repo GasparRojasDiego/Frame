@@ -9,6 +9,7 @@
 // ============================================================
 
 import type { StudyVideo } from '@/types';
+import { tr } from '@/lib/i18n';
 
 /**
  * Tope de vídeos guardados.
@@ -143,7 +144,7 @@ export async function readYoutubeVideo(id: string): Promise<YoutubeVideoInfo> {
   } catch {
     /* la duración es un extra */
   }
-  return { id, title: oembed.title?.trim() || 'Vídeo de YouTube', uploader: oembed.author_name?.trim() || '', duration };
+  return { id, title: oembed.title?.trim() || tr('Vídeo de YouTube'), uploader: oembed.author_name?.trim() || '', duration };
 }
 
 /** Identificador de YouTube dentro de una URL de vídeo. */

@@ -20,6 +20,8 @@ import type { Song } from '@/types';
 
 import { songMatches, songTitle } from '@/lib/music-search';
 import { songCardId, useSongHighlight } from '@/hooks/use-song-highlight';
+import { tr } from '@/lib/i18n';
+import { artistLabel } from '@/lib/enum-labels';
 
 /**
  * Dónde se quedó el usuario: carpeta y desplazamiento (solo sin filtros).
@@ -179,8 +181,8 @@ export default function MusicLibrary() {
           <input
             id="music-search"
             type="text"
-            placeholder="Buscar canciones o artistas…"
-            aria-label="Buscar canciones o artistas"
+            placeholder={tr('Buscar canciones o artistas…')}
+            aria-label={tr('Buscar canciones o artistas')}
             autoComplete="off"
             spellCheck={false}
             className="h-full min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
@@ -189,7 +191,7 @@ export default function MusicLibrary() {
           />
           <span className="shrink-0 whitespace-nowrap text-xs tabular-nums text-muted-foreground" aria-live="polite">
             <span className="font-semibold text-foreground/70">{filteredSongs.length}</span>{' '}
-            {filteredSongs.length === 1 ? 'canción' : 'canciones'}
+            {filteredSongs.length === 1 ? tr('canción') : tr('canciones')}
           </span>
         </label>
 
@@ -198,7 +200,7 @@ export default function MusicLibrary() {
         {pageCount > 1 && (
           <span
             className="flex shrink-0 items-center gap-0.5 text-sm text-muted-foreground"
-            title={`Carpeta ${safePage + 1} de ${pageCount} · canciones ${pageFirst}–${pageLast}`}
+            title={tr('Carpeta {p} de {pageCount} · canciones {pageFirst}–{pageLast}', { p: safePage + 1, pageCount, pageFirst, pageLast })}
           >
             <Button
               variant="ghost"
@@ -206,7 +208,7 @@ export default function MusicLibrary() {
               className="h-6 w-6 text-muted-foreground hover:text-primary disabled:opacity-30"
               onClick={() => goToPage(safePage - 1)}
               disabled={safePage === 0}
-              aria-label="Página anterior"
+              aria-label={tr('Página anterior')}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -219,7 +221,7 @@ export default function MusicLibrary() {
               className="h-6 w-6 text-muted-foreground hover:text-primary disabled:opacity-30"
               onClick={() => goToPage(safePage + 1)}
               disabled={safePage >= pageCount - 1}
-              aria-label="Página siguiente"
+              aria-label={tr('Página siguiente')}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -232,7 +234,7 @@ export default function MusicLibrary() {
             size="icon"
             onClick={handleRandomPlay}
             disabled={filteredSongs.length === 0}
-            title="Reproducir una canción al azar"
+            title={tr('Reproducir una canción al azar')}
           >
             <Shuffle className="h-5 w-5" />
           </Button>
@@ -244,7 +246,7 @@ export default function MusicLibrary() {
             size="icon"
             onClick={() => setShowOnlyFavorites(prev => !prev)}
             aria-pressed={showOnlyFavorites}
-            title={showOnlyFavorites ? 'Ver toda la biblioteca' : 'Ver sólo favoritas'}
+            title={showOnlyFavorites ? tr('Ver toda la biblioteca') : tr('Ver sólo favoritas')}
           >
             <Heart className={cn('h-5 w-5', showOnlyFavorites && 'fill-current')} />
           </Button>
@@ -259,9 +261,9 @@ export default function MusicLibrary() {
             <Music className="h-10 w-10 text-primary" />
           </div>
           <div className="space-y-1">
-            <h3 className="font-semibold text-lg">Tu biblioteca de música está vacía</h3>
+            <h3 className="font-semibold text-lg">{tr('Tu biblioteca de música está vacía')}</h3>
             <p className="text-sm text-muted-foreground">
-              Trae tus canciones desde tu equipo: sueltas o una carpeta entera, con sus portadas y letras.
+              {tr('Trae tus canciones desde tu equipo: sueltas o una carpeta entera, con sus portadas y letras.')}
             </p>
           </div>
           <MusicImportButton variant="empty" />
@@ -269,9 +271,9 @@ export default function MusicLibrary() {
       ) : showNoResultsState ? (
         <Card className="border-dashed mt-8 flex flex-col items-center justify-center text-center p-12 gap-4">
           <div className="space-y-1">
-            <h3 className="font-semibold text-lg">No se encontraron resultados</h3>
+            <h3 className="font-semibold text-lg">{tr('No se encontraron resultados')}</h3>
             <p className="text-sm text-muted-foreground">
-              Prueba con otro término de búsqueda o revisa tus favoritas.
+              {tr('Prueba con otro término de búsqueda o revisa tus favoritas.')}
             </p>
           </div>
         </Card>
@@ -318,7 +320,7 @@ export default function MusicLibrary() {
                   <p className="font-semibold text-foreground truncate">
                     {songTitle(song)}
                   </p>
-                  <p className="text-xs text-muted-foreground truncate">{song.artist}</p>
+                  <p className="text-xs text-muted-foreground truncate">{artistLabel(song.artist)}</p>
                 </div>
               </CardContent>
             </Card>
@@ -332,14 +334,13 @@ export default function MusicLibrary() {
       <AlertDialog open={!!songToDelete} onOpenChange={(isOpen) => !isOpen && setSongToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+            <AlertDialogTitle>{tr('¿Estás absolutamente seguro?')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. Esto eliminará permanentemente la canción
-              "{(songToDelete ? songTitle(songToDelete) : '')}" de tu biblioteca.
+              {tr('Esta acción no se puede deshacer. Esto eliminará permanentemente la canción «{song}» de tu biblioteca.', { song: songToDelete ? songTitle(songToDelete) : '' })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{tr('Cancelar')}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
@@ -349,7 +350,7 @@ export default function MusicLibrary() {
                 }
               }}
             >
-              Eliminar
+              {tr('Eliminar')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

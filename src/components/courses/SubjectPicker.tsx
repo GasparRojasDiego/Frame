@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import WaveBackdrop from '@/components/courses/WaveBackdrop';
 import { useCardImageStyle } from '@/lib/card-image-height';
 import type { Course } from '@/types';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Elegir UNA asignatura, en dos pasos: colección → asignatura.
@@ -148,7 +149,7 @@ export function useSubjectGroups(): SubjectGroup[] {
     }
 
     const loose = (courses ?? []).filter((course) => !inSpaces.has(course.id));
-    if (loose.length > 0) out.push({ id: LOOSE, name: 'Sin colección', courses: loose });
+    if (loose.length > 0) out.push({ id: LOOSE, name: tr('Sin colección'), courses: loose });
 
     return out;
   }, [courses, spaces]);
@@ -167,8 +168,8 @@ export default function SubjectPicker({
   onChange,
   /** Añade la tarjeta «Sin asignatura» al principio. */
   allowNone = false,
-  noneLabel = 'Sin asignatura',
-  noneHint = 'Se guarda en Inicio para colocarla luego',
+  noneLabel = tr('Sin asignatura'),
+  noneHint = tr('Se guarda en Inicio para colocarla luego'),
   className,
 }: {
   value: string | null;
@@ -209,24 +210,24 @@ export default function SubjectPicker({
               variant="ghost"
               className="h-6 w-6 text-muted-foreground hover:text-primary"
               onClick={() => setOpenSpace(null)}
-              title="Volver a las colecciones"
+              title={tr('Volver a las colecciones')}
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
           )}
-          {current && needle === '' ? current.name : '¿De qué asignatura?'}
+          {current && needle === '' ? current.name : tr('¿De qué asignatura?')}
           {selectedCourse ? (
             <span className="text-xs font-normal text-primary">· {selectedCourse.name}</span>
           ) : (
             value === null &&
-            allowNone && <span className="text-xs font-normal text-muted-foreground">sin asignar</span>
+            allowNone && <span className="text-xs font-normal text-muted-foreground">{tr('sin asignar')}</span>
           )}
         </p>
         {hasCourses && (
           <div className="relative w-full sm:w-48">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Buscar…"
+              placeholder={tr('Buscar…')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="h-8 border-primary/60 bg-card pl-8 text-xs"
@@ -237,7 +238,7 @@ export default function SubjectPicker({
 
       {!hasCourses ? (
         <p className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
-          Todavía no tienes asignaturas. Créalas en «Asignaturas».
+          {tr('Todavía no tienes asignaturas. Créalas en «Asignaturas».')}
         </p>
       ) : (
         <div className="space-y-3">
@@ -265,7 +266,7 @@ export default function SubjectPicker({
           {needle !== '' ? (
             searchResults.length === 0 ? (
               <p className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
-                Ninguna asignatura coincide con la búsqueda.
+                {tr('Ninguna asignatura coincide con la búsqueda.')}
               </p>
             ) : (
               <div className={grid}>
@@ -308,7 +309,7 @@ export default function SubjectPicker({
                         ...(group.id === LOOSE ? [] : [`spaceImage_${group.id}`]),
                         ...group.courses.map((course) => `courseImage_${course.id}`),
                       ]}
-                      subtitle={`${group.courses.length} ${group.courses.length === 1 ? 'asignatura' : 'asignaturas'}`}
+                      subtitle={`${group.courses.length} ${group.courses.length === 1 ? tr('asignatura') : tr('asignaturas')}`}
                       onSelect={() => setOpenSpace(group.id)}
                     />
                     <span className="pointer-events-none absolute left-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-background/70 backdrop-blur">
@@ -338,7 +339,7 @@ export default function SubjectPicker({
 export function SubjectMultiPicker({
   values,
   onChange,
-  title = '¿De qué asignaturas?',
+  title = tr('¿De qué asignaturas?'),
   max,
   className,
   searchClassName,
@@ -397,7 +398,7 @@ export function SubjectMultiPicker({
               variant="ghost"
               className="h-6 w-6 text-muted-foreground hover:text-primary"
               onClick={() => setOpenSpace(null)}
-              title="Volver a las colecciones"
+              title={tr('Volver a las colecciones')}
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
@@ -405,7 +406,7 @@ export function SubjectMultiPicker({
           {current && needle === '' ? current.name : title}
           {values.length > 0 && (
             <span className="text-xs font-normal text-primary">
-              · {values.length} {values.length === 1 ? 'marcada' : 'marcadas'}
+              · {values.length} {values.length === 1 ? tr('marcada') : tr('marcadas')}
             </span>
           )}
         </p>
@@ -413,7 +414,7 @@ export function SubjectMultiPicker({
           <div className={cn('relative w-full sm:w-48', searchClassName)}>
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Buscar…"
+              placeholder={tr('Buscar…')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="h-8 border-primary bg-card pl-8 text-xs"
@@ -424,12 +425,12 @@ export function SubjectMultiPicker({
 
       {!hasCourses ? (
         <p className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
-          Todavía no tienes asignaturas. Créalas en «Asignaturas».
+          {tr('Todavía no tienes asignaturas. Créalas en «Asignaturas».')}
         </p>
       ) : needle !== '' ? (
         searchResults.length === 0 ? (
           <p className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
-            Ninguna asignatura coincide con la búsqueda.
+            {tr('Ninguna asignatura coincide con la búsqueda.')}
           </p>
         ) : (
           <div className={grid}>{searchResults.map(courseCard)}</div>
@@ -460,8 +461,8 @@ export function SubjectMultiPicker({
                   imageKeys={groupImageKeys(group)}
                   subtitle={
                     marked > 0
-                      ? `${marked} de ${group.courses.length} marcadas`
-                      : `${group.courses.length} ${group.courses.length === 1 ? 'asignatura' : 'asignaturas'}`
+                      ? tr('{marked} de {length} marcadas', { marked, length: group.courses.length })
+                      : `${group.courses.length} ${group.courses.length === 1 ? tr('asignatura') : tr('asignaturas')}`
                   }
                   onSelect={() => setOpenSpace(group.id)}
                 />

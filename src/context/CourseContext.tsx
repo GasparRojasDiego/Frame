@@ -43,7 +43,7 @@ import { useLocalEventReminders } from '@/components/calendar/useEventReminders'
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { deleteAttachment } from '@/lib/file-handles';
 import { forgetLyrics } from '@/lib/lyrics';
-import { UNKNOWN_ARTIST } from '@/lib/music-import';
+import { UNKNOWN_ARTIST } from '@/lib/enum-labels';
 import { reviewStoredSong } from '@/lib/music-review';
 import { foldName, isJunkTag } from '@/lib/song-names';
 import { activeProfileId, ownerForUnownedSongs } from '@/lib/profile-scope';
@@ -54,6 +54,8 @@ import { isSessionEditable } from '@/lib/session-edit';
 import { activeSessionKey, clearRecoverableSession } from '@/lib/session-recovery';
 import { safeRead, safeReadArray, safeWrite } from '@/lib/safe-storage';
 
+
+import { tr } from '@/lib/i18n';
 
 type TimerMode = 'focus' | 'stopwatch';
 type SelectionMode = 'rendimiento' | 'tiempo';
@@ -1115,7 +1117,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
         setIsTimerActive(false);
         setIsTimerPaused(true);
         setAutoFinishPending(true);
-        void notify({ title: 'Sesión terminada', body: 'Tu sesión de estudio ha terminado.', kind: 'sesion', route: '/temporizador' });
+        void notify({ text: () => ({ title: tr('Sesión terminada'), body: tr('Tu sesión de estudio ha terminado.') }), kind: 'sesion', route: '/temporizador' });
         // Con la vista flotante, Frame suele estar detrás de otras apps: al
         // terminar la sesión se pone delante para registrarla.
         if (isTauri() && miniStateRef.current.miniTimerView !== 'hidden') {
@@ -1319,22 +1321,24 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
         const slotKey = `${dayKey}#${slot}`;
         if (lastSent[task.id] === slotKey) continue;
 
-        let when = '';
+        let diff: number | null = null;
         if (task.dueDate) {
           const due = new Date(task.dueDate);
-          const diff = Math.round(
+          diff = Math.round(
             (new Date(due.getFullYear(), due.getMonth(), due.getDate()).getTime() -
               new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) /
               86_400_000
           );
-          when =
-            diff < 0 ? ' · vencida' : diff === 0 ? ' · vence hoy' : diff === 1 ? ' · vence mañana' : ` · en ${diff} días`;
         }
+        const when = () =>
+          diff === null ? '' : diff < 0 ? tr(' · vencida') : diff === 0 ? tr(' · vence hoy') : diff === 1 ? tr(' · vence mañana') : tr(' · en {diff} días', { diff });
         void notify({
-          title: 'Recordatorio de tarea',
+          text: () => ({
+            title: tr('Recordatorio de tarea'),
+            body: `${task.name}${task.courseName ? ` — ${task.courseName}` : ''}${when()}`,
+          }),
           kind: 'recordatorio',
           route: '/tareas',
-          body: `${task.name}${task.courseName ? ` — ${task.courseName}` : ''}${when}`,
         });
         lastSent[task.id] = slotKey;
         changed = true;
@@ -1365,8 +1369,8 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     if (courses.some(course => course.name.toLowerCase() === trimmedName.toLowerCase())) {
       toast({
         variant: "destructive",
-        title: "Asignatura duplicada",
-        description: "Ya existe una asignatura con este nombre.",
+        title: tr('Asignatura duplicada'),
+        description: tr('Ya existe una asignatura con este nombre.'),
       });
       return;
     }
@@ -1385,8 +1389,8 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
       if (newName && courses.some(course => course.id !== id && course.name.toLowerCase() === newName)) {
         toast({
           variant: "destructive",
-          title: "Nombre duplicado",
-          description: "Ya existe otra asignatura con este nombre.",
+          title: tr('Nombre duplicado'),
+          description: tr('Ya existe otra asignatura con este nombre.'),
         });
         return;
       }
@@ -1443,7 +1447,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     const originalCourses = courses;
     const originalTasks = tasks;
     const originalNotes = notes;
-    const courseName = originalCourses.find(c => c.id === id)?.name || 'Course';
+    const courseName = originalCourses.find(c => c.id === id)?.name || tr('Asignatura');
 
     // Optimistic UI update
     setCourses(prev => prev.filter(c => c.id !== id));
@@ -1454,7 +1458,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
       setCourses(prev => restoreRecords(prev, originalCourses, originalCourses.filter(c => c.id === id)));
       setTasks(prev => restoreRecords(prev, originalTasks, originalTasks.filter(t => t.courseId === id)));
       setNotes(prev => restoreRecords(prev, originalNotes, originalNotes.filter(n => n.courseId === id)));
-      toast({ title: "Acción deshecha", description: `La asignatura "${courseName}" ha sido restaurada.` });
+      toast({ title: tr('Acción deshecha'), description: tr('La asignatura "{courseName}" ha sido restaurada.', { courseName }) });
     };
 
     const commit = () => {
@@ -1501,7 +1505,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     };
 
     pushUndoableAction({ undo, commit });
-    toast({ title: "Asignatura eliminada", description: "Presiona Ctrl+Z para deshacer." });
+    toast({ title: tr('Asignatura eliminada'), description: tr('Presiona Ctrl+Z para deshacer.') });
 
   }, [storageKeys, courses, tasks, notes]);
 
@@ -1552,7 +1556,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     const originalArchived = archivedTasks;
     const taskToDelete = originalTasks.find(t => t.id === id);
     if (!taskToDelete) return; // Safety check
-    const taskName = taskToDelete.name || 'Task';
+    const taskName = taskToDelete.name || tr('Tarea');
     const courseId = taskToDelete.courseId;
     const newByCourse = { ...originalByCourse, [courseId]: (originalByCourse[courseId] || 0) + 1 };
     // La tarea culminada NO desaparece: pasa al archivo con fecha/hora.
@@ -1570,7 +1574,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
         setCompletedTasksCount(prev => Math.max(0, prev - 1));
         setCompletedTasksByCourse(prev => ({ ...prev, [courseId]: Math.max(0, (prev[courseId] || 0) - 1) }));
         setArchivedTasks(prev => prev.filter(a => !(a.id === archivedEntry.id && a.archivedAt === archivedEntry.archivedAt)));
-        toast({ title: "Acción deshecha", description: `Tarea "${taskName}" restaurada.` });
+        toast({ title: tr('Acción deshecha'), description: tr('Tarea "{taskName}" restaurada.', { taskName }) });
     };
 
     const commit = () => {
@@ -1611,7 +1615,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     };
 
     pushUndoableAction({ undo, commit });
-    toast({ title: "Tarea culminada", description: "Queda en tus tareas culminadas. Ctrl+Z para deshacer." });
+    toast({ title: tr('Tarea culminada'), description: tr('Queda en tus tareas culminadas. Ctrl+Z para deshacer.') });
   }, [storageKeys, tasks, completedTasksCount, completedTasksByCourse, archivedTasks]);
   
   // «No se pudo completar»: la tarea sale de pendientes SIN contar como
@@ -1630,7 +1634,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     const undo = () => {
       setTasks(prev => restoreRecords(prev, originalTasks, [target]));
       setIncompleteTasks(prev => prev.filter(t => t.id !== id));
-      toast({ title: "Acción deshecha", description: `Tarea "${target.name}" devuelta a pendientes.` });
+      toast({ title: tr('Acción deshecha'), description: tr('Tarea "{name}" devuelta a pendientes.', { name: target.name }) });
     };
     const commit = () => {
       const latestTasks = getFromLocalStorage<Task[]>(storageKeys.tasks, originalTasks);
@@ -1645,7 +1649,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
       });
     };
     pushUndoableAction({ undo, commit });
-    toast({ title: "Marcada como incompleta", description: "La encuentras en Tareas → Archivadas. Ctrl+Z para deshacer." });
+    toast({ title: tr('Marcada como incompleta'), description: tr('La encuentras en Tareas → Archivadas. Ctrl+Z para deshacer.') });
   }, [storageKeys, tasks, pushUndoableAction]);
 
   const restoreIncompleteTask = useCallback((id: string) => {
@@ -1665,7 +1669,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
       setInLocalStorage(storageKeys.tasks, updated);
       return updated;
     });
-    toast({ title: "Tarea retomada", description: `"${entry.name}" vuelve a tus pendientes.` });
+    toast({ title: tr('Tarea retomada'), description: tr('"{name}" vuelve a tus pendientes.', { name: entry.name }) });
   }, [storageKeys, incompleteTasks]);
 
   const deleteIncompleteTask = useCallback((id: string) => {
@@ -1758,7 +1762,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     const undo = () => {
         setNotes(prev => restoreRecords(prev, originalNotes, [noteToDelete]));
         setArchivedNotes(prev => prev.filter(a => !(a.id === archivedEntry.id && a.archivedAt === archivedEntry.archivedAt)));
-        toast({ title: "Acción deshecha", description: "Recurso restaurado." });
+        toast({ title: tr('Acción deshecha'), description: tr('Recurso restaurado.') });
     };
 
     const commit = () => {
@@ -1771,7 +1775,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     };
 
     pushUndoableAction({ undo, commit });
-    toast({ title: "Recurso archivado", description: "Presiona Ctrl+Z para deshacer." });
+    toast({ title: tr('Recurso archivado'), description: tr('Presiona Ctrl+Z para deshacer.') });
   }, [storageKeys, notes, archivedNotes]);
 
   // Elimina una tarea SIN archivarla: para descartar tareas (p. ej. vencidas
@@ -1787,7 +1791,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
 
     const undo = () => {
       setTasks(prev => restoreRecords(prev, originalTasks, [taskToRemove]));
-      toast({ title: "Acción deshecha", description: `Tarea "${taskToRemove.name}" restaurada.` });
+      toast({ title: tr('Acción deshecha'), description: tr('Tarea "{name}" restaurada.', { name: taskToRemove.name }) });
     };
     const commit = () => {
       const latestTasks = getFromLocalStorage<Task[]>(storageKeys.tasks, originalTasks);
@@ -1796,7 +1800,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
       purgeTaskFiles([taskToRemove]);
     };
     pushUndoableAction({ undo, commit });
-    toast({ title: "Tarea eliminada", description: "No se archivó. Ctrl+Z para deshacer." });
+    toast({ title: tr('Tarea eliminada'), description: tr('No se archivó. Ctrl+Z para deshacer.') });
   }, [storageKeys, tasks]);
 
   // Reparte los minutos de una sesión de estudio entre las tareas avanzadas:
@@ -1913,7 +1917,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     notesToPurge.forEach(n => {
       if (n.kind === 'file') void deleteImage(`noteFile_${n.id}`);
     });
-    toast({ title: "Archivo vaciado", description: "Los archivados de la asignatura se eliminaron definitivamente." });
+    toast({ title: tr('Archivo vaciado'), description: tr('Los archivados de la asignatura se eliminaron definitivamente.') });
   }, [storageKeys, archivedTasks, archivedNotes]);
   
   const updateNotesOrder = useCallback((orderedNotes: Note[]) => {
@@ -2089,8 +2093,8 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     if (!isSessionEditable(target)) {
       toast({
         variant: 'destructive',
-        title: 'Esta sesión ya no se puede editar',
-        description: 'Las sesiones solo se corrigen el mismo día en que se registraron.',
+        title: tr('Esta sesión ya no se puede editar'),
+        description: tr('Las sesiones solo se corrigen el mismo día en que se registraron.'),
       });
       return false;
     }
@@ -2109,7 +2113,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     setInLocalStorage(storageKeys.studySessions, updated);
     // La calificación de hoy se recalcula en vivo en Enfoque, así que no hay
     // nada que invalidar: updateDailyPerformance ignora el día en curso.
-    toast({ title: 'Sesión actualizada', description: 'Los cambios ya cuentan en tus métricas de hoy.' });
+    toast({ title: tr('Sesión actualizada'), description: tr('Los cambios ya cuentan en tus métricas de hoy.') });
     return true;
   }, [storageKeys, studySessions]);
 
@@ -2121,8 +2125,8 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     if (!isSessionEditable(target)) {
       toast({
         variant: 'destructive',
-        title: 'Esta sesión ya no se puede eliminar',
-        description: 'Las sesiones de días anteriores forman parte de tu registro.',
+        title: tr('Esta sesión ya no se puede eliminar'),
+        description: tr('Las sesiones de días anteriores forman parte de tu registro.'),
       });
       return;
     }
@@ -2146,7 +2150,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
         setInLocalStorage(storageKeys.dailyPerformances, next);
         return next;
     });
-    toast({ title: 'Sesión eliminada', description: 'La sesión de estudio se quitó del historial.' });
+    toast({ title: tr('Sesión eliminada'), description: tr('La sesión de estudio se quitó del historial.') });
   }, [storageKeys, studySessions]);
 
   const updateDailyPerformance = useCallback((performanceData: DailyPerformance) => {
@@ -2239,8 +2243,8 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     if (playlists.some(playlist => playlist.name.toLowerCase() === trimmedName.toLowerCase())) {
       toast({
         variant: "destructive",
-        title: "Playlist duplicada",
-        description: "Ya existe una playlist con este nombre.",
+        title: tr('Playlist duplicada'),
+        description: tr('Ya existe una playlist con este nombre.'),
       });
       return;
     }
@@ -2259,8 +2263,8 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
       if (newName && playlists.some(playlist => playlist.id !== id && playlist.name.toLowerCase() === newName)) {
         toast({
           variant: "destructive",
-          title: "Nombre duplicado",
-          description: "Ya existe otra playlist con este nombre.",
+          title: tr('Nombre duplicado'),
+          description: tr('Ya existe otra playlist con este nombre.'),
         });
         return;
       }
@@ -2284,7 +2288,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
                     setPlaylists(prev => prev.map(p =>
                       p.id === id ? { ...p, songIds: restoreIds(p.songIds, originalIds, removedIds) } : p
                     ));
-                    toast({ title: "Acción deshecha", description: `Canción restaurada a la playlist.` });
+                    toast({ title: tr('Acción deshecha'), description: tr('Canción restaurada a la playlist.') });
                 };
 
                 // Se parte de lo PERSISTIDO: guardar la foto de hace siete segundos
@@ -2299,7 +2303,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
                 };
         
                 pushUndoableAction({ undo, commit });
-                toast({ title: "Canción eliminada", description: "Presiona Ctrl+Z para deshacer." });
+                toast({ title: tr('Canción eliminada'), description: tr('Presiona Ctrl+Z para deshacer.') });
             }, 0);
         } else {
           setInLocalStorage(storageKeys.playlists, updatedPlaylists);
@@ -2335,13 +2339,13 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     if (!storageKeys) return;
 
     const originalPlaylists = playlists;
-    const playlistName = originalPlaylists.find(p => p.id === id)?.name || 'Playlist';
+    const playlistName = originalPlaylists.find(p => p.id === id)?.name || tr('Playlist');
 
     setPlaylists(prev => prev.filter(p => p.id !== id));
 
     const undo = () => {
       setPlaylists(prev => restoreRecords(prev, originalPlaylists, originalPlaylists.filter(p => p.id === id)));
-      toast({ title: "Acción deshecha", description: `Playlist "${playlistName}" restaurada.` });
+      toast({ title: tr('Acción deshecha'), description: tr('Playlist "{playlistName}" restaurada.', { playlistName }) });
     };
 
     const commit = () => {
@@ -2354,7 +2358,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     };
 
     pushUndoableAction({ undo, commit });
-    toast({ title: "Playlist eliminada", description: "Presiona Ctrl+Z para deshacer." });
+    toast({ title: tr('Playlist eliminada'), description: tr('Presiona Ctrl+Z para deshacer.') });
 
   }, [storageKeys, playlists]);
   
@@ -2365,8 +2369,8 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     if (spaces.some(space => space.name.toLowerCase() === trimmedName.toLowerCase())) {
       toast({
         variant: "destructive",
-        title: "Colección duplicada",
-        description: "Ya existe una colección con este nombre.",
+        title: tr('Colección duplicada'),
+        description: tr('Ya existe una colección con este nombre.'),
       });
       return;
     }
@@ -2398,8 +2402,8 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
       if (newName && spaces.some(space => space.id !== id && space.name.toLowerCase() === newName)) {
         toast({
           variant: "destructive",
-          title: "Nombre duplicado",
-          description: "Ya existe otra colección con este nombre.",
+          title: tr('Nombre duplicado'),
+          description: tr('Ya existe otra colección con este nombre.'),
         });
         return;
       }
@@ -2416,7 +2420,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     if (!storageKeys) return;
     
     // Find the space to get its name for the toast message before it's deleted.
-    const spaceName = spaces.find(s => s.id === id)?.name || 'Theme';
+    const spaceName = spaces.find(s => s.id === id)?.name || tr('Colección');
     
     // Create the new list of spaces without the one being deleted.
     const updatedSpaces = spaces.filter(s => s.id !== id);
@@ -2430,7 +2434,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     void deleteImage(`spaceImage_${id}`);
 
     // Show a simple confirmation toast, since undo is no longer an option.
-    toast({ title: "Colección eliminada", description: `«${spaceName}» se eliminó. Sus asignaturas siguen en Asignaturas.` });
+    toast({ title: tr('Colección eliminada'), description: tr('«{spaceName}» se eliminó. Sus asignaturas siguen en Asignaturas.', { spaceName }) });
   }, [storageKeys, spaces]);
 
   const addSongs = useCallback(async (newSongs: Song[]) => {
@@ -2448,7 +2452,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     const unique = newSongs.filter(s => !existingIds.has(s.id) && !existingFiles.has(s.fileName));
     const skipped = newSongs.length - unique.length;
     if (skipped > 0) {
-      toast({ title: "Canciones omitidas", description: `${skipped} ya estaban en tu biblioteca.` });
+      toast({ title: tr('Canciones omitidas'), description: tr('{skipped} ya estaban en tu biblioteca.', { skipped }) });
     }
     if (unique.length === 0) return;
 
@@ -2493,10 +2497,10 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
 
     try {
       await saveSongMetadata(updatedSong);
-      toast({ title: "Canción actualizada", description: `La portada de "${updatedSong.title}" ha sido cambiada.` });
+      toast({ title: tr('Canción actualizada'), description: tr('La portada de "{title}" ha sido cambiada.', { title: updatedSong.title }) });
     } catch (e) {
       console.error('No se pudo guardar la canción', id, e);
-      toast({ variant: 'destructive', title: 'No se pudo guardar el cambio', description: 'El disco del equipo rechazó la escritura.' });
+      toast({ variant: 'destructive', title: tr('No se pudo guardar el cambio'), description: tr('El disco del equipo rechazó la escritura.') });
     }
   }, []);
 
@@ -2546,8 +2550,8 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     });
 
     toast({
-        title: "Actualización completa",
-        description: `${pictureById.size} portadas de canciones fueron actualizadas.`,
+        title: tr('Actualización completa'),
+        description: tr('{size} portadas de canciones fueron actualizadas.', { size: pictureById.size }),
     });
   }, [currentSong, storageKeys]);
 
@@ -2583,7 +2587,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
         return { ...p, songIds: restoreIds(p.songIds, before.songIds, [id]) };
       }));
       setPlaybackQueue(prev => (prev.some(s => s.id === id) ? prev : [...prev, songToDelete]));
-      toast({ title: "Acción deshecha", description: `Canción "${songTitle(songToDelete)}" restaurada.` });
+      toast({ title: tr('Acción deshecha'), description: tr('Canción "{songTitle}" restaurada.', { songTitle: songTitle(songToDelete) }) });
     };
 
     const commit = async () => {
@@ -2604,7 +2608,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     };
     
     pushUndoableAction({ undo, commit });
-    toast({ title: `Canción "${songTitle(songToDelete)}" eliminada`, description: "Presiona Ctrl+Z para deshacer." });
+    toast({ title: tr('Canción "{songTitle}" eliminada', { songTitle: songTitle(songToDelete) }), description: tr('Presiona Ctrl+Z para deshacer.') });
 
   }, [currentSong, storageKeys, songs, playlists]);
   
@@ -2874,7 +2878,7 @@ export function useActiveSessionSeconds(): number {
 export function useCourse() {
   const context = useContext(CourseContext);
   if (context === undefined) {
-    throw new Error('useCourse must be used within a CourseProvider');
+    throw new Error(tr('useCourse must be used within a CourseProvider'));
   }
   return context;
 }

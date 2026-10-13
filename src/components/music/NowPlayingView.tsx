@@ -30,6 +30,8 @@ import {
 import { formatClock, playbackClock, usePlaybackPosition } from '@/lib/playback-clock';
 import { songTitle } from '@/lib/music-search';
 import { cn } from '@/lib/utils';
+import { tr } from '@/lib/i18n';
+import { artistLabel } from '@/lib/enum-labels';
 
 // ============================================================
 // «Reproduciendo»: la canción a pantalla completa DENTRO de Frame.
@@ -81,7 +83,7 @@ function LyricsPanel({
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 text-white/70">
         <LoaderCircle className="h-6 w-6 animate-spin" />
-        <p className="text-sm">Cargando la letra…</p>
+        <p className="text-sm">{tr('Cargando la letra…')}</p>
       </div>
     );
   }
@@ -91,13 +93,12 @@ function LyricsPanel({
       <div className="flex h-full flex-col items-center justify-center gap-3 px-8 text-center text-white/70">
         <MicVocal className="h-8 w-8" />
         <p className="text-base font-semibold text-white">
-          {lyrics?.instrumental ? 'Canción instrumental' : 'Sin letra para esta canción'}
+          {lyrics?.instrumental ? tr('Canción instrumental') : tr('Sin letra para esta canción')}
         </p>
         {!lyrics?.instrumental && (
           <>
             <p className="max-w-xs text-xs leading-relaxed">
-              Frame muestra la letra que trae la canción en sus etiquetas o en un archivo .lrc con su mismo nombre. Si
-              tienes ese archivo, añádelo aquí.
+              {tr('Frame muestra la letra que trae la canción en sus etiquetas o en un archivo .lrc con su mismo nombre. Si tienes ese archivo, añádelo aquí.')}
             </p>
             <Button
               variant="ghost"
@@ -105,7 +106,7 @@ function LyricsPanel({
               className="mt-1 h-9 rounded-full border border-white/25 px-4 text-xs font-semibold text-white/90 hover:bg-white/15 hover:text-white"
             >
               <FileText className="mr-2 h-4 w-4" />
-              Añadir letra…
+              {tr('Añadir letra…')}
             </Button>
             {note && <p className="text-xs text-white/60">{note}</p>}
           </>
@@ -117,7 +118,7 @@ function LyricsPanel({
   if (lines.length === 0) {
     return (
       <div className="hide-scrollbar h-full overflow-y-auto px-2 py-6">
-        <p className="mb-4 text-[10px] font-semibold text-white/50">Letra sin sincronizar</p>
+        <p className="mb-4 text-[10px] font-semibold text-white/50">{tr('Letra sin sincronizar')}</p>
         <p className="whitespace-pre-wrap text-lg font-semibold leading-relaxed text-white/85">{lyrics.plain}</p>
       </div>
     );
@@ -137,7 +138,7 @@ function LyricsPanel({
             }}
             type="button"
             onClick={() => playbackClock.seek(Math.max(0, line.time + offset))}
-            title={`Saltar a ${formatClock(Math.max(0, line.time + offset))}`}
+            title={tr('Saltar a {clock}', { clock: formatClock(Math.max(0, line.time + offset)) })}
             className={cn(
               'block w-full rounded-lg px-3 py-2 text-left font-headline text-2xl font-bold leading-snug transition-all duration-300 lg:text-3xl',
               index === active
@@ -175,21 +176,21 @@ function LyricsFooter({
       <Button
         variant="ghost"
         onClick={onAttach}
-        title="Usar la letra de un archivo .lrc o .txt"
+        title={tr('Usar la letra de un archivo .lrc o .txt')}
         className="h-7 rounded-full px-3 text-[11px] text-white/70 hover:bg-white/15 hover:text-white"
       >
         <FileText className="mr-1.5 h-3.5 w-3.5" />
-        Cambiar letra…
+        {tr('Cambiar letra…')}
       </Button>
       {synced && (
-      <div className="flex items-center rounded-full border border-white/15" title="Ajusta si la letra va adelantada o atrasada">
-        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-white/75 hover:bg-white/15 hover:text-white" onClick={() => onOffset(-0.5)} title="Letra 0,5 s antes">
+      <div className="flex items-center rounded-full border border-white/15" title={tr('Ajusta si la letra va adelantada o atrasada')}>
+        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-white/75 hover:bg-white/15 hover:text-white" onClick={() => onOffset(-0.5)} title={tr('Letra 0,5 s antes')}>
           <Minus className="h-3.5 w-3.5" />
         </Button>
         <span className="min-w-[3.25rem] text-center tabular-nums text-white/80">
-          {offset === 0 ? 'A tiempo' : `${offset > 0 ? '+' : '−'}${Math.abs(offset).toFixed(1).replace('.', ',')} s`}
+          {offset === 0 ? tr('A tiempo') : `${offset > 0 ? '+' : '−'}${Math.abs(offset).toFixed(1).replace('.', ',')} s`}
         </span>
-        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-white/75 hover:bg-white/15 hover:text-white" onClick={() => onOffset(0.5)} title="Letra 0,5 s después">
+        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-white/75 hover:bg-white/15 hover:text-white" onClick={() => onOffset(0.5)} title={tr('Letra 0,5 s después')}>
           <Plus className="h-3.5 w-3.5" />
         </Button>
       </div>
@@ -243,12 +244,12 @@ export default function NowPlayingView({ open, onClose }: { open: boolean; onClo
     const song = currentSong;
     if (!file || !song) return;
     if (file.size > 2 * 1024 * 1024) {
-      setLyricsNote('Ese archivo es demasiado grande para ser una letra.');
+      setLyricsNote(tr('Ese archivo es demasiado grande para ser una letra.'));
       return;
     }
     const parsed = lyricsFromText(decodeTextFile(new Uint8Array(await file.arrayBuffer())));
     if (!parsed) {
-      setLyricsNote('Ese archivo no trae ninguna letra.');
+      setLyricsNote(tr('Ese archivo no trae ninguna letra.'));
       return;
     }
     await importLyrics(song.id, parsed);
@@ -276,11 +277,11 @@ export default function NowPlayingView({ open, onClose }: { open: boolean; onClo
   if (!open || !currentSong) return null;
 
   const title = songTitle(currentSong);
-  const artist = currentSong.artist?.trim() || 'Artista desconocido';
+  const artist = artistLabel(currentSong.artist);
   const control = 'h-10 w-10 rounded-full text-white/80 hover:bg-white/15 hover:text-white';
 
   return (
-    <div className="fixed inset-0 z-40 overflow-hidden bg-neutral-950 text-white animate-in fade-in-0 duration-300" role="dialog" aria-label="Reproduciendo">
+    <div className="fixed inset-0 z-40 overflow-hidden bg-neutral-950 text-white animate-in fade-in-0 duration-300" role="dialog" aria-label={tr('Reproduciendo')}>
       {/* Fondo: la portada, muy desenfocada, y un velo para que el texto se lea. */}
       {currentSong.picture && (
         <img src={currentSong.picture} alt="" aria-hidden className="absolute inset-0 h-full w-full scale-125 object-cover opacity-60 blur-3xl" />
@@ -291,7 +292,7 @@ export default function NowPlayingView({ open, onClose }: { open: boolean; onClo
         variant="ghost"
         size="icon"
         onClick={onClose}
-        title="Cerrar (Esc)"
+        title={tr('Cerrar (Esc)')}
         className="absolute right-5 top-5 z-10 h-10 w-10 rounded-full text-white/80 hover:bg-white/15 hover:text-white"
       >
         <ChevronDown className="h-6 w-6" />
@@ -325,7 +326,7 @@ export default function NowPlayingView({ open, onClose }: { open: boolean; onClo
                 max={duration || 0}
                 step={1}
                 onValueChange={(value) => playbackClock.seek(value[0])}
-                aria-label="Posición de la canción"
+                aria-label={tr('Posición de la canción')}
                 className="[&_[role=slider]]:border-white [&_[role=slider]]:bg-white [&>span:first-child]:bg-white/25 [&>span:first-child>span]:bg-white"
               />
               <div className="mt-1.5 flex justify-between text-[11px] tabular-nums text-white/60">
@@ -334,28 +335,28 @@ export default function NowPlayingView({ open, onClose }: { open: boolean; onClo
               </div>
             </div>
             <div className="flex items-center justify-center gap-2">
-              <Button variant="ghost" size="icon" onClick={toggleShuffle} title="Aleatorio" className={cn(control, 'h-9 w-9', isShuffle && 'bg-white/20 text-white')}>
+              <Button variant="ghost" size="icon" onClick={toggleShuffle} title={tr('Aleatorio')} className={cn(control, 'h-9 w-9', isShuffle && 'bg-white/20 text-white')}>
                 <Shuffle className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" onClick={playPrevious} title="Anterior" className={control}>
+              <Button variant="ghost" size="icon" onClick={playPrevious} title={tr('Anterior')} className={control}>
                 <SkipBack className="h-5 w-5" />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={togglePlay}
-                title={isPlaying ? 'Pausar' : 'Reproducir'}
+                title={isPlaying ? tr('Pausar') : tr('Reproducir')}
                 className="h-14 w-14 rounded-full bg-white text-neutral-900 hover:bg-white/90 hover:text-neutral-900"
               >
                 {isPlaying ? <Pause className="h-6 w-6 fill-current" /> : <Play className="h-6 w-6 fill-current pl-0.5" />}
               </Button>
-              <Button variant="ghost" size="icon" onClick={playNext} title="Siguiente" className={control}>
+              <Button variant="ghost" size="icon" onClick={playNext} title={tr('Siguiente')} className={control}>
                 <SkipForward className="h-5 w-5" />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
-                title={repeatMode.mode === 'off' ? 'Repetir esta canción' : 'Dejar de repetir'}
+                title={repeatMode.mode === 'off' ? tr('Repetir esta canción') : tr('Dejar de repetir')}
                 onClick={() => setRepeatMode(repeatMode.mode === 'off' ? { mode: 'infinite' } : { mode: 'off' })}
                 className={cn(control, 'h-9 w-9', repeatMode.mode !== 'off' && 'bg-white/20 text-white')}
               >
@@ -364,7 +365,7 @@ export default function NowPlayingView({ open, onClose }: { open: boolean; onClo
               <Button
                 variant="ghost"
                 size="icon"
-                title={currentSong.isFavorite ? 'Quitar de favoritas' : 'Marcar como favorita'}
+                title={currentSong.isFavorite ? tr('Quitar de favoritas') : tr('Marcar como favorita')}
                 onClick={() => void toggleSongFavorite(currentSong.id)}
                 className={cn(control, 'h-9 w-9')}
               >

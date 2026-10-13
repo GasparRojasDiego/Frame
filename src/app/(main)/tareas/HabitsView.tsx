@@ -24,8 +24,9 @@ import {
 } from 'date-fns';
 import { useTodayKey } from '@/hooks/use-today';
 import HabitsInsights from '@/components/habits/HabitsInsights';
+import { tr } from '@/lib/i18n';
+import { dayInitials } from '@/lib/day-names';
 
-const daysOfWeek = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 /** Un hábito puede llamarse con una frase entera: si no cabe, se desplaza solo. */
 const HABIT_NAME_MAX = 140;
 
@@ -209,7 +210,7 @@ function HabitRowCells({ habit, isEditing, index, weekDates, weekOffset, isStrea
               onBlur={handleNameBlur}
               onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
               className="bg-transparent border-none focus-visible:ring-1 focus-visible:ring-primary h-8 flex-grow text-sm p-1"
-              placeholder="Nombre del hábito"
+              placeholder={tr('Nombre del hábito')}
               maxLength={HABIT_NAME_MAX}
             />
             <PhaseMenu value={habit.phase} fullPhases={fullPhases} onChange={(phase) => updateHabit(habit.id, { phase })} />
@@ -260,7 +261,7 @@ function HabitRowCells({ habit, isEditing, index, weekDates, weekOffset, isStrea
             <div
               key={dayIndex}
               className="flex h-[52px] items-center justify-center border-b"
-              title="Este día no le toca"
+              title={tr('Este día no le toca')}
             >
               <span className="h-1 w-1 rounded-full bg-muted-foreground/25" />
             </div>
@@ -395,16 +396,16 @@ export default function HabitsView({ weekOffset }: { weekOffset: number }) {
                     <Button variant={showArchived ? "secondary" : "ghost"} size="icon" className="text-muted-foreground h-7 w-7" onClick={() => setShowArchived(prev => !prev)}>
                       <RefreshCcw className="h-4 w-4" />
                     </Button>
-                  </TooltipTrigger><TooltipContent><p>Ver archivados</p></TooltipContent></Tooltip></TooltipProvider>
+                  </TooltipTrigger><TooltipContent><p>{tr('Ver archivados')}</p></TooltipContent></Tooltip></TooltipProvider>
                   <TooltipProvider><Tooltip><TooltipTrigger asChild>
                     <Button variant={isArchiveMode ? "secondary" : "ghost"} size="icon" className="text-muted-foreground h-7 w-7" onClick={() => setIsArchiveMode(prev => !prev)} disabled={showArchived}>
                       <Archive className="h-4 w-4" />
                     </Button>
-                  </TooltipTrigger><TooltipContent><p>Archivar hábitos</p></TooltipContent></Tooltip></TooltipProvider>
+                  </TooltipTrigger><TooltipContent><p>{tr('Archivar hábitos')}</p></TooltipContent></Tooltip></TooltipProvider>
               </div>
               <div className="flex-1">
                   <h3 className="text-base font-semibold text-foreground text-center">
-                    {showArchived ? 'Hábitos Archivados' : 'Hábitos'}
+                    {showArchived ? tr('Hábitos Archivados') : tr('Hábitos')}
                   </h3>
               </div>
               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -422,10 +423,10 @@ export default function HabitsView({ weekOffset }: { weekOffset: number }) {
                      >
                          <Pencil className="h-4 w-4"/>
                      </Button>
-                  </TooltipTrigger><TooltipContent><p>Editar nombres</p></TooltipContent></Tooltip></TooltipProvider>
+                  </TooltipTrigger><TooltipContent><p>{tr('Editar nombres')}</p></TooltipContent></Tooltip></TooltipProvider>
               </div>
             </div>
-            {daysOfWeek.map((day, index) => (
+            {dayInitials().map((day, index) => (
                 <div key={index} className={cn(
                   "border-b border-r bg-card/50 flex items-center justify-center text-xs font-bold text-muted-foreground p-2 min-h-[48px]",
                 )}>
@@ -436,7 +437,7 @@ export default function HabitsView({ weekOffset }: { weekOffset: number }) {
               onClick={() => setIsStreakView(prev => !prev)}
               className="border-l border-b bg-card/50 flex items-center justify-center text-xs font-bold text-muted-foreground p-2 min-h-[48px] text-center hover:bg-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
-              {isStreakView ? 'Racha' : '% Éxito'}
+              {isStreakView ? tr('Racha') : tr('% Éxito')}
             </button>
             
             {/* Habit Rows (con una franja por fase del día, si se usan fases) */}
@@ -482,13 +483,13 @@ export default function HabitsView({ weekOffset }: { weekOffset: number }) {
                                         disabled={isLimitReached}
                                     >
                                         <Plus className="mr-2 h-4 w-4 text-primary" />
-                                        Añadir un hábito
+                                        {tr('Añadir un hábito')}
                                     </Button>
                                 </div>
                             </TooltipTrigger>
                             {isLimitReached && (
                                 <TooltipContent>
-                                    <p>Límite de 99 hábitos alcanzado.</p>
+                                    <p>{tr('Límite de 99 hábitos alcanzado.')}</p>
                                 </TooltipContent>
                             )}
                         </Tooltip>

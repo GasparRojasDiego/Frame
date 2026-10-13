@@ -9,6 +9,8 @@ import { HABIT_PHASES, phaseStarted } from '@/lib/habit-phases';
 import { isScheduled } from '@/lib/habit-schedule';
 import { cn } from '@/lib/utils';
 import type { Habit, HabitPhase } from '@/types';
+import { tr } from '@/lib/i18n';
+import { dayInitial, dayInitials } from '@/lib/day-names';
 
 // ============================================================
 // La semana de cada momento del día, en anillos.
@@ -28,7 +30,6 @@ import type { Habit, HabitPhase } from '@/types';
 const RING_COLORS = ['hsl(var(--primary))', '#10b981', '#f59e0b', '#ec4899', '#06b6d4'];
 
 const MAX_RINGS = 5;
-const DAY_INITIALS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
 // Geometría (en unidades del viewBox de 240 × 240).
 const CENTER = 120;
@@ -149,7 +150,7 @@ function PhaseRings({
             variant="ghost"
             className={cn('h-8 w-8', showData ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:text-primary')}
             onClick={() => setShowData((value) => !value)}
-            title={showData ? 'Volver al gráfico' : 'Qué es cada color'}
+            title={showData ? tr('Volver al gráfico') : tr('Qué es cada color')}
             aria-pressed={showData}
           >
             {showData ? <X className="h-4 w-4" /> : <FileBarChart2 className="h-4 w-4" />}
@@ -161,8 +162,8 @@ function PhaseRings({
       {rows.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center">
           <Icon className="h-7 w-7 text-muted-foreground/40" />
-          <p className="text-xs text-muted-foreground">Sin hábitos de {info.label.toLowerCase()}.</p>
-          <p className="px-4 text-[10px] text-muted-foreground/70">Añade uno y elige «{info.label}» como momento.</p>
+          <p className="text-xs text-muted-foreground">{tr('Sin hábitos de {phase}.', { phase: info.label.toLowerCase() })}</p>
+          <p className="px-4 text-[10px] text-muted-foreground/70">{tr('Añade uno y elige «{phase}» como momento.', { phase: info.label })}</p>
         </div>
       ) : showData ? (
         // Cara de datos: qué hábito es cada color y cómo va en la semana.
@@ -188,27 +189,27 @@ function PhaseRings({
           })}
           <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-2 text-[10px] text-muted-foreground">
             <span className="flex items-center gap-1">
-              <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: STATE_FILL.missed }} /> Tocaba y no se hizo
+              <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: STATE_FILL.missed }} />{' '}{tr('Tocaba y no se hizo')}
             </span>
             <span className="flex items-center gap-1">
-              <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: STATE_FILL.pending }} /> Aún no toca
+              <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: STATE_FILL.pending }} />{' '}{tr('Aún no toca')}
             </span>
             <span className="flex items-center gap-1">
-              <span className="h-2.5 w-2.5 rounded-sm border border-border" style={{ backgroundColor: STATE_FILL.off }} /> No es su día
+              <span className="h-2.5 w-2.5 rounded-sm border border-border" style={{ backgroundColor: STATE_FILL.off }} />{' '}{tr('No es su día')}
             </span>
           </div>
         </div>
       ) : (
         // Cara del gráfico.
         <div className="relative mx-auto mt-2 w-full max-w-[290px] flex-1 animate-in fade-in-0">
-          <svg viewBox="0 0 240 240" className="h-full w-full" role="img" aria-label={`Semana de ${info.label.toLowerCase()}`}>
+          <svg viewBox="0 0 240 240" className="h-full w-full" role="img" aria-label={tr('Semana de {p}', { p: info.label.toLowerCase() })}>
             {/* Iniciales de los días, fuera del anillo exterior. */}
-            {DAY_INITIALS.map((initial, index) => {
+            {dayInitials().map((initial, index) => {
               const mid = -90 + index * SEGMENT + SEGMENT / 2;
               const [x, y] = toXY(OUTER + 11, mid);
               return (
                 <text
-                  key={initial}
+                  key={index}
                   x={x}
                   y={y}
                   textAnchor="middle"
@@ -231,12 +232,12 @@ function PhaseRings({
                 const to = -90 + (dayIndex + 1) * SEGMENT - SEGMENT_GAP / 2;
                 const label =
                   state === 'done'
-                    ? 'cumplido'
+                    ? tr('cumplido')
                     : state === 'missed'
-                      ? 'no cumplido'
+                      ? tr('no cumplido')
                       : state === 'pending'
-                        ? 'aún no toca'
-                        : 'no es su día';
+                        ? tr('aún no toca')
+                        : tr('no es su día');
                 return (
                   <path
                     key={`${row.habit.id}-${dayIndex}`}
@@ -244,7 +245,7 @@ function PhaseRings({
                     fill={state === 'done' ? row.color : STATE_FILL[state]}
                     className="transition-[fill] duration-500"
                   >
-                    <title>{`${row.habit.name} · ${DAY_INITIALS[dayIndex]} · ${label}`}</title>
+                    <title>{`${row.habit.name} · ${dayInitial(dayIndex)} · ${label}`}</title>
                   </path>
                 );
               });
@@ -255,12 +256,12 @@ function PhaseRings({
               {rate === null ? '—' : `${rate}%`}
             </text>
             <text x={CENTER} y={CENTER + 13} textAnchor="middle" className="fill-muted-foreground text-[8px] font-semibold">
-              Semana
+              {tr('Semana')}
             </text>
           </svg>
           {hidden > 0 && (
             <p className="text-center text-[10px] text-muted-foreground">
-              +{hidden} {hidden === 1 ? 'hábito no cabe' : 'hábitos no caben'} en el gráfico
+              +{hidden} {hidden === 1 ? tr('hábito no cabe') : tr('hábitos no caben')}{' '}{tr('en el gráfico')}
             </p>
           )}
         </div>
@@ -288,8 +289,9 @@ export default function HabitRings({ habits, weekDates }: { habits: Habit[]; wee
       </div>
       {withoutPhase > 0 && (
         <p className="text-center text-[11px] text-muted-foreground">
-          {withoutPhase === 1 ? 'Un hábito no tiene' : `${withoutPhase} hábitos no tienen`} momento del día y no
-          aparece{withoutPhase === 1 ? '' : 'n'} aquí: {withoutPhase === 1 ? 'asígnale' : 'asígnales'} mañana, tarde o noche con el lápiz de la tabla.
+          {withoutPhase === 1
+            ? tr('Un hábito no tiene momento del día y no aparece aquí: asígnale mañana, tarde o noche con el lápiz de la tabla.')
+            : tr('{count} hábitos no tienen momento del día y no aparecen aquí: asígnales mañana, tarde o noche con el lápiz de la tabla.', { count: withoutPhase })}
         </p>
       )}
     </div>

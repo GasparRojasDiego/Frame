@@ -4,6 +4,7 @@ import { useCourse } from '@/context/CourseContext';
 import { formatClock, playbackClock, usePlaybackPosition } from '@/lib/playback-clock';
 import { songTitle } from '@/lib/music-search';
 import { cn } from '@/lib/utils';
+import { tr } from '@/lib/i18n';
 
 // Escucha previa al armar una playlist: la portada de lo que suena, una barra
 // para adelantar o retroceder y el botón de pausa, sin salir del diálogo.
@@ -26,8 +27,8 @@ export default function PreviewMiniPlayer({ className }: { className?: string })
       <button
         type="button"
         onClick={togglePlay}
-        title={isPlaying ? 'Pausar' : 'Reproducir'}
-        aria-label={isPlaying ? 'Pausar la escucha previa' : 'Reanudar la escucha previa'}
+        title={isPlaying ? tr('Pausar') : tr('Reproducir')}
+        aria-label={isPlaying ? tr('Pausar la escucha previa') : tr('Reanudar la escucha previa')}
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/85"
       >
         {isPlaying ? <Pause className="h-3.5 w-3.5 fill-current" /> : <Play className="h-3.5 w-3.5 fill-current pl-0.5" />}
@@ -43,7 +44,7 @@ export default function PreviewMiniPlayer({ className }: { className?: string })
             max={duration || 0}
             step={1}
             onValueChange={(value) => playbackClock.seek(value[0])}
-            aria-label="Adelantar o retroceder"
+            aria-label={tr('Adelantar o retroceder')}
             className="flex-1"
           />
           <span className="w-8 shrink-0 text-[9px] tabular-nums text-muted-foreground">{formatClock(duration)}</span>

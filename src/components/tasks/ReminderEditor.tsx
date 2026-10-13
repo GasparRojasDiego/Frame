@@ -3,6 +3,8 @@ import { Switch } from '@/components/ui/switch';
 import { WheelColumn } from '@/components/ui/wheel-picker';
 import { cn } from '@/lib/utils';
 import type { Task } from '@/types';
+import { tr } from '@/lib/i18n';
+import { dayInitial } from '@/lib/day-names';
 
 // ============================================================
 // El recordatorio de UNA tarea. Nace apagado: recordar todo es no recordar
@@ -44,19 +46,19 @@ export function reminderToTask(config: ReminderConfig) {
 
 /** Lunes primero, como se lee una semana aquí. */
 const WEEK: { day: number; letter: string; short: string }[] = [
-  { day: 1, letter: 'L', short: 'lun' },
-  { day: 2, letter: 'M', short: 'mar' },
-  { day: 3, letter: 'X', short: 'mié' },
-  { day: 4, letter: 'J', short: 'jue' },
-  { day: 5, letter: 'V', short: 'vie' },
-  { day: 6, letter: 'S', short: 'sáb' },
-  { day: 0, letter: 'D', short: 'dom' },
+  { day: 1, get letter() { return dayInitial(0); }, get short() { return tr('lun'); } },
+  { day: 2, get letter() { return dayInitial(1); }, get short() { return tr('mar'); } },
+  { day: 3, get letter() { return dayInitial(2); }, get short() { return tr('mié'); } },
+  { day: 4, get letter() { return dayInitial(3); }, get short() { return tr('jue'); } },
+  { day: 5, get letter() { return dayInitial(4); }, get short() { return tr('vie'); } },
+  { day: 6, get letter() { return dayInitial(5); }, get short() { return tr('sáb'); } },
+  { day: 0, get letter() { return dayInitial(6); }, get short() { return tr('dom'); } },
 ];
 
 const REPEATS: { minutes: number; label: string }[] = [
-  { minutes: 0, label: 'Una vez' },
-  { minutes: 15, label: '15 min' },
-  { minutes: 30, label: '30 min' },
+  { minutes: 0, get label() { return tr('Una vez'); } },
+  { minutes: 15, get label() { return tr('15 min'); } },
+  { minutes: 30, get label() { return tr('30 min'); } },
   { minutes: 60, label: '1 h' },
   { minutes: 120, label: '2 h' },
   { minutes: 180, label: '3 h' },
@@ -68,17 +70,17 @@ const two = (n: number) => String(n).padStart(2, '0');
 
 /** «Lun, mié y vie a las 18:30 · cada 30 min» */
 export function describeReminder(config: ReminderConfig): string {
-  if (!config.enabled) return 'Sin recordatorio';
+  if (!config.enabled) return tr('Sin recordatorio');
   const chosen = WEEK.filter((d) => config.days.includes(d.day)).map((d) => d.short);
   const daysText =
     chosen.length === 0 || chosen.length === 7
-      ? 'Todos los días'
+      ? tr('Todos los días')
       : chosen.length === 1
-        ? `Los ${chosen[0]}`
+        ? tr('Los {p}', { p: chosen[0] })
         : `${chosen.slice(0, -1).join(', ')} y ${chosen[chosen.length - 1]}`;
   const repeat = REPEATS.find((r) => r.minutes === config.repeatMinutes);
-  const repeatText = config.repeatMinutes > 0 ? ` · se repite cada ${repeat?.label ?? `${config.repeatMinutes} min`}` : '';
-  const text = `${daysText} a las ${config.time}${repeatText}`;
+  const repeatText = config.repeatMinutes > 0 ? tr(' · se repite cada {p}', { p: repeat?.label ?? `${config.repeatMinutes} min` }) : '';
+  const text = tr('{daysText} a las {time}{repeatText}', { daysText, time: config.time, repeatText });
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
@@ -106,30 +108,30 @@ export default function ReminderEditor({
       <div className="flex items-center justify-between gap-3">
         <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
           {value.enabled ? <Bell className="h-3.5 w-3.5 text-primary" /> : <BellOff className="h-3.5 w-3.5 text-muted-foreground" />}
-          Recordatorio
+          {tr('Recordatorio')}
         </span>
         <Switch
           checked={value.enabled}
           onCheckedChange={(enabled) => onChange({ ...value, enabled })}
-          aria-label="Activar el recordatorio de esta tarea"
+          aria-label={tr('Activar el recordatorio de esta tarea')}
         />
       </div>
 
       {!value.enabled ? (
         <p className="text-[11px] leading-snug text-muted-foreground">
-          Apagado. Actívalo solo en las tareas que de verdad no puedes olvidar.
+          {tr('Apagado. Actívalo solo en las tareas que de verdad no puedes olvidar.')}
         </p>
       ) : (
         <>
           <div>
             <div className="mb-1.5 flex items-center justify-between">
-              <span className="text-[10px] font-semibold text-muted-foreground">Días</span>
+              <span className="text-[10px] font-semibold text-muted-foreground">{tr('Días')}</span>
               <button
                 type="button"
                 onClick={() => onChange({ ...value, days: [] })}
                 className={cn('text-[10px] font-semibold', value.days.length === 0 ? 'text-primary' : 'text-muted-foreground hover:text-foreground')}
               >
-                Todos los días
+                {tr('Todos los días')}
               </button>
             </div>
             <div className="grid grid-cols-7 gap-1">
@@ -159,19 +161,19 @@ export default function ReminderEditor({
           </div>
 
           <div className="flex items-center justify-center gap-2">
-            <WheelColumn label="Hora" values={HOURS} value={safeHour} format={two} onChange={(h) => onChange({ ...value, time: `${two(h)}:${two(safeMinute)}` })} />
+            <WheelColumn label={tr('Hora')} values={HOURS} value={safeHour} format={two} onChange={(h) => onChange({ ...value, time: `${two(h)}:${two(safeMinute)}` })} />
             <span className="font-mono text-lg font-bold text-muted-foreground">:</span>
-            <WheelColumn label="Minutos" values={MINUTES} value={safeMinute} format={two} onChange={(m) => onChange({ ...value, time: `${two(safeHour)}:${two(m)}` })} />
+            <WheelColumn label={tr('Minutos')} values={MINUTES} value={safeMinute} format={two} onChange={(m) => onChange({ ...value, time: `${two(safeHour)}:${two(m)}` })} />
             <span className="ml-1 text-[10px] leading-tight text-muted-foreground">
-              Gira la rueda
+              {tr('Gira la rueda')}
               <br />
-              del ratón
+              {tr('del ratón')}
             </span>
           </div>
 
           <div>
             <span className="mb-1.5 block text-[10px] font-semibold text-muted-foreground">
-              Volver a avisar ese día
+              {tr('Volver a avisar ese día')}
             </span>
             <div className="grid grid-cols-3 gap-1">
               {REPEATS.map((repeat) => (
@@ -187,14 +189,14 @@ export default function ReminderEditor({
                       : 'border-border/70 text-muted-foreground hover:border-primary/40 hover:text-foreground'
                   )}
                 >
-                  {repeat.minutes === 0 ? repeat.label : `Cada ${repeat.label}`}
+                  {repeat.minutes === 0 ? repeat.label : tr('Cada {label}', { label: repeat.label })}
                 </button>
               ))}
             </div>
           </div>
 
           <p className="rounded-md bg-secondary/60 px-2 py-1.5 text-[11px] leading-snug text-muted-foreground">
-            {describeReminder(value)}. Deja de avisar cuando culmines la tarea.
+            {describeReminder(value)}{tr('. Deja de avisar cuando culmines la tarea.')}
           </p>
         </>
       )}

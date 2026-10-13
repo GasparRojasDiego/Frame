@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { differenceInCalendarDays, format, formatDistanceToNowStrict, parseISO } from 'date-fns';
-import { es } from 'date-fns/locale';
 import {
   Activity,
   AlertTriangle,
@@ -50,6 +49,7 @@ import type { ReportFormat } from '@/lib/report-export';
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { isFrameOwner } from '@/lib/owner';
 import { cn } from '@/lib/utils';
+import { dateLocale, intlLocale, tr } from '@/lib/i18n';
 
 // ============================================================
 // Panel de uso — solo para el responsable de Frame.
@@ -137,39 +137,39 @@ interface GuestOverview {
 type Period = 7 | 30 | 90;
 
 const EVENT_LABELS: Record<string, string> = {
-  app_open: 'Aperturas de la app',
-  screen_view: 'Interfaces abiertas',
-  study_session_end: 'Sesiones de estudio',
-  task_created: 'Tareas creadas',
-  task_completed: 'Tareas culminadas',
-  task_incomplete: 'Tareas no culminadas',
-  habit_checked: 'Hábitos marcados',
-  report_generated: 'Informes generados',
-  account_signed_in: 'Inicios de sesión',
-  guest_started: 'Entradas como invitado',
-  guest_linked: 'Invitados que vincularon Google',
-  help_asked: 'Preguntas a la ayuda (hasta la 1.6.6)',
-  help_tour: 'Recorridos «Descubrir» (hasta la 1.6.4)',
+  get app_open() { return tr('Aperturas de la app'); },
+  get screen_view() { return tr('Interfaces abiertas'); },
+  get study_session_end() { return tr('Sesiones de estudio'); },
+  get task_created() { return tr('Tareas creadas'); },
+  get task_completed() { return tr('Tareas culminadas'); },
+  get task_incomplete() { return tr('Tareas no culminadas'); },
+  get habit_checked() { return tr('Hábitos marcados'); },
+  get report_generated() { return tr('Informes generados'); },
+  get account_signed_in() { return tr('Inicios de sesión'); },
+  get guest_started() { return tr('Entradas como invitado'); },
+  get guest_linked() { return tr('Invitados que vincularon Google'); },
+  get help_asked() { return tr('Preguntas a la ayuda (hasta la 1.6.6)'); },
+  get help_tour() { return tr('Recorridos «Descubrir» (hasta la 1.6.4)'); },
 };
 
 const SCREEN_LABELS: Record<string, string> = {
-  '/': 'Inicio',
-  '/temporizador': 'Estudio',
-  '/tareas': 'Tareas',
-  '/habitos': 'Hábitos',
-  '/cursos': 'Asignatura (detalle)',
-  '/knowledge': 'Asignaturas',
-  '/calendario': 'Calendario',
+  get '/'() { return tr('Inicio'); },
+  get '/temporizador'() { return tr('Estudio'); },
+  get '/tareas'() { return tr('Tareas'); },
+  get '/habitos'() { return tr('Hábitos'); },
+  get '/cursos'() { return tr('Asignatura (detalle)'); },
+  get '/knowledge'() { return tr('Asignaturas'); },
+  get '/calendario'() { return tr('Calendario'); },
   '/gmail': 'Gmail',
   '/youtube': 'YouTube',
   '/drive': 'Drive',
   '/classroom': 'Classroom',
-  '/music': 'Música',
-  '/playlists': 'Playlists',
-  '/settings': 'Ajustes',
-  '/ayuda': 'Ayuda (hasta la 1.6.6)',
-  '/presentacion': 'Presentación',
-  '/uso': 'Uso',
+  get '/music'() { return tr('Música'); },
+  get '/playlists'() { return tr('Playlists'); },
+  get '/settings'() { return tr('Ajustes'); },
+  get '/ayuda'() { return tr('Ayuda (hasta la 1.6.6)'); },
+  get '/presentacion'() { return tr('Presentación'); },
+  get '/uso'() { return tr('Uso'); },
 };
 
 const PLATFORM_LABEL: Record<string, string> = { windows: 'Windows', android: 'Android' };
@@ -178,13 +178,13 @@ const minutesLabel = (minutes: number) => {
   const m = Math.round(minutes);
   const h = Math.floor(m / 60);
   // Con cientos de horas los minutos sobran y rompen la línea del recuadro.
-  if (h >= 100) return `${h.toLocaleString('es-PE')} h`;
+  if (h >= 100) return `${h.toLocaleString(intlLocale())} h`;
   return h > 0 ? `${h} h ${m % 60} min` : `${m} min`;
 };
 
 const dayLabel = (iso: string) => {
   try {
-    return format(parseISO(iso), 'd MMM', { locale: es });
+    return format(parseISO(iso), tr('d MMM'), { locale: dateLocale() });
   } catch {
     return iso;
   }
@@ -192,7 +192,7 @@ const dayLabel = (iso: string) => {
 
 const ago = (iso: string) => {
   try {
-    return formatDistanceToNowStrict(parseISO(iso), { locale: es, addSuffix: true });
+    return formatDistanceToNowStrict(parseISO(iso), { locale: dateLocale(), addSuffix: true });
   } catch {
     return '—';
   }
@@ -370,11 +370,11 @@ const RECENCY_DOT: Record<Recency, string> = {
 };
 
 const SORT_LABEL: Record<SortKey, string> = {
-  last_seen: 'Última vez',
-  minutes: 'Estudio acumulado',
-  active_days: 'Días activos',
-  tasks: 'Tareas',
-  first_seen: 'Más recientes',
+  get last_seen() { return tr('Última vez'); },
+  get minutes() { return tr('Estudio acumulado'); },
+  get active_days() { return tr('Días activos'); },
+  get tasks() { return tr('Tareas'); },
+  get first_seen() { return tr('Más recientes'); },
 };
 
 function StudentsCard({ data }: { data: Overview }) {
@@ -426,28 +426,28 @@ function StudentsCard({ data }: { data: Overview }) {
   const maxDays = Math.max(1, data.days);
 
   const segments = [
-    { id: 'today', label: 'Hoy', value: data.recency.today, className: RECENCY_DOT.today },
-    { id: 'week', label: 'Esta semana', value: data.recency.week, className: RECENCY_DOT.week },
-    { id: 'month', label: 'Este mes', value: data.recency.month, className: RECENCY_DOT.month },
-    { id: 'older', label: 'Hace más de un mes', value: data.recency.older, className: RECENCY_DOT.older },
+    { id: 'today', label: tr('Hoy'), value: data.recency.today, className: RECENCY_DOT.today },
+    { id: 'week', label: tr('Esta semana'), value: data.recency.week, className: RECENCY_DOT.week },
+    { id: 'month', label: tr('Este mes'), value: data.recency.month, className: RECENCY_DOT.month },
+    { id: 'older', label: tr('Hace más de un mes'), value: data.recency.older, className: RECENCY_DOT.older },
   ];
 
   return (
     <Card className="border-border/70">
-      <CardHeader className="space-y-3 pb-3" echo="Estudiantes">
+      <CardHeader className="space-y-3 pb-3" echo={tr('Estudiantes')}>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <CardTitle className="text-sm font-headline text-muted-foreground">Estudiantes · última vez que abrieron Frame</CardTitle>
+          <CardTitle className="text-sm font-headline text-muted-foreground">{tr('Estudiantes · última vez que abrieron Frame')}</CardTitle>
           <div className="flex items-center gap-2">
             <Tabs value={kind} onValueChange={(v) => setKind(v as typeof kind)}>
               <TabsList className="h-8">
                 <TabsTrigger value="all" className="h-6 px-2.5 text-xs">
-                  Todos {data.totals.users_total}
+                  {tr('Todos')}{' '}{data.totals.users_total}
                 </TabsTrigger>
                 <TabsTrigger value="account" className="h-6 px-2.5 text-xs">
-                  Cuentas {data.totals.accounts_total}
+                  {tr('Cuentas')}{' '}{data.totals.accounts_total}
                 </TabsTrigger>
                 <TabsTrigger value="guest" className="h-6 px-2.5 text-xs">
-                  Invitados {data.totals.guests_total}
+                  {tr('Invitados')}{' '}{data.totals.guests_total}
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -458,7 +458,7 @@ function StudentsCard({ data }: { data: Overview }) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel className="text-xs">Ordenar por</DropdownMenuLabel>
+                <DropdownMenuLabel className="text-xs">{tr('Ordenar por')}</DropdownMenuLabel>
                 {(Object.keys(SORT_LABEL) as SortKey[]).map((key) => (
                   <DropdownMenuItem key={key} onSelect={() => setSort(key)} className={cn('text-xs', sort === key && 'text-primary')}>
                     {SORT_LABEL[key]}
@@ -472,20 +472,20 @@ function StudentsCard({ data }: { data: Overview }) {
       </CardHeader>
       <CardContent className="p-0 pt-3">
         {rows.length === 0 ? (
-          <p className="p-8 text-center text-xs text-muted-foreground">Nadie en este grupo</p>
+          <p className="p-8 text-center text-xs text-muted-foreground">{tr('Nadie en este grupo')}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead className="text-[10px] text-muted-foreground">
                 <tr className="border-y border-border/60 bg-secondary/30">
-                  <th className="px-4 py-2 text-left font-bold">Estudiante</th>
-                  <th className="px-2 py-2 text-left font-bold">Última vez</th>
-                  <th className="px-2 py-2 text-left font-bold">Días activos</th>
-                  <th className="px-2 py-2 text-right font-bold">Estudio</th>
-                  <th className="px-2 py-2 text-right font-bold">Sesiones</th>
-                  <th className="px-2 py-2 text-right font-bold">Tareas</th>
-                  <th className="px-2 py-2 text-right font-bold">Asignaturas</th>
-                  <th className="px-4 py-2 text-left font-bold">Versión</th>
+                  <th className="px-4 py-2 text-left font-bold">{tr('Estudiante')}</th>
+                  <th className="px-2 py-2 text-left font-bold">{tr('Última vez')}</th>
+                  <th className="px-2 py-2 text-left font-bold">{tr('Días activos')}</th>
+                  <th className="px-2 py-2 text-right font-bold">{tr('Estudio')}</th>
+                  <th className="px-2 py-2 text-right font-bold">{tr('Sesiones')}</th>
+                  <th className="px-2 py-2 text-right font-bold">{tr('Tareas')}</th>
+                  <th className="px-2 py-2 text-right font-bold">{tr('Asignaturas')}</th>
+                  <th className="px-4 py-2 text-left font-bold">{tr('Versión')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -497,7 +497,7 @@ function StudentsCard({ data }: { data: Overview }) {
                     <tr key={`${u.id}-${i}`} className="border-b border-border/40 last:border-0 hover:bg-secondary/20">
                       <td className="px-4 py-2">
                         <div className="flex items-center gap-2">
-                          <PlatformIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-label={PLATFORM_LABEL[u.platform ?? ''] ?? 'Sistema'} />
+                          <PlatformIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-label={PLATFORM_LABEL[u.platform ?? ''] ?? tr('Sistema')} />
                           <span className="font-mono text-muted-foreground">{u.id}</span>
                           <span
                             className={cn(
@@ -505,11 +505,11 @@ function StudentsCard({ data }: { data: Overview }) {
                               u.guest ? 'bg-amber-500/15 text-amber-500' : 'bg-primary/15 text-primary'
                             )}
                           >
-                            {u.guest ? 'Invitado' : 'Cuenta'}
+                            {u.guest ? tr('Invitado') : tr('Cuenta')}
                           </span>
                         </div>
                         <p className="mt-0.5 pl-[22px] text-[10px] text-muted-foreground/70">
-                          {u.country ?? 'País desconocido'} · desde {dayLabel(u.first_seen)}
+                          {u.country ?? tr('País desconocido')}{' '}{tr('· desde')}{' '}{dayLabel(u.first_seen)}
                         </p>
                       </td>
                       <td className="px-2 py-2">
@@ -531,7 +531,7 @@ function StudentsCard({ data }: { data: Overview }) {
                       <td className="px-2 py-2 text-right tabular-nums">{u.tasks ?? 0}</td>
                       <td className="px-2 py-2 text-right tabular-nums">{u.courses ?? 0}</td>
                       <td className="px-4 py-2">
-                        <span className={cn('tabular-nums', outdated ? 'text-amber-500' : 'text-muted-foreground')} title={outdated ? `Hay una más nueva: ${latest[u.platform ?? '']}` : undefined}>
+                        <span className={cn('tabular-nums', outdated ? 'text-amber-500' : 'text-muted-foreground')} title={outdated ? tr('Hay una más nueva: {p}', { p: latest[u.platform ?? ''] }) : undefined}>
                           {u.version ?? '—'}
                           {outdated && ' ↑'}
                         </span>
@@ -546,16 +546,16 @@ function StudentsCard({ data }: { data: Overview }) {
         {rows.length > PAGE_SIZE && (
           <div className="flex items-center justify-between border-t border-border/60 px-4 py-2 text-[11px] text-muted-foreground">
             <span className="tabular-nums">
-              {current * PAGE_SIZE + 1}–{Math.min(rows.length, (current + 1) * PAGE_SIZE)} de {rows.length}
+              {current * PAGE_SIZE + 1}–{Math.min(rows.length, (current + 1) * PAGE_SIZE)}{' '}{tr('de')}{' '}{rows.length}
             </span>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="h-7 w-7" disabled={current === 0} onClick={() => setPage(current - 1)} aria-label="Página anterior">
+              <Button variant="ghost" size="icon" className="h-7 w-7" disabled={current === 0} onClick={() => setPage(current - 1)} aria-label={tr('Página anterior')}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <span className="tabular-nums">
                 {current + 1} / {pages}
               </span>
-              <Button variant="ghost" size="icon" className="h-7 w-7" disabled={current >= pages - 1} onClick={() => setPage(current + 1)} aria-label="Página siguiente">
+              <Button variant="ghost" size="icon" className="h-7 w-7" disabled={current >= pages - 1} onClick={() => setPage(current + 1)} aria-label={tr('Página siguiente')}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
@@ -586,7 +586,7 @@ function UsagePanel() {
   const load = useCallback(async (period: Period) => {
     const supabase = getSupabase();
     if (!supabase) {
-      setError('Supabase no está configurado.');
+      setError(tr('Supabase no está configurado.'));
       setLoading(false);
       return;
     }
@@ -601,7 +601,7 @@ function UsagePanel() {
     if (rpcError) {
       setError(
         rpcError.code === '42501'
-          ? 'Solo la cuenta del responsable de Frame puede ver este panel. Inicia sesión con ella.'
+          ? tr('Solo la cuenta del responsable de Frame puede ver este panel. Inicia sesión con ella.')
           : rpcError.message
       );
       setData(null);
@@ -635,7 +635,7 @@ function UsagePanel() {
     try {
       const { data: impact, error: rpcError } = await supabase.rpc('impact_overview');
       if (rpcError || !impact) {
-        toast({ variant: 'destructive', title: 'No se pudo preparar el informe', description: rpcError?.message ?? 'Sin respuesta del servidor.' });
+        toast({ variant: 'destructive', title: tr('No se pudo preparar el informe'), description: rpcError?.message ?? tr('Sin respuesta del servidor.') });
         return;
       }
       const usage: UsageSummary | null = data
@@ -649,7 +649,7 @@ function UsagePanel() {
           }
         : null;
       const report = impact as ImpactData;
-      await run(() => buildImpactDoc(report, usage), `Frame - Informe de impacto - ${report.today}`, formatId);
+      await run(() => buildImpactDoc(report, usage), tr('Frame - Informe de impacto - {today}', { today: report.today }), formatId);
     } finally {
       setPreparing(false);
     }
@@ -671,9 +671,9 @@ function UsagePanel() {
     return [...data.versions]
       .sort((a, b) => a.platform.localeCompare(b.platform) || compareVersions(b.version, a.version))
       .map((v) => ({
-        label: `${PLATFORM_LABEL[v.platform] ?? v.platform} ${v.version}${v.version === newest[v.platform] ? ' · la más nueva' : ''}`,
+        label: `${PLATFORM_LABEL[v.platform] ?? v.platform} ${v.version}${v.version === newest[v.platform] ? tr(' · la más nueva') : ''}`,
         value: v.users,
-        extra: v.users === 1 ? 'estudiante' : 'estudiantes',
+        extra: v.users === 1 ? tr('estudiante') : tr('estudiantes'),
         muted: v.version !== newest[v.platform],
       }));
   })();
@@ -682,13 +682,13 @@ function UsagePanel() {
     <div className="flex flex-col gap-6 p-6 md:p-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="font-headline text-2xl font-bold text-foreground">Panel de uso</h1>
+          <h1 className="font-headline text-2xl font-bold text-foreground">{tr('Panel de uso')}</h1>
           <p className="text-sm text-muted-foreground">
-            Frame en manos de tus estudiantes · datos seudónimos, calculados en el servidor y sin contar tu propia cuenta
+            {tr('Frame en manos de tus estudiantes · datos seudónimos, calculados en el servidor y sin contar tu propia cuenta')}
           </p>
           {data && (
             <p className="mt-1 text-[11px] text-muted-foreground/70">
-              Actualizado {ago(data.generated_at)} · periodo {dayLabel(data.since)} – {dayLabel(data.today)}
+              {tr('Actualizado')}{' '}{ago(data.generated_at)}{' '}{tr('· periodo')}{' '}{dayLabel(data.since)} – {dayLabel(data.today)}
             </p>
           )}
         </div>
@@ -697,30 +697,30 @@ function UsagePanel() {
             <DropdownMenuTrigger asChild>
               <Button variant="default" size="sm" className="h-9 gap-2" disabled={reportBusy}>
                 {reportBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                Informe de impacto
+                {tr('Informe de impacto')}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-60">
               <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-                Cifras citables, evolución por semana de uso y resumen del uso de la app
+                {tr('Cifras citables, evolución por semana de uso y resumen del uso de la app')}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={() => void downloadImpact('pdf')}>
-                <FileText className="mr-2 h-4 w-4" /> PDF
+                <FileText className="mr-2 h-4 w-4" />{' '}{tr('PDF')}
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => void downloadImpact('docx')}>
-                <FileText className="mr-2 h-4 w-4" /> Word (.docx)
+                <FileText className="mr-2 h-4 w-4" />{' '}{tr('Word (.docx)')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <Tabs value={String(days)} onValueChange={(v) => setDays(Number(v) as Period)}>
             <TabsList>
-              <TabsTrigger value="7">7 días</TabsTrigger>
-              <TabsTrigger value="30">30 días</TabsTrigger>
-              <TabsTrigger value="90">90 días</TabsTrigger>
+              <TabsTrigger value="7">{tr('7 días')}</TabsTrigger>
+              <TabsTrigger value="30">{tr('30 días')}</TabsTrigger>
+              <TabsTrigger value="90">{tr('90 días')}</TabsTrigger>
             </TabsList>
           </Tabs>
-          <Button variant="outline" size="icon" onClick={() => void load(days)} disabled={loading} title="Actualizar">
+          <Button variant="outline" size="icon" onClick={() => void load(days)} disabled={loading} title={tr('Actualizar')}>
             <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
           </Button>
         </div>
@@ -744,8 +744,7 @@ function UsagePanel() {
       {nothingYet && (
         <Card className="border-dashed">
           <CardContent className="p-8 text-center text-sm text-muted-foreground">
-            Todavía no hay datos. Aparecen en cuanto un estudiante abra Frame con conexión: primero la
-            apertura del día, y después cada sesión de estudio, tarea terminada e informe generado.
+            {tr('Todavía no hay datos. Aparecen en cuanto un estudiante abra Frame con conexión: primero la apertura del día, y después cada sesión de estudio, tarea terminada e informe generado.')}
           </CardContent>
         </Card>
       )}
@@ -755,33 +754,33 @@ function UsagePanel() {
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Kpi
               icon={Users}
-              label="Estudiantes"
+              label={tr('Estudiantes')}
               value={t.users_total}
-              hint={`${t.accounts_total} con cuenta · ${t.guests_total} invitados · ${t.users_new} nuevos`}
+              hint={tr('{accounts_total} con cuenta · {guests_total} invitados · {users_new} nuevos', { accounts_total: t.accounts_total, guests_total: t.guests_total, users_new: t.users_new })}
             />
-            <Kpi icon={Activity} label="Activos en 7 días" value={t.active_7d} hint={`${t.active_today} hoy · ${t.active_30d} en 30 días`} />
+            <Kpi icon={Activity} label={tr('Activos en 7 días')} value={t.active_7d} hint={tr('{active_today} hoy · {active_30d} en 30 días', { active_today: t.active_today, active_30d: t.active_30d })} />
             <Kpi
               icon={CalendarDays}
-              label="Retención semanal"
+              label={tr('Retención semanal')}
               value={retentionPct === null ? '—' : `${retentionPct}%`}
               hint={
                 data.retention.prev_week === 0
-                  ? 'Sin semana anterior con la que comparar'
-                  : `${data.retention.retained} de ${data.retention.prev_week} volvieron esta semana`
+                  ? tr('Sin semana anterior con la que comparar')
+                  : tr('{retained} de {prev_week} volvieron esta semana', { retained: data.retention.retained, prev_week: data.retention.prev_week })
               }
             />
             <Kpi
               icon={Clock3}
-              label="Estudio en el periodo"
+              label={tr('Estudio en el periodo')}
               value={minutesLabel(t.minutes_period)}
-              hint={`${t.sessions_period} sesiones · ${t.tasks_period} tareas culminadas`}
+              hint={tr('{sessions_period} sesiones · {tasks_period} tareas culminadas', { sessions_period: t.sessions_period, tasks_period: t.tasks_period })}
             />
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card className="border-border/70">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-headline text-muted-foreground">Estudiantes activos por día</CardTitle>
+                <CardTitle className="text-sm font-headline text-muted-foreground">{tr('Estudiantes activos por día')}</CardTitle>
               </CardHeader>
               <CardContent className="h-56 pt-3">
                 <ResponsiveContainer width="100%" height="100%">
@@ -795,7 +794,7 @@ function UsagePanel() {
                     <CartesianGrid stroke="hsl(var(--foreground))" strokeDasharray="3 3" strokeOpacity={0.12} />
                     <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} interval="preserveStartEnd" />
                     <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                    <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [v, 'Activos']} />
+                    <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [v, tr('Activos')]} />
                     <Area type="monotone" dataKey="active_users" stroke="hsl(var(--primary))" fill="url(#usoActivos)" strokeWidth={2} />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -804,7 +803,7 @@ function UsagePanel() {
 
             <Card className="border-border/70">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-headline text-muted-foreground">Minutos de estudio y sesiones por día</CardTitle>
+                <CardTitle className="text-sm font-headline text-muted-foreground">{tr('Minutos de estudio y sesiones por día')}</CardTitle>
               </CardHeader>
               <CardContent className="h-56 pt-3">
                 <ResponsiveContainer width="100%" height="100%">
@@ -826,30 +825,30 @@ function UsagePanel() {
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             <RankList
-              title="Interfaces más abiertas"
+              title={tr('Interfaces más abiertas')}
               rows={data.screens.filter((s) => s.screen in SCREEN_LABELS).map((s) => ({
                 label: SCREEN_LABELS[s.screen],
                 value: s.views,
                 extra: `${s.users} est.`,
               }))}
-              empty="Sin interfaces registradas en el periodo"
+              empty={tr('Sin interfaces registradas en el periodo')}
             />
             <RankList
-              title="Actividad en el periodo"
+              title={tr('Actividad en el periodo')}
               rows={data.events.filter((e) => e.event in EVENT_LABELS).map((e) => ({ label: EVENT_LABELS[e.event], value: e.count, extra: `${e.users} est.` }))}
-              empty="Sin actividad en el periodo"
+              empty={tr('Sin actividad en el periodo')}
             />
-            <RankList title="Versiones instaladas" rows={versionRows} empty="Sin instalaciones registradas" />
+            <RankList title={tr('Versiones instaladas')} rows={versionRows} empty={tr('Sin instalaciones registradas')} />
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <Card className="border-border/70 lg:col-span-2">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-headline text-muted-foreground">Últimas semanas</CardTitle>
+                <CardTitle className="text-sm font-headline text-muted-foreground">{tr('Últimas semanas')}</CardTitle>
               </CardHeader>
               <CardContent className="h-48 pt-3">
                 {data.weekly.length === 0 ? (
-                  <p className="py-10 text-center text-xs text-muted-foreground">Sin semanas registradas todavía</p>
+                  <p className="py-10 text-center text-xs text-muted-foreground">{tr('Sin semanas registradas todavía')}</p>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={data.weekly.map((w) => ({ ...w, label: dayLabel(w.week_start) }))} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
@@ -867,44 +866,44 @@ function UsagePanel() {
 
             <Card className="border-border/70">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-headline text-muted-foreground">Estudio acumulado por estudiante</CardTitle>
+                <CardTitle className="text-sm font-headline text-muted-foreground">{tr('Estudio acumulado por estudiante')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4 pt-3">
                 <SplitBar
                   segments={[
-                    { id: 'none', label: 'Sin estudio', value: data.study_buckets.none, className: 'bg-muted-foreground/40' },
+                    { id: 'none', label: tr('Sin estudio'), value: data.study_buckets.none, className: 'bg-muted-foreground/40' },
                     { id: 'lt1h', label: '< 1 h', value: data.study_buckets.lt1h, className: 'bg-primary/35' },
                     { id: 'h1_5', label: '1–5 h', value: data.study_buckets.h1_5, className: 'bg-primary/60' },
                     { id: 'h5_20', label: '5–20 h', value: data.study_buckets.h5_20, className: 'bg-primary/85' },
-                    { id: 'h20', label: '20 h o más', value: data.study_buckets.h20, className: 'bg-primary' },
+                    { id: 'h20', label: tr('20 h o más'), value: data.study_buckets.h20, className: 'bg-primary' },
                   ]}
                 />
                 <div className="grid grid-cols-2 gap-3 border-t border-border/60 pt-3 text-xs">
                   <div>
-                    <p className="text-[10px] text-muted-foreground">Desde el inicio</p>
+                    <p className="text-[10px] text-muted-foreground">{tr('Desde el inicio')}</p>
                     <p className="font-semibold tabular-nums">{minutesLabel(t.study_minutes_all)}</p>
-                    <p className="text-[11px] text-muted-foreground">{t.sessions_all} sesiones</p>
+                    <p className="text-[11px] text-muted-foreground">{t.sessions_all}{' '}{tr('sesiones')}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-muted-foreground">Informes</p>
+                    <p className="text-[10px] text-muted-foreground">{tr('Informes')}</p>
                     <p className="font-semibold tabular-nums">{data.reports.reduce((acc, r) => acc + r.count, 0)}</p>
                     <p className="text-[11px] text-muted-foreground">
-                      {data.reports.length > 0 ? data.reports.map((r) => `${r.count} ${r.format.toUpperCase()}`).join(' · ') : 'ninguno en el periodo'}
+                      {data.reports.length > 0 ? data.reports.map((r) => `${r.count} ${r.format.toUpperCase()}`).join(' · ') : tr('ninguno en el periodo')}
                     </p>
                   </div>
                 </div>
                 {guests && (guests.started_period > 0 || guests.guests_total > 0) && (
                   <div className="grid grid-cols-2 gap-3 border-t border-border/60 pt-3 text-xs">
                     <div>
-                      <p className="text-[10px] text-muted-foreground">Entraron como invitado</p>
+                      <p className="text-[10px] text-muted-foreground">{tr('Entraron como invitado')}</p>
                       <p className="font-semibold tabular-nums">{guests.started_period}</p>
-                      <p className="text-[11px] text-muted-foreground">{guests.guests_active_7d} activos en 7 días</p>
+                      <p className="text-[11px] text-muted-foreground">{guests.guests_active_7d}{' '}{tr('activos en 7 días')}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] text-muted-foreground">Vincularon Google</p>
+                      <p className="text-[10px] text-muted-foreground">{tr('Vincularon Google')}</p>
                       <p className="font-semibold tabular-nums">{guests.linked_period}</p>
                       <p className="text-[11px] text-muted-foreground">
-                        {guests.started_period > 0 ? `${Math.round((guests.linked_period / guests.started_period) * 100)} % de los invitados` : 'en el periodo'}
+                        {guests.started_period > 0 ? tr('{p} % de los invitados', { p: Math.round((guests.linked_period / guests.started_period) * 100) }) : tr('en el periodo')}
                       </p>
                     </div>
                   </div>

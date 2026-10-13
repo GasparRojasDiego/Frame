@@ -3,7 +3,7 @@ import { readAudioTags } from '@/lib/audio-tags';
 import { shrinkCover } from '@/lib/cover-shrink';
 import { betterLyrics, importLyrics, lyricsFromLines, lyricsFromText, storedLyrics } from '@/lib/lyrics';
 import { getSongFileFromDB } from '@/lib/music-db';
-import { UNKNOWN_ARTIST } from '@/lib/music-import';
+import { UNKNOWN_ARTIST } from '@/lib/enum-labels';
 import { foldName, isJunkTag, resolveSongName } from '@/lib/song-names';
 import type { Song } from '@/types';
 

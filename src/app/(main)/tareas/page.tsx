@@ -21,6 +21,7 @@ import {
   useSensors,
   DragEndEvent,
 } from '@dnd-kit/core';
+import { dndAccessibility } from '@/lib/dnd-a11y';
 import { restrictToParentElement } from '@dnd-kit/modifiers';
 import {
   arrayMove,
@@ -32,6 +33,7 @@ import { Button } from '@/components/ui/button';
 import { useCourse } from '@/context/CourseContext';
 import { cn } from '@/lib/utils';
 import { parseISO } from 'date-fns';
+import { tr } from '@/lib/i18n';
 
 function AllTasksView({
   highlightTaskId,
@@ -112,7 +114,7 @@ function AllTasksView({
   if (!tasksState || tasksState.length === 0) {
     return (
       <p className="text-sm text-muted-foreground text-center">
-        No tienes tareas pendientes. Crea una con el botón «+» de la barra superior o desde cualquier asignatura.
+        {tr('No tienes tareas pendientes. Crea una con el botón «+» de la barra superior o desde cualquier asignatura.')}
       </p>
     );
   }
@@ -122,9 +124,9 @@ function AllTasksView({
   if (visibleTasks.length === 0) {
     return (
       <div className="flex flex-col items-center gap-3 py-6 text-center">
-        <p className="text-sm text-muted-foreground">Ninguna tarea cumple los filtros elegidos.</p>
+        <p className="text-sm text-muted-foreground">{tr('Ninguna tarea cumple los filtros elegidos.')}</p>
         <Button variant="outline" size="sm" onClick={onClearFilters}>
-          Quitar filtros
+          {tr('Quitar filtros')}
         </Button>
       </div>
     );
@@ -143,7 +145,7 @@ function AllTasksView({
   );
 
   return isDragDisabled ? TaskListContent : (
-    <DndContext
+    <DndContext accessibility={dndAccessibility()}
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
@@ -212,16 +214,16 @@ export default function TasksPage() {
                     <span className="flex min-w-0 items-center gap-1.5 truncate text-sm text-muted-foreground">
                       <span className="truncate">
                         <span className="font-semibold text-foreground">{shownCount}</span>{' '}
-                        {shownCount === 1 ? 'tarea' : 'tareas'}
-                        {activeFilters > 0 && ` de ${tasks.length}`}
+                        {shownCount === 1 ? tr('tarea') : tr('tareas')}
+                        {activeFilters > 0 && tr(' de {length}', { length: tasks.length })}
                       </span>
                       <span aria-hidden className="text-border">·</span>
                       <span
                         className="flex shrink-0 items-center gap-1"
                         title={
                           withoutEstimate > 0
-                            ? `Tiempo estimado en total. ${withoutEstimate} ${withoutEstimate === 1 ? 'tarea no tiene' : 'tareas no tienen'} tiempo estimado.`
-                            : 'Tiempo estimado en total'
+                            ? tr('Tiempo estimado en total. {withoutEstimate} {p} tiempo estimado.', { withoutEstimate, p: withoutEstimate === 1 ? tr('tarea no tiene') : tr('tareas no tienen') })
+                            : tr('Tiempo estimado en total')
                         }
                       >
                         <Clock className="h-3.5 w-3.5" />
@@ -234,7 +236,7 @@ export default function TasksPage() {
             </div>
             <div className="text-center">
               <h1 className="text-2xl font-bold text-foreground font-headline">
-                  {showArchived ? 'Tareas archivadas' : 'Galería de tareas'}
+                  {showArchived ? tr('Tareas archivadas') : tr('Galería de tareas')}
               </h1>
             </div>
             <div className="flex items-center gap-2 justify-end">
@@ -243,7 +245,7 @@ export default function TasksPage() {
                     variant={!showArchived ? 'default' : 'outline'}
                     size="icon"
                     onClick={() => setShowArchived(false)}
-                    title="Galería de tareas"
+                    title={tr('Galería de tareas')}
                     className={cn(
                         'h-9 w-9',
                         showArchived && "border-primary bg-primary/20 text-primary hover:bg-primary/30 hover:text-primary"
@@ -256,7 +258,7 @@ export default function TasksPage() {
                     variant={showArchived ? 'default' : 'outline'}
                     size="icon"
                     onClick={() => setShowArchived((p) => !p)}
-                    title="Archivadas: culminadas e incompletas"
+                    title={tr('Archivadas: culminadas e incompletas')}
                     className={cn(
                         'h-9 w-9',
                         !showArchived && "border-primary bg-primary/20 text-primary hover:bg-primary/30 hover:text-primary"

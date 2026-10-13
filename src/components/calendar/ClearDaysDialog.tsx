@@ -7,6 +7,7 @@ import { kindLabelOf } from '@/lib/calendar-events';
 import { cn } from '@/lib/utils';
 import type { LocalCalendarEvent } from '@/types';
 import { daysOf, eventEnd, rangeLabel, shortDayLabel, type DayRange } from './calendar-model';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Vaciar varios días con varias actividades (1.6.7, Diego): un recuadro
@@ -72,11 +73,11 @@ export default function ClearDaysDialog({
   return (
     <Dialog open={!!request} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-md">
-        <EchoHeader word="Eliminar">
+        <EchoHeader word={tr('Eliminar')}>
           <DialogHeader>
-            <DialogTitle className="text-center text-xl font-bold text-primary">¿Qué quieres eliminar?</DialogTitle>
+            <DialogTitle className="text-center text-xl font-bold text-primary">{tr('¿Qué quieres eliminar?')}</DialogTitle>
             <DialogDescription className="text-center text-xs">
-              {request ? (request.range.start === request.range.end ? shortDayLabel(request.range.start) : `${daysOf(request.range).length} días · ${rangeLabel(request.range)}`) : ''}
+              {request ? (request.range.start === request.range.end ? shortDayLabel(request.range.start) : tr('{length} días · {rangeLabel}', { length: daysOf(request.range).length, rangeLabel: rangeLabel(request.range) })) : ''}
             </DialogDescription>
           </DialogHeader>
         </EchoHeader>
@@ -87,9 +88,9 @@ export default function ClearDaysDialog({
             onClick={() => setMarked(allMarked ? new Set() : new Set(events.map((event) => event.id)))}
             className="text-[11px] font-semibold text-primary hover:underline"
           >
-            {allMarked ? 'Desmarcar todas' : 'Marcar todas'}
+            {allMarked ? tr('Desmarcar todas') : tr('Marcar todas')}
           </button>
-          <ul className="max-h-72 space-y-1 overflow-y-auto pr-1" role="group" aria-label="Actividades">
+          <ul className="max-h-72 space-y-1 overflow-y-auto pr-1" role="group" aria-label={tr('Actividades')}>
             {events.map((event) => {
               const end = eventEnd(event);
               const outside = request ? event.date < request.range.start || end > request.range.end : false;
@@ -115,7 +116,7 @@ export default function ClearDaysDialog({
                           kindLabelOf(event),
                           end !== event.date ? rangeLabel({ start: event.date, end }) : shortDayLabel(event.date),
                           event.time ?? '',
-                          outside ? 'solo se quitan estos días' : '',
+                          outside ? tr('solo se quitan estos días') : '',
                         ]
                           .filter(Boolean)
                           .join(' · ')}
@@ -139,7 +140,7 @@ export default function ClearDaysDialog({
                 >
                   <CheckBox checked={colors} />
                   <span className="font-semibold text-foreground">
-                    Color de {request.colorDays} {request.colorDays === 1 ? 'casilla' : 'casillas'}
+                    {tr('Color de')}{' '}{request.colorDays} {request.colorDays === 1 ? tr('casilla') : tr('casillas')}
                   </span>
                 </button>
               </li>
@@ -154,18 +155,18 @@ export default function ClearDaysDialog({
             size="icon"
             disabled={!single || colors}
             onClick={() => single && onEdit(single)}
-            title={single ? `Editar «${single.title}»` : 'Marca una sola actividad para editarla'}
-            aria-label="Editar la actividad marcada"
+            title={single ? tr('Editar «{title}»', { title: single.title }) : tr('Marca una sola actividad para editarla')}
+            aria-label={tr('Editar la actividad marcada')}
           >
             <Pencil className="h-4 w-4" />
           </Button>
           <div className="flex gap-2">
             <Button type="button" variant="gris" onClick={onClose}>
-              Cancelar
+              {tr('Cancelar')}
             </Button>
             <Button type="button" variant="destructive" disabled={!anything} onClick={() => onDelete(marked, colors)}>
               <Trash2 />
-              Eliminar
+              {tr('Eliminar')}
             </Button>
           </div>
         </DialogFooter>

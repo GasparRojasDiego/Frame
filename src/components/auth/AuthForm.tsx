@@ -14,7 +14,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { GUEST_NAME, clearGuestLinkPending, guestLinkedTo, markGuestLinkPending } from '@/lib/guest-link';
+import { clearGuestLinkPending, guestLinkedTo, markGuestLinkPending } from '@/lib/guest-link';
+import { GUEST_NAME } from '@/lib/enum-labels';
 import { flushEvents, trackEvent } from '@/lib/telemetry';
 import type { UserProfile } from '@/types';
 import { useToast } from '@/hooks/use-toast';
@@ -32,6 +33,7 @@ import { isTauri } from '@tauri-apps/api/core';
 import AuthShell, { PasswordInput, validateUsername } from '@/components/auth/AuthShell';
 import GoogleGlyph from '@/components/auth/GoogleGlyph';
 import { EchoHeader } from '@/components/shared/EchoWord';
+import { tr } from '@/lib/i18n';
 
 interface AuthFormProps {
   onAuthSuccess?: () => void;
@@ -129,16 +131,30 @@ export default function AuthForm({ linkGuest }: AuthFormProps) {
     e.preventDefault();
     setIsLoading(true);
 
+    // Validación propia (1.6.7): las burbujas del navegador hablarían en el
+    // idioma de Windows, no en el de Frame.
+    const missing =
+      (mode === 'register' ? validateUsername(username) : null) ??
+      (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+        ? tr('Escribe un correo válido, como nombre@correo.com.')
+        : !password
+          ? tr('Escribe tu contraseña de Frame.')
+          : null);
+    if (missing) {
+      toast({ variant: 'destructive', title: tr('Revisa tus datos'), description: missing });
+      setIsLoading(false);
+      return;
+    }
+
     if (mode === 'register') {
       const problem =
-        validateUsername(username) ??
         (password.length < MIN_PASSWORD
-          ? `La contraseña debe tener al menos ${MIN_PASSWORD} caracteres.`
+          ? tr('La contraseña debe tener al menos {MIN_PASSWORD} caracteres.', { MIN_PASSWORD })
           : password !== passwordAgain
-            ? 'Las dos contraseñas no coinciden.'
+            ? tr('Las dos contraseñas no coinciden.')
             : null);
       if (problem) {
-        toast({ variant: "destructive", title: "Revisa tus datos", description: problem });
+        toast({ variant: "destructive", title: tr('Revisa tus datos'), description: problem });
         setIsLoading(false);
         return;
       }
@@ -149,14 +165,14 @@ export default function AuthForm({ linkGuest }: AuthFormProps) {
       // vez cuando entre con su correo y contraseña desde este mismo recuadro.
       if (error || !session) abortGuestLink();
       if (error) {
-        toast({ variant: "destructive", title: "No se pudo crear la cuenta", description: describeAuthError(error) });
+        toast({ variant: "destructive", title: tr('No se pudo crear la cuenta'), description: describeAuthError(error) });
         setIsLoading(false);
         return;
       }
       if (!session) {
         toast({
-          title: "Confirma tu correo",
-          description: "Te enviamos un enlace para activar tu cuenta. Ábrelo y vuelve aquí a iniciar sesión (mira también en spam).",
+          title: tr('Confirma tu correo'),
+          description: tr('Te enviamos un enlace para activar tu cuenta. Ábrelo y vuelve aquí a iniciar sesión (mira también en spam).'),
           duration: 12000,
         });
         setMode('login');
@@ -169,7 +185,7 @@ export default function AuthForm({ linkGuest }: AuthFormProps) {
     const { error } = await signInWithEmail(email, password);
     if (error) {
       abortGuestLink();
-      toast({ variant: "destructive", title: "No se pudo iniciar sesión", description: describeAuthError(error) });
+      toast({ variant: "destructive", title: tr('No se pudo iniciar sesión'), description: describeAuthError(error) });
       setIsLoading(false);
     }
   };
@@ -179,19 +195,19 @@ export default function AuthForm({ linkGuest }: AuthFormProps) {
   const handleForgotPassword = async () => {
     const address = email.trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) {
-      toast({ title: 'Escribe tu correo', description: 'Pon arriba el correo de tu cuenta y vuelve a pulsar «¿Olvidaste tu contraseña?».' });
+      toast({ title: tr('Escribe tu correo'), description: tr('Pon arriba el correo de tu cuenta y vuelve a pulsar «¿Olvidaste tu contraseña?».') });
       return;
     }
     setIsLoading(true);
     const { error } = await requestPasswordReset(address);
     setIsLoading(false);
     if (error) {
-      toast({ variant: 'destructive', title: 'No se pudo enviar el correo', description: describeAuthError(error) });
+      toast({ variant: 'destructive', title: tr('No se pudo enviar el correo'), description: describeAuthError(error) });
       return;
     }
     toast({
-      title: 'Revisa tu correo',
-      description: `Si ${address} tiene una cuenta, te llegará un enlace para elegir una contraseña nueva (mira también en spam). Caduca en una hora.`,
+      title: tr('Revisa tu correo'),
+      description: tr('Si {address} tiene una cuenta, te llegará un enlace para elegir una contraseña nueva (mira también en spam). Caduca en una hora.', { address }),
       duration: 12000,
     });
   };
@@ -226,7 +242,7 @@ export default function AuthForm({ linkGuest }: AuthFormProps) {
         }
 
         // Sin Supabase: perfil local-first con la identidad de Google.
-        const username = (identity.givenName || identity.name || 'Usuario').slice(0, 12).trim();
+        const username = (identity.givenName || identity.name || tr('Usuario')).slice(0, 12).trim();
         const timestampPart = String(Date.now()).slice(-8);
         const randomPart = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
         const profile: UserProfile = {
@@ -246,7 +262,7 @@ export default function AuthForm({ linkGuest }: AuthFormProps) {
         const message = String(e?.message ?? e);
         // Cerrar la ventana de Google es una decisión, no un error.
         if (!/cancelado/i.test(message)) {
-          toast({ variant: 'destructive', title: 'No se pudo entrar con Google', description: describeAuthError(message) });
+          toast({ variant: 'destructive', title: tr('No se pudo entrar con Google'), description: describeAuthError(message) });
         }
         setIsLoading(false);
         return;
@@ -258,7 +274,7 @@ export default function AuthForm({ linkGuest }: AuthFormProps) {
     const { error } = await signInWithGoogle();
     if (error) {
       abortGuestLink();
-      toast({ variant: "destructive", title: "No se pudo entrar con Google", description: describeAuthError(error) });
+      toast({ variant: "destructive", title: tr('No se pudo entrar con Google'), description: describeAuthError(error) });
       setIsLoading(false);
     }
   };
@@ -266,7 +282,7 @@ export default function AuthForm({ linkGuest }: AuthFormProps) {
   const googleButton = (
     <Button variant="outline" className="w-full gap-2 bg-background" onClick={handleGoogle} disabled={isLoading}>
       {isLoading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <GoogleGlyph className="h-[18px] w-[18px]" />}
-      Continuar con Google
+      {tr('Continuar con Google')}
     </Button>
   );
 
@@ -290,7 +306,7 @@ export default function AuthForm({ linkGuest }: AuthFormProps) {
       setResumeCandidate(null);
       window.dispatchEvent(new Event('profileUpdated'));
     } catch {
-      toast({ variant: 'destructive', title: 'No se pudo entrar como invitado', description: 'Inténtalo de nuevo.' });
+      toast({ variant: 'destructive', title: tr('No se pudo entrar como invitado'), description: tr('Inténtalo de nuevo.') });
     }
   };
 
@@ -309,29 +325,29 @@ export default function AuthForm({ linkGuest }: AuthFormProps) {
       className="mx-auto flex items-center gap-1.5 rounded px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
     >
       <UserRound className="h-3.5 w-3.5" />
-      Entrar como invitado
+      {tr('Entrar como invitado')}
     </button>
   );
 
   const resumeDialog = (
     <Dialog open={resumeCandidate !== null} onOpenChange={(open) => !open && setResumeCandidate(null)}>
       <DialogContent className="sm:max-w-md">
-        <EchoHeader word="Invitado">
+        <EchoHeader word={tr('Invitado')}>
           <DialogHeader>
-            <DialogTitle className="text-center text-lg font-bold text-primary">Ya hay un invitado en este equipo</DialogTitle>
+            <DialogTitle className="text-center text-lg font-bold text-primary">{tr('Ya hay un invitado en este equipo')}</DialogTitle>
             <DialogDescription className="text-center text-xs">
               {resumeCandidate?.username && resumeCandidate.username !== GUEST_NAME
-                ? `Se usó Frame como invitado con el nombre «${resumeCandidate.username}». `
-                : 'Se usó Frame como invitado en este equipo. '}
-              Puedes seguir con ese perfil y todo lo que tiene, o empezar uno nuevo (el anterior no se borra).
+                ? tr('Se usó Frame como invitado con el nombre «{username}». ', { username: resumeCandidate.username })
+                : tr('Se usó Frame como invitado en este equipo. ')}
+              {tr('Puedes seguir con ese perfil y todo lo que tiene, o empezar uno nuevo (el anterior no se borra).')}
             </DialogDescription>
           </DialogHeader>
         </EchoHeader>
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={() => enterAsGuest(null)}>
-            Empezar uno nuevo
+            {tr('Empezar uno nuevo')}
           </Button>
-          <Button onClick={() => resumeCandidate && enterAsGuest(resumeCandidate)}>Seguir con ese perfil</Button>
+          <Button onClick={() => resumeCandidate && enterAsGuest(resumeCandidate)}>{tr('Seguir con ese perfil')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -340,7 +356,7 @@ export default function AuthForm({ linkGuest }: AuthFormProps) {
   const divider = (
     <div className="relative">
       <Separator />
-      <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">o con tu correo</span>
+      <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">{tr('o con tu correo')}</span>
     </div>
   );
 
@@ -352,31 +368,31 @@ export default function AuthForm({ linkGuest }: AuthFormProps) {
             {divider}
             <Tabs value={mode} onValueChange={(v) => setMode(v as 'login' | 'register')}>
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Iniciar sesión</TabsTrigger>
-                <TabsTrigger value="register">Registrarse</TabsTrigger>
+                <TabsTrigger value="login">{tr('Iniciar sesión')}</TabsTrigger>
+                <TabsTrigger value="register">{tr('Registrarse')}</TabsTrigger>
               </TabsList>
 
-              <form onSubmit={handleEmailAuth} className="space-y-3.5 pt-4">
+              <form onSubmit={handleEmailAuth} noValidate className="space-y-3.5 pt-4">
                 <TabsContent value="register" className="m-0 space-y-3.5">
                   <div className="space-y-1.5">
-                    <Label htmlFor="username">Nombre de usuario</Label>
-                    <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} maxLength={12} placeholder="Así te saludará Frame (máx. 12)" autoComplete="nickname" disabled={isLoading} />
+                    <Label htmlFor="username">{tr('Nombre de usuario')}</Label>
+                    <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} maxLength={12} placeholder={tr('Así te saludará Frame (máx. 12)')} autoComplete="nickname" disabled={isLoading} />
                   </div>
                 </TabsContent>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="email">Correo</Label>
-                  <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@correo.com" autoComplete="email" required disabled={isLoading} />
+                  <Label htmlFor="email">{tr('Correo')}</Label>
+                  <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={tr('tu@correo.com')} autoComplete="email" required disabled={isLoading} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="password">{mode === 'register' ? 'Contraseña para Frame' : 'Contraseña de Frame'}</Label>
+                  <Label htmlFor="password">{mode === 'register' ? tr('Contraseña para Frame') : tr('Contraseña de Frame')}</Label>
                   <PasswordInput
                     id="password"
                     value={password}
                     onChange={setPassword}
                     disabled={isLoading}
                     autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
-                    placeholder={mode === 'register' ? `Mínimo ${MIN_PASSWORD} caracteres` : undefined}
+                    placeholder={mode === 'register' ? tr('Mínimo {MIN_PASSWORD} caracteres', { MIN_PASSWORD }) : undefined}
                   />
                   {mode === 'login' && (
                     <div className="flex justify-end">
@@ -386,25 +402,24 @@ export default function AuthForm({ linkGuest }: AuthFormProps) {
                         disabled={isLoading}
                         className="rounded px-1 text-[11px] text-muted-foreground transition-colors hover:text-primary disabled:opacity-50"
                       >
-                        ¿Olvidaste tu contraseña?
+                        {tr('¿Olvidaste tu contraseña?')}
                       </button>
                     </div>
                   )}
                 </div>
                 <TabsContent value="register" className="m-0 space-y-1.5">
-                  <Label htmlFor="passwordAgain">Repite la contraseña</Label>
+                  <Label htmlFor="passwordAgain">{tr('Repite la contraseña')}</Label>
                   <PasswordInput id="passwordAgain" value={passwordAgain} onChange={setPasswordAgain} disabled={isLoading} autoComplete="new-password" />
                 </TabsContent>
                 {mode === 'register' && (
                   <p className="text-xs leading-relaxed text-muted-foreground">
-                    Crea una contraseña nueva, exclusiva de Frame. No escribas la de tu correo electrónico: Frame nunca la
-                    necesita ni te la pedirá.
+                    {tr('Crea una contraseña nueva, exclusiva de Frame. No escribas la de tu correo electrónico: Frame nunca la necesita ni te la pedirá.')}
                   </p>
                 )}
 
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading && <LoaderCircle className="h-4 w-4 animate-spin mr-2" />}
-                  {mode === 'login' ? 'Entrar' : 'Crear cuenta'}
+                  {mode === 'login' ? tr('Entrar') : tr('Crear cuenta')}
                 </Button>
                 {!linkGuest && guestButton}
               </form>
@@ -413,7 +428,7 @@ export default function AuthForm({ linkGuest }: AuthFormProps) {
         ) : (
           <CardContent className="space-y-4 pt-5">
             <p className="text-sm text-center text-muted-foreground">
-                Esta aplicación funciona sin conexión. Todos tus datos se almacenan localmente en tu dispositivo.
+                {tr('Esta aplicación funciona sin conexión. Todos tus datos se almacenan localmente en tu dispositivo.')}
             </p>
             {isGoogleConfigured && googleButton}
             {!linkGuest && guestButton}

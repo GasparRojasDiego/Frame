@@ -7,6 +7,7 @@
 // `@/lib/reverse-geocode` (Open-Meteo sólo hace geocoding directo).
 import { reverseGeocode, formatCoords, type GeoSource } from '@/lib/reverse-geocode';
 import { activeProfileId, weatherCacheKey, weatherImagesKey, weatherPlaceKey } from '@/lib/profile-scope';
+import { getLang, tr, type Lang } from '@/lib/i18n';
 
 export { formatCoords };
 export type { GeoSource };
@@ -66,6 +67,11 @@ export interface WeatherPlace {
   source?: GeoSource;
   /** epoch ms del último INTENTO de resolución (evita bucles y reintenta a las 6 h). */
   resolvedAt?: number;
+  /** Último idioma con el que se intentó (evita reintentar sin red en bucle). */
+  langTriedAt?: Lang;
+  /** Idioma de los nombres (1.6.7). Ausente: español. Al cambiar el idioma de
+   *  la interfaz, el lugar se vuelve a nombrar en el nuevo. */
+  lang?: Lang;
 }
 
 // El lugar, el pronóstico guardado y las fotos del lugar son del perfil
@@ -135,6 +141,7 @@ async function buildAutoPlace(
     resolved: !!named,
     source: opts.ipSource ? 'ip' : named?.source ?? 'coords',
     resolvedAt: Date.now(),
+    lang: getLang(),
   };
 }
 
@@ -182,6 +189,11 @@ const NAME_RETRY_MS = 6 * 60 * 60 * 1000;
  * (esa ventana es lo que impide un bucle de render y de red).
  */
 export function needsNameResolution(place: WeatherPlace): boolean {
+  // Nombres en otro idioma: se vuelven a pedir una vez (también los elegidos
+  // a mano, de los que solo cambian la región y el país).
+  const otherLang = (place.lang ?? 'es') !== getLang();
+  const triedRecently = place.langTriedAt === getLang() && !!place.resolvedAt && Date.now() - place.resolvedAt < NAME_RETRY_MS;
+  if (otherLang && !triedRecently) return true;
   if (!place.auto) return false;
   if (LEGACY_PLACEHOLDERS.includes(place.name)) return true;
   if (place.resolved) return false;
@@ -205,7 +217,12 @@ export async function resolvePlaceName(place: WeatherPlace): Promise<WeatherPlac
         resolvedAt: Date.now(),
       };
     }
-    return { ...place, resolvedAt: Date.now() }; // marca el intento: no reintenta en 6 h
+    return { ...place, resolvedAt: Date.now(), langTriedAt: getLang() }; // marca el intento: no reintenta en 6 h
+  }
+  // Elegido a mano: el nombre es el que eligió la persona; solo se traducen
+  // la región y el país.
+  if (!place.auto) {
+    return { ...place, admin: named.admin ?? place.admin, country: named.country ?? place.country, lang: getLang(), langTriedAt: getLang(), resolvedAt: Date.now() };
   }
   return {
     ...place,
@@ -216,14 +233,16 @@ export async function resolvePlaceName(place: WeatherPlace): Promise<WeatherPlac
     resolved: true,
     source: place.source === 'ip' ? 'ip' : named.source,
     resolvedAt: Date.now(),
+    lang: getLang(),
+    langTriedAt: getLang(),
   };
 }
 
 /** Busca ciudades por nombre (geocoding de Open-Meteo, en español). */
 export async function searchPlaces(query: string): Promise<WeatherPlace[]> {
-  const params = new URLSearchParams({ name: query, count: '6', language: 'es', format: 'json' });
+  const params = new URLSearchParams({ name: query, count: '6', language: getLang(), format: 'json' });
   const resp = await fetch(`https://geocoding-api.open-meteo.com/v1/search?${params}`);
-  if (!resp.ok) throw new Error('No se pudo buscar la ubicación.');
+  if (!resp.ok) throw new Error(tr('No se pudo buscar la ubicación.'));
   const data = await resp.json();
   return (data.results ?? []).map((r: any) => ({
     name: r.name,
@@ -233,6 +252,7 @@ export async function searchPlaces(query: string): Promise<WeatherPlace[]> {
     longitude: r.longitude,
     resolved: true,
     source: 'manual' as const,
+    lang: getLang(),
   }));
 }
 
@@ -249,7 +269,7 @@ export async function fetchWeather(place: WeatherPlace): Promise<WeatherData> {
     forecast_days: '6',
   });
   const resp = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
-  if (!resp.ok) throw new Error('No se pudo obtener el pronóstico.');
+  if (!resp.ok) throw new Error(tr('No se pudo obtener el pronóstico.'));
   const data = await resp.json();
 
   const weather: WeatherData = {
@@ -352,19 +372,19 @@ export async function getPlaceImage(place: WeatherPlace): Promise<string | null>
 
 /** Traducción de códigos WMO a descripción en español. */
 export function weatherLabel(code: number): string {
-  if (code === 0) return 'Despejado';
-  if (code === 1) return 'Mayormente despejado';
-  if (code === 2) return 'Parcialmente nublado';
-  if (code === 3) return 'Nublado';
-  if (code === 45 || code === 48) return 'Niebla';
-  if (code >= 51 && code <= 57) return 'Llovizna';
-  if (code >= 61 && code <= 67) return 'Lluvia';
-  if (code >= 71 && code <= 77) return 'Nieve';
-  if (code >= 80 && code <= 82) return 'Chubascos';
-  if (code === 85 || code === 86) return 'Chubascos de nieve';
-  if (code === 95) return 'Tormenta';
-  if (code === 96 || code === 99) return 'Tormenta con granizo';
-  return 'Variable';
+  if (code === 0) return tr('Despejado');
+  if (code === 1) return tr('Mayormente despejado');
+  if (code === 2) return tr('Parcialmente nublado');
+  if (code === 3) return tr('Nublado');
+  if (code === 45 || code === 48) return tr('Niebla');
+  if (code >= 51 && code <= 57) return tr('Llovizna');
+  if (code >= 61 && code <= 67) return tr('Lluvia');
+  if (code >= 71 && code <= 77) return tr('Nieve');
+  if (code >= 80 && code <= 82) return tr('Chubascos');
+  if (code === 85 || code === 86) return tr('Chubascos de nieve');
+  if (code === 95) return tr('Tormenta');
+  if (code === 96 || code === 99) return tr('Tormenta con granizo');
+  return tr('Variable');
 }
 
 /** Categoría simple para elegir ícono (lucide). */

@@ -21,6 +21,7 @@ import { isRichNoteEmpty } from '@/lib/rich-note';
 import { Button } from '@/components/ui/button';
 import { PeruClock, PeruFlag } from './MiniTimerCard';
 import NoteEditor from './NoteEditor';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Contenido de la ventana flotante NATIVA de Enfoque.
@@ -174,10 +175,10 @@ export default function MiniTimerWindow() {
   const canSwitchMode = !!state && !hasSession;
   const isStopwatch = state?.mode === 'stopwatch';
   const ModeIcon = isStopwatch ? Hourglass : Timer;
-  const otherMode = isStopwatch ? 'temporizador' : 'cronómetro';
+  const otherMode = isStopwatch ? tr('temporizador') : tr('cronómetro');
   const modeTitle = canSwitchMode
-    ? `Cambiar a ${otherMode}`
-    : 'El modo se cambia entre sesiones, no durante una';
+    ? tr('Cambiar a {otherMode}', { otherMode })
+    : tr('El modo se cambia entre sesiones, no durante una');
   const progress =
     state && state.mode === 'focus' && state.sessionStartTime > 0
       ? Math.max(0, Math.min(1, (state.sessionStartTime - time) / state.sessionStartTime))
@@ -219,16 +220,16 @@ export default function MiniTimerWindow() {
 
           {menuOpen ? (
             <>
-              <button className={iconButton} onClick={() => setMenuOpen(false)} title="Volver al reloj">
+              <button className={iconButton} onClick={() => setMenuOpen(false)} title={tr('Volver al reloj')}>
                 <ArrowLeft className="h-3.5 w-3.5" />
               </button>
-              {menuAction('Anotar', NotebookPen, openNote, !hasSession)}
-              {menuAction('Mediana', Maximize2, () => {
+              {menuAction(tr('Anotar'), NotebookPen, openNote, !hasSession)}
+              {menuAction(tr('Mediana'), Maximize2, () => {
                 setMenuOpen(false);
                 sendSize('full');
               })}
-              {menuAction(isStopwatch ? 'Temporiz.' : 'Cronóm.', ArrowLeftRight, () => send('mode'), !canSwitchMode)}
-              {menuAction('Cerrar', X, () => send('close'), false, true)}
+              {menuAction(isStopwatch ? tr('Temporiz.') : tr('Cronóm.'), ArrowLeftRight, () => send('mode'), !canSwitchMode)}
+              {menuAction(tr('Cerrar'), X, () => send('close'), false, true)}
             </>
           ) : (
             <>
@@ -246,7 +247,7 @@ export default function MiniTimerWindow() {
                   canSwitchMode && 'hover:border-primary/60 hover:bg-primary/15 hover:text-primary',
                   'disabled:cursor-default'
                 )}
-                title={canSwitchMode ? `${isStopwatch ? 'Cronómetro' : 'Temporizador'} · pulsa para cambiar a ${otherMode}` : modeTitle}
+                title={canSwitchMode ? tr('{p} · pulsa para cambiar a {otherMode}', { p: isStopwatch ? tr('Cronómetro') : tr('Temporizador'), otherMode }) : modeTitle}
               >
                 <ModeIcon className="h-3.5 w-3.5" />
               </button>
@@ -261,14 +262,14 @@ export default function MiniTimerWindow() {
               ) : (
                 <span data-tauri-drag-region className="flex flex-1 items-center justify-center gap-1.5 text-muted-foreground">
                   <LoaderCircle className="h-3.5 w-3.5 animate-spin text-primary" />
-                  <span className="text-[11px]">Conectando…</span>
+                  <span className="text-[11px]">{tr('Conectando…')}</span>
                 </span>
               )}
               <button
                 className="rounded-lg bg-primary p-1.5 text-primary-foreground transition-colors hover:bg-primary/85 disabled:opacity-50"
                 onClick={() => send('toggle')}
                 disabled={!canStart}
-                title={state?.active ? 'Pausar' : hasSession ? 'Reanudar' : 'Iniciar'}
+                title={state?.active ? tr('Pausar') : hasSession ? tr('Reanudar') : tr('Iniciar')}
               >
                 {state?.active ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
               </button>
@@ -276,11 +277,11 @@ export default function MiniTimerWindow() {
                 className="rounded-lg bg-secondary p-1.5 text-secondary-foreground transition-colors hover:bg-destructive/20 hover:text-destructive disabled:opacity-50"
                 onClick={() => send('finish')}
                 disabled={!hasSession}
-                title="Finalizar"
+                title={tr('Finalizar')}
               >
                 <StopCircle className="h-3.5 w-3.5" />
               </button>
-              <button className={iconButton} onClick={() => setMenuOpen(true)} title="Más opciones">
+              <button className={iconButton} onClick={() => setMenuOpen(true)} title={tr('Más opciones')}>
                 <MoreHorizontal className="h-4 w-4" />
               </button>
             </>
@@ -308,7 +309,7 @@ export default function MiniTimerWindow() {
             className="group flex items-center gap-1.5 rounded-md px-1.5 py-1 text-[11px] font-semibold text-muted-foreground transition-colors enabled:hover:bg-secondary enabled:hover:text-foreground disabled:cursor-default"
           >
             <ModeIcon className="h-3.5 w-3.5 text-primary" />
-            {isStopwatch ? 'Cronómetro' : 'Temporizador'}
+            {isStopwatch ? tr('Cronómetro') : tr('Temporizador')}
             {canSwitchMode && <ArrowLeftRight className="h-3 w-3 opacity-50 group-hover:opacity-100" />}
             {state?.active && <span className="ml-0.5 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />}
           </button>
@@ -318,24 +319,24 @@ export default function MiniTimerWindow() {
               className={cn(iconButton, noteOpen && 'text-primary')}
               onClick={() => (noteOpen ? setNoteOpen(false) : openNote())}
               disabled={!hasSession}
-              title={hasSession ? 'Anotar un avance' : 'Inicia la sesión para anotar avances'}
+              title={hasSession ? tr('Anotar un avance') : tr('Inicia la sesión para anotar avances')}
             >
               <NotebookPen className="h-3.5 w-3.5" />
             </button>
             <button
               className={cn(iconButton, 'flex items-center', showPeruClock && 'bg-primary/10')}
               onClick={togglePeruClock}
-              title={showPeruClock ? 'Ocultar la hora de Perú' : 'Mostrar la hora de Perú'}
+              title={showPeruClock ? tr('Ocultar la hora de Perú') : tr('Mostrar la hora de Perú')}
             >
               <PeruFlag className="h-2.5 w-[15px]" />
             </button>
-            <button className={iconButton} onClick={() => sendSize('compact')} title="Vista compacta">
+            <button className={iconButton} onClick={() => sendSize('compact')} title={tr('Vista compacta')}>
               <Minimize2 className="h-3.5 w-3.5" />
             </button>
             <button
               className={cn(iconButton, 'hover:text-destructive')}
               onClick={() => send('close')}
-              title="Cerrar (pausa la sesión)"
+              title={tr('Cerrar (pausa la sesión)')}
             >
               <X className="h-4 w-4" />
             </button>
@@ -349,17 +350,17 @@ export default function MiniTimerWindow() {
           <div className="flex min-h-0 flex-1 flex-col gap-1.5 p-2.5">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-semibold text-muted-foreground">
-                Anotar avance
+                {tr('Anotar avance')}
               </span>
               <span className="font-mono text-xs font-bold tabular-nums text-primary">{formatTime(time)}</span>
             </div>
             <NoteEditor
-              ariaLabel="Avance de la sesión"
+              ariaLabel={tr('Avance de la sesión')}
               value={noteText}
               onChange={setNoteText}
               onSubmit={submitNote}
               onCancel={() => setNoteOpen(false)}
-              placeholder="Escribe tu avance…"
+              placeholder={tr('Escribe tu avance…')}
               rows={4}
               autoFocus
               dense
@@ -371,14 +372,14 @@ export default function MiniTimerWindow() {
                 onClick={() => setNoteOpen(false)}
                 className="h-6 px-2.5 py-0 text-[10.5px] font-semibold"
               >
-                Cancelar
+                {tr('Cancelar')}
               </Button>
               <Button
                 onClick={submitNote}
                 disabled={isRichNoteEmpty(noteText)}
                 className="h-6 px-3 py-0 text-[10.5px] font-semibold"
               >
-                Anotar
+                {tr('Anotar')}
               </Button>
             </div>
           </div>
@@ -395,7 +396,7 @@ export default function MiniTimerWindow() {
               ) : (
                 <div className="flex items-center justify-center gap-2 text-muted-foreground">
                   <LoaderCircle className="h-4 w-4 animate-spin text-primary" />
-                  <span className="text-xs">Conectando…</span>
+                  <span className="text-xs">{tr('Conectando…')}</span>
                 </div>
               )}
               {showPeruClock && <PeruClock />}
@@ -417,7 +418,7 @@ export default function MiniTimerWindow() {
                 disabled={!canStart}
               >
                 {state?.active ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-                {state?.active ? 'Pausar' : hasSession ? 'Reanudar' : 'Iniciar'}
+                {state?.active ? tr('Pausar') : hasSession ? tr('Reanudar') : tr('Iniciar')}
               </button>
               <button
                 className="flex flex-1 items-center justify-center gap-2 rounded-md border border-border bg-secondary/60 py-1.5 text-xs font-semibold text-secondary-foreground transition-colors hover:border-destructive/50 hover:bg-destructive/15 hover:text-destructive disabled:opacity-50"
@@ -425,7 +426,7 @@ export default function MiniTimerWindow() {
                 disabled={!hasSession}
               >
                 <StopCircle className="h-3.5 w-3.5" />
-                Finalizar
+                {tr('Finalizar')}
               </button>
             </div>
           </>

@@ -13,7 +13,6 @@ import {
   startOfWeek,
   subDays,
 } from 'date-fns';
-import { es } from 'date-fns/locale';
 import {
   ArrowDownRight,
   ArrowRight,
@@ -34,6 +33,8 @@ import { cn } from '@/lib/utils';
 import type { Habit } from '@/types';
 import HabitRings from '@/components/habits/HabitRings';
 import { isScheduled } from '@/lib/habit-schedule';
+import { dateLocale, tr } from '@/lib/i18n';
+import { dayInitials, dayName } from '@/lib/day-names';
 
 // ============================================================
 // Cumplimiento de hábitos.
@@ -55,8 +56,6 @@ import { isScheduled } from '@/lib/habit-schedule';
 
 type Scope = 'week' | 'month';
 
-const DAY_INITIALS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-const DAY_NAMES = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 const HEATMAP_WEEKS = 12;
 
 const dayKey = (date: Date) => format(date, 'yyyy-MM-dd');
@@ -227,7 +226,7 @@ function Gauge({
         className="fill-muted-foreground"
         style={{ fontSize: size * 0.075 }}
       >
-        Cumplido
+        {tr('Cumplido')}
       </text>
     </svg>
   );
@@ -297,7 +296,7 @@ function RhythmChart({
               </TooltipTrigger>
               <TooltipContent side="top">
                 <p className="text-xs">
-                  {format(p.date, "d 'de' MMMM", { locale: es })} — {p.done} de {total}
+                  {format(p.date, tr('d \'de\' MMMM'), { locale: dateLocale() })} — {p.done}{' '}{tr('de')}{' '}{total}
                 </p>
               </TooltipContent>
             </Tooltip>
@@ -311,7 +310,7 @@ function RhythmChart({
 function Delta({ now, before, suffix = '' }: { now: number; before: number; suffix?: string }) {
   const diff = Math.round(now - before);
   if (before === 0 && now === 0) {
-    return <span className="text-[11px] text-muted-foreground/70">Sin datos previos</span>;
+    return <span className="text-[11px] text-muted-foreground/70">{tr('Sin datos previos')}</span>;
   }
   const Icon = diff > 0 ? ArrowUpRight : diff < 0 ? ArrowDownRight : ArrowRight;
   const tone = diff > 0 ? 'text-emerald-500' : diff < 0 ? 'text-red-400' : 'text-muted-foreground';
@@ -422,12 +421,12 @@ export default function HabitsInsights({ weekOffset = 0 }: { weekOffset?: number
   const periodLabel = useMemo(() => {
     const ref = scope === 'week' ? addWeeks(today, offset) : addMonths(today, offset);
     if (scope === 'month') {
-      const label = format(ref, "MMMM 'de' yyyy", { locale: es });
+      const label = format(ref, tr('MMMM \'de\' yyyy'), { locale: dateLocale() });
       return label.charAt(0).toUpperCase() + label.slice(1);
     }
     const start = startOfWeek(ref, { weekStartsOn: 1 });
     const end = endOfWeek(ref, { weekStartsOn: 1 });
-    return `${format(start, 'd MMM', { locale: es })} — ${format(end, 'd MMM', { locale: es })}`;
+    return `${format(start, tr('d MMM'), { locale: dateLocale() })} — ${format(end, tr('d MMM'), { locale: dateLocale() })}`;
   }, [scope, offset, today]);
 
   const weekdayProfile = useMemo(() => {
@@ -441,9 +440,9 @@ export default function HabitsInsights({ weekOffset = 0 }: { weekOffset?: number
       possible[index] += due.length;
       for (const habit of due) if (habit.completedOn?.includes(key)) done[index] += 1;
     }
-    return DAY_INITIALS.map((initial, index) => ({
+    return dayInitials().map((initial, index) => ({
       initial,
-      name: DAY_NAMES[index],
+      name: dayName(index),
       ratio: possible[index] > 0 ? done[index] / possible[index] : 0,
       counted: possible[index] > 0,
     }));
@@ -492,12 +491,12 @@ export default function HabitsInsights({ weekOffset = 0 }: { weekOffset?: number
   if (active.length === 0) {
     return (
       <section className="space-y-4">
-        <h3 className="text-center text-xl font-semibold text-primary">Cumplimiento</h3>
+        <h3 className="text-center text-xl font-semibold text-primary">{tr('Cumplimiento')}</h3>
         <Card className="flex h-40 flex-col items-center justify-center gap-2 border-dashed bg-card/50">
           <Target className="h-6 w-6 text-muted-foreground/60" />
-          <p className="text-sm text-muted-foreground">Todavía no hay hábitos activos.</p>
+          <p className="text-sm text-muted-foreground">{tr('Todavía no hay hábitos activos.')}</p>
           <p className="px-6 text-center text-xs text-muted-foreground/70">
-            Crea uno arriba y aquí aparecerá cómo lo vas sosteniendo.
+            {tr('Crea uno arriba y aquí aparecerá cómo lo vas sosteniendo.')}
           </p>
         </Card>
       </section>
@@ -513,7 +512,7 @@ export default function HabitsInsights({ weekOffset = 0 }: { weekOffset?: number
   return (
     <section className="space-y-6">
       <div className="relative flex items-center justify-center">
-        <h3 className="text-xl font-semibold text-primary">Cumplimiento</h3>
+        <h3 className="text-xl font-semibold text-primary">{tr('Cumplimiento')}</h3>
         <div className="absolute right-0">
           <Tabs
             value={scope}
@@ -523,15 +522,15 @@ export default function HabitsInsights({ weekOffset = 0 }: { weekOffset?: number
             }}
           >
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="week">Semana</TabsTrigger>
-              <TabsTrigger value="month">Mes</TabsTrigger>
+              <TabsTrigger value="week">{tr('Semana')}</TabsTrigger>
+              <TabsTrigger value="month">{tr('Mes')}</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
       </div>
 
       <div className="flex items-center justify-center gap-2">
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setOffset((o) => o - 1)} title="Periodo anterior">
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setOffset((o) => o - 1)} title={tr('Periodo anterior')}>
           <ChevronLeft className="h-5 w-5" />
         </Button>
         <p className="whitespace-nowrap text-sm font-semibold text-primary">{periodLabel}</p>
@@ -541,7 +540,7 @@ export default function HabitsInsights({ weekOffset = 0 }: { weekOffset?: number
           className="h-8 w-8"
           onClick={() => setOffset((o) => Math.min(0, o + 1))}
           disabled={offset >= 0}
-          title="Periodo siguiente"
+          title={tr('Periodo siguiente')}
         >
           <ChevronRight className="h-5 w-5" />
         </Button>
@@ -558,41 +557,41 @@ export default function HabitsInsights({ weekOffset = 0 }: { weekOffset?: number
             <div className="flex items-center gap-2">
               <Delta now={current.compliance} before={previous.compliance} suffix=" pts" />
               <span className="text-[11px] text-muted-foreground">
-                vs {scope === 'week' ? 'la semana anterior' : 'el mes anterior'}
+                {tr('vs')}{' '}{scope === 'week' ? tr('la semana anterior') : tr('el mes anterior')}
               </span>
             </div>
             {/* El embudo del periodo, en una línea. */}
             <div className="flex w-full items-center justify-center gap-2 rounded-lg border border-border/50 bg-background/40 px-3 py-2 text-center">
               <span className="text-sm font-bold tabular-nums text-muted-foreground">{current.possible}</span>
-              <span className="text-[10px] text-muted-foreground">posibles</span>
+              <span className="text-[10px] text-muted-foreground">{tr('posibles')}</span>
               <ArrowRight className="h-3.5 w-3.5 text-primary/60" />
               <span className="text-sm font-bold tabular-nums text-primary">{current.done}</span>
-              <span className="text-[10px] text-muted-foreground">cumplidas</span>
+              <span className="text-[10px] text-muted-foreground">{tr('cumplidas')}</span>
             </div>
           </div>
         </Panel>
 
         <Panel
-          title="Ritmo del periodo"
-          subtitle={`Hábitos cumplidos cada día, sobre ${active.length}`}
+          title={tr('Ritmo del periodo')}
+          subtitle={tr('Hábitos cumplidos cada día, sobre {length}', { length: active.length })}
           className="lg:col-span-2"
         >
           <RhythmChart series={current.series} total={active.length} />
           <div className="mt-3 grid grid-cols-3 gap-2">
             <Stat
               icon={CalendarCheck2}
-              label="Días perfectos"
+              label={tr('Días perfectos')}
               value={`${current.perfectDays}/${current.days.length}`}
             />
             <Stat
               icon={Flame}
-              label="Racha perfecta"
+              label={tr('Racha perfecta')}
               value={String(streaks.current)}
-              hint={streaks.best > 0 ? `récord: ${streaks.best}` : 'sin récord aún'}
+              hint={streaks.best > 0 ? tr('récord: {best}', { best: streaks.best }) : tr('sin récord aún')}
             />
             <Stat
               icon={Target}
-              label="Días activos"
+              label={tr('Días activos')}
               value={`${current.activeDays}/${current.days.length}`}
             />
           </div>
@@ -604,7 +603,7 @@ export default function HabitsInsights({ weekOffset = 0 }: { weekOffset?: number
 
       {/* ---------- Semana tipo y mapa de constancia, a medias ---------- */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Panel title="Tu semana tipo" subtitle="Dónde se sostiene y dónde se cae">
+        <Panel title={tr('Tu semana tipo')} subtitle={tr('Dónde se sostiene y dónde se cae')}>
           <TooltipProvider delayDuration={150}>
             <div className="flex h-[180px] items-end justify-between gap-2">
               {weekdayProfile.map((day) => {
@@ -650,7 +649,7 @@ export default function HabitsInsights({ weekOffset = 0 }: { weekOffset?: number
                     </TooltipTrigger>
                     <TooltipContent side="top">
                       <p className="text-xs capitalize">
-                        {day.name}: {day.counted ? `${Math.round(day.ratio * 100)} % cumplido` : 'sin días aún'}
+                        {day.name}: {day.counted ? tr('{p} % cumplido', { p: Math.round(day.ratio * 100) }) : tr('sin días aún')}
                       </p>
                     </TooltipContent>
                   </Tooltip>
@@ -660,21 +659,20 @@ export default function HabitsInsights({ weekOffset = 0 }: { weekOffset?: number
           </TooltipProvider>
           {bestWeekday && worstWeekday && bestWeekday.initial !== worstWeekday.initial && (
             <p className="mt-3 text-center text-[11px] text-muted-foreground">
-              Tu mejor día es el <span className="font-semibold capitalize text-emerald-500">{bestWeekday.name}</span> y
-              el que peor te sale, el <span className="font-semibold capitalize text-amber-500">{worstWeekday.name}</span>.
+              {tr('Tu mejor día es el')}{' '}<span className="font-semibold capitalize text-emerald-500">{bestWeekday.name}</span>{' '}{tr('y el que peor te sale, el')}{' '}<span className="font-semibold capitalize text-amber-500">{worstWeekday.name}</span>.
             </p>
           )}
         </Panel>
 
         <Panel
-          title="Mapa de constancia"
-          subtitle="Las últimas 12 semanas: cuanto más intenso, más hábitos cumplidos ese día"
+          title={tr('Mapa de constancia')}
+          subtitle={tr('Las últimas 12 semanas: cuanto más intenso, más hábitos cumplidos ese día')}
         >
         <TooltipProvider delayDuration={100}>
           <div className="flex justify-center gap-1 overflow-x-auto pb-1">
             <div className="mr-1 flex flex-col gap-1 pt-[1px]">
-              {DAY_INITIALS.map((initial) => (
-                <span key={initial} className="flex h-3.5 items-center text-[9px] leading-none text-muted-foreground/70">
+              {dayInitials().map((initial, index) => (
+                <span key={index} className="flex h-3.5 items-center text-[9px] leading-none text-muted-foreground/70">
                   {initial}
                 </span>
               ))}
@@ -695,8 +693,8 @@ export default function HabitsInsights({ weekOffset = 0 }: { weekOffset?: number
                     {!day.future && (
                       <TooltipContent side="top">
                         <p className="text-xs">
-                          {format(day.date, "d 'de' MMMM", { locale: es })} —{' '}
-                          {day.due > 0 ? `${day.done} de ${day.due}` : 'sin hábitos ese día'}
+                          {format(day.date, tr('d \'de\' MMMM'), { locale: dateLocale() })} —{' '}
+                          {day.due > 0 ? tr('{done} de {due}', { done: day.done, due: day.due }) : tr('sin hábitos ese día')}
                         </p>
                       </TooltipContent>
                     )}
@@ -707,14 +705,14 @@ export default function HabitsInsights({ weekOffset = 0 }: { weekOffset?: number
           </div>
         </TooltipProvider>
         <div className="mt-3 flex items-center justify-center gap-1.5">
-          <span className="text-[10px] text-muted-foreground">Menos</span>
+          <span className="text-[10px] text-muted-foreground">{tr('Menos')}</span>
           {[0, 0.3, 0.6, 0.9, 1].map((ratio) => (
             <span key={ratio} className={cn('h-3 w-3 rounded-[3px]', heatTone(ratio))} />
           ))}
-          <span className="text-[10px] text-muted-foreground">Más</span>
+          <span className="text-[10px] text-muted-foreground">{tr('Más')}</span>
         </div>
         <p className="mt-3 text-center text-[10px] text-muted-foreground/80">
-          El cumplimiento cuenta solo los días ya vividos del periodo, no los que faltan.
+          {tr('El cumplimiento cuenta solo los días ya vividos del periodo, no los que faltan.')}
         </p>
         </Panel>
       </div>

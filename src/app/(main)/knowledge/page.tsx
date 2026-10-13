@@ -3,6 +3,7 @@ import { useCourse } from '@/context/CourseContext';
 import { Button } from '@/components/ui/button';
 import CoursesGrid from '@/components/courses/CoursesGrid';
 import CardImageSettings from '@/components/courses/CardImageSettings';
+import { tr } from '@/lib/i18n';
 
 // Interfaz "Asignaturas": las tarjetas de cursos y colecciones estilo aula.
 // (Las pestañas Estudio y Classroom se retiraron en la Fase 16; el botón
@@ -17,12 +18,12 @@ export default function KnowledgePage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <GraduationCap className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold text-primary font-headline">Mis asignaturas</h1>
+          <h1 className="text-2xl font-bold text-primary font-headline">{tr('Mis asignaturas')}</h1>
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" className="text-xs" onClick={() => setCreateCourseOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
-            Añadir
+            {tr('Añadir')}
           </Button>
           {/* Engranaje: el tamaño de la imagen de todas las tarjetas. */}
           <CardImageSettings />

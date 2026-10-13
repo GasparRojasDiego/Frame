@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { format, parseISO } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { Clock, Lock, NotebookPen } from 'lucide-react';
 import {
   Dialog,
@@ -20,6 +19,8 @@ import { cn } from '@/lib/utils';
 import { formatHMS, sessionSeconds } from '@/lib/duration';
 import { isSessionEditable } from '@/lib/session-edit';
 import type { StudySession } from '@/types';
+import { dateLocale, tr } from '@/lib/i18n';
+import { sessionTypeLabel } from '@/lib/enum-labels';
 
 // ============================================================
 // Corregir una sesión YA registrada, el mismo día.
@@ -102,7 +103,7 @@ export default function EditSessionDialog({
 
   const started = (() => {
     try {
-      return format(parseISO(session.startTime), 'HH:mm', { locale: es });
+      return format(parseISO(session.startTime), 'HH:mm', { locale: dateLocale() });
     } catch {
       return null;
     }
@@ -115,12 +116,12 @@ export default function EditSessionDialog({
         <DialogHeader className="shrink-0 space-y-0 px-5 pb-3 pt-5">
           {/* «CORREGIR», a la deriva detrás del título. */}
           <div className="relative -mx-5 -mt-5 overflow-hidden px-5 pb-2 pt-5">
-            <EchoWord word="Corregir" />
+            <EchoWord word={tr('Corregir')} />
             <DialogTitle className="relative text-center text-lg font-bold tracking-wider text-primary">
-              Corregir sesión
+              {tr('Corregir sesión')}
             </DialogTitle>
             <DialogDescription className="sr-only">
-              Corrige el enfoque, las asignaturas y la anotación de una sesión de hoy.
+              {tr('Corrige el enfoque, las asignaturas y la anotación de una sesión de hoy.')}
             </DialogDescription>
           </div>
 
@@ -128,9 +129,9 @@ export default function EditSessionDialog({
             <div className="space-y-0.5 text-center">
               <p
                 className="flex items-center justify-center gap-1 text-[10px] text-muted-foreground"
-                title="Lo mide el reloj: no se edita"
+                title={tr('Lo mide el reloj: no se edita')}
               >
-                Tiempo estudiado
+                {tr('Tiempo estudiado')}
                 <Lock className="h-3 w-3" />
               </p>
               <p className="font-headline text-2xl font-bold tabular-nums text-primary">
@@ -139,7 +140,7 @@ export default function EditSessionDialog({
               {started && (
                 <p className="flex items-center justify-center gap-1 text-[10px] text-muted-foreground">
                   <Clock className="h-3 w-3" />
-                  {session.sessionType} · {started}
+                  {sessionTypeLabel(session.sessionType)} · {started}
                 </p>
               )}
             </div>
@@ -148,7 +149,7 @@ export default function EditSessionDialog({
               <div>
                 <div className="flex items-center justify-between">
                   <Label htmlFor="edit-perception" className="text-[10px] text-muted-foreground">
-                    Nivel de enfoque
+                    {tr('Nivel de enfoque')}
                   </Label>
                   <span
                     className={cn(
@@ -176,7 +177,7 @@ export default function EditSessionDialog({
                     needsFocus ? 'text-amber-600 dark:text-amber-400' : 'text-transparent'
                   )}
                 >
-                  Mueve la barra: sin enfoque no se puede guardar.
+                  {tr('Mueve la barra: sin enfoque no se puede guardar.')}
                 </p>
               </div>
             )}
@@ -191,8 +192,8 @@ export default function EditSessionDialog({
               className="flex items-center gap-1.5 text-[10px] text-muted-foreground"
             >
               <NotebookPen className="h-3.5 w-3.5 text-primary" />
-              ¿Qué hiciste?
-              <span className="text-muted-foreground/70">(opcional)</span>
+              {tr('¿Qué hiciste?')}
+              <span className="text-muted-foreground/70">{tr('(opcional)')}</span>
             </Label>
             {/* El mismo editor con formato del cierre de sesión. */}
             <NoteEditor
@@ -200,7 +201,7 @@ export default function EditSessionDialog({
               ariaLabelledBy="edit-session-notes-label"
               value={notes}
               onChange={setNotes}
-              placeholder="Resolví los ejercicios 12 al 20; me atasqué en la derivada de la cadena…"
+              placeholder={tr('Resolví los ejercicios 12 al 20; me atasqué en la derivada de la cadena…')}
               rows={3}
               dense
             />
@@ -214,7 +215,7 @@ export default function EditSessionDialog({
           <SubjectMultiPicker
             values={selectedSubjectIds}
             onChange={setSelectedSubjectIds}
-            title="¿Qué estudiaste?"
+            title={tr('¿Qué estudiaste?')}
           />
         </div>
 
@@ -222,21 +223,21 @@ export default function EditSessionDialog({
         <div className="mx-5 h-px shrink-0 bg-border" />
         <div className="flex shrink-0 items-center justify-between gap-3 px-5 py-3">
           <Button type="button" variant="gris" size="sm" className="text-xs" onClick={onClose}>
-            Cancelar
+            {tr('Cancelar')}
           </Button>
 
           <div className="flex items-center gap-3">
             {(needsFocus || needsSubject) && (
               <span className="text-right text-[10px] leading-tight text-amber-600 dark:text-amber-400">
                 {needsFocus && needsSubject
-                  ? 'Falta el enfoque y la asignatura'
+                  ? tr('Falta el enfoque y la asignatura')
                   : needsFocus
-                    ? 'Falta marcar tu enfoque'
-                    : 'Falta marcar la asignatura'}
+                    ? tr('Falta marcar tu enfoque')
+                    : tr('Falta marcar la asignatura')}
               </span>
             )}
             <Button type="button" size="sm" onClick={save} disabled={blocked} className="min-w-[9rem]">
-              Guardar cambios
+              {tr('Guardar cambios')}
             </Button>
           </div>
         </div>

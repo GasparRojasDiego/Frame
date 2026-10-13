@@ -9,6 +9,99 @@ use tauri::{Emitter, Manager};
 /// pulsación de la X cierra la app sin más, pase lo que pase en la interfaz.
 static CLOSE_ASKED: AtomicBool = AtomicBool::new(false);
 
+/// Idioma de la interfaz (1.6.7): lo fija el frontend al arrancar y al
+/// cambiarlo. Solo lo usan los títulos de ventanas y de los selectores de
+/// archivos; los mensajes de error se traducen en la interfaz.
+static UI_ENGLISH: AtomicBool = AtomicBool::new(false);
+
+/// Texto nativo en el idioma de la interfaz.
+fn ui(es: &'static str, en: &'static str) -> &'static str {
+    if UI_ENGLISH.load(Ordering::Relaxed) {
+        en
+    } else {
+        es
+    }
+}
+
+/// Títulos de las ventanas propias, en los dos idiomas.
+const WINDOW_TITLES: [(&str, &str, &str); 3] = [
+    (AUTH_WINDOW, "Acceder con Google — Frame", "Sign in with Google — Frame"),
+    ("minitimer", "Enfoque — Frame", "Focus — Frame"),
+    ("schedulepeek", "Horario — Frame", "Schedule — Frame"),
+];
+
+fn window_title(label: &str) -> &'static str {
+    WINDOW_TITLES
+        .iter()
+        .find(|(l, _, _)| *l == label)
+        .map(|(_, es, en)| ui(es, en))
+        .unwrap_or("Frame")
+}
+
+#[tauri::command]
+fn set_ui_language(app: tauri::AppHandle, lang: String) {
+    let english = lang == "en";
+    // Gmail, YouTube y Classroom se abren en el idioma de Frame (`hl`): si
+    // cambia, se cierran y el recuadro los vuelve a abrir solo, ya en el nuevo.
+    if UI_ENGLISH.swap(english, Ordering::Relaxed) != english {
+        close_embeds(&app);
+    }
+    // Las ventanas que ya están abiertas cambian de título en el acto.
+    for (label, _, _) in WINDOW_TITLES {
+        if let Some(window) = app.get_webview_window(label) {
+            let _ = window.set_title(window_title(label));
+        }
+    }
+}
+
+/// Texto del portapapeles para «Pegar» en el menú propio de los campos de
+/// texto (TextFieldMenu.tsx). El motor web pediría permiso con un aviso en el
+/// idioma de Windows; aquí se lee sin preguntar, solo cuando el usuario pega.
+#[tauri::command]
+fn read_clipboard_text() -> Result<String, String> {
+    #[cfg(windows)]
+    unsafe {
+        use windows_sys::Win32::System::DataExchange::{
+            CloseClipboard, GetClipboardData, IsClipboardFormatAvailable, OpenClipboard,
+        };
+        use windows_sys::Win32::System::Memory::{GlobalLock, GlobalUnlock};
+        use windows_sys::Win32::System::Ole::CF_UNICODETEXT;
+
+        if IsClipboardFormatAvailable(CF_UNICODETEXT as u32) == 0 {
+            return Ok(String::new());
+        }
+        // Otro programa puede tenerlo abierto un instante: se reintenta.
+        let mut open = false;
+        for _ in 0..10 {
+            if OpenClipboard(std::ptr::null_mut()) != 0 {
+                open = true;
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(15));
+        }
+        if !open {
+            return Err("clipboard busy".into());
+        }
+        let mut text = String::new();
+        let handle = GetClipboardData(CF_UNICODETEXT as u32);
+        if !handle.is_null() {
+            let data = GlobalLock(handle) as *const u16;
+            if !data.is_null() {
+                let mut len = 0;
+                while *data.add(len) != 0 {
+                    len += 1;
+                }
+                text = String::from_utf16_lossy(std::slice::from_raw_parts(data, len));
+                GlobalUnlock(handle);
+            }
+        }
+        CloseClipboard();
+        Ok(text)
+    }
+    #[cfg(not(windows))]
+    Err("unsupported".into())
+}
+
 // ============================================================
 // OAuth nativo (Google, PKCE + loopback).
 //
@@ -53,7 +146,7 @@ async fn open_auth_window(app: tauri::AppHandle, url: String) -> Result<(), Stri
         tauri::WebviewUrl::External(parsed),
     )
     .incognito(true)
-    .title("Acceder con Google — Frame")
+    .title(window_title(AUTH_WINDOW))
     .inner_size(520.0, 700.0)
     .min_inner_size(420.0, 560.0)
     .center()
@@ -261,7 +354,7 @@ async fn http_get_text(url: String) -> Result<String, String> {
     let resp = reqwest::Client::new()
         .get(url)
         .header("User-Agent", "Frame/1.6 (VT Asvent)")
-        .header("Accept-Language", "es")
+        .header("Accept-Language", ui("es", "en"))
         .send()
         .await
         .map_err(|e| e.to_string())?;
@@ -447,12 +540,14 @@ async fn google_embed_update(
 ) -> Result<(), String> {
     use tauri::{LogicalPosition, LogicalSize};
 
-    let (label, url) = match kind.as_str() {
+    let (label, base) = match kind.as_str() {
         "gmail" => ("gmail-embed", "https://mail.google.com/"),
         "youtube" => ("youtube-embed", "https://www.youtube.com/"),
         "classroom" => ("classroom-embed", "https://classroom.google.com/"),
         _ => return Err("Servicio no permitido.".into()),
     };
+    // En el idioma de Frame: sin `hl`, Google saldría en el de Windows.
+    let url = format!("{base}?hl={}", ui("es", "en"));
 
     // Otro perfil: las páginas del anterior se cierran antes de nada.
     {
@@ -568,7 +663,7 @@ async fn open_mini_timer(
         "minitimer",
         tauri::WebviewUrl::App("index.html".into()),
     )
-    .title("Enfoque — Frame")
+    .title(window_title("minitimer"))
     .inner_size(w_px, h_px)
     .resizable(false)
     .decorations(false)
@@ -692,7 +787,7 @@ fn show_schedule_peek(app: &tauri::AppHandle) -> Result<(), String> {
         "schedulepeek",
         tauri::WebviewUrl::App("index.html".into()),
     )
-    .title("Horario — Frame")
+    .title(window_title("schedulepeek"))
     .inner_size(peek_width, peek_height)
     .position(x, y)
     .decorations(false)
@@ -950,18 +1045,15 @@ fn open_note_file(file_name: String, data_base64: String) -> Result<(), String> 
     Ok(())
 }
 
-/// Guarda un informe generado en el frontend dentro de la carpeta Descargas y
-/// devuelve la ruta completa.
-///
-/// Existe para que el aviso de "informe listo" pueda ABRIRLO: la descarga del
-/// navegador no dice dónde acabó el archivo, así que obligaba a ir al
-/// explorador a buscarlo. Si el nombre ya existe, se numera (2), (3)… en vez
-/// de pisar el informe anterior.
-#[tauri::command]
-fn save_report_file(
-    app_handle: tauri::AppHandle,
-    file_name: String,
-    data_base64: String,
+/// Escribe un archivo generado o guardado en el frontend dentro de Descargas
+/// y devuelve la ruta completa. Si el nombre ya existe, se numera (2), (3)…
+/// en vez de pisar el anterior. `allowed`: extensiones admitidas (None, todas).
+fn save_in_downloads(
+    app_handle: &tauri::AppHandle,
+    file_name: &str,
+    data_base64: &str,
+    allowed: Option<&[&str]>,
+    fallback: &str,
 ) -> Result<String, String> {
     use base64::Engine;
     let bytes = base64::engine::general_purpose::STANDARD
@@ -979,23 +1071,16 @@ fn save_report_file(
         .chars()
         .filter(|c| !matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|'))
         .collect();
-    let safe = if safe.trim().is_empty() {
-        "Informe.docx".to_string()
-    } else {
-        safe
-    };
+    let safe = if safe.trim().is_empty() { fallback.to_string() } else { safe };
 
     let (stem, extension) = match safe.rfind('.') {
         Some(index) => (safe[..index].to_string(), safe[index..].to_string()),
         None => (safe.clone(), String::new()),
     };
-
-    // Este comando existe para los informes y solo escribe sus formatos. Con
-    // cualquier extensión, sumado a `open_local_file`, era una forma de dejar
-    // un programa en Descargas y lanzarlo.
-    const REPORT_EXTENSIONS: &[&str] = &[".docx", ".pdf", ".html", ".txt", ".csv"];
-    if !REPORT_EXTENSIONS.contains(&extension.to_ascii_lowercase().as_str()) {
-        return Err("Formato de informe no admitido.".into());
+    if let Some(allowed) = allowed {
+        if !allowed.contains(&extension.to_ascii_lowercase().as_str()) {
+            return Err("Formato de informe no admitido.".into());
+        }
     }
 
     let mut path = dir.join(&safe);
@@ -1010,6 +1095,35 @@ fn save_report_file(
 
     std::fs::write(&path, &bytes).map_err(|e| e.to_string())?;
     Ok(path.to_string_lossy().to_string())
+}
+
+/// Guarda un informe en Descargas para que el aviso de «informe listo» pueda
+/// ABRIRLO: la descarga del navegador no dice dónde acabó el archivo.
+///
+/// Solo los formatos de informe: con cualquier extensión, sumado a
+/// `open_local_file`, era una forma de dejar un programa en Descargas y
+/// lanzarlo.
+#[tauri::command]
+fn save_report_file(
+    app_handle: tauri::AppHandle,
+    file_name: String,
+    data_base64: String,
+) -> Result<String, String> {
+    const REPORT_EXTENSIONS: &[&str] = &[".docx", ".pdf", ".html", ".txt", ".csv"];
+    save_in_downloads(&app_handle, &file_name, &data_base64, Some(REPORT_EXTENSIONS), "Informe.docx")
+}
+
+/// Copia en Descargas de un adjunto o del archivo de una anotación (1.6.7).
+/// Sustituye a la descarga del motor web, cuyo aviso sale en el idioma de
+/// Windows. Admite cualquier extensión porque es un archivo del propio
+/// usuario, y por eso Frame nunca lo abre: solo puede mostrarlo en su carpeta.
+#[tauri::command]
+fn save_file_copy(
+    app_handle: tauri::AppHandle,
+    file_name: String,
+    data_base64: String,
+) -> Result<String, String> {
+    save_in_downloads(&app_handle, &file_name, &data_base64, None, "Archivo")
 }
 
 // ============================================================
@@ -1100,7 +1214,7 @@ fn walk_music(root: &std::path::Path, dir: &std::path::Path, out: &mut Vec<Picke
 async fn music_pick(window: tauri::Window, folder: bool) -> Result<Option<PickedSource>, String> {
     let dialog = rfd::AsyncFileDialog::new().set_parent(&window);
     let (kind, name, files) = if folder {
-        let Some(dir) = dialog.set_title("Elige la carpeta con tu música").pick_folder().await else {
+        let Some(dir) = dialog.set_title(ui("Elige la carpeta con tu música", "Choose the folder with your music")).pick_folder().await else {
             return Ok(None);
         };
         let root = dir.path().to_path_buf();
@@ -1114,7 +1228,7 @@ async fn music_pick(window: tauri::Window, folder: bool) -> Result<Option<Picked
         })
         .await
         .map_err(|e| e.to_string())?;
-        let name = root.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "Carpeta".into());
+        let name = root.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| ui("Carpeta", "Folder").into());
         ("folder", name, files)
     } else {
         // Sin el índice .json: suelto no significa nada.
@@ -1125,8 +1239,11 @@ async fn music_pick(window: tauri::Window, folder: bool) -> Result<Option<Picked
             .copied()
             .collect();
         let Some(handles) = dialog
-            .set_title("Elige tus canciones (y, si las tienes, sus letras y portadas)")
-            .add_filter("Canciones, letras y portadas", &exts)
+            .set_title(ui(
+                "Elige tus canciones (y, si las tienes, sus letras y portadas)",
+                "Choose your songs (and their lyrics and covers, if you have them)",
+            ))
+            .add_filter(ui("Canciones, letras y portadas", "Songs, lyrics and covers"), &exts)
             .pick_files()
             .await
         else {
@@ -1385,6 +1502,8 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
+            set_ui_language,
+            read_clipboard_text,
             oauth_wait_callback,
             oauth_cancel_wait,
             open_auth_window,
@@ -1405,6 +1524,7 @@ pub fn run() {
             close_mini_timer,
             focus_main_window,
             save_report_file,
+            save_file_copy,
             schedule_peek,
             schedule_peek_enable,
             schedule_peek_resize,

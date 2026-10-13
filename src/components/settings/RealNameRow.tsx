@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 import { tidyName, updatePersonNames } from '@/lib/supabase/auth';
 import type { UserProfile } from '@/types';
+import { errorText, tr } from '@/lib/i18n';
 
 // Nombres y apellidos de la cuenta (Ajustes → perfil). Las cuentas anteriores a
 // la 1.4.8 no los tienen: aquí se añaden o se corrigen. El invitado no los lleva.
@@ -29,7 +30,7 @@ export default function RealNameRow({ userProfile }: { userProfile: UserProfile 
     const first = tidyName(firstNames);
     const last = tidyName(lastNames);
     if (first.length < 2 || last.length < 2) {
-      toast({ variant: 'destructive', title: 'Revisa tus datos', description: 'Escribe tus nombres y tus apellidos.' });
+      toast({ variant: 'destructive', title: tr('Revisa tus datos'), description: tr('Escribe tus nombres y tus apellidos.') });
       return;
     }
     setSaving(true);
@@ -42,12 +43,12 @@ export default function RealNameRow({ userProfile }: { userProfile: UserProfile 
       localStorage.setItem('userProfile', JSON.stringify({ ...stored, firstNames: first, lastNames: last }));
       window.dispatchEvent(new CustomEvent('profileUpdated'));
       setEditing(false);
-      toast({ title: 'Nombre guardado' });
+      toast({ title: tr('Nombre guardado') });
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'No se pudo guardar',
-        description: error instanceof Error ? error.message : String(error),
+        title: tr('No se pudo guardar'),
+        description: errorText(error),
       });
     } finally {
       setSaving(false);
@@ -57,12 +58,12 @@ export default function RealNameRow({ userProfile }: { userProfile: UserProfile 
   if (editing) {
     return (
       <div className="flex flex-wrap items-center gap-1.5 pt-1">
-        <Input value={lastNames} onChange={(e) => setLastNames(e.target.value)} placeholder="Apellidos" maxLength={40} className="h-7 w-36 text-xs" autoFocus />
-        <Input value={firstNames} onChange={(e) => setFirstNames(e.target.value)} placeholder="Nombres" maxLength={40} className="h-7 w-36 text-xs" />
-        <Button size="icon" variant="ghost" className="h-7 w-7 text-green-500" onClick={() => void save()} disabled={saving} title="Guardar">
+        <Input value={lastNames} onChange={(e) => setLastNames(e.target.value)} placeholder={tr('Apellidos')} maxLength={40} className="h-7 w-36 text-xs" autoFocus />
+        <Input value={firstNames} onChange={(e) => setFirstNames(e.target.value)} placeholder={tr('Nombres')} maxLength={40} className="h-7 w-36 text-xs" />
+        <Button size="icon" variant="ghost" className="h-7 w-7 text-green-500" onClick={() => void save()} disabled={saving} title={tr('Guardar')}>
           <Check className="h-4 w-4" />
         </Button>
-        <Button size="icon" variant="ghost" className="h-7 w-7 text-red-500" onClick={() => setEditing(false)} disabled={saving} title="Descartar">
+        <Button size="icon" variant="ghost" className="h-7 w-7 text-red-500" onClick={() => setEditing(false)} disabled={saving} title={tr('Descartar')}>
           <X className="h-4 w-4" />
         </Button>
       </div>
@@ -74,9 +75,9 @@ export default function RealNameRow({ userProfile }: { userProfile: UserProfile 
       type="button"
       onClick={start}
       className="group/name flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-primary"
-      title="Cambiar tus nombres y apellidos"
+      title={tr('Cambiar tus nombres y apellidos')}
     >
-      {current || 'Añade tus nombres y apellidos'}
+      {current || tr('Añade tus nombres y apellidos')}
       <Pencil className="h-3 w-3 opacity-0 transition-opacity group-hover/name:opacity-100" />
     </button>
   );

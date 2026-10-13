@@ -1,7 +1,8 @@
 import type React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { MONTH_NAMES, type MonthCursor } from './calendar-model';
+import { monthName, type MonthCursor } from './calendar-model';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Fila del mes: ‹ Marzo 2026 › centrado de verdad y, a la derecha, lo que
@@ -25,20 +26,20 @@ export default function MonthBar({
   /** Controles del extremo derecho. */
   children?: React.ReactNode;
 }) {
-  const monthName = MONTH_NAMES[cursor.month];
+  const name = monthName(cursor.month);
   const arrow = 'h-8 w-8 text-muted-foreground hover:bg-transparent hover:text-primary [&_svg]:size-5';
   return (
     <div className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3">
       <span aria-hidden />
       <div className="flex items-center gap-1">
-        <Button variant="ghost" size="icon" className={arrow} onClick={onPrev} aria-label="Mes anterior" title="Mes anterior (Re Pág)">
+        <Button variant="ghost" size="icon" className={arrow} onClick={onPrev} aria-label={tr('Mes anterior')} title={tr('Mes anterior (Re Pág)')}>
           <ChevronLeft />
         </Button>
         {/* Ancho fijo: las flechas no bailan al pasar de «Mayo» a «Septiembre». */}
         <h2 className="w-[12rem] text-center font-headline text-lg font-semibold leading-none text-primary" aria-live="polite">
-          {monthName} {cursor.year}
+          {name} {cursor.year}
         </h2>
-        <Button variant="ghost" size="icon" className={arrow} onClick={onNext} aria-label="Mes siguiente" title="Mes siguiente (Av Pág)">
+        <Button variant="ghost" size="icon" className={arrow} onClick={onNext} aria-label={tr('Mes siguiente')} title={tr('Mes siguiente (Av Pág)')}>
           <ChevronRight />
         </Button>
       </div>

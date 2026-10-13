@@ -14,6 +14,8 @@ import { cn } from '@/lib/utils';
 import { useCourse } from '@/context/CourseContext';
 import { sessionSeconds, formatMinutes, formatDurationLabel } from '@/lib/duration';
 import type { TaskDifficulty, UserProfile } from '@/types';
+import { tr } from '@/lib/i18n';
+import { dayInitial, fromSunday } from '@/lib/day-names';
 
 // ============================================================
 // Expediente del usuario, en collage: las piezas NO miden todas lo mismo —
@@ -28,7 +30,6 @@ const DIFFICULTY_HEX: Record<TaskDifficulty, string> = {
   'Media': 'hsl(38 92% 50%)',
   'Difícil': 'hsl(0 72% 60%)',
 };
-const DAY_INITIALS = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
 
 /** Cifra suelta, para la retícula de datos secundarios. El tinte baja de
  *  arriba hacia abajo (vertical y sutil, como el resto de degradados). */
@@ -108,7 +109,7 @@ export default function ProfileStats({ userProfile }: { userProfile: UserProfile
       return {
         key,
         minutes: minutesByDay.get(key) ?? 0,
-        initial: DAY_INITIALS[day.getDay()],
+        initial: dayInitial(fromSunday(day.getDay())),
         isToday: index === 20,
       };
     });
@@ -116,7 +117,7 @@ export default function ProfileStats({ userProfile }: { userProfile: UserProfile
     // Minutos por asignatura: el tiempo se reparte entre las declaradas.
     const minutesBySubject = new Map<string, number>();
     for (const session of sessions) {
-      const subjects = session.subjects?.length ? session.subjects : ['Sin asignatura'];
+      const subjects = session.subjects?.length ? session.subjects : [tr('Sin asignatura')];
       const share = sessionSeconds(session) / 60 / subjects.length;
       for (const subject of subjects) {
         minutesBySubject.set(subject, (minutesBySubject.get(subject) ?? 0) + share);
@@ -195,7 +196,7 @@ export default function ProfileStats({ userProfile }: { userProfile: UserProfile
   return (
     <div className="space-y-4">
       <h2 className="text-center text-xl font-semibold leading-none tracking-tight text-primary">
-        Tu expediente
+        {tr('Tu expediente')}
       </h2>
 
       {/* ---------- Franja principal: el dato que más pesa, más grande ---------- */}
@@ -214,20 +215,20 @@ export default function ProfileStats({ userProfile }: { userProfile: UserProfile
               <div>
                 <p className="flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground">
                   <Clock className="h-3.5 w-3.5 text-primary" />
-                  Tiempo de estudio acumulado
+                  {tr('Tiempo de estudio acumulado')}
                 </p>
                 <p className="font-headline text-5xl font-bold leading-none text-primary tabular-nums">
                   {formatMinutes(stats.totalSeconds / 60)}
                 </p>
                 <p className="mt-1.5 text-xs text-muted-foreground">
-                  {stats.sessionCount} {stats.sessionCount === 1 ? 'sesión' : 'sesiones'} ·{' '}
-                  {stats.activeDays} {stats.activeDays === 1 ? 'día' : 'días'} activos · media de{' '}
+                  {stats.sessionCount} {stats.sessionCount === 1 ? tr('sesión') : tr('sesiones')} ·{' '}
+                  {stats.activeDays} {stats.activeDays === 1 ? tr('día') : tr('días')}{' '}{tr('activos · media de')}{' '}
                   {stats.avgSeconds > 0 ? formatDurationLabel(Math.round(stats.avgSeconds)) : '—'}
                 </p>
               </div>
               <div className="text-right">
                 <p className="text-[10px] font-semibold text-muted-foreground">
-                  Últimas 3 semanas
+                  {tr('Últimas 3 semanas')}
                 </p>
               </div>
             </div>
@@ -238,7 +239,7 @@ export default function ProfileStats({ userProfile }: { userProfile: UserProfile
                 <div
                   key={day.key}
                   className="group relative flex-1"
-                  title={`${day.key}: ${day.minutes > 0 ? formatMinutes(day.minutes) : 'sin estudio'}`}
+                  title={`${day.key}: ${day.minutes > 0 ? formatMinutes(day.minutes) : tr('sin estudio')}`}
                 >
                   <div
                     className={cn(
@@ -262,30 +263,30 @@ export default function ProfileStats({ userProfile }: { userProfile: UserProfile
         <div className="grid grid-cols-2 gap-3 lg:col-span-2">
           <Metric
             icon={CheckCircle2}
-            label="Tareas"
+            label={tr('Tareas')}
             value={String(stats.tasksDone)}
-            hint="terminadas"
+            hint={tr('terminadas')}
             accent="from-emerald-500/[0.06]"
           />
           <Metric
             icon={Target}
-            label="A tiempo"
+            label={tr('A tiempo')}
             value={stats.punctuality !== null ? `${Math.round(stats.punctuality * 100)}%` : '—'}
-            hint={stats.punctuality !== null ? 'de las que tenían fecha' : 'sin fechas que medir'}
+            hint={stats.punctuality !== null ? tr('de las que tenían fecha') : tr('sin fechas que medir')}
             accent="from-amber-500/[0.06]"
           />
           <Metric
             icon={Flame}
-            label="Mejor racha"
+            label={tr('Mejor racha')}
             value={stats.longestStreak > 0 ? `${stats.longestStreak} d` : '—'}
-            hint="días seguidos"
+            hint={tr('días seguidos')}
             accent="from-orange-500/[0.06]"
           />
           <Metric
             icon={Timer}
-            label="Más larga"
+            label={tr('Más larga')}
             value={stats.longest > 0 ? formatDurationLabel(stats.longest) : '—'}
-            hint="una sola sesión"
+            hint={tr('una sola sesión')}
           />
         </div>
       </div>
@@ -295,7 +296,7 @@ export default function ProfileStats({ userProfile }: { userProfile: UserProfile
         {/* Rosco de complejidad */}
         <Card className="lg:col-span-2">
           <CardContent className="p-4">
-            <SectionTitle icon={Target}>Dificultad</SectionTitle>
+            <SectionTitle icon={Target}>{tr('Dificultad')}</SectionTitle>
             {difficultyTotal > 0 ? (
               <>
                 <div className="relative h-[130px]">
@@ -325,7 +326,7 @@ export default function ProfileStats({ userProfile }: { userProfile: UserProfile
                       {difficultyTotal}
                     </span>
                     <span className="text-[9px] text-muted-foreground">
-                      tareas
+                      {tr('tareas')}
                     </span>
                   </div>
                 </div>
@@ -346,7 +347,7 @@ export default function ProfileStats({ userProfile }: { userProfile: UserProfile
               </>
             ) : (
               <p className="py-10 text-center text-xs text-muted-foreground">
-                Culmina tareas para ver su reparto.
+                {tr('Culmina tareas para ver su reparto.')}
               </p>
             )}
           </CardContent>
@@ -355,7 +356,7 @@ export default function ProfileStats({ userProfile }: { userProfile: UserProfile
         {/* Tiempo por asignatura */}
         <Card className="lg:col-span-4">
           <CardContent className="p-4">
-            <SectionTitle icon={TrendingUp}>Dónde va tu tiempo</SectionTitle>
+            <SectionTitle icon={TrendingUp}>{tr('Dónde va tu tiempo')}</SectionTitle>
             {stats.subjectRows.length > 0 ? (
               <ul className="space-y-2.5">
                 {stats.subjectRows.map((row, index) => (
@@ -382,7 +383,7 @@ export default function ProfileStats({ userProfile }: { userProfile: UserProfile
               </ul>
             ) : (
               <p className="py-10 text-center text-xs text-muted-foreground">
-                Aún no hay tiempo de estudio repartido por asignatura.
+                {tr('Aún no hay tiempo de estudio repartido por asignatura.')}
               </p>
             )}
           </CardContent>

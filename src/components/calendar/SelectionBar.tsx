@@ -2,6 +2,7 @@ import { BellPlus, CalendarPlus, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NoColorSwatch, Swatch } from './CalendarBits';
 import { PAINT_COLORS, daysBetween, rangeLabel, type DayRange } from './calendar-model';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Barra flotante de los días seleccionados (arrastrando o con mayús+clic).
@@ -37,13 +38,13 @@ export default function SelectionBar({
   return (
     <div
       role="toolbar"
-      aria-label={`${count} ${count === 1 ? 'día seleccionado' : 'días seleccionados'}`}
+      aria-label={`${count} ${count === 1 ? tr('día seleccionado') : tr('días seleccionados')}`}
       className="pointer-events-auto flex max-w-full flex-wrap items-center justify-center gap-1.5 rounded-xl border border-border bg-card/95 p-1.5 shadow-[0_14px_36px_-14px_rgb(0_0_0/0.5)] backdrop-blur-md duration-200 animate-in fade-in-0 slide-in-from-bottom-2 motion-reduce:animate-none"
     >
       <div className="flex items-baseline gap-1.5 pl-2 pr-1">
         <span className="text-sm font-bold tabular-nums text-foreground">{count}</span>
         <span className="whitespace-nowrap text-xs text-muted-foreground">
-          {count === 1 ? 'día' : 'días'} · {rangeLabel(range)}
+          {count === 1 ? tr('día') : tr('días')} · {rangeLabel(range)}
         </span>
       </div>
 
@@ -51,16 +52,16 @@ export default function SelectionBar({
 
       <Button variant="fantasma" size="sm" className="h-8 px-2.5 text-xs" onClick={onEvent}>
         <CalendarPlus />
-        Evento
+        {tr('Evento')}
       </Button>
       <Button variant="fantasma" size="sm" className="h-8 px-2.5 text-xs" onClick={onReminder}>
         <BellPlus />
-        Recordatorio
+        {tr('Recordatorio')}
       </Button>
 
       <Divider />
 
-      <div className="flex items-center gap-1.5 px-1" role="group" aria-label="Color de las casillas">
+      <div className="flex items-center gap-1.5 px-1" role="group" aria-label={tr('Color de las casillas')}>
         {PAINT_COLORS.map(({ hex, name }) => (
           <Swatch
             key={hex}
@@ -81,8 +82,8 @@ export default function SelectionBar({
         size="icon"
         className="h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground"
         onClick={onClear}
-        aria-label="Vaciar estos días"
-        title="Vaciar estos días (Supr)"
+        aria-label={tr('Vaciar estos días')}
+        title={tr('Vaciar estos días (Supr)')}
       >
         <Trash2 />
       </Button>
@@ -91,8 +92,8 @@ export default function SelectionBar({
         size="icon"
         className="h-8 w-8 text-muted-foreground"
         onClick={onDismiss}
-        aria-label="Soltar la selección"
-        title="Soltar la selección (Esc)"
+        aria-label={tr('Soltar la selección')}
+        title={tr('Soltar la selección (Esc)')}
       >
         <X />
       </Button>

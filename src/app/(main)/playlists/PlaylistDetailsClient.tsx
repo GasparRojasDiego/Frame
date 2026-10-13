@@ -10,6 +10,7 @@ import {
   useSensors,
   DragEndEvent,
 } from '@dnd-kit/core';
+import { dndAccessibility } from '@/lib/dnd-a11y';
 import { restrictToParentElement } from '@dnd-kit/modifiers';
 import {
   arrayMove,
@@ -57,6 +58,8 @@ import SongPickerGrid from '@/components/music/SongPickerGrid';
 import { songCardId, useSongHighlight } from '@/hooks/use-song-highlight';
 import { songMatches, songTitle } from '@/lib/music-search';
 import { EchoHeader } from '@/components/shared/EchoWord';
+import { tr } from '@/lib/i18n';
+import { artistLabel } from '@/lib/enum-labels';
 
 /**
  * Curva suave (entrada y salida lentas) para los degradados de la cabecera:
@@ -116,7 +119,7 @@ const SortablePlaylistSongCard = ({ song, onPlay, onRemove, highlighted }: { son
                             </div>
                             <div className="flex flex-col truncate min-w-0">
                                 <p className="font-semibold text-foreground truncate">{songTitle(song)}</p>
-                                <p className="text-xs text-muted-foreground truncate">{song.artist}</p>
+                                <p className="text-xs text-muted-foreground truncate">{artistLabel(song.artist)}</p>
                             </div>
                         </CardContent>
                     </div>
@@ -156,7 +159,7 @@ const PlaylistSongCard = ({ song, onPlay, onRemove, highlighted }: { song: Song;
                 </div>
                 <div className="flex flex-col truncate min-w-0">
                     <p className="font-semibold text-foreground truncate">{songTitle(song)}</p>
-                    <p className="text-xs text-muted-foreground truncate">{song.artist}</p>
+                    <p className="text-xs text-muted-foreground truncate">{artistLabel(song.artist)}</p>
                 </div>
             </CardContent>
         </Card>
@@ -339,8 +342,8 @@ export default function PlaylistDetailsClient({ id }: { id: string }) {
   if (!playlist) {
     return (
       <div className="text-center py-16 p-6">
-        <p className="text-lg text-muted-foreground">Playlist no encontrada.</p>
-        <Button onClick={() => router.push('/music')} className="mt-4">Ir al Inicio</Button>
+        <p className="text-lg text-muted-foreground">{tr('Playlist no encontrada.')}</p>
+        <Button onClick={() => router.push('/music')} className="mt-4">{tr('Ir al Inicio')}</Button>
       </div>
     );
   }
@@ -408,8 +411,8 @@ export default function PlaylistDetailsClient({ id }: { id: string }) {
             setPickerAspect(aspectOf(headerImageRef.current));
             setImagePickerOpen(true);
           }}
-          title="Cambiar la imagen de la playlist"
-          aria-label="Cambiar la imagen de la playlist"
+          title={tr('Cambiar la imagen de la playlist')}
+          aria-label={tr('Cambiar la imagen de la playlist')}
           className="absolute right-4 top-4 z-10 h-10 w-10 rounded-full border border-border/60 bg-background/70 text-foreground backdrop-blur transition-colors hover:bg-background hover:text-primary md:right-6"
         >
           <Camera className="h-5 w-5" />
@@ -428,8 +431,8 @@ export default function PlaylistDetailsClient({ id }: { id: string }) {
                 autoFocus
                 className="h-12 text-center text-3xl font-bold"
               />
-              <Button size="icon" variant="ghost" onClick={handleSaveName} title="Guardar el nombre"><Check className="h-6 w-6 text-green-500"/></Button>
-              <Button size="icon" variant="ghost" onClick={handleCancelEdit} title="Descartar"><X className="h-6 w-6 text-red-500"/></Button>
+              <Button size="icon" variant="ghost" onClick={handleSaveName} title={tr('Guardar el nombre')}><Check className="h-6 w-6 text-green-500"/></Button>
+              <Button size="icon" variant="ghost" onClick={handleCancelEdit} title={tr('Descartar')}><X className="h-6 w-6 text-red-500"/></Button>
             </div>
           ) : (
             <h1 className="truncate text-center font-headline text-4xl font-bold leading-[3rem] text-primary" title={playlist.name}>
@@ -441,15 +444,15 @@ export default function PlaylistDetailsClient({ id }: { id: string }) {
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               id="playlist-search"
-              aria-label="Buscar en la playlist"
-              placeholder="canciones o artistas…"
+              aria-label={tr('Buscar en la playlist')}
+              placeholder={tr('canciones o artistas…')}
               className={cn('w-full border-primary bg-card pl-9', totalLabel ? 'pr-52' : 'pr-32')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
             <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 whitespace-nowrap text-xs text-muted-foreground">
               / <span className="font-bold text-foreground/80">{songsToShow.length}</span>{' '}
-              {songsToShow.length === 1 ? 'canción' : 'canciones'}
+              {songsToShow.length === 1 ? tr('canción') : tr('canciones')}
               {totalLabel && (
                 <>
                   {' · '}
@@ -467,27 +470,27 @@ export default function PlaylistDetailsClient({ id }: { id: string }) {
                 className="rounded-md border border-primary bg-primary/20"
                 onClick={handleShufflePlay}
                 disabled={playlistSongs.length === 0}
-                title="Reproducir en orden aleatorio"
+                title={tr('Reproducir en orden aleatorio')}
               >
                 <Shuffle className="h-5 w-5 text-primary" />
               </Button>
               <Button onClick={() => setAddSongsOpen(true)}>
                 <PlusCircle />
-                Añadir canciones
+                {tr('Añadir canciones')}
               </Button>
             </div>
             <div className="flex items-center gap-1">
-              <Button size="icon" variant="ghost" onClick={handleEdit} title="Cambiar el nombre"><Pencil className="h-5 w-5" /></Button>
+              <Button size="icon" variant="ghost" onClick={handleEdit} title={tr('Cambiar el nombre')}><Pencil className="h-5 w-5" /></Button>
               <AlertDialog>
-                <AlertDialogTrigger asChild><Button variant="ghost" size="icon" title="Eliminar la playlist"><Trash2 className="h-5 w-5 text-red-500/90" /></Button></AlertDialogTrigger>
+                <AlertDialogTrigger asChild><Button variant="ghost" size="icon" title={tr('Eliminar la playlist')}><Trash2 className="h-5 w-5 text-red-500/90" /></Button></AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>¿Eliminar esta playlist?</AlertDialogTitle>
-                    <AlertDialogDescription>Se eliminará «{playlist.name}». Las canciones siguen en tu biblioteca.</AlertDialogDescription>
+                    <AlertDialogTitle>{tr('¿Eliminar esta playlist?')}</AlertDialogTitle>
+                    <AlertDialogDescription>{tr('Se eliminará «{name}». Las canciones siguen en tu biblioteca.', { name: playlist.name })}</AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                    <AlertDialogCancel>{tr('Cancelar')}</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{tr('Eliminar')}</AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
@@ -501,14 +504,14 @@ export default function PlaylistDetailsClient({ id }: { id: string }) {
           open={isImagePickerOpen}
           onOpenChange={setImagePickerOpen}
           onSelect={handleSelectImage}
-          title={`Imagen de ${playlist.name}`}
+          title={tr('Imagen de {name}', { name: playlist.name })}
           aspect={pickerAspect}
         />
       )}
       
       {songsToShow.length > 0 ? (
          !isSearching ? (
-            <DndContext
+            <DndContext accessibility={dndAccessibility()}
                 sensors={sensors}
                 collisionDetection={closestCenter}
                 onDragEnd={handleDragEnd}
@@ -547,8 +550,8 @@ export default function PlaylistDetailsClient({ id }: { id: string }) {
               <Music className="h-10 w-10 text-primary" />
           </div>
           <div className="space-y-1">
-              <h3 className="font-semibold text-lg">Playlist vacía</h3>
-              <p className="text-sm text-muted-foreground">{searchQuery ? 'No hay canciones que coincidan con tu búsqueda.' : 'Usa el botón "Añadir canciones" para llenar esta playlist.'}</p>
+              <h3 className="font-semibold text-lg">{tr('Playlist vacía')}</h3>
+              <p className="text-sm text-muted-foreground">{searchQuery ? tr('No hay canciones que coincidan con tu búsqueda.') : tr('Usa el botón "Añadir canciones" para llenar esta playlist.')}</p>
           </div>
         </Card>
       )}
@@ -558,10 +561,10 @@ export default function PlaylistDetailsClient({ id }: { id: string }) {
           reaparecía una lista de casillas con el nombre del archivo. */}
       <Dialog open={isAddSongsOpen} onOpenChange={setAddSongsOpen}>
         <DialogContent className="max-w-2xl">
-          <EchoHeader word="Añadir">
+          <EchoHeader word={tr('Añadir')}>
             <DialogHeader>
               <DialogTitle className="text-center text-xl font-bold text-primary">
-                Añadir canciones a "{playlist.name}"
+                {tr('Añadir canciones a «{name}»', { name: playlist.name })}
               </DialogTitle>
             </DialogHeader>
           </EchoHeader>
@@ -576,9 +579,9 @@ export default function PlaylistDetailsClient({ id }: { id: string }) {
           <DialogFooter className="items-center sm:justify-between">
             <p className="text-xs text-muted-foreground">
               {playlist.songIds.length}{" "}
-              {playlist.songIds.length === 1 ? "canción en la playlist" : "canciones en la playlist"}
+              {playlist.songIds.length === 1 ? tr('canción en la playlist') : tr('canciones en la playlist')}
             </p>
-            <Button onClick={() => setAddSongsOpen(false)}>Listo</Button>
+            <Button onClick={() => setAddSongsOpen(false)}>{tr('Listo')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -586,13 +589,13 @@ export default function PlaylistDetailsClient({ id }: { id: string }) {
       <AlertDialog open={!!songToRemove} onOpenChange={(isOpen) => !isOpen && setSongToRemove(null)}>
         <AlertDialogContent>
             <AlertDialogHeader>
-                <AlertDialogTitle>¿Eliminar canción de la playlist?</AlertDialogTitle>
+                <AlertDialogTitle>{tr('¿Eliminar canción de la playlist?')}</AlertDialogTitle>
                 <AlertDialogDescription>
-                    Esto eliminará "{(songToRemove ? songTitle(songToRemove) : '')}" de la playlist "{playlist.name}". La canción permanecerá en tu biblioteca.
+                    {tr('Esto quitará «{song}» de la playlist «{playlist}». La canción permanecerá en tu biblioteca.', { song: songToRemove ? songTitle(songToRemove) : '', playlist: playlist.name })}
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogCancel>{tr('Cancelar')}</AlertDialogCancel>
                 <AlertDialogAction 
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     onClick={() => {
@@ -602,7 +605,7 @@ export default function PlaylistDetailsClient({ id }: { id: string }) {
                         }
                     }}
                 >
-                    Eliminar
+                    {tr('Eliminar')}
                 </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>

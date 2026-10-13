@@ -6,11 +6,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  ALL_DAY_LABEL,
+  allDayLabel,
   HABIT_PHASES, phaseLabel
 } from '@/lib/habit-phases';
 import { cn } from '@/lib/utils';
 import type { HabitPhase } from '@/types';
+import { tr } from '@/lib/i18n';
 
 export const PHASE_ICON: Record<HabitPhase | 'all', typeof Sun> = {
   morning: Sunrise,
@@ -38,7 +39,7 @@ export function PhaseMenu({
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          title={`Fase del día: ${phaseLabel(value)}`}
+          title={tr('Fase del día: {phaseLabel}', { phaseLabel: phaseLabel(value) })}
           className={cn(
             'flex h-7 shrink-0 items-center gap-1 rounded-md border border-border/70 px-1.5 text-[10px] font-semibold text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary',
             className
@@ -56,13 +57,13 @@ export function PhaseMenu({
             <DropdownMenuItem key={phase.id} disabled={full} onSelect={() => onChange(phase.id)} className="text-xs">
               <PhaseIcon className="mr-2 h-3.5 w-3.5 text-primary" />
               <span className="flex-1">{phase.label}</span>
-              <span className="text-[10px] text-muted-foreground">{full ? 'Completa' : phase.range}</span>
+              <span className="text-[10px] text-muted-foreground">{full ? tr('Completa') : phase.range}</span>
             </DropdownMenuItem>
           );
         })}
         <DropdownMenuItem onSelect={() => onChange(undefined)} className="text-xs">
           <CalendarClock className="mr-2 h-3.5 w-3.5 text-primary" />
-          {ALL_DAY_LABEL}
+          {allDayLabel()}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

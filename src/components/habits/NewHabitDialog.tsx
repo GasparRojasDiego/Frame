@@ -17,6 +17,7 @@ import { HABIT_PHASES, currentPhase } from '@/lib/habit-phases';
 import { WEEK_ORDER, WEEKDAY_INITIAL, describeSchedule } from '@/lib/habit-schedule';
 import { cn } from '@/lib/utils';
 import type { Habit, HabitPhase } from '@/types';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Alta de un hábito.
@@ -34,9 +35,9 @@ export const MAX_HABITS_PER_PHASE = 5;
 const HABIT_NAME_MAX = 140;
 
 const PRESETS: { label: string; days: number[] }[] = [
-  { label: 'Entre semana', days: [1, 2, 3, 4, 5] },
-  { label: 'Fin de semana', days: [6, 0] },
-  { label: 'Días alternos', days: [1, 3, 5] },
+  { get label() { return tr('Entre semana'); }, days: [1, 2, 3, 4, 5] },
+  { get label() { return tr('Fin de semana'); }, days: [6, 0] },
+  { get label() { return tr('Días alternos'); }, days: [1, 3, 5] },
 ];
 
 export default function NewHabitDialog({
@@ -96,18 +97,18 @@ export default function NewHabitDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="overflow-hidden sm:max-w-lg">
         <div className="relative -mx-6 -mt-6 overflow-hidden px-6 pb-4 pt-6 after:absolute after:inset-x-6 after:bottom-0 after:h-px after:bg-border">
-          <EchoWord word="Hábito" />
+          <EchoWord word={tr('Hábito')} />
           <DialogHeader className="relative">
-            <DialogTitle className="text-center text-lg font-bold text-primary">Nuevo hábito</DialogTitle>
+            <DialogTitle className="text-center text-lg font-bold text-primary">{tr('Nuevo hábito')}</DialogTitle>
             <DialogDescription className="text-center text-xs">
-              Frame lo medirá solo en los días que le toquen.
+              {tr('Frame lo medirá solo en los días que le toquen.')}
             </DialogDescription>
           </DialogHeader>
         </div>
 
         <div className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="habit-name" className="text-xs">Nombre</Label>
+            <Label htmlFor="habit-name" className="text-xs">{tr('Nombre')}</Label>
             <Input
               id="habit-name"
               value={name}
@@ -115,7 +116,7 @@ export default function NewHabitDialog({
               onKeyDown={(e) => {
                 if (e.key === 'Enter') create();
               }}
-              placeholder="Por ejemplo: leer veinte minutos"
+              placeholder={tr('Por ejemplo: leer veinte minutos')}
               maxLength={HABIT_NAME_MAX}
               className="border-primary bg-card"
               autoFocus
@@ -124,7 +125,7 @@ export default function NewHabitDialog({
 
           {/* Momento del día */}
           <div className="space-y-2">
-            <Label className="text-xs">¿En qué momento del día?</Label>
+            <Label className="text-xs">{tr('¿En qué momento del día?')}</Label>
             <div className="grid grid-cols-3 gap-2">
               {HABIT_PHASES.map((info) => {
                 const Icon = PHASE_ICON[info.id];
@@ -148,7 +149,7 @@ export default function NewHabitDialog({
                     <Icon className="h-5 w-5" />
                     <span className="text-sm font-semibold">{info.label}</span>
                     <span className="text-[10px] tabular-nums opacity-80">
-                      {full ? 'Completo' : `${count} de ${MAX_HABITS_PER_PHASE}`}
+                      {full ? tr('Completo') : tr('{count} de {MAX_HABITS_PER_PHASE}', { count, MAX_HABITS_PER_PHASE })}
                     </span>
                   </button>
                 );
@@ -156,19 +157,19 @@ export default function NewHabitDialog({
             </div>
             {allFull && (
               <p className="text-[11px] text-amber-600 dark:text-amber-400">
-                Las tres fases tienen ya {MAX_HABITS_PER_PHASE} hábitos. Archiva alguno para añadir otro.
+                {tr('Las tres fases tienen ya')}{' '}{MAX_HABITS_PER_PHASE}{' '}{tr('hábitos. Archiva alguno para añadir otro.')}
               </p>
             )}
           </div>
 
           {/* Frecuencia */}
           <div className="space-y-2">
-            <Label className="text-xs">¿Con qué frecuencia?</Label>
+            <Label className="text-xs">{tr('¿Con qué frecuencia?')}</Label>
             <div className="grid grid-cols-2 gap-2">
               {(
                 [
-                  { id: 'daily', icon: Repeat, title: 'Cada día', hint: 'Los siete días de la semana' },
-                  { id: 'custom', icon: CalendarDays, title: 'Cada cierto tiempo', hint: 'Solo los días que elijas' },
+                  { id: 'daily', icon: Repeat, title: tr('Cada día'), hint: tr('Los siete días de la semana') },
+                  { id: 'custom', icon: CalendarDays, title: tr('Cada cierto tiempo'), hint: tr('Solo los días que elijas') },
                 ] as const
               ).map((option) => {
                 const Icon = option.icon;
@@ -234,11 +235,10 @@ export default function NewHabitDialog({
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {days.length === 0 ? (
-                    'Elige al menos un día.'
+                    tr('Elige al menos un día.')
                   ) : (
                     <>
-                      Toca: <span className="font-semibold text-foreground">{describeSchedule({ days })}</span>. Los
-                      demás días no aparecerán como casilla ni contarán como fallo.
+                      {tr('Toca:')}{' '}<span className="font-semibold text-foreground">{describeSchedule({ days })}</span>{tr('. Los demás días no aparecerán como casilla ni contarán como fallo.')}
                     </>
                   )}
                 </p>
@@ -249,10 +249,10 @@ export default function NewHabitDialog({
 
         <DialogFooter className="gap-2 sm:justify-between">
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancelar
+            {tr('Cancelar')}
           </Button>
           <Button type="button" onClick={create} disabled={!canCreate}>
-            Crear hábito
+            {tr('Crear hábito')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,6 +1,7 @@
 import { FolderKanban, GraduationCap, NotebookPen, PartyPopper, UserRound } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { TaskDifficulty, TaskKind } from '@/types';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Distintivos de tipo y dificultad de un pendiente. Viven aparte porque los
@@ -11,11 +12,11 @@ import type { TaskDifficulty, TaskKind } from '@/types';
 export const TASK_KINDS: TaskKind[] = ['Tarea', 'Examen', 'Proyecto', 'Actividad', 'Personal'];
 
 export const TASK_KIND_META: Record<TaskKind, { icon: React.ElementType; hint: string }> = {
-  Tarea: { icon: NotebookPen, hint: 'del profesor' },
-  Examen: { icon: GraduationCap, hint: 'evaluación' },
-  Proyecto: { icon: FolderKanban, hint: 'trabajo largo' },
-  Actividad: { icon: PartyPopper, hint: 'evento del colegio' },
-  Personal: { icon: UserRound, hint: 'cosa tuya' },
+  Tarea: { icon: NotebookPen, get hint() { return tr('del profesor'); } },
+  Examen: { icon: GraduationCap, get hint() { return tr('evaluación'); } },
+  Proyecto: { icon: FolderKanban, get hint() { return tr('trabajo largo'); } },
+  Actividad: { icon: PartyPopper, get hint() { return tr('evento del colegio'); } },
+  Personal: { icon: UserRound, get hint() { return tr('cosa tuya'); } },
 };
 
 export const TASK_DIFFICULTIES: TaskDifficulty[] = ['Fácil', 'Media', 'Difícil'];

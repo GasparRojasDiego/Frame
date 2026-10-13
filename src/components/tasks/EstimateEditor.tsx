@@ -1,6 +1,7 @@
 import { Hourglass } from 'lucide-react';
 import { WheelColumn } from '@/components/ui/wheel-picker';
 import { cn } from '@/lib/utils';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Tiempo estimado en HORAS Y MINUTOS: nadie piensa «esto me lleva 150
@@ -38,7 +39,7 @@ export default function EstimateEditor({
       <div className="flex items-center justify-between gap-3">
         <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
           <Hourglass className={cn('h-3.5 w-3.5', minutes > 0 ? 'text-primary' : 'text-muted-foreground')} />
-          Tiempo estimado
+          {tr('Tiempo estimado')}
         </span>
         {minutes > 0 && (
           <button
@@ -46,16 +47,16 @@ export default function EstimateEditor({
             onClick={() => onChange(0)}
             className="text-[10px] font-semibold text-muted-foreground transition-colors hover:text-foreground"
           >
-            Quitar
+            {tr('Quitar')}
           </button>
         )}
       </div>
 
       <div className="flex items-center justify-center gap-2">
-        <WheelColumn label="Horas" values={HOURS} value={hours} format={(h) => String(h)} onChange={(h) => onChange(h * 60 + rest)} />
+        <WheelColumn label={tr('Horas')} values={HOURS} value={hours} format={(h) => String(h)} onChange={(h) => onChange(h * 60 + rest)} />
         <span className="text-xs font-semibold text-muted-foreground">h</span>
-        <WheelColumn label="Minutos" values={MINUTES} value={rest} format={two} onChange={(m) => onChange(hours * 60 + m)} />
-        <span className="text-xs font-semibold text-muted-foreground">min</span>
+        <WheelColumn label={tr('Minutos')} values={MINUTES} value={rest} format={two} onChange={(m) => onChange(hours * 60 + m)} />
+        <span className="text-xs font-semibold text-muted-foreground">{tr('min')}</span>
       </div>
     </div>
   );

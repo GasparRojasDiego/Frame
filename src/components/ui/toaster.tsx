@@ -7,12 +7,14 @@ import {
   ToastTitle,
   ToastViewport,
 } from "@/components/ui/toast";
+import { tr } from '@/lib/i18n';
 
 export function Toaster() {
   const { toasts } = useToast()
 
   return (
-    <ToastProvider>
+    // Lo que anuncia el lector de pantalla: Radix lo trae en inglés fijo.
+    <ToastProvider label={tr('Notificación')}>
       {toasts.map(function ({ id, title, description, action, ...props }) {
         return (
           <Toast key={id} {...props}>
@@ -23,11 +25,11 @@ export function Toaster() {
               )}
             </div>
             {action}
-            <ToastClose />
+            <ToastClose aria-label={tr('Cerrar')} />
           </Toast>
         )
       })}
-      <ToastViewport />
+      <ToastViewport label={tr('Notificaciones ({hotkey})')} />
     </ToastProvider>
   )
 }

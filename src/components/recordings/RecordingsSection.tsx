@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import {
   Mic,
   Play,
@@ -52,6 +51,8 @@ import { IMPORTANCE_LABEL, IMPORTANCE_STYLE } from '@/lib/recordings';
 import { cn } from '@/lib/utils';
 import EchoWord from '@/components/shared/EchoWord';
 
+
+import { dateLocale, errorText, tr } from '@/lib/i18n';
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
@@ -160,14 +161,14 @@ function RecordingDetailsDialog({
   const handleOpenFile = useCallback(() => {
     if (!isTauri() || !recording.filePath) return;
     void invoke('open_local_file', { path: recording.filePath }).catch((e) =>
-      toast({ variant: 'destructive', title: 'No se pudo abrir el archivo', description: String(e) })
+      toast({ variant: 'destructive', title: tr('No se pudo abrir el archivo'), description: errorText(e) })
     );
   }, [recording.filePath, toast]);
 
   const handleReveal = useCallback(() => {
     if (!isTauri()) return;
     void invoke('reveal_recording', { path: recording.filePath ?? '' }).catch((e) =>
-      toast({ variant: 'destructive', title: 'No se pudo abrir la ubicación', description: String(e) })
+      toast({ variant: 'destructive', title: tr('No se pudo abrir la ubicación'), description: errorText(e) })
     );
   }, [recording.filePath, toast]);
 
@@ -199,15 +200,15 @@ function RecordingDetailsDialog({
     // conviene decir que está en Inicio.
     const courseName = updates.courseId ? courses.find((c) => c.id === updates.courseId)?.name : null;
     toast({
-      title: 'Grabación actualizada',
-      description: courseName ? `"${finalName}" quedó en ${courseName}.` : `"${finalName}" quedó en Inicio.`,
+      title: tr('Grabación actualizada'),
+      description: courseName ? tr('"{finalName}" quedó en {courseName}.', { finalName, courseName }) : tr('"{finalName}" quedó en Inicio.', { finalName }),
     });
     onOpenChange(false);
   }, [courseId, courses, description, importance, kind, name, onOpenChange, recording, toast, updateRecording]);
 
   const handleDelete = useCallback(() => {
     deleteRecording(recording.id);
-    toast({ title: 'Grabación eliminada', description: `"${recording.name}" se eliminó definitivamente.` });
+    toast({ title: tr('Grabación eliminada'), description: tr('"{name}" se eliminó definitivamente.', { name: recording.name }) });
     onOpenChange(false);
   }, [deleteRecording, onOpenChange, recording, toast]);
 
@@ -225,8 +226,8 @@ function RecordingDetailsDialog({
               type="button"
               variant="ghost"
               size="icon"
-              aria-label="Opciones de la grabación"
-              title="Opciones de la grabación"
+              aria-label={tr('Opciones de la grabación')}
+              title={tr('Opciones de la grabación')}
               className="absolute left-[13px] top-[13px] z-10 h-[22px] w-[22px] rounded-sm text-muted-foreground opacity-70 transition-opacity hover:bg-primary/10 hover:text-primary hover:opacity-100"
             >
               <Settings className="h-4 w-4" />
@@ -237,11 +238,11 @@ function RecordingDetailsDialog({
               <>
                 <DropdownMenuItem onSelect={handleOpenFile} disabled={!recording.filePath}>
                   <FileAudio className="mr-2 h-4 w-4 text-primary" />
-                  Abrir archivo
+                  {tr('Abrir archivo')}
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={handleReveal}>
                   <FolderOpen className="mr-2 h-4 w-4 text-primary" />
-                  Abrir ubicación del archivo
+                  {tr('Abrir ubicación del archivo')}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
               </>
@@ -251,16 +252,16 @@ function RecordingDetailsDialog({
               onSelect={() => setConfirmDelete(true)}
             >
               <Trash2 className="mr-2 h-4 w-4" />
-              Eliminar grabación
+              {tr('Eliminar grabación')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
         {/* --- Cabecera: qué audio es, de un vistazo --- */}
         <DialogHeader className="relative items-center overflow-hidden space-y-0 bg-gradient-to-b from-primary/10 via-primary/[0.04] to-transparent px-8 pb-5 pt-10 text-center">
-          <EchoWord word="Grabación" />
+          <EchoWord word={tr('Grabación')} />
           <div className="relative flex w-full flex-col items-center">
-          <DialogTitle className="sr-only">Detalles de la grabación</DialogTitle>
+          <DialogTitle className="sr-only">{tr('Detalles de la grabación')}</DialogTitle>
           <div
             className={cn(
               'mb-3 flex h-14 w-14 items-center justify-center rounded-full border transition-colors',
@@ -272,16 +273,16 @@ function RecordingDetailsDialog({
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            aria-label="Nombre de la grabación"
-            title="Haz clic para cambiar el nombre"
+            aria-label={tr('Nombre de la grabación')}
+            title={tr('Haz clic para cambiar el nombre')}
             className="w-full truncate border-b border-transparent bg-transparent pb-0.5 text-center text-xl font-bold text-foreground outline-none transition-colors hover:border-border focus:border-primary/70"
           />
           <p className="mt-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-            <span className="first-letter:uppercase">{format(recordedAt, "EEEE d 'de' MMMM 'de' yyyy", { locale: es })}</span>
+            <span className="first-letter:uppercase">{format(recordedAt, tr('EEEE d \'de\' MMMM \'de\' yyyy'), { locale: dateLocale() })}</span>
             <span aria-hidden>·</span>
             <span className="flex items-center gap-1 tabular-nums">
               <Clock className="h-3 w-3 text-primary" />
-              {format(recordedAt, 'HH:mm', { locale: es })}
+              {format(recordedAt, 'HH:mm', { locale: dateLocale() })}
             </span>
             <span aria-hidden>·</span>
             <span className="font-semibold tabular-nums text-foreground">{formatDuration(sliderMax)}</span>
@@ -320,7 +321,7 @@ function RecordingDetailsDialog({
                   max={sliderMax}
                   step={0.5}
                   onValueChange={handleSeek}
-                  aria-label="Posición del audio"
+                  aria-label={tr('Posición del audio')}
                 />
                 <div className="mt-1.5 flex justify-between text-[11px] tabular-nums text-muted-foreground">
                   <span>{formatDuration(currentTime)}</span>
@@ -336,21 +337,21 @@ function RecordingDetailsDialog({
                       step={1}
                       onValueChange={(v) => setVolume(v[0])}
                       className="max-w-[110px]"
-                      aria-label="Volumen"
+                      aria-label={tr('Volumen')}
                     />
                   </div>
                   <Button
                     size="icon"
                     className="h-12 w-12 rounded-full shadow-[0_0_18px_hsl(var(--primary)/0.35)]"
                     onClick={togglePlay}
-                    aria-label={isPlaying ? 'Pausar' : 'Reproducir'}
+                    aria-label={isPlaying ? tr('Pausar') : tr('Reproducir')}
                   >
                     {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 pl-0.5" />}
                   </Button>
                   <div className="flex items-center justify-end gap-2">
                     <Gauge className="h-4 w-4 text-muted-foreground" />
                     <Select value={String(speed)} onValueChange={(v) => setSpeed(Number(v))}>
-                      <SelectTrigger className="h-8 w-[76px] bg-card text-xs" aria-label="Velocidad">
+                      <SelectTrigger className="h-8 w-[76px] bg-card text-xs" aria-label={tr('Velocidad')}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -366,7 +367,7 @@ function RecordingDetailsDialog({
               </>
             ) : (
               <p className="py-5 text-center text-xs text-muted-foreground">
-                El audio de esta grabación ya no está disponible.
+                {tr('El audio de esta grabación ya no está disponible.')}
               </p>
             )}
           </div>
@@ -374,14 +375,14 @@ function RecordingDetailsDialog({
           {/* --- Datos --- */}
           <div className="space-y-1.5">
             <Label htmlFor="recEditDesc" className="text-[11px] font-semibold text-muted-foreground">
-              Descripción
+              {tr('Descripción')}
             </Label>
             <NoteEditor
               id="recEditDesc"
               value={description}
               onChange={setDescription}
-              placeholder="¿De qué trata este audio?"
-              ariaLabel="Descripción de la grabación"
+              placeholder={tr('¿De qué trata este audio?')}
+              ariaLabel={tr('Descripción de la grabación')}
               rows={3}
               toolbarSide
             />
@@ -390,13 +391,13 @@ function RecordingDetailsDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-[11px] font-semibold text-muted-foreground">
-                Importancia
+                {tr('Importancia')}
               </Label>
               <ImportancePicker value={importance} onChange={setImportance} />
             </div>
             <div className="space-y-1.5">
               <Label className="text-[11px] font-semibold text-muted-foreground">
-                Tipo
+                {tr('Tipo')}
               </Label>
               <KindPicker value={kind} onChange={setKind} />
             </div>
@@ -417,25 +418,25 @@ function RecordingDetailsDialog({
         <div className="px-6 py-4">
           <Button className="w-full" onClick={() => void handleSave()} disabled={isSaving}>
             {isSaving ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Guardar cambios
+            {tr('Guardar cambios')}
           </Button>
         </div>
 
         <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>¿Eliminar esta grabación?</AlertDialogTitle>
+              <AlertDialogTitle>{tr('¿Eliminar esta grabación?')}</AlertDialogTitle>
               <AlertDialogDescription>
-                «{recording.name}» se eliminará de Frame y de tu equipo de forma definitiva. No se puede deshacer.
+                {tr('«{name}» se eliminará de Frame y de tu equipo de forma definitiva. No se puede deshacer.', { name: recording.name })}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel className={buttonVariants({ variant: 'gris' })}>Cancelar</AlertDialogCancel>
+              <AlertDialogCancel className={buttonVariants({ variant: 'gris' })}>{tr('Cancelar')}</AlertDialogCancel>
               <AlertDialogAction
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 onClick={handleDelete}
               >
-                Eliminar
+                {tr('Eliminar')}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -480,7 +481,7 @@ function RecordingCard({ recording, showCourse = true }: { recording: Recording;
               )}
               {recording.partCount != null && recording.partCount > 1 && (
                 <span className="shrink-0 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                  Parte {recording.partIndex}/{recording.partCount}
+                  {tr('Parte')}{' '}{recording.partIndex}/{recording.partCount}
                 </span>
               )}
             </div>
@@ -490,7 +491,7 @@ function RecordingCard({ recording, showCourse = true }: { recording: Recording;
             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3 text-primary" />
-                {format(new Date(recording.recordedAt), "d MMM yyyy · HH:mm", { locale: es })}
+                {format(new Date(recording.recordedAt), tr('d MMM yyyy · HH:mm'), { locale: dateLocale() })}
               </span>
               <span className="tabular-nums">{formatDuration(recording.durationSec)}</span>
               {showCourse && courseName && (
@@ -553,11 +554,11 @@ export default function RecordingsSection({
   return (
     <div className={variant === 'home' ? 'pt-4' : ''}>
       {variant === 'home' ? (
-        <h1 className="pt-8 pb-4 text-center font-headline text-2xl font-bold text-primary">Grabaciones</h1>
+        <h1 className="pt-8 pb-4 text-center font-headline text-2xl font-bold text-primary">{tr('Grabaciones')}</h1>
       ) : (
         <div className="mb-3 flex items-center gap-2">
           <Mic className="h-4 w-4 text-primary" />
-          <h3 className="text-sm font-bold text-primary">Grabaciones</h3>
+          <h3 className="text-sm font-bold text-primary">{tr('Grabaciones')}</h3>
           <span className="text-xs text-muted-foreground">({visible.length})</span>
         </div>
       )}

@@ -20,7 +20,6 @@ import {
   startOfToday,
   addDays,
 } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { saveImage } from '@/lib/music-db';
@@ -35,6 +34,8 @@ import LooseNotesSection from '@/components/dashboard/LooseNotesSection';
 import { DIFFICULTY_META, DifficultyBars } from '@/components/tasks/task-badges';
 import { EchoHeader, EchoTileHeader } from '@/components/shared/EchoWord';
 import { scheduleImageKey } from '@/lib/profile-scope';
+import { dateLocale, tr } from '@/lib/i18n';
+import { dayInitials } from '@/lib/day-names';
 
 // El radar usa la biblioteca de gráficos (la más pesada de la app) y está al
 // final de Inicio: se carga aparte para que Inicio aparezca antes.
@@ -342,7 +343,7 @@ export default function HomePage() {
   
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayFormatted = format(yesterday, 'd MMM', { locale: es });
+  const yesterdayFormatted = format(yesterday, tr('d MMM'), { locale: dateLocale() });
 
   const { toast } = useToast();
 
@@ -471,10 +472,10 @@ export default function HomePage() {
           const isQuotaError = e.name === 'QuotaExceededError';
           toast({
             variant: "destructive",
-            title: isQuotaError ? "Imagen Demasiado Grande" : "Error al Guardar",
+            title: isQuotaError ? tr('Imagen Demasiado Grande') : tr('Error al Guardar'),
             description: isQuotaError 
-              ? "La imagen es demasiado grande. Por favor, elige un archivo más pequeño."
-              : "Ocurrió un error inesperado al guardar la imagen.",
+              ? tr('La imagen es demasiado grande. Por favor, elige un archivo más pequeño.')
+              : tr('Ocurrió un error inesperado al guardar la imagen.'),
           });
         }
       };
@@ -520,10 +521,10 @@ export default function HomePage() {
     if (!criticalTask?.dueDate) return null;
     try {
       const days = differenceInCalendarDays(parseISO(criticalTask.dueDate), startOfToday());
-      if (days < 0) return { days: 0, label: 'vencida', urgent: true };
-      if (days === 0) return { days: 0, label: 'vence hoy', urgent: true };
-      if (days === 1) return { days: 1, label: 'vence mañana', urgent: true };
-      return { days, label: `en ${days} días`, urgent: days <= 3 };
+      if (days < 0) return { days: 0, label: tr('vencida'), urgent: true };
+      if (days === 0) return { days: 0, label: tr('vence hoy'), urgent: true };
+      if (days === 1) return { days: 1, label: tr('vence mañana'), urgent: true };
+      return { days, label: tr('en {days} días', { days }), urgent: days <= 3 };
     } catch {
       return null;
     }
@@ -537,8 +538,8 @@ export default function HomePage() {
       const due = parseISO(criticalTask.dueDate);
       const sameYear = due.getFullYear() === new Date().getFullYear();
       return {
-        short: format(due, sameYear ? 'EEE d MMM' : 'd MMM yy', { locale: es }),
-        long: format(due, "EEEE d 'de' MMMM 'de' yyyy", { locale: es }),
+        short: format(due, sameYear ? 'EEE d MMM' : 'd MMM yy', { locale: dateLocale() }),
+        long: format(due, tr('EEEE d \'de\' MMMM \'de\' yyyy'), { locale: dateLocale() }),
       };
     } catch {
       return null;
@@ -577,13 +578,13 @@ export default function HomePage() {
                   style={{ height: scheduleHeight ? `${scheduleHeight}px` : 'auto', minHeight: '280px' }}
                 >
                   {scheduleImage ? (
-                      <Image src={scheduleImage} alt="Horario" layout="fill" objectFit="contain" />
+                      <Image src={scheduleImage} alt={tr('Horario')} layout="fill" objectFit="contain" />
                   ) : (
                     <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground h-full">
                       <Upload className="h-10 w-10" />
-                      <h3 className="font-semibold text-lg">Mi horario</h3>
+                      <h3 className="font-semibold text-lg">{tr('Mi horario')}</h3>
                       <p className="text-xs">
-                        Haz clic para subir una imagen de tu horario.
+                        {tr('Haz clic para subir una imagen de tu horario.')}
                       </p>
                     </div>
                   )}
@@ -594,14 +595,14 @@ export default function HomePage() {
           <div ref={studyHoursCardRef} className="lg:col-span-6">
             <Card className="h-full">
                 <CardHeader className="pb-4">
-                    <CardTitle className="text-lg font-headline text-center">Rendimiento académico</CardTitle>
+                    <CardTitle className="text-lg font-headline text-center">{tr('Rendimiento académico')}</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col gap-4">
                       <StatTile
                         icon={Clock}
-                        label={`Ayer, ${yesterdayFormatted}`}
+                        label={tr('Ayer, {yesterdayFormatted}', { yesterdayFormatted })}
                         accent="from-primary/[0.06]"
                       >
                         {/* Aguja sobre 20 (o sobre la meta diaria en modo
@@ -613,7 +614,7 @@ export default function HomePage() {
                               value={yesterdayPerformance?.score ?? 0}
                               max={20}
                               label={yesterdayPerformance ? yesterdayPerformance.score.toFixed(1) : '0.0'}
-                              sub="de 20"
+                              sub={tr('de 20')}
                               tone={GRADE_HSL[yesterdayPerformance?.grade ?? 'C']}
                             />
                           ) : (
@@ -632,14 +633,14 @@ export default function HomePage() {
                             <span className="text-xs font-semibold text-muted-foreground tabular-nums">
                               {yesterdayHours}h {yesterdayMinutes}m
                             </span>
-                            <span className="text-[10px] text-muted-foreground">estudiados</span>
+                            <span className="text-[10px] text-muted-foreground">{tr('estudiados')}</span>
                           </div>
                         </div>
                       </StatTile>
 
                       <StatTile
                         icon={Calendar}
-                        label="Promedio semanal"
+                        label={tr('Promedio semanal')}
                         accent="from-chart-2/[0.09]"
                       >
                         {/* Silueta de los 7 días: la tendencia importa más que
@@ -660,13 +661,13 @@ export default function HomePage() {
                             )}
                           </div>
                           <span className="pb-1 text-[10px] text-muted-foreground">
-                            {selectionMode === 'rendimiento' ? 'media · L a D' : 'esta semana'}
+                            {selectionMode === 'rendimiento' ? tr('media · L a D') : tr('esta semana')}
                           </span>
                         </div>
                         <Sparkline series={weekSeries} max={seriesMax} />
                         <div className="flex justify-between px-0.5 text-[9px] font-semibold text-muted-foreground">
-                          {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((day) => (
-                            <span key={day}>{day}</span>
+                          {dayInitials().map((day, index) => (
+                            <span key={index}>{day}</span>
                           ))}
                         </div>
                       </StatTile>
@@ -687,7 +688,7 @@ export default function HomePage() {
                               <div
                                 role="button"
                                 tabIndex={0}
-                                aria-label={`Próxima tarea: ${criticalTask.name}`}
+                                aria-label={tr('Próxima tarea: {name}', { name: criticalTask.name })}
                                 onKeyDown={(event) => {
                                   if (event.key === 'Enter' || event.key === ' ') {
                                     event.preventDefault();
@@ -698,7 +699,7 @@ export default function HomePage() {
                               >
                                 <StatTile
                                   icon={AlertTriangle}
-                                  label="Próxima tarea"
+                                  label={tr('Próxima tarea')}
                                   accent="from-amber-500/[0.09]"
                                   interactive
                                   className="min-h-0 min-w-0 overflow-hidden"
@@ -724,13 +725,13 @@ export default function HomePage() {
                                           days={criticalTaskCountdown.days}
                                           label={criticalTaskCountdown.label}
                                           urgent={criticalTaskCountdown.urgent}
-                                          title={criticalTaskDue ? `Fecha de entrega: ${criticalTaskDue.long}` : undefined}
+                                          title={criticalTaskDue ? tr('Fecha de entrega: {long}', { long: criticalTaskDue.long }) : undefined}
                                         />
                                       )}
                                       {criticalTaskDue && (
                                         <span
                                           className="shrink-0"
-                                          title={`Fecha de entrega: ${criticalTaskDue.long}`}
+                                          title={tr('Fecha de entrega: {long}', { long: criticalTaskDue.long })}
                                         >
                                           {criticalTaskDue.short}
                                         </span>
@@ -740,7 +741,7 @@ export default function HomePage() {
                                           'inline-flex shrink-0 items-center gap-1 font-medium',
                                           PRIORITY_TONE[criticalTaskPriority].text
                                         )}
-                                        title={`Importancia ${criticalTaskPriority.toLowerCase()}`}
+                                        title={tr('Importancia {p}', { p: criticalTaskPriority.toLowerCase() })}
                                       >
                                         <span
                                           className={cn('h-1.5 w-1.5 rounded-full', PRIORITY_TONE[criticalTaskPriority].dot)}
@@ -750,7 +751,7 @@ export default function HomePage() {
                                       {criticalTask.difficulty && DIFFICULTY_META[criticalTask.difficulty] && (
                                         <span
                                           className={cn('flex shrink-0', DIFFICULTY_META[criticalTask.difficulty].text)}
-                                          title={`Dificultad ${criticalTask.difficulty.toLowerCase()}`}
+                                          title={tr('Dificultad {p}', { p: criticalTask.difficulty.toLowerCase() })}
                                         >
                                           <DifficultyBars level={criticalTask.difficulty} />
                                         </span>
@@ -766,13 +767,13 @@ export default function HomePage() {
                                           : 'italic text-muted-foreground/60'
                                       }
                                     >
-                                      {criticalTaskDescription || 'Sin descripción.'}
+                                      {criticalTaskDescription || tr('Sin descripción.')}
                                     </FitText>
 
                                     {/* El avance, abajo del todo y a lo ancho. */}
                                     <div
                                       className="flex shrink-0 items-center gap-2"
-                                      title={`Avance: ${criticalTaskProgress}%`}
+                                      title={tr('Avance: {criticalTaskProgress}%', { criticalTaskProgress })}
                                     >
                                       <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary">
                                         <span
@@ -789,35 +790,35 @@ export default function HomePage() {
                               </div>
                             </DialogTrigger>
                             <DialogContent>
-                                <EchoHeader word="Interfaz">
+                                <EchoHeader word={tr('Interfaz')}>
                                   <DialogHeader>
-                                      <DialogTitle className="text-primary text-xl font-bold text-center">Interfaz</DialogTitle>
+                                      <DialogTitle className="text-primary text-xl font-bold text-center">{tr('Interfaz')}</DialogTitle>
                                   </DialogHeader>
                                 </EchoHeader>
                                 <div className="grid grid-cols-2 gap-4 pt-4">
                                     <Button
                                       variant="fantasma"
                                       onClick={() => router.push(`/tareas?highlightTaskId=${criticalTask.id}`, { scroll: false })}>
-                                      Galería de tareas
+                                      {tr('Galería de tareas')}
                                     </Button>
                                     <Button
                                       variant="fantasma"
                                       onClick={() => router.push(`/cursos/?id=${criticalTask.courseId}&highlightTaskId=${criticalTask.id}`, { scroll: false })}>
-                                      Ver asignatura
+                                      {tr('Ver asignatura')}
                                     </Button>
                                 </div>
                             </DialogContent>
                           </Dialog>
                         ) : (
                           <div className="flex min-h-0 flex-[3] basis-0">
-                            <StatTile icon={AlertTriangle} label="Próxima tarea" accent="from-amber-500/[0.09]">
-                              <p className="font-headline text-lg font-bold text-foreground">Todo en orden</p>
-                              <p className="text-xs text-muted-foreground">No tienes tareas pendientes con fecha.</p>
+                            <StatTile icon={AlertTriangle} label={tr('Próxima tarea')} accent="from-amber-500/[0.09]">
+                              <p className="font-headline text-lg font-bold text-foreground">{tr('Todo en orden')}</p>
+                              <p className="text-xs text-muted-foreground">{tr('No tienes tareas pendientes con fecha.')}</p>
                             </StatTile>
                           </div>
                         )}
 
-                      <StatTile icon={Flame} label="Días de racha" accent="from-orange-500/[0.09]" className="min-h-0 flex-[2] basis-0 overflow-hidden">
+                      <StatTile icon={Flame} label={tr('Días de racha')} accent="from-orange-500/[0.09]" className="min-h-0 flex-[2] basis-0 overflow-hidden">
                         {/* La llama crece con la racha y el anillo mide cuánto
                             falta para el siguiente hito de 7 días. */}
                         <div className="flex flex-1 items-center justify-center gap-3">
@@ -851,16 +852,16 @@ export default function HomePage() {
                             </p>
                             <p className="mt-1 text-[11px] text-muted-foreground">
                               {streak === 0
-                                ? 'empieza hoy'
+                                ? tr('empieza hoy')
                                 : streak === 1
-                                  ? 'día seguido'
-                                  : 'días seguidos'}
+                                  ? tr('día seguido')
+                                  : tr('días seguidos')}
                             </p>
                             {streak > 0 && (
                               <p className="text-[10px] text-orange-400">
                                 {7 - (streak % 7) === 7
-                                  ? '¡semana completa!'
-                                  : `${7 - (streak % 7)} para la semana`}
+                                  ? tr('¡semana completa!')
+                                  : tr('{p} para la semana', { p: 7 - (streak % 7) })}
                               </p>
                             )}
                           </div>

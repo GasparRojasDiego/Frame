@@ -6,6 +6,7 @@ import ConstellationBackdrop from '@/components/layout/ConstellationBackdrop';
 import FrameLogo from '@/components/layout/FrameLogo';
 import { APP_VERSION } from '@/lib/version';
 import { cn } from '@/lib/utils';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Marco común de las pantallas de acceso (entrar, registrarse y completar
@@ -39,13 +40,13 @@ export default function AuthShell({ title, description, children, inDialog = fal
           inDialog && 'pr-12'
         )}
       >
-        <span>VT Asvent</span>
+        <span>{tr('VT Asvent')}</span>
         <span>2026 · v{APP_VERSION}</span>
       </div>
       <CardHeader echo={false} className="items-center pb-4 pt-3 text-center">
         <div className="flex items-center justify-center gap-3">
           <FrameLogo className="h-12 w-12" />
-          <span className="select-none text-3xl font-bold text-foreground">FRAME</span>
+          <span className="select-none text-3xl font-bold text-foreground">{tr('FRAME')}</span>
         </div>
         {title && <CardTitle className="pt-2 text-xl font-bold text-foreground">{title}</CardTitle>}
         {description && <CardDescription>{description}</CardDescription>}
@@ -100,7 +101,7 @@ export function PasswordInput({
         type="button"
         onClick={() => setVisible((current) => !current)}
         className="absolute right-0 top-0 flex h-full w-10 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
-        aria-label={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+        aria-label={visible ? tr('Ocultar contraseña') : tr('Mostrar contraseña')}
         tabIndex={-1}
       >
         {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -112,6 +113,6 @@ export function PasswordInput({
 /** Único dato que se pide al crear una cuenta: cómo te llamará Frame. */
 export function validateUsername(username: string): string | null {
   const user = username.trim();
-  if (user.length === 0 || user.length > 12) return 'El nombre de usuario debe tener entre 1 y 12 caracteres.';
+  if (user.length === 0 || user.length > 12) return tr('El nombre de usuario debe tener entre 1 y 12 caracteres.');
   return null;
 }

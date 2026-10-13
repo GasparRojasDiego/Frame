@@ -6,6 +6,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { TASK_DIFFICULTIES, TASK_KINDS } from '@/components/tasks/task-badges';
 import { cn } from '@/lib/utils';
 import type { Task, TaskDifficulty, TaskKind, TaskPriority } from '@/types';
+import { tr } from '@/lib/i18n';
+import { difficultyLabel, priorityLabel, taskKindLabel } from '@/lib/enum-labels';
 
 // ============================================================
 // Filtros de la galería de tareas.
@@ -75,10 +77,10 @@ export function applyTaskFilters(tasks: Task[], filters: TaskFilterState): Task[
 const PRIORITIES: TaskPriority[] = ['Alta', 'Media', 'Baja'];
 
 const DUE_OPTIONS: { value: DueFilter; label: string }[] = [
-  { value: 'overdue', label: 'Vencidas' },
-  { value: 'today', label: 'Vencen hoy' },
-  { value: 'week', label: 'Próximos 7 días' },
-  { value: 'none', label: 'Sin fecha' },
+  { value: 'overdue', get label() { return tr('Vencidas'); } },
+  { value: 'today', get label() { return tr('Vencen hoy'); } },
+  { value: 'week', get label() { return tr('Próximos 7 días'); } },
+  { value: 'none', get label() { return tr('Sin fecha'); } },
 ];
 
 function toggle<T>(list: T[], item: T): T[] {
@@ -127,7 +129,7 @@ export default function TaskFilters({
         <Button
           variant="outline"
           size="icon"
-          title="Filtrar tareas"
+          title={tr('Filtrar tareas')}
           className={cn(
             'relative h-9 w-9 border-primary text-primary hover:bg-primary/30 hover:text-primary',
             active > 0 ? 'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground' : 'bg-primary/20'
@@ -143,7 +145,7 @@ export default function TaskFilters({
       </PopoverTrigger>
       <PopoverContent align="start" className="w-80 space-y-3.5 p-3.5">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-bold text-primary">Filtrar tareas</p>
+          <p className="text-sm font-bold text-primary">{tr('Filtrar tareas')}</p>
           {active > 0 && (
             <button
               type="button"
@@ -151,7 +153,7 @@ export default function TaskFilters({
               className="flex items-center gap-1 text-[11px] font-semibold text-muted-foreground hover:text-destructive"
             >
               <X className="h-3 w-3" />
-              Quitar filtros
+              {tr('Quitar filtros')}
             </button>
           )}
         </div>
@@ -161,45 +163,45 @@ export default function TaskFilters({
           <Input
             value={value.query}
             onChange={(e) => onChange({ ...value, query: e.target.value })}
-            placeholder="Nombre, descripción o asignatura…"
+            placeholder={tr('Nombre, descripción o asignatura…')}
             className="h-8 pl-8 text-xs"
           />
         </div>
 
-        <Group title="Importancia">
+        <Group title={tr('Importancia')}>
           {PRIORITIES.map((priority) => (
             <Pill
               key={priority}
               active={value.priorities.includes(priority)}
               onClick={() => onChange({ ...value, priorities: toggle(value.priorities, priority) })}
             >
-              {priority}
+              {priorityLabel(priority)}
             </Pill>
           ))}
         </Group>
 
-        <Group title="Dificultad">
+        <Group title={tr('Dificultad')}>
           {TASK_DIFFICULTIES.map((difficulty) => (
             <Pill
               key={difficulty}
               active={value.difficulties.includes(difficulty)}
               onClick={() => onChange({ ...value, difficulties: toggle(value.difficulties, difficulty) })}
             >
-              {difficulty}
+              {difficultyLabel(difficulty)}
             </Pill>
           ))}
           <Pill
             active={value.difficulties.includes('unset')}
             onClick={() => onChange({ ...value, difficulties: toggle(value.difficulties, 'unset' as const) })}
           >
-            Sin definir
+            {tr('Sin definir')}
           </Pill>
         </Group>
 
 
-        <Group title="Entrega">
+        <Group title={tr('Entrega')}>
           <Pill active={value.byProximity} onClick={() => onChange({ ...value, byProximity: !value.byProximity })}>
-            Por proximidad
+            {tr('Por proximidad')}
           </Pill>
           {DUE_OPTIONS.map((option) => (
             <Pill
@@ -212,14 +214,14 @@ export default function TaskFilters({
           ))}
         </Group>
 
-        <Group title="Tipo">
+        <Group title={tr('Tipo')}>
           {TASK_KINDS.map((kind) => (
             <Pill
               key={kind}
               active={value.kinds.includes(kind)}
               onClick={() => onChange({ ...value, kinds: toggle(value.kinds, kind) })}
             >
-              {kind}
+              {taskKindLabel(kind)}
             </Pill>
           ))}
         </Group>

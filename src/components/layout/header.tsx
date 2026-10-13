@@ -11,6 +11,7 @@ import { buildHeaderPhrases, type HeaderPhrase } from '@/lib/header-phrases';
 import { startQuickRecording } from '@/lib/quick-recording';
 import type { RecorderState } from '@/components/recordings/RecordingDialog';
 import type { UserProfile } from '@/types';
+import { tr, useLang } from '@/lib/i18n';
 
 // La frase propia (clave `headerQuote`) se retiró en la 1.6.2: la barra ya no
 // muestra un texto escrito a mano sino frases con los datos del usuario. Se
@@ -136,6 +137,7 @@ function PhraseStage({ text }: { text: string }) {
 function HeaderPhrases({ name }: { name?: string }) {
   const { tasks, archivedTasks, courses, studySessions, habits, studyGoals, dailyPerformances, streakGoal } = useCourse();
   const todayKey = useTodayKey();
+  const lang = useLang();
   const [tick, setTick] = useState(0);
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [paused, setPaused] = useState(false);
@@ -154,9 +156,9 @@ function HeaderPhrases({ name }: { name?: string }) {
         dailyPerformances: dailyPerformances ?? [],
         streakGoal,
       }),
-    // `tick` y `todayKey` no se leen dentro: solo renuevan el «ahora».
+    // `tick`, `todayKey` y `lang` no se leen dentro: renuevan el «ahora» y el idioma.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [tick, todayKey, name, tasks, archivedTasks, courses, studySessions, habits, studyGoals, dailyPerformances, streakGoal]
+    [tick, todayKey, lang, name, tasks, archivedTasks, courses, studySessions, habits, studyGoals, dailyPerformances, streakGoal]
   );
   const phrasesRef = useRef(phrases);
   phrasesRef.current = phrases;
@@ -250,10 +252,10 @@ export default function Header({ userProfile }: HeaderProps) {
           variant={isRecordingOpen || recorderState !== 'idle' ? 'default' : 'fantasma'}
           title={
             recorderState === 'recording'
-              ? 'Grabando… (pulsa para ver la grabación)'
+              ? tr('Grabando… (pulsa para ver la grabación)')
               : recorderState === 'paused'
-                ? 'Grabación en pausa (pulsa para verla)'
-                : 'Grabación (Ctrl+Shift+F)'
+                ? tr('Grabación en pausa (pulsa para verla)')
+                : tr('Grabación (Ctrl+Shift+F)')
           }
           className={cn(barButton, 'transition-colors', recorderState === 'recording' && 'animate-session-glow')}
           onClick={() => setRecordingOpen(true)}

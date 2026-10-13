@@ -13,6 +13,7 @@
 
 import type { CalendarDayColor, LocalCalendarEvent, Task } from '@/types';
 import { EVENT_COLOR_ROWS, eventDisplay } from '@/lib/calendar-events';
+import { getLang, tr } from '@/lib/i18n';
 
 // ---------------------------------------------------------------------------
 // Claves de día
@@ -89,36 +90,61 @@ export function monthWeeks({ year, month }: MonthCursor): string[][] {
   return weeks;
 }
 
-export const MONTH_NAMES = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
-];
-
-const MONTH_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sept', 'oct', 'nov', 'dic'];
-const WEEKDAY_NAMES = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-
-export const weekdayName = (key: string): string => WEEKDAY_NAMES[fromKey(key).getDay()];
-
-/** «martes 12 de marzo» (con el año solo si no es el actual). */
-export function longDayLabel(key: string, todayKey: string): string {
-  const date = fromKey(key);
-  const year = date.getFullYear() !== fromKey(todayKey).getFullYear() ? ` de ${date.getFullYear()}` : '';
-  return `${WEEKDAY_NAMES[date.getDay()]} ${date.getDate()} de ${MONTH_NAMES[date.getMonth()].toLowerCase()}${year}`;
-}
-
-/** «12 mar» */
-export const shortDayLabel = (key: string): string => {
-  const date = fromKey(key);
-  return `${date.getDate()} ${MONTH_SHORT[date.getMonth()]}`;
+// Nombres de meses y días por idioma: el español queda exactamente como era
+// («12 mar», «martes 12 de marzo») y el inglés lleva su propio orden
+// («Mar 12», «Tuesday, March 12»).
+const MONTHS = {
+  es: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
+  en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+};
+const MONTHS_SHORT = {
+  es: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sept', 'oct', 'nov', 'dic'],
+  en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+};
+const WEEKDAYS = {
+  es: ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'],
+  en: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
 };
 
-/** «12 – 18 mar», «28 feb – 3 mar» o «12 mar» para un solo día. */
+/** «Octubre» / «October». */
+export const monthName = (month: number): string => MONTHS[getLang()][month];
+
+/** «oct» / «Oct». */
+export const monthShort = (month: number): string => MONTHS_SHORT[getLang()][month];
+
+/** «1 oct» / «Oct 1». */
+export const dayMonthShort = (day: number, month: number): string =>
+  getLang() === 'en' ? `${monthShort(month)} ${day}` : `${day} ${monthShort(month)}`;
+
+export const weekdayName = (key: string): string => WEEKDAYS[getLang()][fromKey(key).getDay()];
+
+/** «martes 12 de marzo» / «Tuesday, March 12» (con el año solo si no es el actual). */
+export function longDayLabel(key: string, todayKey: string): string {
+  const date = fromKey(key);
+  const otherYear = date.getFullYear() !== fromKey(todayKey).getFullYear();
+  const weekday = WEEKDAYS[getLang()][date.getDay()];
+  if (getLang() === 'en') {
+    return `${weekday}, ${monthName(date.getMonth())} ${date.getDate()}${otherYear ? `, ${date.getFullYear()}` : ''}`;
+  }
+  return `${weekday} ${date.getDate()} de ${monthName(date.getMonth()).toLowerCase()}${otherYear ? ` de ${date.getFullYear()}` : ''}`;
+}
+
+/** «12 mar» / «Mar 12» */
+export const shortDayLabel = (key: string): string => {
+  const date = fromKey(key);
+  return dayMonthShort(date.getDate(), date.getMonth());
+};
+
+/** «12 – 18 mar», «28 feb – 3 mar» o «12 mar» para un solo día (en inglés,
+ *  «Mar 12 – 18», «Feb 28 – Mar 3»). */
 export function rangeLabel({ start, end }: DayRange): string {
   if (start === end) return shortDayLabel(start);
   const a = fromKey(start);
   const b = fromKey(end);
   if (a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear()) {
-    return `${a.getDate()} – ${b.getDate()} ${MONTH_SHORT[b.getMonth()]}`;
+    return getLang() === 'en'
+      ? `${monthShort(a.getMonth())} ${a.getDate()} – ${b.getDate()}`
+      : `${a.getDate()} – ${b.getDate()} ${monthShort(b.getMonth())}`;
   }
   return `${shortDayLabel(start)} – ${shortDayLabel(end)}`;
 }
@@ -126,10 +152,10 @@ export function rangeLabel({ start, end }: DayRange): string {
 /** «Hoy», «Mañana», «Hace 3 días»… para el subtítulo del día. */
 export function relativeDayLabel(key: string, todayKey: string): string {
   const diff = daysBetween(todayKey, key);
-  if (diff === 0) return 'Hoy';
-  if (diff === 1) return 'Mañana';
-  if (diff === -1) return 'Ayer';
-  return diff > 0 ? `Dentro de ${diff} días` : `Hace ${-diff} días`;
+  if (diff === 0) return tr('Hoy');
+  if (diff === 1) return tr('Mañana');
+  if (diff === -1) return tr('Ayer');
+  return diff > 0 ? tr('Dentro de {diff} días', { diff }) : tr('Hace {p} días', { p: -diff });
 }
 
 export const capitalize = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
@@ -144,21 +170,23 @@ const COLOR_NAMES = ['azul', 'verde', 'amarillo', 'coral', 'lila', 'celeste', 'r
 
 export const PAINT_COLORS: { hex: string; name: string }[] = EVENT_COLOR_ROWS[0].map((hex, index) => ({
   hex,
-  name: COLOR_NAMES[index] ?? hex,
+  get name() {
+    return COLOR_NAMES[index] ? tr(COLOR_NAMES[index]) : hex;
+  },
 }));
 
 /** Avisos que ofrece el formulario (minutos de antelación). */
 export const REMIND_OPTIONS: { minutes: number; label: string }[] = [
-  { minutes: 0, label: 'A la hora' },
-  { minutes: 10, label: '10 min antes' },
-  { minutes: 30, label: '30 min antes' },
-  { minutes: 60, label: '1 h antes' },
-  { minutes: 1440, label: 'El día antes' },
+  { minutes: 0, get label() { return tr('A la hora'); } },
+  { minutes: 10, get label() { return tr('10 min antes'); } },
+  { minutes: 30, get label() { return tr('30 min antes'); } },
+  { minutes: 60, get label() { return tr('1 h antes'); } },
+  { minutes: 1440, get label() { return tr('El día antes'); } },
 ];
 
 export const remindLabel = (minutes: number | undefined): string | null => {
   if (minutes === undefined || minutes === null) return null;
-  return REMIND_OPTIONS.find((option) => option.minutes === minutes)?.label ?? `${minutes} min antes`;
+  return REMIND_OPTIONS.find((option) => option.minutes === minutes)?.label ?? tr('{minutes} min antes', { minutes });
 };
 
 // ---------------------------------------------------------------------------
@@ -341,7 +369,7 @@ export function buildTaskItems(tasks: Task[], first: string, last: string): Grid
       end: day,
       label: task.name,
       variant: 'task',
-      hint: `${task.name} · ${task.courseName || 'Sin asignatura'}`,
+      hint: `${task.name} · ${task.courseName || tr('Sin asignatura')}`,
     });
   }
   return items;

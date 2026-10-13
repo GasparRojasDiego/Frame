@@ -7,7 +7,6 @@ import {
   startOfToday,
   subWeeks,
 } from 'date-fns';
-import { es } from 'date-fns/locale';
 import {
   ArrowDownRight,
   ArrowRight,
@@ -23,9 +22,10 @@ import { cn } from '@/lib/utils';
 import { buildDayIndex, dayKey, GOAL_DAY_KEYS } from '@/lib/academic-metrics';
 import { formatMinutes } from '@/lib/duration';
 import { EchoTileHeader } from '@/components/shared/EchoWord';
+import { dateLocale, tr } from '@/lib/i18n';
+import { dayInitial, fromSunday } from '@/lib/day-names';
 
 /** Iniciales de los 7 días en el orden de la semana ISO (lunes primero). */
-const DAY_INITIALS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
 interface DayColumn {
   key: string;
@@ -70,7 +70,7 @@ export default function AcademicPulse() {
       const key = dayKey(day);
       return {
         key,
-        label: DAY_INITIALS[(day.getDay() + 6) % 7],
+        label: dayInitial(fromSunday(day.getDay())),
         minutes: index.get(key)?.minutes ?? 0,
         goal: studyGoals?.[GOAL_DAY_KEYS[day.getDay()]] ?? 0,
         isToday: key === dayKey(today),
@@ -108,10 +108,10 @@ export default function AcademicPulse() {
     metrics.goalWeek > 0 ? Math.min(999, Math.round((metrics.minutes / metrics.goalWeek) * 100)) : null;
   const consistency = Math.round((metrics.activeDays / metrics.elapsedDays) * 100);
 
-  const rangeLabel = `${format(metrics.weekStart, "d 'de' MMMM", { locale: es })} — ${format(
+  const rangeLabel = `${format(metrics.weekStart, tr('d \'de\' MMMM'), { locale: dateLocale() })} — ${format(
     metrics.weekEnd,
-    "d 'de' MMMM",
-    { locale: es }
+    tr('d \'de\' MMMM'),
+    { locale: dateLocale() }
   )}`;
 
   const DeltaBadge = ({ value, unit }: { value: number; unit: string }) => {
@@ -127,7 +127,7 @@ export default function AcademicPulse() {
         )}
       >
         <Icon className="h-3 w-3" />
-        {rounded === 0 ? 'igual' : `${Math.abs(rounded)}${unit}`}
+        {rounded === 0 ? tr('igual') : `${Math.abs(rounded)}${unit}`}
       </span>
     );
   };
@@ -135,7 +135,7 @@ export default function AcademicPulse() {
   return (
     <section className="space-y-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="font-headline text-lg font-bold text-primary">Tu semana en datos</h2>
+        <h2 className="font-headline text-lg font-bold text-primary">{tr('Tu semana en datos')}</h2>
         <p className="text-xs text-muted-foreground">{rangeLabel}</p>
       </div>
 
@@ -143,11 +143,11 @@ export default function AcademicPulse() {
         {/* ---------------- Ritmo de la semana ---------------- */}
         <Card className="lg:col-span-2">
           <CardContent className="flex h-full flex-col gap-3 p-4">
-            <EchoTileHeader word="Ritmo">
+            <EchoTileHeader word={tr('Ritmo')}>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
                   <TrendingUp className="h-4 w-4 text-primary" />
-                  Ritmo de estudio
+                  {tr('Ritmo de estudio')}
                 </div>
                 <DeltaBadge value={minutesDelta} unit=" min" />
               </div>
@@ -159,7 +159,7 @@ export default function AcademicPulse() {
               </p>
               {goalPercent !== null && (
                 <span className="text-xs text-muted-foreground">
-                  {goalPercent}% de tu meta ({formatMinutes(metrics.goalWeek)})
+                  {goalPercent}{tr('% de tu meta (')}{formatMinutes(metrics.goalWeek)})
                 </span>
               )}
             </div>
@@ -206,11 +206,11 @@ export default function AcademicPulse() {
                       </TooltipTrigger>
                       <TooltipContent side="top">
                         <p className="font-semibold capitalize">
-                          {format(new Date(`${day.key}T00:00:00`), "EEEE d", { locale: es })}
+                          {format(new Date(`${day.key}T00:00:00`), tr('EEEE d'), { locale: dateLocale() })}
                         </p>
                         <p className="text-muted-foreground">
-                          {day.minutes > 0 ? formatMinutes(day.minutes) : 'Sin estudio'}
-                          {day.goal > 0 && ` · meta ${formatMinutes(day.goal)}`}
+                          {day.minutes > 0 ? formatMinutes(day.minutes) : tr('Sin estudio')}
+                          {day.goal > 0 && tr(' · meta {minutes}', { minutes: formatMinutes(day.goal) })}
                         </p>
                       </TooltipContent>
                     </Tooltip>
@@ -224,10 +224,10 @@ export default function AcademicPulse() {
         {/* ---------------- Constancia ---------------- */}
         <Card>
           <CardContent className="flex h-full flex-col gap-2 p-4 text-center">
-            <EchoTileHeader word="Constancia">
+            <EchoTileHeader word={tr('Constancia')}>
               <div className="flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground">
                 <CalendarCheck2 className="h-4 w-4 text-primary" />
-                Constancia
+                {tr('Constancia')}
               </div>
             </EchoTileHeader>
             <div className="flex flex-1 flex-col items-center justify-center gap-2">
@@ -253,8 +253,8 @@ export default function AcademicPulse() {
               </div>
             </div>
             <p className="text-[11px] text-muted-foreground">
-              {metrics.activeDays} de {metrics.elapsedDays}{' '}
-              {metrics.elapsedDays === 1 ? 'día' : 'días'} con estudio
+              {metrics.activeDays}{' '}{tr('de')}{' '}{metrics.elapsedDays}{' '}
+              {metrics.elapsedDays === 1 ? tr('día') : tr('días')}{' '}{tr('con estudio')}
             </p>
             </div>
           </CardContent>
@@ -263,10 +263,10 @@ export default function AcademicPulse() {
         {/* ---------------- Tareas culminadas ---------------- */}
         <Card>
           <CardContent className="flex h-full flex-col gap-2 p-4 text-center">
-            <EchoTileHeader word="Tareas">
+            <EchoTileHeader word={tr('Tareas')}>
               <div className="flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground">
                 <CheckCircle2 className="h-4 w-4 text-primary" />
-                Tareas culminadas
+                {tr('Tareas culminadas')}
               </div>
             </EchoTileHeader>
             <div className="flex flex-1 flex-col items-center justify-center gap-2">
@@ -274,7 +274,7 @@ export default function AcademicPulse() {
                 {metrics.tasksDone}
               </p>
               <DeltaBadge value={metrics.tasksDone - metrics.prevTasksDone} unit="" />
-              <p className="text-[11px] text-muted-foreground">frente a la semana pasada</p>
+              <p className="text-[11px] text-muted-foreground">{tr('frente a la semana pasada')}</p>
             </div>
           </CardContent>
         </Card>

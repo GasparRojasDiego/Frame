@@ -6,6 +6,7 @@ import {
   useStudyVideoPlayer,
 } from '@/lib/study-video-player';
 import { cn } from '@/lib/utils';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // El reproductor de vídeos de estudio, montado UNA vez en el layout.
@@ -144,8 +145,8 @@ export default function StudyVideoHost() {
       <button
         type="button"
         onClick={() => setStudyVideoTheater(!theater)}
-        title={theater ? 'Reducir (Esc)' : 'Ampliar dentro de Frame'}
-        aria-label={theater ? 'Reducir el vídeo' : 'Ampliar el vídeo'}
+        title={theater ? tr('Reducir (Esc)') : tr('Ampliar dentro de Frame')}
+        aria-label={theater ? tr('Reducir el vídeo') : tr('Ampliar el vídeo')}
         className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-md bg-black/60 text-white opacity-0 backdrop-blur transition-opacity hover:bg-black/80 focus-visible:opacity-100 group-hover/video:opacity-100"
       >
         {theater ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}

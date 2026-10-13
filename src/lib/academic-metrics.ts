@@ -31,6 +31,7 @@ import type {
   TaskPriority,
 } from '@/types';
 import { sessionSeconds } from '@/lib/duration';
+import { tr } from '@/lib/i18n';
 
 /** getDay() (0 = domingo) → clave de StudyGoals. Mismo orden que Enfoque. */
 export const GOAL_DAY_KEYS: (keyof StudyGoals)[] = [
@@ -46,7 +47,9 @@ export const GOAL_DAY_KEYS: (keyof StudyGoals)[] = [
 export const PRIORITIES: TaskPriority[] = ['Alta', 'Media', 'Baja'];
 
 /** Asignatura imputada a las sesiones que no declararon ninguna. */
-export const UNASSIGNED_SUBJECT = 'Sin asignatura';
+/** Grupo de las sesiones sin asignatura: se traduce al agrupar, y quien
+ *  compara usa esta misma función, así que siempre coinciden. */
+export const unassignedSubject = (): string => tr('Sin asignatura');
 
 export type PeriodScope = 'week' | 'month';
 
@@ -115,7 +118,7 @@ export function buildDayIndex(
     b.minutes += minutes;
     b.sessions += 1;
     b.perceptionSum += s.perception || 0;
-    const subjects = s.subjects?.length ? s.subjects : [UNASSIGNED_SUBJECT];
+    const subjects = s.subjects?.length ? s.subjects : [unassignedSubject()];
     // El tiempo se reparte a partes iguales entre las asignaturas de la sesión.
     const share = minutes / subjects.length;
     for (const subject of subjects) {
@@ -128,7 +131,7 @@ export function buildDayIndex(
     if (!k) continue;
     const b = at(k);
     b.tasksDone += 1;
-    const course = t.courseName || 'Sin asignatura';
+    const course = t.courseName || tr('Sin asignatura');
     b.tasksByCourse[course] = (b.tasksByCourse[course] || 0) + 1;
     const priority: TaskPriority = PRIORITIES.includes(t.priority) ? t.priority : 'Media';
     b.tasksByPriority[priority] += 1;

@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { getLang, type Lang } from '@/lib/i18n';
 
 // ============================================================
 // Registro de notificaciones (la campana, desde la 1.6.4).
@@ -37,7 +38,20 @@ export interface LogEntry {
   courseId?: string;
   /** Interfaz a la que lleva al pulsarla. */
   route?: string;
+  /** El texto en los dos idiomas (1.6.7): un aviso guardado se lee en el
+   *  idioma de la interfaz de hoy, no en el del día en que llegó. */
+  texts?: Partial<Record<Lang, EntryText>>;
 }
+
+export interface EntryText {
+  title: string;
+  detail: string;
+}
+
+/** Título y detalle en el idioma actual (los avisos de antes de la 1.6.7
+ *  solo tienen el texto con el que llegaron). */
+export const entryText = (entry: Pick<LogEntry, 'title' | 'detail' | 'texts'>): EntryText =>
+  entry.texts?.[getLang()] ?? { title: entry.title, detail: entry.detail };
 
 interface NotificationPrefs {
   sound: boolean;
@@ -127,9 +141,18 @@ export function syncCurrent(current: Omit<LogEntry, 'at' | 'read'>[], readIds?: 
   if (!currentUser) return;
   const known = new Set(entries.map((e) => e.id));
   const fresh = current.filter((n) => !known.has(n.id) && !cleared.has(n.id));
-  if (fresh.length === 0) return;
-  const now = Date.now();
-  entries = [...fresh.map((n) => ({ ...n, at: now, read: readIds?.has(n.id) ?? false })), ...entries];
+  // Las que siguen vigentes estrenan texto si cambió (otro idioma, otra fecha).
+  const byId = new Map(current.map((n) => [n.id, n]));
+  let refreshed = false;
+  entries = entries.map((entry) => {
+    const now = byId.get(entry.id);
+    if (!now || JSON.stringify([now.title, now.detail, now.texts]) === JSON.stringify([entry.title, entry.detail, entry.texts])) return entry;
+    refreshed = true;
+    return { ...entry, title: now.title, detail: now.detail, texts: now.texts };
+  });
+  if (fresh.length === 0 && !refreshed) return;
+  const at = Date.now();
+  entries = [...fresh.map((n) => ({ ...n, at, read: readIds?.has(n.id) ?? false })), ...entries];
   persist();
 }
 

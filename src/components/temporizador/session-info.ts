@@ -1,6 +1,7 @@
 import { parseISO } from 'date-fns';
 import { sessionSeconds } from '@/lib/duration';
 import type { Course, StudySession } from '@/types';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Lecturas comunes de una sesión de estudio guardada: su tramo horario, sus
@@ -69,7 +70,7 @@ export function sessionSubjects(session: StudySession, courses: Course[]): Sessi
     if (seen.has(key)) continue;
     seen.add(key);
     // El nombre vigente manda: si la asignatura se renombró, se lee el nuevo.
-    out.push({ key, name: course?.name ?? name ?? 'Asignatura', course });
+    out.push({ key, name: course?.name ?? name ?? tr('Asignatura'), course });
   }
   return out;
 }

@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { Course } from '@/types';
 import { EchoHeader } from '@/components/shared/EchoWord';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Mover UNA asignatura de colección.
@@ -71,13 +72,13 @@ export default function CourseCollectionDialog({
         updateSpace(to.id, { courseIds: [...to.courseIds, course.id] });
       }
       toast({
-        title: 'Asignatura movida',
-        description: `"${course.name}" ahora está en ${spaces.find((s) => s.id === selected)?.name}.`,
+        title: tr('Asignatura movida'),
+        description: tr('"{name}" ahora está en {name2}.', { name: course.name, name2: spaces.find((s) => s.id === selected)?.name }),
       });
     } else {
       toast({
-        title: 'Asignatura suelta',
-        description: `"${course.name}" ya no pertenece a ninguna colección.`,
+        title: tr('Asignatura suelta'),
+        description: tr('"{name}" ya no pertenece a ninguna colección.', { name: course.name }),
       });
     }
     onOpenChange(false);
@@ -86,21 +87,21 @@ export default function CourseCollectionDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
-        <EchoHeader word="Colección">
+        <EchoHeader word={tr('Colección')}>
           <DialogHeader>
             <DialogTitle className="flex items-center justify-center gap-2 text-lg font-bold text-primary">
               <Layers className="h-5 w-5" />
-              Colección de {course.name}
+              {tr('Colección de')}{' '}{course.name}
             </DialogTitle>
             <DialogDescription className="text-center text-xs">
-              Una asignatura pertenece como mucho a una colección.
+              {tr('Una asignatura pertenece como mucho a una colección.')}
             </DialogDescription>
           </DialogHeader>
         </EchoHeader>
 
         {spaces.length === 0 ? (
           <p className="rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground">
-            Todavía no hay colecciones. Créala desde «Añadir» y podrás traer aquí esta asignatura.
+            {tr('Todavía no hay colecciones. Créala desde «Añadir» y podrás traer aquí esta asignatura.')}
           </p>
         ) : (
           <ScrollArea className="max-h-[300px] pr-2">
@@ -116,7 +117,7 @@ export default function CourseCollectionDialog({
                 )}
               >
                 <Minus className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <span className="min-w-0 flex-1 text-sm text-foreground">Sin colección</span>
+                <span className="min-w-0 flex-1 text-sm text-foreground">{tr('Sin colección')}</span>
                 {selected === null && <Check className="h-4 w-4 shrink-0 text-primary" />}
               </button>
 
@@ -146,10 +147,10 @@ export default function CourseCollectionDialog({
 
         <DialogFooter>
           <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-            Cancelar
+            {tr('Cancelar')}
           </Button>
           <Button size="sm" onClick={save} disabled={spaces.length === 0}>
-            Guardar
+            {tr('Guardar')}
           </Button>
         </DialogFooter>
       </DialogContent>

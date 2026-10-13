@@ -9,6 +9,7 @@ import {
   type ImageUpdatedDetail,
 } from '@/lib/music-db';
 import { fingerprint, imageOwnership, isLeakedScheduleImage, scheduleImageKey } from '@/lib/profile-scope';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Imágenes que viajan entre dispositivos (1.5.5 escritorio / 1.0.8 Android).
@@ -277,7 +278,7 @@ async function reconcile(uid: string, onlyKeys?: Set<string>): Promise<Reconcile
           base[key] = { l: null, r: null };
         } else {
           const { data: blob, error } = await supabase.storage.from(BUCKET).download(objectPath(uid, key, remoteHash));
-          if (error || !blob) throw new Error(error?.message ?? 'descarga vacía');
+          if (error || !blob) throw new Error(error?.message ?? tr('descarga vacía'));
           const dataUrl = await blobToDataUrl(blob);
           await saveImage(localKey, dataUrl, { fromSync: true, at: entry?.m ?? 0 });
           base[key] = { l: await fingerprint(dataUrl), r: remoteHash };
@@ -335,9 +336,9 @@ async function reconcile(uid: string, onlyKeys?: Set<string>): Promise<Reconcile
 /** Sube la imagen y devuelve la huella de lo que quedó en la nube. */
 async function upload(uid: string, key: string, dataUrl: string): Promise<string> {
   const supabase = getSupabase();
-  if (!supabase) throw new Error('sin nube');
+  if (!supabase) throw new Error(tr('sin nube'));
   const original = dataUrlToBlob(dataUrl);
-  if (!original) throw new Error('imagen ilegible');
+  if (!original) throw new Error(tr('imagen ilegible'));
   const blob = await shrinkForUpload(original);
   // La huella de la nube es la de lo que se bajará de allí (reducida o no).
   const hash = blob === original ? await fingerprint(dataUrl) : await fingerprint(await blobToDataUrl(blob));

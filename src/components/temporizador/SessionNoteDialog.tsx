@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { formatHMS } from '@/lib/duration';
 import { isRichNoteEmpty } from '@/lib/rich-note';
 import { cn } from '@/lib/utils';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Anotar un avance SIN cerrar la sesión.
@@ -56,16 +57,16 @@ function FocusPicker({ value, onChange }: { value: number | null; onChange: (nex
           <Gauge className="h-3.5 w-3.5" />
           {value !== null ? (
             <>
-              Enfoque <span className="tabular-nums">{value}/20</span>
+              {tr('Enfoque')}{' '}<span className="tabular-nums">{value}/20</span>
             </>
           ) : (
-            'Enfoque (opcional)'
+            tr('Enfoque (opcional)')
           )}
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-60 space-y-3 p-3">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-foreground">Enfoque en este tramo</span>
+          <span className="text-xs font-semibold text-foreground">{tr('Enfoque en este tramo')}</span>
           <span className="text-sm font-bold tabular-nums text-primary">{value ?? '–'}/20</span>
         </div>
         <Slider
@@ -82,7 +83,7 @@ function FocusPicker({ value, onChange }: { value: number | null; onChange: (nex
             className="flex items-center gap-1 text-[11px] text-muted-foreground transition-colors hover:text-destructive"
           >
             <X className="h-3 w-3" />
-            Quitar
+            {tr('Quitar')}
           </button>
         )}
       </PopoverContent>
@@ -144,8 +145,8 @@ export default function SessionNoteDialog({
       focus: focus ?? undefined,
     });
     toast({
-      title: 'Avance anotado',
-      description: `Queda registrado en el minuto ${minute} de la sesión.`,
+      title: tr('Avance anotado'),
+      description: tr('Queda registrado en el minuto {minute} de la sesión.', { minute }),
     });
     onOpenChange(false);
   };
@@ -155,13 +156,13 @@ export default function SessionNoteDialog({
       <DialogContent className="flex max-h-[88vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
         <DialogHeader className="relative shrink-0 space-y-1 overflow-hidden px-6 pb-4 pt-6">
           {/* «AVANCE», repetido y a la deriva detrás del título. */}
-          <EchoWord word="Avance" />
+          <EchoWord word={tr('Avance')} />
           <DialogTitle className="relative flex items-center justify-center gap-2 text-lg font-bold text-primary">
             <NotebookPen className="h-5 w-5" />
-            Anotar avance
+            {tr('Anotar avance')}
           </DialogTitle>
           <DialogDescription className="relative text-center text-xs">
-            Minuto {minute} de la sesión
+            {tr('Minuto')}{' '}{minute}{' '}{tr('de la sesión')}
           </DialogDescription>
         </DialogHeader>
 
@@ -171,11 +172,11 @@ export default function SessionNoteDialog({
           {/* Se escribe directamente; el enfoque, arriba a la derecha. */}
           <NoteEditor
             id="session-note-text"
-            ariaLabel="Avance de la sesión"
+            ariaLabel={tr('Avance de la sesión')}
             value={text}
             onChange={setText}
             onSubmit={save}
-            placeholder="Ej: terminé los ejercicios 1 al 8 de derivadas"
+            placeholder={tr('Ej: terminé los ejercicios 1 al 8 de derivadas')}
             rows={5}
             autoFocus
             toolbarEnd={<FocusPicker value={focus} onChange={setFocus} />}
@@ -188,13 +189,13 @@ export default function SessionNoteDialog({
               setTaskId(null);
             }}
             allowNone
-            noneHint="Queda solo en la sesión"
+            noneHint={tr('Queda solo en la sesión')}
           />
 
           {availableTasks.length > 0 && (
             <div className="space-y-2 duration-200 animate-in fade-in slide-in-from-top-1 motion-reduce:animate-none">
               <p className="text-sm font-semibold text-foreground">
-                ¿De qué tarea?
+                {tr('¿De qué tarea?')}
                 {taskId && (
                   <span className="ml-2 text-xs font-normal text-primary">
                     · {availableTasks.find((t) => t.id === taskId)?.name}
@@ -218,10 +219,10 @@ export default function SessionNoteDialog({
         <div aria-hidden className="mx-6 h-px shrink-0 bg-border" />
         <div className="flex shrink-0 justify-end gap-2 px-6 py-3">
           <Button variant="gris" size="sm" onClick={() => onOpenChange(false)}>
-            Cancelar
+            {tr('Cancelar')}
           </Button>
           <Button size="sm" onClick={save} disabled={empty}>
-            Anotar
+            {tr('Anotar')}
           </Button>
         </div>
       </DialogContent>

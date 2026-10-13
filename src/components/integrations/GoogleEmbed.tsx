@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { LoaderCircle, WifiOff } from 'lucide-react';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { activeProfileId } from '@/lib/profile-scope';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Recuadro anfitrión de un servicio de Google REAL (Gmail, YouTube, Classroom)
@@ -157,14 +158,14 @@ export default function GoogleEmbed({
         // Solo se ve un instante mientras la página de Google carga encima.
         <div className="flex items-center gap-3 text-muted-foreground">
           <LoaderCircle className="h-5 w-5 animate-spin text-primary" />
-          <span className="text-sm">Cargando {SERVICE_LABEL[kind]}…</span>
+          <span className="text-sm">{tr('Cargando')}{' '}{SERVICE_LABEL[kind]}…</span>
         </div>
       ) : (
         offlineContent ?? (
           <div className="flex flex-col items-center gap-3 px-6 text-center text-muted-foreground">
             <WifiOff className="h-8 w-8" />
-            <p className="text-sm font-semibold text-foreground">Sin conexión a internet</p>
-            <p className="max-w-sm text-xs">{SERVICE_LABEL[kind]} necesita conexión a internet.</p>
+            <p className="text-sm font-semibold text-foreground">{tr('Sin conexión a internet')}</p>
+            <p className="max-w-sm text-xs">{SERVICE_LABEL[kind]}{' '}{tr('necesita conexión a internet.')}</p>
           </div>
         )
       )}

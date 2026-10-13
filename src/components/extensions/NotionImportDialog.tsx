@@ -1,6 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
 import { format, parseISO } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { ArrowLeft, CalendarDays, CheckSquare, FileUp, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -23,6 +22,7 @@ import {
 import '@/lib/extensions/registry';
 import { DEFAULT_EVENT_COLOR } from '@/lib/calendar-events';
 import { cn } from '@/lib/utils';
+import { dateLocale, tr } from '@/lib/i18n';
 
 // ============================================================
 // Importador de Notion: tareas y fechas. Se abre desde Ajustes (menú de la
@@ -33,18 +33,18 @@ import { cn } from '@/lib/utils';
 type ImportAs = 'tasks' | 'events';
 
 const MAPPING_LABEL: Record<keyof NotionMapping, string> = {
-  title: 'Título',
-  date: 'Fecha',
-  status: 'Estado',
-  course: 'Asignatura',
-  priority: 'Prioridad',
-  kind: 'Tipo',
-  description: 'Descripción',
+  get title() { return tr('Título'); },
+  get date() { return tr('Fecha'); },
+  get status() { return tr('Estado'); },
+  get course() { return tr('Asignatura'); },
+  get priority() { return tr('Prioridad'); },
+  get kind() { return tr('Tipo'); },
+  get description() { return tr('Descripción'); },
 };
 
 const dayLabel = (date: string) => {
   try {
-    return format(parseISO(date), "d 'de' MMM yyyy", { locale: es });
+    return format(parseISO(date), tr('d \'de\' MMM yyyy'), { locale: dateLocale() });
   } catch {
     return date;
   }
@@ -113,7 +113,7 @@ export default function NotionImportDialog({
     try {
       const found = await readNotionFiles([...files]);
       if (found.length === 0) {
-        setError('No encontré ninguna tabla. Elige el .zip que descarga Notion al exportar con «Markdown y CSV», o el .csv de la base de datos.');
+        setError(tr('No encontré ninguna tabla. Elige el .zip que descarga Notion al exportar con «Markdown y CSV», o el .csv de la base de datos.'));
         return;
       }
       setTables(found);
@@ -123,7 +123,7 @@ export default function NotionImportDialog({
       const first = interpretTable(found[0], m, courses ?? []);
       choose(first.filter((i) => !i.done));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo leer el archivo.');
+      setError(e instanceof Error ? e.message : tr('No se pudo leer el archivo.'));
     } finally {
       setBusy(false);
       if (fileRef.current) fileRef.current.value = '';
@@ -145,7 +145,7 @@ export default function NotionImportDialog({
       const now = Date.now();
       chosen.forEach((item, n) => {
         const course = (courses ?? []).find((c) => c.id === item.courseId) ?? null;
-        const notes = [item.description, item.time ? `Hora: ${item.time}` : '', !course && item.courseLabel ? `Notion: ${item.courseLabel}` : '']
+        const notes = [item.description, item.time ? tr('Hora: {time}', { time: item.time }) : '', !course && item.courseLabel ? tr('Notion: {courseLabel}', { courseLabel: item.courseLabel }) : '']
           .filter(Boolean)
           .join('\n');
         addTask({
@@ -162,8 +162,8 @@ export default function NotionImportDialog({
         });
       });
       toast({
-        title: `${chosen.length} ${chosen.length === 1 ? 'tarea importada' : 'tareas importadas'} de Notion`,
-        description: 'Las que no tenían asignatura están al final de Inicio, para colocarlas.',
+        title: tr('{length} {p} de Notion', { length: chosen.length, p: chosen.length === 1 ? tr('tarea importada') : tr('tareas importadas') }),
+        description: tr('Las que no tenían asignatura están al final de Inicio, para colocarlas.'),
       });
     } else {
       for (const item of chosen) {
@@ -179,8 +179,8 @@ export default function NotionImportDialog({
         });
       }
       toast({
-        title: `${chosen.length} ${chosen.length === 1 ? 'fecha importada' : 'fechas importadas'} al calendario`,
-        description: 'Las verás en Calendario → «Local».',
+        title: tr('{length} {p} al calendario', { length: chosen.length, p: chosen.length === 1 ? tr('fecha importada') : tr('fechas importadas') }),
+        description: tr('Las verás en Calendario → «Local».'),
       });
     }
     setOpen(false);
@@ -211,20 +211,20 @@ export default function NotionImportDialog({
             variant="ghost"
             size="icon"
             onClick={reset}
-            title="Elegir otro archivo"
-            aria-label="Atrás: elegir otro archivo"
+            title={tr('Elegir otro archivo')}
+            aria-label={tr('Atrás: elegir otro archivo')}
             className="absolute left-4 top-4 z-10 h-7 w-7 text-muted-foreground hover:bg-primary/10 hover:text-primary"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
         )}
-        <EchoHeader word="Notion" className="mb-0">
+        <EchoHeader word={tr('Notion')} className="mb-0">
           <DialogHeader className="items-center">
             <div className="flex items-center justify-center gap-2.5">
               <ExtensionIcon id="notion" className="h-8 w-8" />
-              <DialogTitle className="text-xl font-bold text-primary">Importar de Notion</DialogTitle>
+              <DialogTitle className="text-xl font-bold text-primary">{tr('Importar de Notion')}</DialogTitle>
             </div>
-            <DialogDescription className="text-center text-xs">Tus tareas y fechas, de una base de datos de Notion a Frame.</DialogDescription>
+            <DialogDescription className="text-center text-xs">{tr('Tus tareas y fechas, de una base de datos de Notion a Frame.')}</DialogDescription>
           </DialogHeader>
         </EchoHeader>
 
@@ -232,10 +232,10 @@ export default function NotionImportDialog({
           <div className="space-y-4">
             <ol className="space-y-2 rounded-xl bg-secondary/40 p-4 text-sm text-foreground/90">
               {[
-                'En Notion, abre la base de datos con tus tareas.',
-                'Pulsa ••• (arriba a la derecha) → «Exportar».',
-                'Formato: «Markdown y CSV». Pulsa «Exportar» y se descargará un .zip.',
-                'Aquí, elige ese .zip (o el .csv de dentro).',
+                tr('En Notion, abre la base de datos con tus tareas.'),
+                tr('Pulsa ••• (arriba a la derecha) → «Exportar».'),
+                tr('Formato: «Markdown y CSV». Pulsa «Exportar» y se descargará un .zip.'),
+                tr('Aquí, elige ese .zip (o el .csv de dentro).'),
               ].map((step, i) => (
                 <li key={step} className="flex gap-2.5">
                   <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[11px] font-bold text-primary">
@@ -248,10 +248,10 @@ export default function NotionImportDialog({
             <input ref={fileRef} type="file" accept=".zip,.csv" multiple className="hidden" onChange={(e) => void onFiles(e.target.files)} />
             <Button className="w-full gap-2" onClick={() => fileRef.current?.click()} disabled={busy}>
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" />}
-              Elegir el archivo de Notion
+              {tr('Elegir el archivo de Notion')}
             </Button>
             {error && <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
-            <p className="text-center text-[11px] text-muted-foreground">Todo ocurre en tu equipo: Frame no se conecta a tu cuenta de Notion.</p>
+            <p className="text-center text-[11px] text-muted-foreground">{tr('Todo ocurre en tu equipo: Frame no se conecta a tu cuenta de Notion.')}</p>
           </div>
         ) : (
           <>
@@ -261,7 +261,7 @@ export default function NotionImportDialog({
                   value={tableIndex}
                   onChange={(e) => switchTable(Number(e.target.value))}
                   className="rounded-md border border-border bg-background px-2 py-1"
-                  aria-label="Base de datos"
+                  aria-label={tr('Base de datos')}
                 >
                   {tables.map((t, i) => (
                     <option key={t.name} value={i}>
@@ -271,7 +271,7 @@ export default function NotionImportDialog({
                 </select>
               )}
               <span className="font-semibold text-foreground">{table.name}</span>
-              <span className="text-muted-foreground">· {table.rows.length} filas</span>
+              <span className="text-muted-foreground">· {table.rows.length}{' '}{tr('filas')}</span>
               <div className="ml-auto flex overflow-hidden rounded-full border border-border/70">
                 {(['tasks', 'events'] as ImportAs[]).map((value) => (
                   <button
@@ -284,7 +284,7 @@ export default function NotionImportDialog({
                     )}
                   >
                     {value === 'tasks' ? <CheckSquare className="h-3.5 w-3.5" /> : <CalendarDays className="h-3.5 w-3.5" />}
-                    {value === 'tasks' ? 'Como tareas' : 'Como fechas del calendario'}
+                    {value === 'tasks' ? tr('Como tareas') : tr('Como fechas del calendario')}
                   </button>
                 ))}
               </div>
@@ -305,11 +305,11 @@ export default function NotionImportDialog({
             <div className="flex items-center justify-between gap-3 text-xs">
               <label className="flex items-center gap-2">
                 <Checkbox checked={allChosen} onCheckedChange={(v) => (v ? choose(visibleItems) : setSelected(new Set()))} />
-                Seleccionar todo
+                {tr('Seleccionar todo')}
               </label>
               {mapping?.status && (
                 <label className="flex items-center gap-2 text-muted-foreground">
-                  Incluir las ya terminadas
+                  {tr('Incluir las ya terminadas')}
                   <Switch checked={includeDone} onCheckedChange={setIncludeDone} />
                 </label>
               )}
@@ -318,7 +318,7 @@ export default function NotionImportDialog({
             <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-border/70">
               {visibleItems.length === 0 ? (
                 <p className="p-6 text-center text-sm text-muted-foreground">
-                  {importAs === 'events' ? 'Ninguna fila tiene fecha.' : 'No hay filas para importar.'}
+                  {importAs === 'events' ? tr('Ninguna fila tiene fecha.') : tr('No hay filas para importar.')}
                 </p>
               ) : (
                 visibleItems.map((item) => {
@@ -347,12 +347,12 @@ export default function NotionImportDialog({
                       <span className="min-w-0 flex-1">
                         <span className="block truncate font-medium text-foreground">{item.title}</span>
                         <span className="block truncate text-[11px] text-muted-foreground">
-                          {item.date ? (item.startDate ? `${dayLabel(item.startDate)} → ${dayLabel(item.date)}` : dayLabel(item.date)) : 'Sin fecha'}
+                          {item.date ? (item.startDate ? `${dayLabel(item.startDate)} → ${dayLabel(item.date)}` : dayLabel(item.date)) : tr('Sin fecha')}
                           {item.time ? ` · ${item.time}` : ''}
                           {' · '}
-                          {item.courseId ? item.courseLabel : item.courseLabel ? `${item.courseLabel} (sin asignatura igual en Frame)` : 'Sin asignatura'}
-                          {item.done ? ' · terminada' : ''}
-                          {dup ? ' · ya está en Frame' : ''}
+                          {item.courseId ? item.courseLabel : item.courseLabel ? tr('{courseLabel} (sin asignatura igual en Frame)', { courseLabel: item.courseLabel }) : tr('Sin asignatura')}
+                          {item.done ? tr(' · terminada') : ''}
+                          {dup ? tr(' · ya está en Frame') : ''}
                         </span>
                       </span>
                     </label>
@@ -363,11 +363,11 @@ export default function NotionImportDialog({
 
             <div className="flex items-center justify-end gap-2">
               <Button variant="gris" onClick={close}>
-                Cancelar
+                {tr('Cancelar')}
               </Button>
               <Button onClick={runImport} disabled={chosenCount === 0}>
-                Importar {chosenCount}{' '}
-                {importAs === 'tasks' ? (chosenCount === 1 ? 'tarea' : 'tareas') : chosenCount === 1 ? 'fecha' : 'fechas'}
+                {tr('Importar')}{' '}{chosenCount}{' '}
+                {importAs === 'tasks' ? (chosenCount === 1 ? tr('tarea') : tr('tareas')) : chosenCount === 1 ? tr('fecha') : tr('fechas')}
               </Button>
             </div>
           </>

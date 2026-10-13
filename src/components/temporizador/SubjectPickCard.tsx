@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PickCard, groupImageKeys, useSubjectGroups } from '@/components/courses/SubjectPicker';
 import type { Course, Task } from '@/types';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Elegir asignatura y tareas al cerrar o corregir una sesión de estudio. Vive
@@ -61,7 +62,7 @@ export function TaskPickCard({
       </span>
       <span className="block truncate text-[11px] font-semibold text-foreground">{task.name}</span>
       <span className="block text-[10px] text-muted-foreground">
-        {estimate > 0 ? `estimada ${formatEstimate(estimate)} · ` : ''}
+        {estimate > 0 ? `${tr('estimada {time}', { time: formatEstimate(estimate) })} · ` : ''}
         {progress}%
       </span>
       <span className="mt-0.5 block h-0.5 w-full overflow-hidden rounded-full bg-secondary">
@@ -91,7 +92,7 @@ export function SessionSubjectPicker({
   subjectIds,
   taskIds,
   onChange,
-  title = '¿Qué estudiaste?',
+  title = tr('¿Qué estudiaste?'),
   className,
 }: {
   subjectIds: string[];
@@ -176,7 +177,7 @@ export function SessionSubjectPicker({
               variant="ghost"
               className="h-6 w-6 shrink-0 text-muted-foreground hover:text-primary"
               onClick={() => setOpenGroup(null)}
-              title="Volver a las colecciones"
+              title={tr('Volver a las colecciones')}
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
@@ -184,7 +185,7 @@ export function SessionSubjectPicker({
           <span className="truncate">{showBack && current ? current.name : title}</span>
           {subjectIds.length > 0 && (
             <span className="shrink-0 text-xs font-normal text-primary">
-              · {subjectIds.length} {subjectIds.length === 1 ? 'marcada' : 'marcadas'}
+              · {subjectIds.length} {subjectIds.length === 1 ? tr('marcada') : tr('marcadas')}
             </span>
           )}
         </p>
@@ -192,7 +193,7 @@ export function SessionSubjectPicker({
           <div className="relative w-full sm:w-48">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Buscar…"
+              placeholder={tr('Buscar…')}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               className="h-8 border-primary/60 bg-card pl-8 text-xs"
@@ -203,7 +204,7 @@ export function SessionSubjectPicker({
 
       {!hasCourses ? (
         <p className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
-          No has creado ninguna asignatura.
+          {tr('No has creado ninguna asignatura.')}
         </p>
       ) : visibleCourses === null ? (
         /* --- Paso 1: las colecciones --- */
@@ -217,8 +218,8 @@ export function SessionSubjectPicker({
                   imageKeys={groupImageKeys(group)}
                   subtitle={
                     marked > 0
-                      ? `${marked} de ${group.courses.length} marcadas`
-                      : `${group.courses.length} ${group.courses.length === 1 ? 'asignatura' : 'asignaturas'}`
+                      ? tr('{marked} de {length} marcadas', { marked, length: group.courses.length })
+                      : `${group.courses.length} ${group.courses.length === 1 ? tr('asignatura') : tr('asignaturas')}`
                   }
                   onSelect={() => setOpenGroup(group.id)}
                 />
@@ -231,7 +232,7 @@ export function SessionSubjectPicker({
         </div>
       ) : visibleCourses.length === 0 ? (
         <p className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
-          Ninguna asignatura coincide con la búsqueda.
+          {tr('Ninguna asignatura coincide con la búsqueda.')}
         </p>
       ) : (
         <>
@@ -244,7 +245,7 @@ export function SessionSubjectPicker({
                   key={course.id}
                   title={course.name}
                   imageKeys={[`courseImage_${course.id}`]}
-                  subtitle={pending > 0 ? `${pending} ${pending === 1 ? 'tarea' : 'tareas'}` : undefined}
+                  subtitle={pending > 0 ? `${pending} ${pending === 1 ? tr('tarea') : tr('tareas')}` : undefined}
                   selected={chosen.has(course.id)}
                   onSelect={() => toggleSubject(course.id)}
                 />
@@ -260,7 +261,7 @@ export function SessionSubjectPicker({
             >
               <p className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground">
                 <ListChecks className="h-3.5 w-3.5 shrink-0 text-primary" />
-                <span className="truncate">Tareas de {course.name}</span>
+                <span className="truncate">{tr('Tareas de')}{' '}{course.name}</span>
               </p>
               <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                 {(advanceable.get(course.id) ?? []).map((task) => (

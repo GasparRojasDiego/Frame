@@ -28,8 +28,11 @@ import { deleteRemoteAccount, signOut, type DeleteAccountMode } from '@/lib/supa
 import { pushToCloud } from '@/lib/supabase/sync';
 import { cn } from '@/lib/utils';
 import type { UserProfile } from '@/types';
+import { errorText, tr } from '@/lib/i18n';
 
-const CONFIRM_WORD = 'eliminar';
+/** Palabra que se escribe para confirmar el borrado: en el idioma de la
+ *  interfaz, igual que la instrucción que la pide. */
+const confirmWord = () => tr('eliminar');
 const SUPPORT_EMAIL = 'vt.asvent@gmail.com';
 
 const WHAT_IS_LOST = [
@@ -86,7 +89,7 @@ export default function AccountMenu({ userProfile }: { userProfile: UserProfile 
   const isCloud = !!userProfile && !userProfile.isGuest && isSupabaseConfigured;
   /** Invitado con servicio de cuentas disponible: puede vincular Google. */
   const canLink = !!userProfile && userProfile.isGuest && isSupabaseConfigured;
-  const canDelete = confirmText.trim().toLowerCase() === CONFIRM_WORD && understood;
+  const canDelete = confirmText.trim().toLowerCase() === confirmWord() && understood;
 
   /** Cada opción cierra el menú antes de abrir lo suyo. */
   const pick = (action: () => void) => () => {
@@ -172,8 +175,8 @@ export default function AccountMenu({ userProfile }: { userProfile: UserProfile 
       setPhase('confirm');
       toast({
         variant: 'destructive',
-        title: 'No se pudo eliminar la cuenta',
-        description: error instanceof Error ? error.message : String(error),
+        title: tr('No se pudo eliminar la cuenta'),
+        description: errorText(error),
       });
     }
   };
@@ -181,18 +184,18 @@ export default function AccountMenu({ userProfile }: { userProfile: UserProfile 
   const outcomeMessage = (): string => {
     if (!outcome) return '';
     if (outcome.remoteError) {
-      return `Se eliminó todo lo guardado en este dispositivo, pero el borrado en la nube quedó incompleto. Escribe a ${SUPPORT_EMAIL} para terminarlo.`;
+      return tr('Se eliminó todo lo guardado en este dispositivo, pero el borrado en la nube quedó incompleto. Escribe a {SUPPORT_EMAIL} para terminarlo.', { SUPPORT_EMAIL });
     }
     if (!isCloud) {
-      return 'Se eliminó todo lo que la aplicación guardaba en este dispositivo. No había ningún dato en la nube.';
+      return tr('Se eliminó todo lo que la aplicación guardaba en este dispositivo. No había ningún dato en la nube.');
     }
     if (outcome.mode === 'full') {
-      return 'Tu cuenta y todos tus datos se eliminaron por completo, aquí y en la nube.';
+      return tr('Tu cuenta y todos tus datos se eliminaron por completo, aquí y en la nube.');
     }
-    return `Se eliminaron todos tus datos, aquí y en la nube, y se cerró tu sesión. Tu correo sigue registrado como cuenta de acceso: si quieres retirarlo también, escribe a ${SUPPORT_EMAIL}.`;
+    return tr('Se eliminaron todos tus datos, aquí y en la nube, y se cerró tu sesión. Tu correo sigue registrado como cuenta de acceso: si quieres retirarlo también, escribe a {SUPPORT_EMAIL}.', { SUPPORT_EMAIL });
   };
 
-  const deleteTitle = isCloud ? 'Eliminar cuenta permanentemente' : 'Eliminar todos mis datos';
+  const deleteTitle = isCloud ? tr('Eliminar cuenta permanentemente') : tr('Eliminar todos mis datos');
 
   return (
     <>
@@ -203,8 +206,8 @@ export default function AccountMenu({ userProfile }: { userProfile: UserProfile 
           <Button
             variant={menuOpen ? 'default' : 'ghost'}
             size="icon"
-            title="Cerrar sesión, importar de Notion y eliminar cuenta"
-            aria-label="Opciones de la cuenta"
+            title={tr('Cerrar sesión, importar de Notion y eliminar cuenta')}
+            aria-label={tr('Opciones de la cuenta')}
             className={cn(
               'h-9 w-9 rounded-md border',
               menuOpen
@@ -224,10 +227,10 @@ export default function AccountMenu({ userProfile }: { userProfile: UserProfile 
                   size="sm"
                   className="w-full justify-start"
                   onClick={pick(() => setLinkOpen(true))}
-                  title="Pasa tus datos de invitado a una cuenta y quedan respaldados en la nube"
+                  title={tr('Pasa tus datos de invitado a una cuenta y quedan respaldados en la nube')}
                 >
                   <Link2 className="h-4 w-4" />
-                  Vincular mi cuenta
+                  {tr('Vincular mi cuenta')}
                 </Button>
                 <div role="separator" className="mx-2 my-0.5 h-px bg-border/70" />
               </>
@@ -241,7 +244,7 @@ export default function AccountMenu({ userProfile }: { userProfile: UserProfile 
               onClick={pick(() => setLogoutOpen(true))}
             >
               <LogOut className="h-4 w-4" />
-              Cerrar sesión
+              {tr('Cerrar sesión')}
             </Button>
 
             <Button
@@ -249,10 +252,10 @@ export default function AccountMenu({ userProfile }: { userProfile: UserProfile 
               size="sm"
               className="w-full justify-start"
               onClick={pick(() => setNotionOpen(true))}
-              title="Tus tareas y fechas de una base de datos de Notion"
+              title={tr('Tus tareas y fechas de una base de datos de Notion')}
             >
               <NotionLogo className="h-4 w-4" />
-              Importar de Notion
+              {tr('Importar de Notion')}
             </Button>
 
             <Button
@@ -263,7 +266,7 @@ export default function AccountMenu({ userProfile }: { userProfile: UserProfile 
               disabled={!userProfile}
             >
               <Trash2 className="h-4 w-4" />
-              {isCloud ? 'Eliminar cuenta' : 'Eliminar mis datos'}
+              {isCloud ? tr('Eliminar cuenta') : tr('Eliminar mis datos')}
             </Button>
 
             <UsagePanelButton userProfile={userProfile} onOpen={() => setMenuOpen(false)} />
@@ -279,15 +282,15 @@ export default function AccountMenu({ userProfile }: { userProfile: UserProfile 
       <AlertDialog open={logoutOpen} onOpenChange={(open) => !isLoggingOut && setLogoutOpen(open)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Cerrar sesión?</AlertDialogTitle>
+            <AlertDialogTitle>{tr('¿Cerrar sesión?')}</AlertDialogTitle>
             <AlertDialogDescription>
               {isCloud
-                ? 'Se cerrará tu sesión en este dispositivo y volverás a la pantalla de acceso. Antes de salir se guarda un último respaldo, así que tus datos sincronizados se conservan intactos.'
-                : 'Tu sesión es de invitado. Tus datos NO se borran: se quedan en este equipo y vuelves a ellos pulsando «Entrar como invitado». Para no depender de este equipo, mejor vincula antes tu cuenta (en esta misma rueda, «Vincular mi cuenta»): tus datos pasan a tu cuenta y quedan respaldados en la nube.'}
+                ? tr('Se cerrará tu sesión en este dispositivo y volverás a la pantalla de acceso. Antes de salir se guarda un último respaldo, así que tus datos sincronizados se conservan intactos.')
+                : tr('Tu sesión es de invitado. Tus datos NO se borran: se quedan en este equipo y vuelves a ellos pulsando «Entrar como invitado». Para no depender de este equipo, mejor vincula antes tu cuenta (en esta misma rueda, «Vincular mi cuenta»): tus datos pasan a tu cuenta y quedan respaldados en la nube.')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isLoggingOut}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={isLoggingOut}>{tr('Cancelar')}</AlertDialogCancel>
             <AlertDialogAction
               disabled={isLoggingOut}
               onClick={(e) => {
@@ -296,7 +299,7 @@ export default function AccountMenu({ userProfile }: { userProfile: UserProfile 
               }}
             >
               {isLoggingOut && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
-              Cerrar sesión
+              {tr('Cerrar sesión')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -316,14 +319,13 @@ export default function AccountMenu({ userProfile }: { userProfile: UserProfile 
               <AlertDialogHeader>
                 <AlertDialogTitle>
                   {isCloud && outcome?.mode === 'full' && !outcome.remoteError
-                    ? 'Cuenta eliminada'
-                    : 'Datos eliminados'}
+                    ? tr('Cuenta eliminada')
+                    : tr('Datos eliminados')}
                 </AlertDialogTitle>
                 <AlertDialogDescription>{outcomeMessage()}</AlertDialogDescription>
               </AlertDialogHeader>
               <p className="text-xs text-muted-foreground">
-                Los archivos que ya hubieras guardado por tu cuenta en carpetas del equipo (audios
-                exportados, música copiada) siguen donde los dejaste.
+                {tr('Los archivos que ya hubieras guardado por tu cuenta en carpetas del equipo (audios exportados, música copiada) siguen donde los dejaste.')}
               </p>
               <AlertDialogFooter>
                 <AlertDialogAction
@@ -343,7 +345,7 @@ export default function AccountMenu({ userProfile }: { userProfile: UserProfile 
                   }}
                 >
                   {isWiping && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
-                  Volver a la pantalla de acceso
+                  {tr('Volver a la pantalla de acceso')}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </>
@@ -353,12 +355,12 @@ export default function AccountMenu({ userProfile }: { userProfile: UserProfile 
                 <AlertDialogTitle className="text-destructive">{deleteTitle}</AlertDialogTitle>
                 <AlertDialogDescription asChild>
                   <div className="space-y-3">
-                    <p>Se eliminará de forma definitiva:</p>
+                    <p>{tr('Se eliminará de forma definitiva:')}</p>
                     <ul className="list-inside list-disc space-y-1 text-xs">
                       {WHAT_IS_LOST.map((item) => (
-                        <li key={item}>{item}</li>
+                        <li key={item}>{tr(item)}</li>
                       ))}
-                      {isCloud && <li>Tu respaldo y tus métricas en la nube</li>}
+                      {isCloud && <li>{tr('Tu respaldo y tus métricas en la nube')}</li>}
                     </ul>
                   </div>
                 </AlertDialogDescription>
@@ -367,7 +369,7 @@ export default function AccountMenu({ userProfile }: { userProfile: UserProfile 
               <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3">
                 <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
                 <p className="text-xs font-semibold text-destructive">
-                  Esta acción es irreversible. Frame no puede recuperar nada después.
+                  {tr('Esta acción es irreversible. Frame no puede recuperar nada después.')}
                 </p>
               </div>
 
@@ -386,20 +388,19 @@ export default function AccountMenu({ userProfile }: { userProfile: UserProfile 
                     htmlFor="confirmar-borrado-cuenta"
                     className="text-xs font-normal leading-snug text-muted-foreground"
                   >
-                    Entiendo que perderé todos mis datos y que no hay vuelta atrás.
+                    {tr('Entiendo que perderé todos mis datos y que no hay vuelta atrás.')}
                   </Label>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="palabra-confirmacion" className="text-xs">
-                    Escribe <span className="font-bold text-destructive">{CONFIRM_WORD}</span> para
-                    confirmar
+                    {tr('Escribe')}{' '}<span className="font-bold text-destructive">{confirmWord()}</span>{' '}{tr('para confirmar')}
                   </Label>
                   <Input
                     id="palabra-confirmacion"
                     value={confirmText}
                     onChange={(e) => setConfirmText(e.target.value)}
-                    placeholder={CONFIRM_WORD}
+                    placeholder={confirmWord()}
                     autoComplete="off"
                     spellCheck={false}
                     disabled={phase === 'working'}
@@ -408,7 +409,7 @@ export default function AccountMenu({ userProfile }: { userProfile: UserProfile 
               </div>
 
               <AlertDialogFooter>
-                <AlertDialogCancel disabled={phase === 'working'}>Cancelar</AlertDialogCancel>
+                <AlertDialogCancel disabled={phase === 'working'}>{tr('Cancelar')}</AlertDialogCancel>
                 <AlertDialogAction
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   disabled={!canDelete || phase === 'working'}
@@ -420,7 +421,7 @@ export default function AccountMenu({ userProfile }: { userProfile: UserProfile 
                   }}
                 >
                   {phase === 'working' && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
-                  {phase === 'working' ? 'Eliminando…' : 'Eliminar definitivamente'}
+                  {phase === 'working' ? tr('Eliminando…') : tr('Eliminar definitivamente')}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </>

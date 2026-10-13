@@ -56,7 +56,8 @@
         "startMenuFolder": "Frame",
         "installerIcon": "icons/icon.ico",
         "languages": [
-          "Spanish"
+          "Spanish",
+          "English"
         ],
         "displayLanguageSelector": false
       }

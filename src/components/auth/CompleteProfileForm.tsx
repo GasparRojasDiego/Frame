@@ -12,6 +12,7 @@ import { tidyName, updatePersonNames, updateUsername } from '@/lib/supabase/auth
 import { pushToCloud } from '@/lib/supabase/sync';
 import AuthShell, { validateUsername } from '@/components/auth/AuthShell';
 import { SUGGESTED_NAMES_KEY } from '@/components/auth/AuthForm';
+import { tr } from '@/lib/i18n';
 
 interface CompleteProfileFormProps {
   onProfileComplete: (profile: UserProfile) => void;
@@ -71,7 +72,7 @@ export default function CompleteProfileForm({ onProfileComplete }: CompleteProfi
 
     const partialProfile = readStoredProfile();
     if (!partialProfile?.id) {
-      setError('La sesión no es válida. Inicia sesión de nuevo.');
+      setError(tr('La sesión no es válida. Inicia sesión de nuevo.'));
       setIsLoading(false);
       return;
     }
@@ -110,14 +111,14 @@ export default function CompleteProfileForm({ onProfileComplete }: CompleteProfi
       onProfileComplete(fullProfile);
 
       toast({
-        title: 'Perfil listo',
-        description: `Te damos la bienvenida a Frame, ${fullProfile.username}.`,
+        title: tr('Perfil listo'),
+        description: tr('Te damos la bienvenida a Frame, {username}.', { username: fullProfile.username }),
       });
     } catch (err: any) {
       console.error(err);
-      const message = err?.message || 'No se pudo guardar tu perfil. Inténtalo de nuevo.';
+      const message = err?.message || tr('No se pudo guardar tu perfil. Inténtalo de nuevo.');
       setError(message);
-      toast({ variant: 'destructive', title: 'No se pudo guardar tu perfil', description: message });
+      toast({ variant: 'destructive', title: tr('No se pudo guardar tu perfil'), description: message });
     } finally {
       setIsLoading(false);
     }
@@ -127,29 +128,29 @@ export default function CompleteProfileForm({ onProfileComplete }: CompleteProfi
 
   return (
     <AuthShell
-      title="Completa tu perfil"
+      title={tr('Completa tu perfil')}
       description={
         isGuest
-          ? 'Elige cómo quieres que te llame Frame.'
-          : 'Es la primera vez que entras con esta cuenta: elige cómo te llamará Frame.'
+          ? tr('Elige cómo quieres que te llame Frame.')
+          : tr('Es la primera vez que entras con esta cuenta: elige cómo te llamará Frame.')
       }
     >
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} noValidate>
         <CardContent className="space-y-3.5 pt-5">
           {error && (
             <Alert variant="destructive">
-              <AlertTitle>Revisa tus datos</AlertTitle>
+              <AlertTitle>{tr('Revisa tus datos')}</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
           <div className="space-y-1.5">
-            <Label htmlFor="username">Nombre de usuario</Label>
+            <Label htmlFor="username">{tr('Nombre de usuario')}</Label>
             <Input
               id="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               maxLength={12}
-              placeholder="Así te saludará Frame (máx. 12)"
+              placeholder={tr('Así te saludará Frame (máx. 12)')}
               autoComplete="nickname"
               required
               disabled={isLoading}
@@ -159,7 +160,7 @@ export default function CompleteProfileForm({ onProfileComplete }: CompleteProfi
         <CardFooter>
           <Button type="submit" className="w-full" disabled={isLoading || !ready}>
             {isLoading ? <LoaderCircle className="h-4 w-4 animate-spin mr-2" /> : null}
-            Guardar y continuar
+            {tr('Guardar y continuar')}
           </Button>
         </CardFooter>
       </form>

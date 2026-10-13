@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { useActiveSessionSeconds, useCourse } from '@/context/CourseContext';
 import { useRouter } from '@/lib/navigation';
 import { formatHMS } from '@/lib/duration';
+import { tr } from '@/lib/i18n';
 
 /**
  * Despedida de Frame.
@@ -77,30 +78,28 @@ export default function AppCloseGuard() {
           <span className="mb-1 rounded-full bg-primary/15 p-3">
             <PauseCircle className="h-7 w-7 text-primary" />
           </span>
-          <AlertDialogTitle>Tienes una sesión de estudio en curso</AlertDialogTitle>
+          <AlertDialogTitle>{tr('Tienes una sesión de estudio en curso')}</AlertDialogTitle>
           <AlertDialogDescription>
-            Llevas{' '}
+            {tr('Llevas')}{' '}
             <span className="font-semibold tabular-nums text-primary">
               {formatHMS(activeSessionSeconds)}
             </span>{' '}
-            estudiando. Si cierras Frame ahora, ese tiempo se pierde salvo que lo dejes en
-            suspenso o lo registres.
+            {tr('estudiando. Si cierras Frame ahora, ese tiempo se pierde salvo que lo dejes en suspenso o lo registres.')}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <div className="flex flex-col gap-2 pt-2">
-          <Button onClick={handleSuspend}>Pausar la sesión y cerrar</Button>
+          <Button onClick={handleSuspend}>{tr('Pausar la sesión y cerrar')}</Button>
           <Button variant="outline" onClick={handleRegisterNow}>
-            Registrar la sesión ahora
+            {tr('Registrar la sesión ahora')}
           </Button>
           <Button variant="ghost" onClick={handleStay}>
-            Seguir estudiando
+            {tr('Seguir estudiando')}
           </Button>
         </div>
 
         <p className="text-center text-[11px] text-muted-foreground">
-          Si la suspendes, al volver a abrir Frame hoy podrás retomarla justo donde la dejaste,
-          registrarla o descartarla.
+          {tr('Si la suspendes, al volver a abrir Frame hoy podrás retomarla justo donde la dejaste, registrarla o descartarla.')}
         </p>
       </AlertDialogContent>
     </AlertDialog>

@@ -2,11 +2,11 @@ import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { intlLocale } from '@/lib/i18n';
 
 interface CalendarProps {
   selected?: Date
   onSelect: (date: Date) => void
-  locale?: any 
 }
 
 function CustomCalendar({ selected, onSelect }: CalendarProps) {
@@ -25,7 +25,12 @@ function CustomCalendar({ selected, onSelect }: CalendarProps) {
   }, [selected]);
 
 
-  const daysOfWeek = ["Lu", "Ma", "Mi", "Ju", "Vi", "Sá", "Do"];
+  // Iniciales de lunes a domingo en el idioma de la interfaz (el 1-ene-2024 fue lunes).
+  const weekday = new Intl.DateTimeFormat(intlLocale(), { weekday: 'short' });
+  const daysOfWeek = Array.from({ length: 7 }, (_, i) => {
+    const name = weekday.format(new Date(2024, 0, 1 + i));
+    return name.charAt(0).toUpperCase() + name.charAt(1);
+  });
 
   const changeMonth = (amount: number) => {
     setCurrentDate(prev => {
@@ -62,7 +67,7 @@ function CustomCalendar({ selected, onSelect }: CalendarProps) {
           <ChevronLeft className="h-4 w-4" />
         </Button>
         <div className="text-sm font-medium text-center">
-          {new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(currentDate)}
+          {new Intl.DateTimeFormat(intlLocale(), { month: 'long', year: 'numeric' }).format(currentDate)}
         </div>
         <Button variant="ghost" size="icon" onClick={() => changeMonth(1)} className="h-7 w-7 text-foreground">
           <ChevronRight className="h-4 w-4" />

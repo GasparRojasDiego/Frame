@@ -17,6 +17,7 @@ import { useCourse } from '@/context/CourseContext';
 import { useToast } from '@/hooks/use-toast';
 import { addLooseNote } from '@/lib/loose-notes';
 import { cn } from '@/lib/utils';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Crear desde donde sea.
@@ -75,10 +76,10 @@ export default function QuickCreateButton() {
       uid: userProfile.id,
     });
     toast({
-      title: 'Tarea creada',
+      title: tr('Tarea creada'),
       description: course
         ? `${draft.name} · ${course.name}`
-        : `${draft.name} · sin asignatura, la tienes al final de Inicio`,
+        : tr('{name} · sin asignatura, la tienes al final de Inicio', { name: draft.name }),
     });
     setOpen(false);
   };
@@ -89,22 +90,22 @@ export default function QuickCreateButton() {
     if (course) {
       addNote(course.id, text, { kind: 'text' });
       toast({
-        title: 'Anotación guardada',
-        description: `Queda en los recursos de ${course.name}.`,
+        title: tr('Anotación guardada'),
+        description: tr('Queda en los recursos de {name}.', { name: course.name }),
       });
     } else {
       // Sin asignatura: tarjeta en Inicio hasta que se coloque o se borre.
       if (!userProfile || !addLooseNote(userProfile.id, text)) {
         toast({
           variant: 'destructive',
-          title: 'No se pudo guardar',
-          description: 'El almacenamiento del equipo está lleno o no responde.',
+          title: tr('No se pudo guardar'),
+          description: tr('El almacenamiento del equipo está lleno o no responde.'),
         });
         return;
       }
       toast({
-        title: 'Anotación guardada',
-        description: 'Sin asignatura: la tienes en Inicio.',
+        title: tr('Anotación guardada'),
+        description: tr('Sin asignatura: la tienes en Inicio.'),
       });
     }
     setOpen(false);
@@ -135,7 +136,7 @@ export default function QuickCreateButton() {
   const choiceIcon =
     'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-md';
 
-  const title = mode === 'menu' ? 'Crear' : mode === 'task' ? 'Tarea nueva' : 'Anotación nueva';
+  const title = mode === 'menu' ? tr('Crear') : mode === 'task' ? tr('Tarea nueva') : tr('Anotación nueva');
 
   return (
     <>
@@ -145,7 +146,7 @@ export default function QuickCreateButton() {
         variant={open ? 'default' : 'fantasma'}
         className="h-9 w-9 rounded-md border border-primary"
         onClick={() => setOpen(true)}
-        title="Crear una tarea o una anotación"
+        title={tr('Crear una tarea o una anotación')}
       >
         <Plus className="h-5 w-5" />
       </Button>
@@ -161,7 +162,7 @@ export default function QuickCreateButton() {
               línea que la X de cierre (top-4 + 8) y que la flecha de atrás. */}
           <DialogHeader className="relative shrink-0 overflow-hidden px-6 pb-4 pt-[15px]">
             {/* «CREAR», repetido y a la deriva detrás del título. */}
-            <EchoWord word="Crear" />
+            <EchoWord word={tr('Crear')} />
             <div className="relative flex items-center justify-center">
               {/* Atrás: flecha en la esquina superior izquierda, a la altura
                   del título (sustituye a la barra inferior con «Atrás»). */}
@@ -171,8 +172,8 @@ export default function QuickCreateButton() {
                   size="icon"
                   variant="ghost"
                   onClick={goBack}
-                  title="Volver a Crear"
-                  aria-label="Volver a Crear"
+                  title={tr('Volver a Crear')}
+                  aria-label={tr('Volver a Crear')}
                   // `-left-4`: el icono queda a 16 px del borde, simétrico a la X.
                   className="absolute -left-4 top-1/2 h-8 w-8 -translate-y-1/2 rounded-md text-muted-foreground hover:bg-primary/10 hover:text-primary"
                 >
@@ -184,10 +185,10 @@ export default function QuickCreateButton() {
             {/* Fuera del menú, la descripción solo existe para el lector de pantalla. */}
             <DialogDescription className={cn('text-center text-xs', mode === 'menu' ? 'relative' : 'sr-only')}>
               {mode === 'menu'
-                ? 'Sin ir hasta la asignatura.'
+                ? tr('Sin ir hasta la asignatura.')
                 : mode === 'task'
-                  ? 'Elige la asignatura y rellena la tarea.'
-                  : 'Elige la asignatura (o ninguna) y escribe la anotación.'}
+                  ? tr('Elige la asignatura y rellena la tarea.')
+                  : tr('Elige la asignatura (o ninguna) y escribe la anotación.')}
             </DialogDescription>
           </DialogHeader>
           {/* Divisoria con margen a ambos lados, no de borde a borde. */}
@@ -208,9 +209,9 @@ export default function QuickCreateButton() {
                       <ClipboardList className="h-5 w-5" />
                     </span>
                     <span className="min-w-0">
-                      <span className="block text-base font-bold leading-tight text-foreground">Tarea</span>
+                      <span className="block text-base font-bold leading-tight text-foreground">{tr('Tarea')}</span>
                       <span className="block text-[11px] font-medium leading-tight text-muted-foreground">
-                        Con fecha y asignatura
+                        {tr('Con fecha y asignatura')}
                       </span>
                     </span>
                   </span>
@@ -228,9 +229,9 @@ export default function QuickCreateButton() {
                       <NotebookPen className="h-5 w-5" />
                     </span>
                     <span className="min-w-0">
-                      <span className="block text-base font-bold leading-tight text-foreground">Anotación</span>
+                      <span className="block text-base font-bold leading-tight text-foreground">{tr('Anotación')}</span>
                       <span className="block text-[11px] font-medium leading-tight text-muted-foreground">
-                        Texto suelto que recordar
+                        {tr('Texto suelto que recordar')}
                       </span>
                     </span>
                   </span>
@@ -247,7 +248,7 @@ export default function QuickCreateButton() {
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-bold text-muted-foreground">
-                        La tarea
+                        {tr('La tarea')}
                       </span>
                       <span className="h-px flex-1 bg-border" />
                     </div>
@@ -257,7 +258,7 @@ export default function QuickCreateButton() {
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-bold text-muted-foreground">
-                        La anotación
+                        {tr('La anotación')}
                       </span>
                       <span className="h-px flex-1 bg-border" />
                     </div>
@@ -268,8 +269,8 @@ export default function QuickCreateButton() {
                       value={noteText}
                       onChange={setNoteText}
                       onSubmit={saveNote}
-                      placeholder="Lo que no quieres olvidar"
-                      ariaLabel="La anotación"
+                      placeholder={tr('Lo que no quieres olvidar')}
+                      ariaLabel={tr('La anotación')}
                       rows={5}
                       autoFocus
                       toolbarSide
@@ -278,11 +279,11 @@ export default function QuickCreateButton() {
                       <Button
                         onClick={saveNote}
                         disabled={isRichNoteEmpty(noteText)}
-                        title={course ? `Guardar en ${course.name}` : 'Guardar en Inicio, sin asignatura'}
+                        title={course ? tr('Guardar en {name}', { name: course.name }) : tr('Guardar en Inicio, sin asignatura')}
                         className={cn(isRichNoteEmpty(noteText) && 'border border-primary bg-primary/20 text-primary')}
                       >
                         <NotebookPen className="mr-2 h-4 w-4" />
-                        Guardar
+                        {tr('Guardar')}
                       </Button>
                     </div>
                   </div>

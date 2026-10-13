@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Rueda de selección: el valor elegido va en el centro, con el anterior y el
@@ -80,7 +81,7 @@ export function WheelColumn<T extends string | number>({
         className
       )}
     >
-      <button type="button" tabIndex={-1} onClick={() => step(-1)} aria-label={`${label}: anterior`} className="flex h-4 w-full items-center justify-center text-muted-foreground/50 hover:text-primary">
+      <button type="button" tabIndex={-1} onClick={() => step(-1)} aria-label={tr('{label}: anterior', { label })} className="flex h-4 w-full items-center justify-center text-muted-foreground/50 hover:text-primary">
         <ChevronUp className="h-3 w-3" />
       </button>
       <button type="button" tabIndex={-1} onClick={() => step(-1)} className={neighbor}>
@@ -92,7 +93,7 @@ export function WheelColumn<T extends string | number>({
       <button type="button" tabIndex={-1} onClick={() => step(1)} className={neighbor}>
         {format(at(1))}
       </button>
-      <button type="button" tabIndex={-1} onClick={() => step(1)} aria-label={`${label}: siguiente`} className="flex h-4 w-full items-center justify-center text-muted-foreground/50 hover:text-primary">
+      <button type="button" tabIndex={-1} onClick={() => step(1)} aria-label={tr('{label}: siguiente', { label })} className="flex h-4 w-full items-center justify-center text-muted-foreground/50 hover:text-primary">
         <ChevronDown className="h-3 w-3" />
       </button>
     </div>

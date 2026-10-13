@@ -26,7 +26,7 @@ import DayEventsDialog, { type CalendarPanel } from './DayEventsDialog';
 import ClearDaysDialog, { type ClearDaysRequest } from './ClearDaysDialog';
 import type { EventPreset } from './LocalEventDialog';
 import {
-  MONTH_NAMES,
+  monthName,
   buildFills,
   buildTaskItems,
   capitalize,
@@ -52,6 +52,7 @@ import {
   type GridItem,
   type MonthCursor,
 } from './calendar-model';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Calendario LOCAL de la interfaz Calendario: eventos propios, colores de
@@ -100,7 +101,7 @@ function buildItems(
         kindLabelOf(event),
         event.time,
         end !== event.date ? rangeLabel({ start: event.date, end }) : '',
-        remind ? `Aviso ${remind.toLowerCase()}` : '',
+        remind ? tr('Aviso {p}', { p: remind.toLowerCase() }) : '',
         event.description ? richNoteToLine(event.description) : '',
       ]
         .filter(Boolean)
@@ -206,10 +207,10 @@ export default function FullCalendarView({
         void ensureNotificationPermission().catch(() => undefined);
         if (!existing) {
           const when = payload.endDate
-            ? `Del ${rangeLabel({ start: payload.date, end: payload.endDate })}, cada día a las ${payload.time}`
-            : `${shortDayLabel(payload.date)} a las ${payload.time}`;
+            ? tr('Del {rangeLabel}, cada día a las {time}', { rangeLabel: rangeLabel({ start: payload.date, end: payload.endDate }), time: payload.time })
+            : tr('{shortDayLabel} a las {time}', { shortDayLabel: shortDayLabel(payload.date), time: payload.time });
           toast({
-            title: 'Aviso programado',
+            title: tr('Aviso programado'),
             description: `${when} · ${remindLabel(payload.remindBefore)?.toLowerCase()}`,
           });
         }
@@ -244,7 +245,7 @@ export default function FullCalendarView({
       }
       const plan = planClear(localEvents, dayColors, target, todayKey);
       if (plan.eventCount === 0 && plan.colorDays.length === 0) {
-        toast({ title: 'Nada que vaciar', description: 'Esos días no tienen eventos ni color.' });
+        toast({ title: tr('Nada que vaciar'), description: tr('Esos días no tienen eventos ni color.') });
         return;
       }
       setPendingClear({ range: target, plan });
@@ -296,20 +297,20 @@ export default function FullCalendarView({
     const trimmed = pendingClear.plan.update.length;
     const colors = pendingClear.plan.colorDays.length;
     const parts = [
-      removed ? (removed === 1 ? 'se borrará 1 evento' : `se borrarán ${removed} eventos`) : '',
+      removed ? (removed === 1 ? tr('se borrará 1 evento') : tr('se borrarán {removed} eventos', { removed })) : '',
       trimmed
         ? trimmed === 1
-          ? 'se recortará 1 evento que sigue en otros días'
-          : `se recortarán ${trimmed} eventos que siguen en otros días`
+          ? tr('se recortará 1 evento que sigue en otros días')
+          : tr('se recortarán {trimmed} eventos que siguen en otros días', { trimmed })
         : '',
-      colors ? `se quitará el color de ${colors} ${colors === 1 ? 'casilla' : 'casillas'}` : '',
+      colors ? tr('se quitará el color de {colors} {p}', { colors, p: colors === 1 ? tr('casilla') : tr('casillas') }) : '',
     ].filter(Boolean);
-    const text = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} y ${parts[parts.length - 1]}` : parts[0] ?? '';
+    const text = parts.length > 1 ? tr('{list} y {last}', { list: parts.slice(0, -1).join(', '), last: parts[parts.length - 1] }) : parts[0] ?? '';
     return capitalize(text);
   })();
 
   return (
-    <section className={cn('flex min-h-0 flex-col gap-3', className)} aria-label="Calendario local">
+    <section className={cn('flex min-h-0 flex-col gap-3', className)} aria-label={tr('Calendario local')}>
       <MonthBar
         cursor={cursor}
         onPrev={() => setCursor((c) => shiftMonth(c, -1))}
@@ -321,10 +322,10 @@ export default function FullCalendarView({
           size="sm"
           className="h-8 px-3 text-xs"
           onClick={() => openForm('evento')}
-          title={range ? `Crear un evento del ${rangeLabel(range)}` : 'Crear un evento'}
+          title={range ? tr('Crear un evento del {rangeLabel}', { rangeLabel: rangeLabel(range) }) : tr('Crear un evento')}
         >
           <Plus />
-          Evento
+          {tr('Evento')}
         </Button>
       </MonthBar>
 
@@ -351,7 +352,7 @@ export default function FullCalendarView({
           }}
           onClearRequest={requestClear}
           onMonthChange={setCursor}
-          ariaLabel={`${MONTH_NAMES[cursor.month]} de ${cursor.year}`}
+          ariaLabel={`${monthName(cursor.month)} ${cursor.year}`}
         />
       </div>
 
@@ -403,17 +404,17 @@ export default function FullCalendarView({
           <AlertDialogHeader>
             <AlertDialogTitle>
               {pendingClear && pendingClear.range.start === pendingClear.range.end
-                ? `¿Vaciar el ${shortDayLabel(pendingClear.range.start)}?`
-                : `¿Vaciar del ${pendingClear ? rangeLabel(pendingClear.range) : ''}?`}
+                ? tr('¿Vaciar el {shortDayLabel}?', { shortDayLabel: shortDayLabel(pendingClear.range.start) })
+                : tr('¿Vaciar del {p}?', { p: pendingClear ? rangeLabel(pendingClear.range) : '' })}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {clearSummary}. Las tareas no se tocan.
+              {clearSummary}{tr('. Las tareas no se tocan.')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{tr('Cancelar')}</AlertDialogCancel>
             <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={applyClear}>
-              Vaciar
+              {tr('Vaciar')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

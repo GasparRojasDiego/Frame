@@ -1,6 +1,7 @@
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import AuthForm from '@/components/auth/AuthForm';
 import type { UserProfile } from '@/types';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Vincular la cuenta de quien entró como invitado.
@@ -25,9 +26,9 @@ export default function GuestLinkDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[92vh] overflow-y-auto p-0 sm:max-w-md">
-        <DialogTitle className="sr-only">Vincular tu cuenta</DialogTitle>
+        <DialogTitle className="sr-only">{tr('Vincular tu cuenta')}</DialogTitle>
         <DialogDescription className="sr-only">
-          Entra con Google o con tu correo: todo lo que hiciste como invitado pasa a tu cuenta.
+          {tr('Entra con Google o con tu correo: todo lo que hiciste como invitado pasa a tu cuenta.')}
         </DialogDescription>
         {open && <AuthForm linkGuest={guest} />}
       </DialogContent>

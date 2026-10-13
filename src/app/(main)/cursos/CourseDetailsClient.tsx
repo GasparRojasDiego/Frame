@@ -9,6 +9,7 @@ import {
   useSensors,
   DragEndEvent,
 } from '@dnd-kit/core';
+import { dndAccessibility } from '@/lib/dnd-a11y';
 import { restrictToParentElement } from '@dnd-kit/modifiers';
 import {
   arrayMove,
@@ -60,7 +61,6 @@ import {
   Archive,
 } from 'lucide-react';
 import { parseISO, format } from 'date-fns';
-import { es } from 'date-fns/locale';
 
 import type { Course, Note, NoteKind, Task } from '@/types';
 import { cn } from '@/lib/utils';
@@ -77,11 +77,14 @@ import RecordingsSection from '@/components/recordings/RecordingsSection';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useSaveCopy } from '@/hooks/use-save-copy';
 import RichNoteView from '@/components/temporizador/RichNoteView';
 import { richNoteToLine } from '@/lib/rich-note';
 import { ExternalLink } from 'lucide-react';
 import { EchoHeader } from '@/components/shared/EchoWord';
 
+
+import { dateLocale, errorText, tr } from '@/lib/i18n';
 
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -101,6 +104,7 @@ function fileIconFor(mime?: string, fileName?: string) {
 
 function NoteFileAttachment({ note }: { note: Note }) {
   const { toast } = useToast();
+  const saveCopy = useSaveCopy();
   const [dataUrl, setDataUrl] = useState<string | null>(null);
   const [isViewerOpen, setViewerOpen] = useState(false);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
@@ -153,11 +157,11 @@ function NoteFileAttachment({ note }: { note: Note }) {
     if (isTauri()) {
       try {
         await invoke('open_note_file', {
-          fileName: note.fileName || 'archivo',
+          fileName: note.fileName || tr('archivo'),
           dataBase64: dataUrl.split(',')[1] ?? '',
         });
       } catch (e: any) {
-        toast({ variant: 'destructive', title: 'Abrir archivo', description: String(e) });
+        toast({ variant: 'destructive', title: tr('Abrir archivo'), description: errorText(e) });
       }
     } else {
       window.open(dataUrl, '_blank');
@@ -170,11 +174,7 @@ function NoteFileAttachment({ note }: { note: Note }) {
   };
 
   const handleDownload = () => {
-    if (!dataUrl) return;
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = note.fileName || 'archivo';
-    a.click();
+    if (dataUrl) void saveCopy(dataUrl, note.fileName || tr('archivo'));
   };
 
   return (
@@ -185,7 +185,7 @@ function NoteFileAttachment({ note }: { note: Note }) {
           onClick={handleOpen}
           disabled={!dataUrl}
           className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:cursor-default"
-          title={canPreviewInApp ? 'Ver dentro de la app' : 'Abrir con la aplicación del sistema'}
+          title={canPreviewInApp ? tr('Ver dentro de la app') : tr('Abrir con la aplicación del sistema')}
         >
           {isImage && dataUrl ? (
             <img src={dataUrl} alt={note.fileName} className="h-10 w-10 shrink-0 rounded object-cover" />
@@ -194,7 +194,7 @@ function NoteFileAttachment({ note }: { note: Note }) {
           )}
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs font-medium text-foreground transition-colors hover:text-primary">
-              {note.fileName || 'Archivo'}
+              {note.fileName || tr('Archivo')}
             </p>
             {note.content && <p className="truncate text-[11px] text-muted-foreground">{note.content}</p>}
           </div>
@@ -206,7 +206,7 @@ function NoteFileAttachment({ note }: { note: Note }) {
             className="h-7 w-7 shrink-0"
             onClick={() => void handleOpenWithSystem()}
             disabled={!dataUrl}
-            title="Abrir con la aplicación del sistema"
+            title={tr('Abrir con la aplicación del sistema')}
           >
             <ExternalLink className="h-3.5 w-3.5" />
           </Button>
@@ -217,7 +217,7 @@ function NoteFileAttachment({ note }: { note: Note }) {
           className="h-7 w-7 shrink-0"
           onClick={handleDownload}
           disabled={!dataUrl}
-          title="Guardar una copia"
+          title={tr('Guardar una copia')}
         >
           <Download className="h-3.5 w-3.5" />
         </Button>
@@ -226,10 +226,10 @@ function NoteFileAttachment({ note }: { note: Note }) {
       {/* Visor integrado: imágenes y PDF se ven sin salir de Frame */}
       <Dialog open={isViewerOpen} onOpenChange={setViewerOpen}>
         <DialogContent className="max-w-4xl">
-          <EchoHeader word="Archivo">
+          <EchoHeader word={tr('Archivo')}>
             <DialogHeader>
               <DialogTitle className="truncate pr-8 text-base text-primary">
-                {note.fileName || 'Archivo'}
+                {note.fileName || tr('Archivo')}
               </DialogTitle>
             </DialogHeader>
           </EchoHeader>
@@ -303,7 +303,7 @@ const SortableNoteCard = ({
     if (!note.createdAt) return null;
     try {
         const date = parseISO(note.createdAt);
-        const formatted = format(date, "eeee, d 'de' MMMM 'del' yyyy", { locale: es });
+        const formatted = format(date, tr('eeee, d \'de\' MMMM \'del\' yyyy'), { locale: dateLocale() });
         return formatted.charAt(0).toUpperCase() + formatted.slice(1);
     } catch (e) {
         console.error("Invalid date format for note:", e);
@@ -373,15 +373,15 @@ const SortableNoteCard = ({
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                            <AlertDialogTitle>{tr('¿Estás seguro?')}</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Esto eliminará permanentemente esta nota. Esta acción se puede deshacer durante un breve período de tiempo.
+                              {tr('Esto eliminará permanentemente esta nota. Esta acción se puede deshacer durante un breve período de tiempo.')}
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogCancel>{tr('Cancelar')}</AlertDialogCancel>
                             <AlertDialogAction onClick={() => onDelete(note.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                              Eliminar
+                              {tr('Eliminar')}
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
@@ -421,7 +421,7 @@ const SortableNoteCard = ({
                           showSeparator ? "pt-2" : "pt-0"
                       )}
                   >
-                      {note.content ? <RichNoteView text={note.content} /> : <span className="italic text-muted-foreground/50">Haz clic para añadir contenido...</span>}
+                      {note.content ? <RichNoteView text={note.content} /> : <span className="italic text-muted-foreground/50">{tr('Haz clic para añadir contenido...')}</span>}
                   </div>
                 )
               ) : kind === 'url' ? (
@@ -452,9 +452,9 @@ const resourceIconFor = (kind: NoteKind) =>
 
 const resourceTitleFor = (note: Note) => {
   const kind: NoteKind = note.kind ?? 'text';
-  if (kind === 'file') return note.fileName || 'Archivo';
-  if (kind === 'url') return note.content || note.url || 'Enlace';
-  return note.content || 'Recurso sin contenido';
+  if (kind === 'file') return note.fileName || tr('Archivo');
+  if (kind === 'url') return note.content || note.url || tr('Enlace');
+  return note.content || tr('Recurso sin contenido');
 };
 
 interface ManageResourcesDialogProps {
@@ -520,18 +520,18 @@ const ManageResourcesDialog = ({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-lg">
-          <EchoHeader word="Recursos">
+          <EchoHeader word={tr('Recursos')}>
             <DialogHeader>
-              <DialogTitle className="text-base text-primary">Editar recursos</DialogTitle>
+              <DialogTitle className="text-base text-primary">{tr('Editar recursos')}</DialogTitle>
               <DialogDescription className="text-xs">
-                Modifica el contenido, el enlace o la descripción de cada recurso, o elimínalo.
+                {tr('Modifica el contenido, el enlace o la descripción de cada recurso, o elimínalo.')}
               </DialogDescription>
             </DialogHeader>
           </EchoHeader>
 
           {notes.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
-              Esta asignatura ya no tiene recursos.
+              {tr('Esta asignatura ya no tiene recursos.')}
             </p>
           ) : (
             <div className="-mr-1 max-h-[60vh] space-y-2 overflow-y-auto pr-1">
@@ -552,7 +552,7 @@ const ManageResourcesDialog = ({
                             {kind === 'url' && (
                               <Input
                                 value={draft.url ?? ''}
-                                placeholder="https://..."
+                                placeholder={tr('https://...')}
                                 onChange={(e) => setDraft((d) => ({ ...d, url: e.target.value }))}
                                 className="h-8 text-xs"
                                 autoFocus
@@ -561,7 +561,7 @@ const ManageResourcesDialog = ({
                             {kind === 'file' && (
                               <Input
                                 value={draft.fileName ?? ''}
-                                placeholder="Nombre del archivo"
+                                placeholder={tr('Nombre del archivo')}
                                 onChange={(e) => setDraft((d) => ({ ...d, fileName: e.target.value }))}
                                 className="h-8 text-xs"
                                 autoFocus
@@ -578,7 +578,7 @@ const ManageResourcesDialog = ({
                             ) : (
                               <Input
                                 value={draft.content ?? ''}
-                                placeholder="Descripción (opcional)"
+                                placeholder={tr('Descripción (opcional)')}
                                 onChange={(e) => setDraft((d) => ({ ...d, content: e.target.value }))}
                                 className="h-8 text-xs"
                               />
@@ -606,7 +606,7 @@ const ManageResourcesDialog = ({
                               variant="ghost"
                               className="h-7 w-7 text-green-500"
                               onClick={() => saveEdit(note)}
-                              title="Guardar cambios"
+                              title={tr('Guardar cambios')}
                             >
                               <Check className="h-3.5 w-3.5" />
                             </Button>
@@ -615,7 +615,7 @@ const ManageResourcesDialog = ({
                               variant="ghost"
                               className="h-7 w-7 text-muted-foreground"
                               onClick={cancelEdit}
-                              title="Cancelar"
+                              title={tr('Cancelar')}
                             >
                               <X className="h-3.5 w-3.5" />
                             </Button>
@@ -627,7 +627,7 @@ const ManageResourcesDialog = ({
                               variant="ghost"
                               className="h-7 w-7 text-muted-foreground hover:text-primary"
                               onClick={() => startEdit(note)}
-                              title="Editar recurso"
+                              title={tr('Editar recurso')}
                             >
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
@@ -636,7 +636,7 @@ const ManageResourcesDialog = ({
                               variant="ghost"
                               className="h-7 w-7 text-red-500/80 hover:text-red-500"
                               onClick={() => setPendingDelete(note)}
-                              title="Eliminar recurso"
+                              title={tr('Eliminar recurso')}
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
@@ -660,14 +660,13 @@ const ManageResourcesDialog = ({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar este recurso?</AlertDialogTitle>
+            <AlertDialogTitle>{tr('¿Eliminar este recurso?')}</AlertDialogTitle>
             <AlertDialogDescription>
-              «{pendingDelete ? resourceTitleFor(pendingDelete) : ''}» pasará a los Archivados de la
-              asignatura. Podrás deshacerlo durante unos segundos.
+              {tr('«{name}» pasará a los Archivados de la asignatura. Podrás deshacerlo durante unos segundos.', { name: pendingDelete ? resourceTitleFor(pendingDelete) : '' })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{tr('Cancelar')}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
@@ -676,7 +675,7 @@ const ManageResourcesDialog = ({
                 cancelEdit();
               }}
             >
-              Eliminar
+              {tr('Eliminar')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -694,7 +693,7 @@ export default function CourseDetailsClient({ id }: { id: string }) {
    *  URL (?from=<id>) porque la vista de colección es estado local de la
    *  cuadrícula y sin este dato el retroceso caería siempre en la raíz. */
   const fromSpaceId = searchParams.get('from');
-  const backLabel = fromSpaceId ? 'Volver a la colección' : 'Volver a Asignaturas';
+  const backLabel = fromSpaceId ? tr('Volver a la colección') : tr('Volver a Asignaturas');
   const handleBack = () =>
     router.push(fromSpaceId ? `/knowledge?space=${fromSpaceId}` : '/knowledge');
   const highlightTaskId = searchParams.get('highlightTaskId');
@@ -737,9 +736,9 @@ export default function CourseDetailsClient({ id }: { id: string }) {
     () =>
       (
         [
-          ['text', 'Anotaciones'],
-          ['url', 'Enlaces'],
-          ['file', 'Archivos'],
+          ['text', tr('Anotaciones')],
+          ['url', tr('Enlaces')],
+          ['file', tr('Archivos')],
         ] as const
       )
         .map(([kind, label]) => ({ kind, label, items: notes.filter((note) => (note.kind ?? 'text') === kind) }))
@@ -1041,7 +1040,7 @@ export default function CourseDetailsClient({ id }: { id: string }) {
       try {
         const date = parseISO(task.archivedAt);
         key = format(date, 'yyyy-MM');
-        const monthLabel = format(date, "MMMM 'de' yyyy", { locale: es });
+        const monthLabel = format(date, tr('MMMM \'de\' yyyy'), { locale: dateLocale() });
         label = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
       } catch {
         continue;
@@ -1064,8 +1063,8 @@ export default function CourseDetailsClient({ id }: { id: string }) {
   if (!course) {
     return (
       <div className="text-center py-16">
-        <p className="text-lg text-muted-foreground">Asignatura no encontrada. Puede que haya sido eliminada.</p>
-        <Button onClick={() => router.push('/cursos')} className="mt-4">Volver a Asignaturas</Button>
+        <p className="text-lg text-muted-foreground">{tr('Asignatura no encontrada. Puede que haya sido eliminada.')}</p>
+        <Button onClick={() => router.push('/cursos')} className="mt-4">{tr('Volver a Asignaturas')}</Button>
       </div>
     );
   }
@@ -1085,7 +1084,7 @@ export default function CourseDetailsClient({ id }: { id: string }) {
       <Button size="icon" variant="ghost" className={ghostBtn} title={backLabel} onClick={handleBack}>
         <ArrowLeft className="h-4 w-4" />
       </Button>
-      <Button size="icon" variant="ghost" className={ghostBtn} title="Editar asignatura" onClick={handleEditCourse}>
+      <Button size="icon" variant="ghost" className={ghostBtn} title={tr('Editar asignatura')} onClick={handleEditCourse}>
         <Pencil className="h-4 w-4" />
       </Button>
       <AlertDialog>
@@ -1094,21 +1093,21 @@ export default function CourseDetailsClient({ id }: { id: string }) {
             variant="ghost"
             size="icon"
             className={cn(ghostBtn, 'hover:border-red-500 hover:bg-red-500/10 hover:text-red-500')}
-            title="Eliminar asignatura"
+            title={tr('Eliminar asignatura')}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar esta asignatura?</AlertDialogTitle>
+            <AlertDialogTitle>{tr('¿Eliminar esta asignatura?')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Se eliminará «{course.name}» con sus tareas y recursos. Puedes deshacerlo unos segundos con Ctrl+Z.
+              {tr('Se eliminará «{name}» con sus tareas y recursos. Puedes deshacerlo unos segundos con Ctrl+Z.', { name: course.name })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteCourse} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Eliminar</AlertDialogAction>
+            <AlertDialogCancel>{tr('Cancelar')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteCourse} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{tr('Eliminar')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -1116,7 +1115,7 @@ export default function CourseDetailsClient({ id }: { id: string }) {
         size="icon"
         variant="ghost"
         className={cn(ghostBtn, showArchived && 'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground')}
-        title="Archivados: tareas culminadas y recursos eliminados"
+        title={tr('Archivados: tareas culminadas y recursos eliminados')}
         onClick={() => setShowArchived((p) => !p)}
       >
         <Archive className="h-4 w-4" />
@@ -1128,10 +1127,10 @@ export default function CourseDetailsClient({ id }: { id: string }) {
   const bannerStats = (
     <div className="flex w-full flex-col divide-y divide-border/70">
       {[
-        { icon: CheckCircle2, label: 'Tareas culminadas', value: completedCount },
-        { icon: ListChecks, label: 'Tareas pendientes', value: tasks.length },
-        { icon: Clock, label: 'Tiempo de estudio', value: studyLabel },
-        { icon: TimerIcon, label: 'Sesiones de estudio', value: courseSessions.length },
+        { icon: CheckCircle2, label: tr('Tareas culminadas'), value: completedCount },
+        { icon: ListChecks, label: tr('Tareas pendientes'), value: tasks.length },
+        { icon: Clock, label: tr('Tiempo de estudio'), value: studyLabel },
+        { icon: TimerIcon, label: tr('Sesiones de estudio'), value: courseSessions.length },
       ].map(({ icon: Icon, label, value }) => (
         <div key={label} className="flex flex-1 items-center gap-3 py-2">
           <Icon className="h-4 w-4 shrink-0 text-primary" />
@@ -1184,12 +1183,12 @@ export default function CourseDetailsClient({ id }: { id: string }) {
                 value={editedCourseName}
                 onChange={(e) => setEditedCourseName(e.target.value)}
                 className="h-10 text-center text-xl font-bold"
-                placeholder="Nombre de la asignatura"
+                placeholder={tr('Nombre de la asignatura')}
               />
               <Input
                 value={editedTeacherName}
                 onChange={(e) => setEditedTeacherName(e.target.value)}
-                placeholder="Nombre del profesor"
+                placeholder={tr('Nombre del profesor')}
                 className="h-9 text-center text-sm text-muted-foreground"
               />
               <div className="flex items-center gap-1">
@@ -1224,11 +1223,10 @@ export default function CourseDetailsClient({ id }: { id: string }) {
         <div className="mt-8 space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-              <Archive className="h-5 w-5 text-primary" /> Archivados
+              <Archive className="h-5 w-5 text-primary" />{' '}{tr('Archivados')}
             </h3>
             <p className="text-[11px] text-muted-foreground">
-              Registro permanente de esta asignatura. No se puede vaciar: es la
-              base de los informes de rendimiento.
+              {tr('Registro permanente de esta asignatura. No se puede vaciar: es la base de los informes de rendimiento.')}
             </p>
           </div>
 
@@ -1236,19 +1234,19 @@ export default function CourseDetailsClient({ id }: { id: string }) {
           {courseArchivedTasks.length > 0 && (
             <Card className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-4">
               <div>
-                <p className="text-[10px] text-muted-foreground">Tareas culminadas</p>
+                <p className="text-[10px] text-muted-foreground">{tr('Tareas culminadas')}</p>
                 <p className="font-headline text-2xl font-bold tabular-nums text-primary">
                   {archiveSummary.total}
                 </p>
               </div>
               <div>
-                <p className="text-[10px] text-muted-foreground">Tiempo dedicado</p>
+                <p className="text-[10px] text-muted-foreground">{tr('Tiempo dedicado')}</p>
                 <p className="font-headline text-2xl font-bold tabular-nums text-foreground">
                   {archiveSummary.minutes > 0 ? formatMinutes(Math.round(archiveSummary.minutes)) : '—'}
                 </p>
               </div>
               <div>
-                <p className="text-[10px] text-muted-foreground">Entregadas a tiempo</p>
+                <p className="text-[10px] text-muted-foreground">{tr('Entregadas a tiempo')}</p>
                 <p className="font-headline text-2xl font-bold tabular-nums text-foreground">
                   {archiveSummary.withDeadline > 0
                     ? `${archiveSummary.onTime}/${archiveSummary.withDeadline}`
@@ -1256,7 +1254,7 @@ export default function CourseDetailsClient({ id }: { id: string }) {
                 </p>
               </div>
               <div>
-                <p className="text-[10px] text-muted-foreground">Recursos archivados</p>
+                <p className="text-[10px] text-muted-foreground">{tr('Recursos archivados')}</p>
                 <p className="font-headline text-2xl font-bold tabular-nums text-foreground">
                   {courseArchivedNotes.length}
                 </p>
@@ -1267,7 +1265,7 @@ export default function CourseDetailsClient({ id }: { id: string }) {
           {courseArchivedTasks.length === 0 && courseArchivedNotes.length === 0 ? (
             <Card className="flex h-28 items-center justify-center border-dashed">
               <p className="text-sm text-muted-foreground">
-                Aún no hay tareas culminadas ni recursos archivados.
+                {tr('Aún no hay tareas culminadas ni recursos archivados.')}
               </p>
             </Card>
           ) : (
@@ -1281,7 +1279,7 @@ export default function CourseDetailsClient({ id }: { id: string }) {
                       {label}
                     </h4>
                     <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">
-                      {monthTasks.length} {monthTasks.length === 1 ? 'tarea' : 'tareas'}
+                      {monthTasks.length} {monthTasks.length === 1 ? tr('tarea') : tr('tareas')}
                     </span>
                     <span className="h-px flex-1 bg-border" />
                   </div>
@@ -1301,7 +1299,7 @@ export default function CourseDetailsClient({ id }: { id: string }) {
                 <div className="space-y-2.5">
                   <div className="flex flex-wrap items-baseline gap-x-3">
                     <h4 className="text-xs font-bold text-foreground">
-                      Recursos archivados
+                      {tr('Recursos archivados')}
                     </h4>
                     <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
                       {courseArchivedNotes.length}
@@ -1325,7 +1323,7 @@ export default function CourseDetailsClient({ id }: { id: string }) {
                           )}
                           <div className="min-w-0">
                             <p className="truncate text-sm font-semibold text-foreground">
-                              {n.kind === 'file' ? n.fileName ?? 'Archivo' : n.kind === 'url' ? n.url : richNoteToLine(n.content ?? '')}
+                              {n.kind === 'file' ? n.fileName ?? tr('Archivo') : n.kind === 'url' ? n.url : richNoteToLine(n.content ?? '')}
                             </p>
                             {n.kind !== 'text' && n.content && (
                               <p className="truncate text-xs text-muted-foreground">{n.content}</p>
@@ -1333,8 +1331,8 @@ export default function CourseDetailsClient({ id }: { id: string }) {
                           </div>
                         </div>
                         <p className="mt-2 border-t border-border/60 pl-1.5 pt-2 text-[10px] text-muted-foreground/90">
-                          Archivado el{' '}
-                          {format(parseISO(n.archivedAt), "d 'de' MMMM yyyy, h:mm a", { locale: es })}
+                          {tr('Archivado el')}{' '}
+                          {format(parseISO(n.archivedAt), tr('d \'de\' MMMM yyyy, h:mm a'), { locale: dateLocale() })}
                         </p>
                       </Card>
                     ))}
@@ -1353,14 +1351,14 @@ export default function CourseDetailsClient({ id }: { id: string }) {
         {/* Tarjeta de nuevo RECURSO (antes "Nota"): siempre visible a la derecha */}
         <Card className="lg:col-span-3">
           <CardHeader className="flex flex-row items-center justify-between p-4 pb-3">
-            <CardTitle className="text-base">Nuevo recurso</CardTitle>
+            <CardTitle className="text-base">{tr('Nuevo recurso')}</CardTitle>
             <Button
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-muted-foreground hover:text-primary"
               onClick={() => setManageNotesOpen(true)}
               disabled={notes.length === 0}
-              title="Editar o eliminar recursos"
+              title={tr('Editar o eliminar recursos')}
             >
               <SquarePen className="h-4 w-4" />
             </Button>
@@ -1379,7 +1377,7 @@ export default function CourseDetailsClient({ id }: { id: string }) {
                       : 'bg-secondary text-muted-foreground hover:text-foreground'
                   )}
                 >
-                  {k === 'text' ? 'Texto' : k === 'url' ? 'URL' : 'Archivo'}
+                  {k === 'text' ? tr('Texto') : k === 'url' ? 'URL' : tr('Archivo')}
                 </button>
               ))}
             </div>
@@ -1394,7 +1392,7 @@ export default function CourseDetailsClient({ id }: { id: string }) {
                   textarea.style.height = 'auto';
                   textarea.style.height = `${textarea.scrollHeight}px`;
                 }}
-                placeholder="Escribe un recurso rápido..."
+                placeholder={tr('Escribe un recurso rápido...')}
                 className={cn(
                   'resize-none overflow-hidden rounded-md border-0 bg-secondary/40 p-2 focus-visible:ring-0 focus-visible:ring-offset-0',
                   isNewNoteJustifiable && 'text-justify'
@@ -1406,13 +1404,13 @@ export default function CourseDetailsClient({ id }: { id: string }) {
             {newNoteKind === 'url' && (
               <div className="space-y-2">
                 <Input
-                  placeholder="https://..."
+                  placeholder={tr('https://...')}
                   value={newNoteUrl}
                   onChange={(e) => setNewNoteUrl(e.target.value)}
                   className="h-9 text-xs"
                 />
                 <Input
-                  placeholder="Descripción (opcional)"
+                  placeholder={tr('Descripción (opcional)')}
                   value={newNoteContent}
                   onChange={(e) => setNewNoteContent(e.target.value)}
                   className="h-9 text-xs"
@@ -1429,10 +1427,10 @@ export default function CourseDetailsClient({ id }: { id: string }) {
                   className="block w-full text-xs text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-primary/10 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-primary hover:file:bg-primary/20"
                 />
                 {newNoteFile && (
-                  <p className="text-[11px] text-muted-foreground">Seleccionado: {newNoteFile.name}</p>
+                  <p className="text-[11px] text-muted-foreground">{tr('Seleccionado:')}{' '}{newNoteFile.name}</p>
                 )}
                 <Input
-                  placeholder="Descripción (opcional)"
+                  placeholder={tr('Descripción (opcional)')}
                   value={newNoteContent}
                   onChange={(e) => setNewNoteContent(e.target.value)}
                   className="h-9 text-xs"
@@ -1446,14 +1444,14 @@ export default function CourseDetailsClient({ id }: { id: string }) {
                   size="icon"
                   variant="outline"
                   onClick={handleCancelAddNote}
-                  title="Limpiar"
+                  title={tr('Limpiar')}
                   className="h-8 w-8 border-red-500/80 bg-red-500/10 text-red-500/80 hover:bg-red-500/20 hover:text-red-500"
                 >
                   <X className="h-4 w-4" />
                 </Button>
               )}
               <Button size="sm" onClick={handleAddNote} disabled={!canSaveNote || isSavingNote} className="text-xs">
-                {isSavingNote ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : 'Guardar'}
+                {isSavingNote ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : tr('Guardar')}
               </Button>
             </div>
           </CardContent>
@@ -1470,8 +1468,8 @@ export default function CourseDetailsClient({ id }: { id: string }) {
           <div className="flex overflow-hidden rounded-none border border-primary bg-card shadow-md">
             {(
               [
-                ['tasks', 'Tareas'],
-                ['resources', 'Recursos'],
+                ['tasks', tr('Tareas')],
+                ['resources', tr('Recursos')],
               ] as const
             ).map(([value, label], index) => (
               <button
@@ -1508,7 +1506,7 @@ export default function CourseDetailsClient({ id }: { id: string }) {
                 </h3>
                 <span className="h-px flex-1 bg-border" />
               </div>
-              <DndContext
+              <DndContext accessibility={dndAccessibility()}
                 sensors={sensors}
                 collisionDetection={closestCenter}
                 onDragEnd={handleNoteDragEnd}
@@ -1538,7 +1536,7 @@ export default function CourseDetailsClient({ id }: { id: string }) {
           {resourceGroups.length === 0 && (
             <Card className="flex h-24 items-center justify-center border-dashed">
               <p className="text-sm text-muted-foreground">
-                Aún no hay recursos en esta asignatura. Guárdalos con «Nuevo recurso», arriba a la derecha.
+                {tr('Aún no hay recursos en esta asignatura. Guárdalos con «Nuevo recurso», arriba a la derecha.')}
               </p>
             </Card>
           )}
@@ -1550,7 +1548,7 @@ export default function CourseDetailsClient({ id }: { id: string }) {
         /* Solo las tareas PENDIENTES: las culminadas viven en Archivados */
         <div className="space-y-4">
           {tasks && tasks.length > 0 ? (
-            <DndContext
+            <DndContext accessibility={dndAccessibility()}
                 sensors={sensors}
                 collisionDetection={closestCenter}
                 onDragEnd={handleTaskDragEnd}
@@ -1566,7 +1564,7 @@ export default function CourseDetailsClient({ id }: { id: string }) {
             </DndContext>
           ) : (
               <Card className="flex items-center justify-center h-24 border-dashed">
-                  <p className="text-sm text-muted-foreground">No hay tareas pendientes en esta asignatura.</p>
+                  <p className="text-sm text-muted-foreground">{tr('No hay tareas pendientes en esta asignatura.')}</p>
               </Card>
           )}
         </div>

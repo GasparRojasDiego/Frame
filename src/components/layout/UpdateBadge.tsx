@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { Download, LoaderCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getUpdateState, openUpdateDialog, subscribeUpdate, type UpdateState } from '@/lib/updater';
+import { tr } from '@/lib/i18n';
 
 /**
  * Testigo de actualización, al borde derecho del botón "Perfil".
@@ -41,15 +42,15 @@ export default function UpdateBadge({ collapsed = false }: { collapsed?: boolean
     <button
       type="button"
       onClick={openUpdateDialog}
-      aria-label={`Actualizar Frame a la versión ${version}`}
+      aria-label={tr('Actualizar Frame a la versión {version}', { version })}
       title={
         downloading
           ? `Descargando Frame ${version}: ${percent}%`
           : working
-            ? 'Actualizando…'
+            ? tr('Actualizando…')
             : phase === 'ready'
-              ? `Frame ${version} lista para instalar`
-              : `Frame ${version} disponible`
+              ? tr('Frame {version} lista para instalar', { version })
+              : tr('Frame {version} disponible', { version })
       }
       className={cn(
         'relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full',

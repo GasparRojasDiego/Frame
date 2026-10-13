@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { differenceInCalendarDays, format, parseISO } from 'date-fns';
-import { es } from 'date-fns/locale';
 import {
   Bell,
   BellOff,
@@ -56,6 +55,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useCourse } from '@/context/CourseContext';
+import { dateLocale, tr } from '@/lib/i18n';
+import { difficultyLabel, priorityLabel, taskKindLabel } from '@/lib/enum-labels';
 
 // ============================================================
 // Tarjeta de pendiente.
@@ -87,17 +88,17 @@ const PRIORITY_META: Record<TaskPriority, { spine: string; dot: string; text: st
 function describeDueDate(due: Date): { label: string; tone: string } {
   const days = differenceInCalendarDays(due, new Date());
   const year = due.getFullYear() === new Date().getFullYear() ? '' : ' yy';
-  const exact = format(due, `d MMM${year}`, { locale: es });
+  const exact = format(due, `d MMM${year}`, { locale: dateLocale() });
 
   if (days < 0) {
     return {
-      label: days === -1 ? 'Venció ayer' : `Venció hace ${Math.abs(days)} días`,
+      label: days === -1 ? tr('Venció ayer') : tr('Venció hace {p} días', { p: Math.abs(days) }),
       tone: 'text-rose-500 dark:text-rose-400 font-semibold',
     };
   }
-  if (days === 0) return { label: 'Vence hoy', tone: 'text-rose-500 dark:text-rose-400 font-semibold' };
-  if (days === 1) return { label: 'Vence mañana', tone: 'text-amber-500 dark:text-amber-400 font-medium' };
-  if (days <= 7) return { label: `En ${days} días`, tone: 'text-amber-500 dark:text-amber-400' };
+  if (days === 0) return { label: tr('Vence hoy'), tone: 'text-rose-500 dark:text-rose-400 font-semibold' };
+  if (days === 1) return { label: tr('Vence mañana'), tone: 'text-amber-500 dark:text-amber-400 font-medium' };
+  if (days <= 7) return { label: tr('En {days} días', { days }), tone: 'text-amber-500 dark:text-amber-400' };
   return { label: exact, tone: '' };
 }
 
@@ -256,34 +257,34 @@ export const TaskCard = ({
 
   const confirmCopy: Record<Exclude<PendingConfirm, null>, { title: string; text: string; action: string; run: () => void; danger?: boolean }> = {
     complete: {
-      title: '¿Culminar la tarea?',
-      text: 'Pasará a tus tareas culminadas. Puedes deshacerlo unos segundos con Ctrl+Z.',
-      action: 'Culminar',
+      title: tr('¿Culminar la tarea?'),
+      text: tr('Pasará a tus tareas culminadas. Puedes deshacerlo unos segundos con Ctrl+Z.'),
+      action: tr('Culminar'),
       run: () => deleteTask(task.id),
     },
     incomplete: {
-      title: '¿Marcar como incompleta?',
-      text: 'Úsalo cuando la tarea ya no se pudo terminar. Saldrá de tus pendientes sin contar como culminada, y podrás retomarla desde Tareas → Archivadas.',
-      action: 'Marcar como incompleta',
+      title: tr('¿Marcar como incompleta?'),
+      text: tr('Úsalo cuando la tarea ya no se pudo terminar. Saldrá de tus pendientes sin contar como culminada, y podrás retomarla desde Tareas → Archivadas.'),
+      action: tr('Marcar como incompleta'),
       run: () => markTaskIncomplete(task.id),
     },
     delete: {
-      title: '¿Eliminar la tarea?',
-      text: `«${task.name}» se eliminará con sus archivos adjuntos y no quedará en tu historial. Puedes deshacerlo unos segundos con Ctrl+Z.`,
-      action: 'Eliminar',
+      title: tr('¿Eliminar la tarea?'),
+      text: tr('«{name}» se eliminará con sus archivos adjuntos y no quedará en tu historial. Puedes deshacerlo unos segundos con Ctrl+Z.', { name: task.name }),
+      action: tr('Eliminar'),
       run: () => removeTask(task.id),
       danger: true,
     },
     retry: {
-      title: '¿Retomar la tarea?',
-      text: `«${task.name}» vuelve a tus tareas pendientes con el avance que tenía, para intentarlo de nuevo.`,
-      action: 'Retomar',
+      title: tr('¿Retomar la tarea?'),
+      text: tr('«{name}» vuelve a tus tareas pendientes con el avance que tenía, para intentarlo de nuevo.', { name: task.name }),
+      action: tr('Retomar'),
       run: () => restoreIncompleteTask(task.id),
     },
     purge: {
-      title: '¿Eliminar definitivamente?',
-      text: `«${task.name}» se eliminará con sus archivos adjuntos. No se puede deshacer.`,
-      action: 'Eliminar',
+      title: tr('¿Eliminar definitivamente?'),
+      text: tr('«{name}» se eliminará con sus archivos adjuntos. No se puede deshacer.', { name: task.name }),
+      action: tr('Eliminar'),
       run: () => deleteIncompleteTask(task.id),
       danger: true,
     },
@@ -306,7 +307,7 @@ export const TaskCard = ({
       {/* Filo de importancia: el único acento permanente de la tarjeta. */}
       <span
         aria-hidden
-        title={`Importancia ${shownPriority.toLowerCase()}`}
+        title={tr('Importancia {p}', { p: priorityLabel(shownPriority).toLowerCase() })}
         className={cn('absolute inset-y-0 left-0 w-[3px] transition-colors', priorityMeta.spine)}
       />
 
@@ -314,7 +315,7 @@ export const TaskCard = ({
       {isIncomplete && (
         <div className="flex items-center justify-center gap-1.5 border-b border-amber-500/30 bg-amber-500/15 py-1 text-[10px] font-bold text-amber-600 dark:text-amber-400">
           <CircleSlash className="h-3 w-3" />
-          Tarea incompleta
+          {tr('Tarea incompleta')}
         </div>
       )}
 
@@ -343,7 +344,7 @@ export const TaskCard = ({
                   variant="ghost"
                   onClick={handleSaveEdit}
                   disabled={editedName.trim() === ''}
-                  title="Guardar cambios (Ctrl+Enter)"
+                  title={tr('Guardar cambios (Ctrl+Enter)')}
                   className="h-6 w-6 text-emerald-500 hover:text-emerald-600"
                 >
                   <Check className="h-4 w-4" />
@@ -352,7 +353,7 @@ export const TaskCard = ({
                   size="icon"
                   variant="ghost"
                   onClick={handleCancelEdit}
-                  title="Descartar cambios (Esc)"
+                  title={tr('Descartar cambios (Esc)')}
                   className="h-6 w-6 text-rose-500 hover:text-rose-600"
                 >
                   <X className="h-4 w-4" />
@@ -363,7 +364,7 @@ export const TaskCard = ({
                 <Button
                   size="icon"
                   variant="ghost"
-                  title="Editar"
+                  title={tr('Editar')}
                   className="h-6 w-6 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
                   onClick={() => setIsEditing(true)}
                 >
@@ -374,7 +375,7 @@ export const TaskCard = ({
                     <Button
                       size="icon"
                       variant="ghost"
-                      title="Más opciones"
+                      title={tr('Más opciones')}
                       className="h-6 w-6 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100"
                     >
                       <MoreVertical className="h-3.5 w-3.5" />
@@ -387,13 +388,13 @@ export const TaskCard = ({
                         onSelect={() => setConfirm('purge')}
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
-                        Eliminar definitivamente
+                        {tr('Eliminar definitivamente')}
                       </DropdownMenuItem>
                     ) : (
                       <>
                         <DropdownMenuItem onSelect={() => setConfirm('incomplete')}>
                           <CircleSlash className="mr-2 h-4 w-4 text-amber-500" />
-                          Marcar como incompleta
+                          {tr('Marcar como incompleta')}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -401,7 +402,7 @@ export const TaskCard = ({
                           onSelect={() => setConfirm('delete')}
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
-                          Eliminar tarea
+                          {tr('Eliminar tarea')}
                         </DropdownMenuItem>
                       </>
                     )}
@@ -411,7 +412,7 @@ export const TaskCard = ({
                   <Button
                     size="icon"
                     variant="outline"
-                    title="Retomar la tarea"
+                    title={tr('Retomar la tarea')}
                     onClick={() => setConfirm('retry')}
                     className="h-6 w-6 rounded-full border-2 border-amber-500 text-amber-500 hover:bg-amber-500/10 hover:text-amber-500"
                   >
@@ -421,7 +422,7 @@ export const TaskCard = ({
                   <Button
                     size="icon"
                     variant="outline"
-                    title="Culminar la tarea"
+                    title={tr('Culminar la tarea')}
                     onClick={() => setConfirm('complete')}
                     className="group/check h-5 w-5 rounded-full border-2 border-primary text-primary hover:bg-primary/10"
                   >
@@ -440,8 +441,8 @@ export const TaskCard = ({
               ref={nameTextareaRef}
               value={editedName}
               onChange={(e) => setEditedName(e.target.value)}
-              aria-label="Nombre de la tarea"
-              placeholder="Nombre de la tarea"
+              aria-label={tr('Nombre de la tarea')}
+              placeholder={tr('Nombre de la tarea')}
               rows={1}
               autoFocus
               className="block w-full resize-none overflow-hidden rounded-sm border-0 bg-transparent p-0 text-sm font-semibold leading-snug text-foreground outline-none transition-colors placeholder:text-muted-foreground/50 hover:bg-primary/5 focus:bg-primary/5"
@@ -450,8 +451,8 @@ export const TaskCard = ({
               ref={descriptionTextareaRef}
               value={editedDescription}
               onChange={(e) => setEditedDescription(e.target.value)}
-              aria-label="Descripción"
-              placeholder="Añadir una descripción…"
+              aria-label={tr('Descripción')}
+              placeholder={tr('Añadir una descripción…')}
               rows={1}
               className="mt-1 block w-full resize-none overflow-hidden rounded-sm border-0 bg-transparent p-0 text-xs leading-relaxed text-muted-foreground outline-none transition-colors placeholder:text-muted-foreground/50 hover:bg-primary/5 focus:bg-primary/5"
             />
@@ -480,14 +481,13 @@ export const TaskCard = ({
           {isEditing ? (
             <Popover open={isCalendarOpen} onOpenChange={setCalendarOpen}>
               <PopoverTrigger asChild>
-                <button type="button" title="Cambiar la fecha de entrega" className={cn(chip, chipEditable, 'gap-1', due ? due.tone : chipGhost)}>
+                <button type="button" title={tr('Cambiar la fecha de entrega')} className={cn(chip, chipEditable, 'gap-1', due ? due.tone : chipGhost)}>
                   <CalendarIcon className="h-3.5 w-3.5" />
-                  {due ? due.label : 'Sin fecha'}
+                  {due ? due.label : tr('Sin fecha')}
                 </button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
-                  locale={es}
                   selected={editedDueDate}
                   onSelect={(date) => {
                     setEditedDueDate(date instanceof Date ? date : undefined);
@@ -505,7 +505,7 @@ export const TaskCard = ({
                         setCalendarOpen(false);
                       }}
                     >
-                      Quitar fecha
+                      {tr('Quitar fecha')}
                     </Button>
                   </div>
                 )}
@@ -514,7 +514,7 @@ export const TaskCard = ({
           ) : (
             due &&
             shownDue && (
-              <span className={cn(chip, 'gap-1', due.tone)} title={format(shownDue, "d 'de' MMMM 'de' yyyy", { locale: es })}>
+              <span className={cn(chip, 'gap-1', due.tone)} title={format(shownDue, tr('d \'de\' MMMM \'de\' yyyy'), { locale: dateLocale() })}>
                 <CalendarIcon className="h-3.5 w-3.5" />
                 {due.label}
               </span>
@@ -525,9 +525,9 @@ export const TaskCard = ({
           {isEditing ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button type="button" title="Cambiar el tipo" className={cn(chip, chipEditable)}>
+                <button type="button" title={tr('Cambiar el tipo')} className={cn(chip, chipEditable)}>
                   <KindIcon className="h-3.5 w-3.5" />
-                  {shownKind}
+                  {taskKindLabel(shownKind)}
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="min-w-[9rem]">
@@ -536,16 +536,16 @@ export const TaskCard = ({
                   return (
                     <DropdownMenuItem key={k} onSelect={() => setEditedKind(k)} className="text-xs">
                       <Icon className="mr-2 h-3.5 w-3.5 text-primary" />
-                      {k}
+                      {taskKindLabel(k)}
                     </DropdownMenuItem>
                   );
                 })}
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <span className={chip} title={`Tipo: ${shownKind}`}>
+            <span className={chip} title={tr('Tipo: {kind}', { kind: taskKindLabel(shownKind) })}>
               <KindIcon className="h-3.5 w-3.5" />
-              {shownKind}
+              {taskKindLabel(shownKind)}
             </span>
           )}
 
@@ -553,24 +553,24 @@ export const TaskCard = ({
           {isEditing ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button type="button" title="Cambiar la importancia" className={cn(chip, chipEditable, 'font-medium', priorityMeta.text)}>
+                <button type="button" title={tr('Cambiar la importancia')} className={cn(chip, chipEditable, 'font-medium', priorityMeta.text)}>
                   <span className={cn('h-1.5 w-1.5 rounded-full', priorityMeta.dot)} />
-                  {shownPriority}
+                  {priorityLabel(shownPriority)}
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="min-w-[8rem]">
                 {(['Alta', 'Media', 'Baja'] as TaskPriority[]).map((p) => (
                   <DropdownMenuItem key={p} onSelect={() => setEditedPriority(p)} className="text-xs">
                     <span className={cn('mr-2 h-1.5 w-1.5 rounded-full', PRIORITY_META[p].dot)} />
-                    {p}
+                    {priorityLabel(p)}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <span className={cn(chip, 'font-medium', priorityMeta.text)} title={`Importancia ${shownPriority.toLowerCase()}`}>
+            <span className={cn(chip, 'font-medium', priorityMeta.text)} title={tr('Importancia {p}', { p: priorityLabel(shownPriority).toLowerCase() })}>
               <span className={cn('h-1.5 w-1.5 rounded-full', priorityMeta.dot)} />
-              {shownPriority}
+              {priorityLabel(shownPriority)}
             </span>
           )}
 
@@ -578,29 +578,29 @@ export const TaskCard = ({
           {isEditing ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button type="button" title="Cambiar la dificultad" className={cn(chip, chipEditable, !shownDifficulty && chipGhost)}>
+                <button type="button" title={tr('Cambiar la dificultad')} className={cn(chip, chipEditable, !shownDifficulty && chipGhost)}>
                   {shownDifficulty ? <DifficultyBars level={shownDifficulty} /> : null}
-                  {shownDifficulty ?? 'Dificultad'}
+                  {shownDifficulty ? difficultyLabel(shownDifficulty) : tr('Dificultad')}
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="min-w-[9rem]">
                 {TASK_DIFFICULTIES.map((d) => (
                   <DropdownMenuItem key={d} onSelect={() => setEditedDifficulty(d)} className="text-xs">
                     <DifficultyBars level={d} className="mr-2 text-muted-foreground" />
-                    {d}
+                    {difficultyLabel(d)}
                   </DropdownMenuItem>
                 ))}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={() => setEditedDifficulty(undefined)} className="text-xs text-muted-foreground">
-                  Sin definir
+                  {tr('Sin definir')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
             shownDifficulty && (
-              <span className={chip} title={`Dificultad: ${shownDifficulty}`}>
+              <span className={chip} title={tr('Dificultad: {difficulty}', { difficulty: difficultyLabel(shownDifficulty) })}>
                 <DifficultyBars level={shownDifficulty} />
-                {shownDifficulty}
+                {difficultyLabel(shownDifficulty)}
               </span>
             )
           )}
@@ -609,9 +609,9 @@ export const TaskCard = ({
           {isEditing ? (
             <Popover>
               <PopoverTrigger asChild>
-                <button type="button" title="Cambiar el tiempo estimado" className={cn(chip, chipEditable, 'gap-1', shownEstimate <= 0 && chipGhost)}>
+                <button type="button" title={tr('Cambiar el tiempo estimado')} className={cn(chip, chipEditable, 'gap-1', shownEstimate <= 0 && chipGhost)}>
                   <Clock className="h-3.5 w-3.5" />
-                  {shownEstimate > 0 ? formatEstimate(shownEstimate) : 'Estimar'}
+                  {shownEstimate > 0 ? formatEstimate(shownEstimate) : tr('Estimar')}
                 </button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-3" align="start">
@@ -620,7 +620,7 @@ export const TaskCard = ({
             </Popover>
           ) : (
             shownEstimate > 0 && (
-              <span className={cn(chip, 'gap-1')} title="Tiempo estimado: el avance sube con tus sesiones de estudio">
+              <span className={cn(chip, 'gap-1')} title={tr('Tiempo estimado: el avance sube con tus sesiones de estudio')}>
                 <Clock className="h-3.5 w-3.5" />
                 {formatEstimate(shownEstimate)}
               </span>
@@ -637,7 +637,7 @@ export const TaskCard = ({
                   className={cn(chip, chipEditable, 'gap-1', shownReminder.enabled ? 'text-primary' : chipGhost)}
                 >
                   {shownReminder.enabled ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
-                  {shownReminder.enabled ? shownReminder.time : 'Recordar'}
+                  {shownReminder.enabled ? shownReminder.time : tr('Recordar')}
                 </button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-3" align="start">
@@ -691,7 +691,7 @@ export const TaskCard = ({
             value={[progress]}
             onValueChange={(value) => setProgress(value[0])}
             onValueCommit={handleProgressChange}
-            title={`Avance: ${Math.round(progress)}%`}
+            title={tr('Avance: {p}%', { p: Math.round(progress) })}
             className="flex-grow [&_[data-orientation=horizontal]]:h-1 [&>span]:h-1"
           />
           <span className="w-9 shrink-0 text-right text-xs font-semibold tabular-nums text-primary">
@@ -708,7 +708,7 @@ export const TaskCard = ({
               <AlertDialogDescription>{confirmCopy[confirm].text}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogCancel>{tr('Cancelar')}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => {
                   const run = confirmCopy[confirm].run;

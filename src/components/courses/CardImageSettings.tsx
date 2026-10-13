@@ -12,6 +12,7 @@ import {
   useCardImageRatio,
   useReferenceWidth,
 } from '@/lib/card-image-height';
+import { tr } from '@/lib/i18n';
 
 /**
  * Engranaje de Asignaturas: el tamaño de la imagen de todas las tarjetas. Se
@@ -26,14 +27,14 @@ export default function CardImageSettings() {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button size="icon" variant="fantasma" className="h-9 w-9" title="Ajustes de las tarjetas">
+        <Button size="icon" variant="fantasma" className="h-9 w-9" title={tr('Ajustes de las tarjetas')}>
           <Settings className="h-4 w-4" />
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-72 space-y-3">
         <div className="flex items-baseline justify-between gap-2">
-          <p className="text-sm font-semibold text-foreground">Alto de las imágenes</p>
-          <span className="text-xs tabular-nums text-muted-foreground">{height} px</span>
+          <p className="text-sm font-semibold text-foreground">{tr('Alto de las imágenes')}</p>
+          <span className="text-xs tabular-nums text-muted-foreground">{height}{' '}{tr('px')}</span>
         </div>
         <Slider
           min={CARD_IMAGE_MIN}
@@ -41,7 +42,7 @@ export default function CardImageSettings() {
           step={4}
           value={[Math.min(CARD_IMAGE_MAX, Math.max(CARD_IMAGE_MIN, height))]}
           onValueChange={([value]) => setCardImageHeightAt(value, width)}
-          aria-label="Alto de la imagen de las tarjetas"
+          aria-label={tr('Alto de la imagen de las tarjetas')}
         />
         <Button
           size="sm"
@@ -51,7 +52,7 @@ export default function CardImageSettings() {
           onClick={() => setCardImageRatio(CARD_RATIO_DEFAULT)}
         >
           <RotateCcw className="mr-2 h-3.5 w-3.5" />
-          Valor predeterminado
+          {tr('Valor predeterminado')}
         </Button>
       </PopoverContent>
     </Popover>

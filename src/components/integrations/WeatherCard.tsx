@@ -41,6 +41,8 @@ import {
   resolvePlaceName,
 } from '@/lib/weather';
 import { EchoHeader } from '@/components/shared/EchoWord';
+import { errorText, tr } from '@/lib/i18n';
+import { dayShort, fromSunday } from '@/lib/day-names';
 
 const KIND_ICON = {
   sun: Sun,
@@ -59,20 +61,19 @@ function WeatherIcon({ code, isDay, className }: { code: number; isDay: boolean;
   return <Icon className={className} />;
 }
 
-const DAY_NAMES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
 const SOURCE_LABEL: Record<GeoSource, string> = {
-  bigdatacloud: 'Ubicación GPS · nombre por BigDataCloud',
-  photon: 'Ubicación GPS · nombre por Photon (OpenStreetMap)',
-  nominatim: 'Ubicación GPS · nombre por Nominatim (OpenStreetMap)',
-  ip: 'Ubicación aproximada por IP: puede desviarse decenas de kilómetros',
-  manual: 'Ciudad elegida manualmente',
-  coords: 'Sin nombre disponible: se muestran las coordenadas',
+  get bigdatacloud() { return tr('Ubicación GPS · nombre por BigDataCloud'); },
+  get photon() { return tr('Ubicación GPS · nombre por Photon (OpenStreetMap)'); },
+  get nominatim() { return tr('Ubicación GPS · nombre por Nominatim (OpenStreetMap)'); },
+  get ip() { return tr('Ubicación aproximada por IP: puede desviarse decenas de kilómetros'); },
+  get manual() { return tr('Ciudad elegida manualmente'); },
+  get coords() { return tr('Sin nombre disponible: se muestran las coordenadas'); },
 };
 
 function placeSourceLabel(p: WeatherPlace): string {
   if (p.source) return SOURCE_LABEL[p.source];
-  return p.auto ? 'Ubicación detectada automáticamente' : SOURCE_LABEL.manual;
+  return p.auto ? tr('Ubicación detectada automáticamente') : SOURCE_LABEL.manual;
 }
 
 /** "Distrito de Miraflores, Lima": lo justo para reconocer el sitio de un vistazo. */
@@ -108,7 +109,7 @@ export default function WeatherCard() {
       try {
         setWeather(await fetchWeather(p));
       } catch (e: any) {
-        toast({ variant: 'destructive', title: 'Clima', description: String(e.message ?? e) });
+        toast({ variant: 'destructive', title: tr('Clima'), description: errorText(e) });
       } finally {
         setIsLoading(false);
       }
@@ -212,7 +213,7 @@ export default function WeatherCard() {
     try {
       setResults(await searchPlaces(query.trim()));
     } catch (e: any) {
-      toast({ variant: 'destructive', title: 'Clima', description: String(e.message ?? e) });
+      toast({ variant: 'destructive', title: tr('Clima'), description: errorText(e) });
     } finally {
       setIsSearching(false);
     }
@@ -236,18 +237,16 @@ export default function WeatherCard() {
         // El diálogo se cierra al elegir, así que la confirmación va por aviso:
         // es el momento exacto en que el usuario quiere comprobar el acierto.
         toast({
-          title: 'Clima',
+          title: tr('Clima'),
           description: detected.resolved
-            ? `Ubicación detectada: ${placeFullLabel(detected)}${
-                detected.accuracy != null ? ` (±${Math.round(detected.accuracy)} m)` : ''
-              }`
-            : 'Ubicación detectada, pero no se pudo obtener el nombre del lugar. Se muestran las coordenadas.',
+            ? tr('Ubicación detectada: {placeFullLabel}{p}', { placeFullLabel: placeFullLabel(detected), p: detected.accuracy != null ? ` (±${Math.round(detected.accuracy)} m)` : '' })
+            : tr('Ubicación detectada, pero no se pudo obtener el nombre del lugar. Se muestran las coordenadas.'),
         });
       } else {
         toast({
           variant: 'destructive',
-          title: 'Clima',
-          description: 'No se pudo detectar tu ubicación. Busca tu ciudad manualmente.',
+          title: tr('Clima'),
+          description: tr('No se pudo detectar tu ubicación. Busca tu ciudad manualmente.'),
         });
       }
     } finally {
@@ -269,24 +268,24 @@ export default function WeatherCard() {
             isLocating ? (
               <div className="flex items-center justify-center gap-3 py-4 text-muted-foreground sm:py-2">
                 <LoaderCircle className="h-6 w-6 animate-spin text-primary" />
-                <p className="text-sm">Detectando tu ubicación…</p>
+                <p className="text-sm">{tr('Detectando tu ubicación…')}</p>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center gap-3 py-4 sm:flex-row sm:justify-between sm:py-2">
                 <div className="flex items-center gap-3 text-muted-foreground">
                   <CloudSun className="h-8 w-8 text-primary" />
                   <div>
-                    <p className="text-sm font-semibold text-foreground">Pronóstico del clima</p>
+                    <p className="text-sm font-semibold text-foreground">{tr('Pronóstico del clima')}</p>
                     <p className="text-xs">
                       {autoFailed
-                        ? 'No pudimos detectar tu ubicación: elige tu ciudad.'
-                        : 'Elige tu ciudad para ver el pronóstico en tu Inicio.'}
+                        ? tr('No pudimos detectar tu ubicación: elige tu ciudad.')
+                        : tr('Elige tu ciudad para ver el pronóstico en tu Inicio.')}
                     </p>
                   </div>
                 </div>
                 <Button size="sm" className="text-xs" onClick={() => setPickerOpen(true)}>
                   <MapPin className="mr-2 h-4 w-4" />
-                  Elegir ubicación
+                  {tr('Elegir ubicación')}
                 </Button>
               </div>
             )
@@ -309,7 +308,7 @@ export default function WeatherCard() {
                       {weather ? `${weather.current.temperature}°` : '--°'}
                     </span>
                     <span className="text-sm text-muted-foreground">
-                      {weather ? weatherLabel(weather.current.weatherCode) : 'Cargando…'}
+                      {weather ? weatherLabel(weather.current.weatherCode) : tr('Cargando…')}
                     </span>
                   </div>
                   <TooltipProvider delayDuration={200}>
@@ -327,7 +326,7 @@ export default function WeatherCard() {
                             <MapPin className="h-3 w-3 shrink-0" />
                           )}
                           <span className="truncate">
-                            {isResolvingName ? 'Identificando el lugar…' : placeShortLabel(place)}
+                            {isResolvingName ? tr('Identificando el lugar…') : placeShortLabel(place)}
                           </span>
                         </button>
                       </TooltipTrigger>
@@ -338,12 +337,12 @@ export default function WeatherCard() {
                         </p>
                         {place.accuracy != null && (
                           <p className="text-muted-foreground">
-                            Precisión GPS: ±{Math.round(place.accuracy)} m
+                            {tr('Precisión GPS: ±')}{Math.round(place.accuracy)} m
                           </p>
                         )}
                         <p className="text-muted-foreground">{placeSourceLabel(place)}</p>
                         <p className="pt-1 text-muted-foreground opacity-80">
-                          Clic para cambiar la ubicación
+                          {tr('Clic para cambiar la ubicación')}
                         </p>
                       </TooltipContent>
                     </Tooltip>
@@ -352,12 +351,12 @@ export default function WeatherCard() {
                 {weather && (
                   <div className="hidden flex-col gap-1 pl-4 text-xs text-muted-foreground md:flex">
                     <span className="flex items-center gap-1.5">
-                      <Droplets className="h-3.5 w-3.5 text-primary" /> {weather.current.humidity}% humedad
+                      <Droplets className="h-3.5 w-3.5 text-primary" /> {weather.current.humidity}{tr('% humedad')}
                     </span>
                     <span className="flex items-center gap-1.5">
-                      <Wind className="h-3.5 w-3.5 text-primary" /> {weather.current.windSpeed} km/h
+                      <Wind className="h-3.5 w-3.5 text-primary" /> {weather.current.windSpeed}{' '}{tr('km/h')}
                     </span>
-                    <span>Sensación: {weather.current.apparent}°</span>
+                    <span>{tr('Sensación:')}{' '}{weather.current.apparent}°</span>
                   </div>
                 )}
               </div>
@@ -372,13 +371,13 @@ export default function WeatherCard() {
                     'hidden h-[66px] min-w-0 flex-1 flex-wrap justify-center gap-1 overflow-hidden border-x border-border/60 px-3 md:flex',
                     isLoading && 'opacity-60'
                   )}
-                  aria-label="Pronóstico de las próximas horas"
+                  aria-label={tr('Pronóstico de las próximas horas')}
                 >
                   {weather.hourly.map((hour) => (
                     <div
                       key={hour.time}
                       className="flex h-[66px] w-[52px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-md border border-border/60"
-                      title={`${weatherLabel(hour.weatherCode)} · ${hour.precipProb}% lluvia`}
+                      title={tr('{weatherLabel} · {precipProb}% lluvia', { weatherLabel: weatherLabel(hour.weatherCode), precipProb: hour.precipProb })}
                     >
                       <span className="text-[10px] font-semibold text-muted-foreground">
                         {hour.time.slice(11, 16)}
@@ -400,10 +399,10 @@ export default function WeatherCard() {
                       <div
                         key={day.date}
                         className="flex w-14 flex-col items-center gap-1 rounded-md bg-secondary/50 py-2"
-                        title={`${weatherLabel(day.weatherCode)} · ${day.precipProb}% lluvia`}
+                        title={tr('{weatherLabel} · {precipProb}% lluvia', { weatherLabel: weatherLabel(day.weatherCode), precipProb: day.precipProb })}
                       >
                         <span className="text-[10px] font-semibold text-muted-foreground">
-                          {DAY_NAMES[d.getDay()]}
+                          {dayShort(fromSunday(d.getDay()))}
                         </span>
                         <WeatherIcon code={day.weatherCode} isDay className="h-5 w-5 text-primary" />
                         <span className="text-[11px] font-semibold text-foreground">
@@ -422,11 +421,11 @@ export default function WeatherCard() {
       {/* Selector de ubicación */}
       <Dialog open={isPickerOpen} onOpenChange={setPickerOpen}>
         <DialogContent className="max-w-md">
-          <EchoHeader word="Ubicación">
+          <EchoHeader word={tr('Ubicación')}>
             <DialogHeader>
-              <DialogTitle className="text-xl text-primary font-bold text-center">Ubicación del clima</DialogTitle>
+              <DialogTitle className="text-xl text-primary font-bold text-center">{tr('Ubicación del clima')}</DialogTitle>
               <DialogDescription className="text-center">
-                Detección automática por GPS, o busca tu ciudad manualmente.
+                {tr('Detección automática por GPS, o busca tu ciudad manualmente.')}
               </DialogDescription>
             </DialogHeader>
           </EchoHeader>
@@ -441,11 +440,11 @@ export default function WeatherCard() {
             ) : (
               <LocateFixed className="mr-2 h-4 w-4" />
             )}
-            Usar mi ubicación (GPS)
+            {tr('Usar mi ubicación (GPS)')}
           </Button>
           {place?.auto && (
             <p className="text-center text-xs text-muted-foreground">
-              Detectado: <span className="font-medium text-foreground">{placeFullLabel(place)}</span>
+              {tr('Detectado:')}{' '}<span className="font-medium text-foreground">{placeFullLabel(place)}</span>
               <br />
               <span className="opacity-80">
                 {formatCoords(place.latitude, place.longitude)}
@@ -459,7 +458,7 @@ export default function WeatherCard() {
           </div>
           <div className="flex gap-2">
             <Input
-              placeholder="Ej: Lima, Madrid, Bogotá…"
+              placeholder={tr('Ej: Lima, Madrid, Bogotá…')}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && void handleSearch()}

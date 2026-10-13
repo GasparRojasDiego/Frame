@@ -36,6 +36,8 @@ import {
   weekdayName,
   type DayRange,
 } from './calendar-model';
+import { tr } from '@/lib/i18n';
+import { priorityLabel } from '@/lib/enum-labels';
 
 // ============================================================
 // EL recuadro del calendario LOCAL. Uno solo, con dos caras:
@@ -105,13 +107,13 @@ function DayView({
             <span className="flex h-10 w-10 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-primary">
               <CalendarDays className="h-5 w-5" />
             </span>
-            <p className="text-sm text-muted-foreground">Nada para este día.</p>
+            <p className="text-sm text-muted-foreground">{tr('Nada para este día.')}</p>
           </div>
         )}
 
         {dayEvents.length > 0 && (
           <section className="space-y-2">
-            <SectionLabel>Eventos</SectionLabel>
+            <SectionLabel>{tr('Eventos')}</SectionLabel>
             <ul className="space-y-1.5">
               {dayEvents.map((event) => {
                 const end = eventEnd(event);
@@ -120,10 +122,10 @@ function DayView({
                 const remind = event.time ? remindLabel(event.remindBefore) : null;
                 const details = [
                   kindLabelOf(event),
-                  event.time ?? 'Todo el día',
+                  event.time ?? tr('Todo el día'),
                   multi ? rangeLabel({ start: event.date, end }) : '',
-                  remind ? `Aviso ${remind.toLowerCase()}` : '',
-                  past ? 'Pasado' : '',
+                  remind ? tr('Aviso {p}', { p: remind.toLowerCase() }) : '',
+                  past ? tr('Pasado') : '',
                 ]
                   .filter(Boolean)
                   .join(' · ');
@@ -133,7 +135,7 @@ function DayView({
                     {confirming === event.id ? (
                       <div className="flex items-center gap-2 rounded-lg border border-destructive/60 bg-destructive/10 px-3 py-2">
                         <p className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
-                          ¿Eliminar «{event.title}»{multi ? ' en todos sus días' : ''}?
+                          {multi ? tr('¿Eliminar «{title}» en todos sus días?', { title: event.title }) : tr('¿Eliminar «{title}»?', { title: event.title })}
                         </p>
                         <Button
                           size="sm"
@@ -142,7 +144,7 @@ function DayView({
                           onClick={() => setConfirming(null)}
                           autoFocus
                         >
-                          No
+                          {tr('No')}
                         </Button>
                         <Button
                           size="sm"
@@ -153,7 +155,7 @@ function DayView({
                             setConfirming(null);
                           }}
                         >
-                          Eliminar
+                          {tr('Eliminar')}
                         </Button>
                       </div>
                     ) : (
@@ -168,7 +170,7 @@ function DayView({
                             past && 'opacity-55 saturate-50'
                           )}
                           style={tintVar(event.color)}
-                          title="Editar"
+                          title={tr('Editar')}
                         >
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-sm font-semibold">{event.title}</span>
@@ -180,8 +182,8 @@ function DayView({
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"
-                          aria-label={`Eliminar «${event.title}»`}
-                          title="Eliminar"
+                          aria-label={tr('Eliminar «{title}»', { title: event.title })}
+                          title={tr('Eliminar')}
                           onClick={() => setConfirming(event.id)}
                         >
                           <Trash2 />
@@ -197,7 +199,7 @@ function DayView({
 
         {tasks.length > 0 && (
           <section className="space-y-2">
-            <SectionLabel>Tareas que vencen</SectionLabel>
+            <SectionLabel>{tr('Tareas que vencen')}</SectionLabel>
             <ul className="space-y-1.5">
               {tasks.map((task) => (
                 <li
@@ -208,15 +210,15 @@ function DayView({
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-foreground">{task.name}</p>
                     <p className="truncate text-[11px] text-muted-foreground">
-                      {task.courseName || 'Sin asignatura'} · Importancia {String(task.priority).toLowerCase()}
+                      {task.courseName || tr('Sin asignatura')}{' · '}{tr('Importancia {level}', { level: priorityLabel(task.priority).toLowerCase() })}
                     </p>
                   </div>
                   <Button
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 shrink-0 text-muted-foreground hover:text-primary"
-                    aria-label={`Ver «${task.name}» en Tareas`}
-                    title="Ver en Tareas"
+                    aria-label={tr('Ver «{name}» en Tareas', { name: task.name })}
+                    title={tr('Ver en Tareas')}
                     onClick={() => onNavigate(`/tareas?highlightTaskId=${task.id}`)}
                   >
                     <ListTodo />
@@ -226,8 +228,8 @@ function DayView({
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 shrink-0 text-muted-foreground hover:text-primary"
-                      aria-label={`Ir a la asignatura de «${task.name}»`}
-                      title="Ir a la asignatura"
+                      aria-label={tr('Ir a la asignatura de «{name}»', { name: task.name })}
+                      title={tr('Ir a la asignatura')}
                       onClick={() => onNavigate(`/cursos/?id=${task.courseId}&highlightTaskId=${task.id}`)}
                     >
                       <BookOpen />
@@ -240,8 +242,8 @@ function DayView({
         )}
 
         <section className="space-y-2.5">
-          <SectionLabel>Color de la casilla</SectionLabel>
-          <div className="flex flex-wrap items-center gap-2.5" role="group" aria-label="Color de la casilla">
+          <SectionLabel>{tr('Color de la casilla')}</SectionLabel>
+          <div className="flex flex-wrap items-center gap-2.5" role="group" aria-label={tr('Color de la casilla')}>
             {PAINT_COLORS.map(({ hex, name }) => (
               <Swatch key={hex} color={hex} name={name} active={fill === hex} onClick={() => onPaint(hex)} />
             ))}
@@ -252,11 +254,11 @@ function DayView({
         <div className="grid grid-cols-2 gap-2">
           <Button variant="fantasma" onClick={() => onCreate('evento')}>
             <CalendarPlus />
-            Evento
+            {tr('Evento')}
           </Button>
           <Button variant="fantasma" onClick={() => onCreate('recordatorio')}>
             <BellPlus />
-            Recordatorio
+            {tr('Recordatorio')}
           </Button>
         </div>
       </div>

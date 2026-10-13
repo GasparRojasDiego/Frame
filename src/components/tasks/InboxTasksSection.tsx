@@ -16,6 +16,7 @@ import { useCourse } from '@/context/CourseContext';
 import { useToast } from '@/hooks/use-toast';
 import type { Task } from '@/types';
 import EchoWord from '@/components/shared/EchoWord';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Bandeja de tareas sin asignatura (final de Inicio).
@@ -45,8 +46,8 @@ function AssignDialog({
     if (!task || !course) return;
     updateTask(task.id, { courseId: course.id, courseName: course.name });
     toast({
-      title: 'Tarea colocada',
-      description: `«${task.name}» ya pertenece a ${course.name}.`,
+      title: tr('Tarea colocada'),
+      description: tr('«{name}» ya pertenece a {name2}.', { name: task.name, name2: course.name }),
     });
     onClose();
   };
@@ -63,9 +64,9 @@ function AssignDialog({
     >
       <DialogContent className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
         <DialogHeader className="shrink-0 px-6 pb-4 pt-6 relative overflow-hidden">
-          <EchoWord word="Colocar" />
+          <EchoWord word={tr('Colocar')} />
           <DialogTitle className="text-center text-lg font-bold text-primary">
-            Colocar en una asignatura
+            {tr('Colocar en una asignatura')}
           </DialogTitle>
           <DialogDescription className="text-center text-xs">
             {task ? `«${task.name}»` : ''}
@@ -79,10 +80,10 @@ function AssignDialog({
 
         <DialogFooter className="shrink-0 border-t px-6 py-3">
           <Button variant="ghost" size="sm" onClick={onClose}>
-            Cancelar
+            {tr('Cancelar')}
           </Button>
           <Button size="sm" onClick={assign} disabled={!course}>
-            Colocar
+            {tr('Colocar')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -107,14 +108,13 @@ export default function InboxTasksSection() {
 
       <div className="flex flex-wrap items-center justify-center gap-2 text-center">
         <Inbox className="h-5 w-5 text-primary" />
-        <h2 className="font-headline text-lg font-bold text-foreground">Sin asignatura</h2>
+        <h2 className="font-headline text-lg font-bold text-foreground">{tr('Sin asignatura')}</h2>
         <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary">
           {loose.length}
         </span>
       </div>
       <p className="text-center text-xs text-muted-foreground">
-        Apuntadas en caliente desde la barra superior. Edítalas aquí mismo y colócalas en su
-        asignatura cuando sepas cuál es.
+        {tr('Apuntadas en caliente desde la barra superior. Edítalas aquí mismo y colócalas en su asignatura cuando sepas cuál es.')}
       </p>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -128,7 +128,7 @@ export default function InboxTasksSection() {
               onClick={() => setAssigning(task)}
             >
               <Layers className="mr-2 h-3.5 w-3.5" />
-              Colocar en una asignatura
+              {tr('Colocar en una asignatura')}
             </Button>
           </div>
         ))}

@@ -27,7 +27,6 @@ import {
   parseISO,
   startOfISOWeek,
 } from 'date-fns';
-import { es } from 'date-fns/locale';
 import {
   ChartColumn,
   ChevronLeft,
@@ -57,14 +56,16 @@ import {
   periodRange,
   PRIORITIES,
   shiftRange,
-  UNASSIGNED_SUBJECT,
+  unassignedSubject,
   type DayIndex,
   type MetricsOptions,
   type PeriodScope,
 } from '@/lib/academic-metrics';
+import { dateLocale, tr } from '@/lib/i18n';
+import { dayInitial, dayInitials, fromSunday } from '@/lib/day-names';
+import { priorityLabel } from '@/lib/enum-labels';
 
-const WEEKDAY_LABELS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-const OTHER_SUBJECTS = 'Otras';
+const otherSubjects = () => tr('Otras');
 const HEAT_LEVELS = ['bg-muted', 'bg-primary/25', 'bg-primary/45', 'bg-primary/70', 'bg-primary'];
 /** Columnas de la rejilla de cifras secundarias según cuántas hay (de 2 a 6):
  *  siempre filas completas. Clases escritas enteras para que Tailwind las vea. */
@@ -98,9 +99,9 @@ function groupTopSubjects(
   const toItem = ([name, value]: [string, number]) => ({ name, value });
   if (sorted.length <= limit) return { items: sorted.map(toItem), othersLabel: null };
   const head = sorted.slice(0, limit);
-  const othersLabel = head.some(([name]) => name === OTHER_SUBJECTS)
-    ? 'Otras asignaturas'
-    : OTHER_SUBJECTS;
+  const othersLabel = head.some(([name]) => name === otherSubjects())
+    ? tr('Otras asignaturas')
+    : otherSubjects();
   const rest = sorted.slice(limit).reduce((acc, [, minutes]) => acc + minutes, 0);
   return { items: [...head.map(toItem), { name: othersLabel, value: rest }], othersLabel };
 }
@@ -118,10 +119,10 @@ function Delta({
 }) {
   const diff = now - before;
   if (before === 0 && now === 0) {
-    return <span className="text-[11px] text-muted-foreground/70">Sin datos previos</span>;
+    return <span className="text-[11px] text-muted-foreground/70">{tr('Sin datos previos')}</span>;
   }
   if (Math.abs(diff) < 0.5) {
-    return <span className="text-[11px] text-muted-foreground/70">Igual que {scopeLabel}</span>;
+    return <span className="text-[11px] text-muted-foreground/70">{tr('Igual que')}{' '}{scopeLabel}</span>;
   }
   const Icon = diff > 0 ? TrendingUp : TrendingDown;
   const magnitude = formatValue ? formatValue(Math.abs(diff)) : String(Math.round(Math.abs(diff)));
@@ -134,7 +135,7 @@ function Delta({
     >
       <Icon className="h-3 w-3 shrink-0" />
       {diff > 0 ? '+' : '−'}
-      {magnitude} vs. {scopeLabel}
+      {magnitude}{' '}{tr('vs.')}{' '}{scopeLabel}
     </span>
   );
 }
@@ -220,7 +221,7 @@ export default function AcademicAnalytics() {
   // 0 = periodo actual. Solo se navega hacia atrás: el futuro no tiene datos.
   const [offset, setOffset] = useState(0);
 
-  const scopeLabel = scope === 'week' ? 'la semana anterior' : 'el mes anterior';
+  const scopeLabel = scope === 'week' ? tr('la semana anterior') : tr('el mes anterior');
 
   const activeHabits = useMemo(() => habits.filter((h) => !h.isArchived), [habits]);
 
@@ -234,14 +235,14 @@ export default function AcademicAnalytics() {
   const { start, end } = useMemo(() => periodRange(scope, offset), [scope, offset]);
 
   const periodLabel = useMemo(() => {
-    if (scope === 'month') return capitalize(format(start, 'MMMM yyyy', { locale: es }));
-    const startMonth = format(start, 'MMMM', { locale: es });
-    const endMonth = format(end, 'MMMM', { locale: es });
+    if (scope === 'month') return capitalize(format(start, tr('MMMM yyyy'), { locale: dateLocale() }));
+    const startMonth = format(start, tr('MMMM'), { locale: dateLocale() });
+    const endMonth = format(end, tr('MMMM'), { locale: dateLocale() });
     const range =
       startMonth === endMonth
-        ? `${format(start, 'd')} - ${format(end, 'd')} de ${startMonth}`
-        : `${format(start, 'd')} de ${startMonth} - ${format(end, 'd')} de ${endMonth}`;
-    return `Semana ${getISOWeek(start)} · ${range}`;
+        ? tr('{p} - {p2} de {startMonth}', { p: format(start, 'd'), p2: format(end, 'd'), startMonth })
+        : tr('{p} de {startMonth} - {p2} de {endMonth}', { p: format(start, 'd'), startMonth, p2: format(end, 'd'), endMonth });
+    return tr('Semana {iSOWeek} · {range}', { iSOWeek: getISOWeek(start), range });
   }, [scope, start, end]);
 
   const options: MetricsOptions = useMemo(
@@ -271,7 +272,7 @@ export default function AcademicAnalytics() {
   const activityData = useMemo(() => {
     const buckets: { name: string; days: Date[] }[] =
       scope === 'week'
-        ? periodDays.map((d) => ({ name: WEEKDAY_LABELS[(d.getDay() + 6) % 7], days: [d] }))
+        ? periodDays.map((d) => ({ name: dayInitial(fromSunday(d.getDay())), days: [d] }))
         : eachWeekOfInterval({ start, end }, { weekStartsOn: 1 }).map((w) => ({
             name: `S${getISOWeek(w)}`,
             days: eachDayOfInterval({ start: startOfISOWeek(w), end: endOfISOWeek(w) }).filter(
@@ -305,7 +306,7 @@ export default function AcademicAnalytics() {
         name:
           scope === 'week'
             ? `S${getISOWeek(range.start)}`
-            : capitalize(format(range.start, 'MMM', { locale: es })),
+            : capitalize(format(range.start, tr('MMM'), { locale: dateLocale() })),
         Horas: Math.round((metrics.minutes / 60) * 10) / 10,
         Efectividad: metrics.effectiveness,
       };
@@ -354,45 +355,45 @@ export default function AcademicAnalytics() {
   const secondaryMetrics = useMemo(() => {
     const items: { label: string; value: string; hint?: string }[] = [
       {
-        label: 'Sesiones de estudio',
+        label: tr('Sesiones de estudio'),
         value: String(current.sessions),
         hint:
           current.sessions > 0
-            ? `Media de ${formatMinutes(current.avgSessionMinutes)} por sesión`
+            ? tr('Media de {minutes} por sesión', { minutes: formatMinutes(current.avgSessionMinutes) })
             : undefined,
       },
       {
-        label: 'Días con meta cumplida',
+        label: tr('Días con meta cumplida'),
         value: `${current.daysMeetingGoal}/${current.elapsedDays}`,
-        hint: `Meta acumulada: ${formatMinutes(current.goalMinutes)}`,
+        hint: tr('Meta acumulada: {minutes}', { minutes: formatMinutes(current.goalMinutes) }),
       },
     ];
     if (current.avgPerception !== null) {
       items.push({
-        label: 'Percepción media',
+        label: tr('Percepción media'),
         value: `${current.avgPerception.toFixed(1)}/20`,
-        hint: 'Cómo valoraste tus sesiones',
+        hint: tr('Cómo valoraste tus sesiones'),
       });
     }
     if (current.bestDay) {
       items.push({
-        label: 'Mejor día',
-        value: capitalize(format(parseISO(current.bestDay.key), "EEE d 'de' MMM", { locale: es })),
+        label: tr('Mejor día'),
+        value: capitalize(format(parseISO(current.bestDay.key), tr('EEE d \'de\' MMM'), { locale: dateLocale() })),
         hint: formatMinutes(current.bestDay.minutes),
       });
     }
     if (current.tasksDone > 0) {
       items.push({
-        label: 'Tiempo por tarea',
+        label: tr('Tiempo por tarea'),
         value: formatMinutes(current.minutes / current.tasksDone),
-        hint: 'Estudio del periodo entre tareas terminadas',
+        hint: tr('Estudio del periodo entre tareas terminadas'),
       });
     }
     if (current.tasksWithDue > 0) {
       items.push({
-        label: 'Entregas a tiempo',
+        label: tr('Entregas a tiempo'),
         value: `${current.tasksOnTime}/${current.tasksWithDue}`,
-        hint: 'Tareas culminadas antes de su fecha límite',
+        hint: tr('Tareas culminadas antes de su fecha límite'),
       });
     }
     return items;
@@ -403,7 +404,7 @@ export default function AcademicAnalytics() {
   return (
     <section className="space-y-6">
       <div className="relative flex items-center justify-center">
-        <h3 className="text-xl font-semibold text-primary">Progreso académico</h3>
+        <h3 className="text-xl font-semibold text-primary">{tr('Progreso académico')}</h3>
         <div className="absolute right-0">
           <Tabs
             value={scope}
@@ -413,8 +414,8 @@ export default function AcademicAnalytics() {
             }}
           >
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="week">Semana</TabsTrigger>
-              <TabsTrigger value="month">Mes</TabsTrigger>
+              <TabsTrigger value="week">{tr('Semana')}</TabsTrigger>
+              <TabsTrigger value="month">{tr('Mes')}</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -426,7 +427,7 @@ export default function AcademicAnalytics() {
           size="icon"
           className="h-8 w-8 text-foreground"
           onClick={() => setOffset((o) => o - 1)}
-          title="Periodo anterior"
+          title={tr('Periodo anterior')}
         >
           <ChevronLeft className="h-5 w-5" />
         </Button>
@@ -437,7 +438,7 @@ export default function AcademicAnalytics() {
           className="h-8 w-8 text-foreground"
           onClick={() => setOffset((o) => Math.min(0, o + 1))}
           disabled={offset >= 0}
-          title="Periodo siguiente"
+          title={tr('Periodo siguiente')}
         >
           <ChevronRight className="h-5 w-5" />
         </Button>
@@ -447,10 +448,10 @@ export default function AcademicAnalytics() {
         <Card className="flex h-44 flex-col items-center justify-center gap-2 border-dashed bg-card/50">
           <ChartColumn className="h-6 w-6 text-muted-foreground/60" />
           <p className="text-sm text-muted-foreground">
-            Aún no hay actividad registrada en este periodo.
+            {tr('Aún no hay actividad registrada en este periodo.')}
           </p>
           <p className="px-6 text-center text-xs text-muted-foreground/70">
-            Estudia con el reloj de Estudio o culmina tareas y tus métricas aparecerán aquí.
+            {tr('Estudia con el reloj de Estudio o culmina tareas y tus métricas aparecerán aquí.')}
           </p>
         </Card>
       ) : (
@@ -458,12 +459,12 @@ export default function AcademicAnalytics() {
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <KpiCard
               icon={ListChecks}
-              label="Tareas culminadas"
+              label={tr('Tareas culminadas')}
               value={String(current.tasksDone)}
               hint={
                 current.tasksWithDue > 0
-                  ? `${current.tasksOnTime} de ${current.tasksWithDue} a tiempo`
-                  : 'Sin fechas límite registradas'
+                  ? tr('{tasksOnTime} de {tasksWithDue} a tiempo', { tasksOnTime: current.tasksOnTime, tasksWithDue: current.tasksWithDue })
+                  : tr('Sin fechas límite registradas')
               }
             >
               <Delta now={current.tasksDone} before={previous.tasksDone} scopeLabel={scopeLabel} />
@@ -471,9 +472,9 @@ export default function AcademicAnalytics() {
 
             <KpiCard
               icon={Clock}
-              label="Tiempo de estudio"
+              label={tr('Tiempo de estudio')}
               value={formatMinutes(current.minutes)}
-              hint={`Meta del periodo: ${formatMinutes(current.goalMinutes)}`}
+              hint={tr('Meta del periodo: {minutes}', { minutes: formatMinutes(current.goalMinutes) })}
             >
               <Delta
                 now={current.minutes}
@@ -485,9 +486,9 @@ export default function AcademicAnalytics() {
 
             <KpiCard
               icon={Gauge}
-              label="Efectividad"
+              label={tr('Efectividad')}
               value={`${current.effectiveness}%`}
-              hint={`Meta cumplida al ${current.goalCompliance}%`}
+              hint={tr('Meta cumplida al {goalCompliance}%', { goalCompliance: current.goalCompliance })}
             >
               <Delta
                 now={current.effectiveness}
@@ -499,9 +500,9 @@ export default function AcademicAnalytics() {
 
             <KpiCard
               icon={Flame}
-              label="Constancia"
+              label={tr('Constancia')}
               value={`${current.activeDays}/${current.totalDays}`}
-              hint="Días con estudio registrado"
+              hint={tr('Días con estudio registrado')}
             >
               <Delta now={current.activeDays} before={previous.activeDays} scopeLabel={scopeLabel} />
             </KpiCard>
@@ -509,8 +510,8 @@ export default function AcademicAnalytics() {
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <SectionCard
-              title="Actividad del periodo"
-              subtitle="Minutos de estudio por asignatura y tareas terminadas"
+              title={tr('Actividad del periodo')}
+              subtitle={tr('Minutos de estudio por asignatura y tareas terminadas')}
               className="lg:col-span-2"
             >
               <ResponsiveContainer width="100%" height={280}>
@@ -543,8 +544,8 @@ export default function AcademicAnalytics() {
                   <RechartsTooltip
                     cursor={{ fill: 'hsl(var(--accent))', radius: 4 }}
                     contentStyle={TOOLTIP_STYLE}
-                    formatter={(value: number, name: string) =>
-                      name === 'Tareas' ? [value, name] : [formatMinutes(value), name]
+                    formatter={(value: number, name: string, item: { dataKey?: unknown }) =>
+                      item?.dataKey === 'Tareas' ? [value, name] : [formatMinutes(value), name]
                     }
                   />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
@@ -563,20 +564,21 @@ export default function AcademicAnalytics() {
                     yAxisId="right"
                     type="monotone"
                     dataKey="Tareas"
+                    name={tr('Tareas')}
                     stroke="hsl(var(--primary))"
                     strokeWidth={2}
                     dot={{ r: 3 }}
                   />
                 </ComposedChart>
               </ResponsiveContainer>
-              {subjectKeys.includes(UNASSIGNED_SUBJECT) && (
+              {subjectKeys.includes(unassignedSubject()) && (
                 <p className="mt-2 text-center text-[10px] text-muted-foreground/70">
-                  Las sesiones sin asignatura elegida se agrupan como «{UNASSIGNED_SUBJECT}».
+                  {tr('Las sesiones sin asignatura elegida se agrupan como «{name}».', { name: unassignedSubject() })}
                 </p>
               )}
             </SectionCard>
 
-            <SectionCard title="Efectividad" subtitle="Meta, puntualidad y constancia combinadas">
+            <SectionCard title={tr('Efectividad')} subtitle={tr('Meta, puntualidad y constancia combinadas')}>
               <div className="relative">
                 <ResponsiveContainer width="100%" height={190}>
                   {/* El barrido lo escala PolarAngleAxis (dominio 0-100): el arco
@@ -586,7 +588,7 @@ export default function AcademicAnalytics() {
                     outerRadius="100%"
                     startAngle={90}
                     endAngle={-270}
-                    data={[{ name: 'Efectividad', value: current.effectiveness }]}
+                    data={[{ name: tr('Efectividad'), value: current.effectiveness }]}
                   >
                     <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
                     <RadialBar
@@ -599,27 +601,27 @@ export default function AcademicAnalytics() {
                 </ResponsiveContainer>
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                   <p className="text-4xl font-bold text-primary">{current.effectiveness}%</p>
-                  <p className="text-[11px] text-muted-foreground">efectividad</p>
+                  <p className="text-[11px] text-muted-foreground">{tr('efectividad')}</p>
                 </div>
               </div>
               <div className="space-y-3 px-1 pb-1 pt-2">
                 <MetricBar
-                  label="Meta de estudio"
+                  label={tr('Meta de estudio')}
                   value={current.goalCompliance}
-                  hint={`${formatMinutes(current.minutes)} de ${formatMinutes(current.goalMinutes)}`}
+                  hint={tr('{minutes} de {minutes2}', { minutes: formatMinutes(current.minutes), minutes2: formatMinutes(current.goalMinutes) })}
                 />
                 {current.punctuality !== null && (
                   <MetricBar
-                    label="Puntualidad"
+                    label={tr('Puntualidad')}
                     value={current.punctuality}
-                    hint={`${current.tasksOnTime} de ${current.tasksWithDue} tareas a tiempo`}
+                    hint={tr('{tasksOnTime} de {tasksWithDue} tareas a tiempo', { tasksOnTime: current.tasksOnTime, tasksWithDue: current.tasksWithDue })}
                   />
                 )}
                 {current.habitConsistency !== null && (
                   <MetricBar
-                    label="Constancia de hábitos"
+                    label={tr('Constancia de hábitos')}
                     value={current.habitConsistency}
-                    hint={`${activeHabits.length} ${activeHabits.length === 1 ? 'hábito activo' : 'hábitos activos'}`}
+                    hint={`${activeHabits.length} ${activeHabits.length === 1 ? tr('hábito activo') : tr('hábitos activos')}`}
                   />
                 )}
               </div>
@@ -628,8 +630,8 @@ export default function AcademicAnalytics() {
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <SectionCard
-              title="Tendencia"
-              subtitle={scope === 'week' ? 'Últimas 8 semanas' : 'Últimos 6 meses'}
+              title={tr('Tendencia')}
+              subtitle={scope === 'week' ? tr('Últimas 8 semanas') : tr('Últimos 6 meses')}
               className="lg:col-span-2"
             >
               <ResponsiveContainer width="100%" height={250}>
@@ -662,8 +664,8 @@ export default function AcademicAnalytics() {
                   <RechartsTooltip
                     cursor={{ stroke: 'hsl(var(--border))' }}
                     contentStyle={TOOLTIP_STYLE}
-                    formatter={(value: number, name: string) =>
-                      name === 'Horas' ? [`${value} h`, name] : [`${value}%`, name]
+                    formatter={(value: number, name: string, item: { dataKey?: unknown }) =>
+                      item?.dataKey === 'Horas' ? [`${value} h`, name] : [`${value}%`, name]
                     }
                   />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
@@ -671,6 +673,7 @@ export default function AcademicAnalytics() {
                     yAxisId="left"
                     type="monotone"
                     dataKey="Horas"
+                    name={tr('Horas')}
                     stroke="hsl(var(--chart-2))"
                     fill="hsl(var(--chart-2))"
                     fillOpacity={0.18}
@@ -680,6 +683,7 @@ export default function AcademicAnalytics() {
                     yAxisId="right"
                     type="monotone"
                     dataKey="Efectividad"
+                    name={tr('Efectividad')}
                     stroke="hsl(var(--primary))"
                     strokeWidth={2}
                     dot={{ r: 3 }}
@@ -688,9 +692,9 @@ export default function AcademicAnalytics() {
               </ResponsiveContainer>
             </SectionCard>
 
-            <SectionCard title="Reparto por asignatura" subtitle="Minutos de estudio del periodo">
+            <SectionCard title={tr('Reparto por asignatura')} subtitle={tr('Minutos de estudio del periodo')}>
               {subjectSplit.length === 0 ? (
-                <EmptyBox message="Sin sesiones de estudio en el periodo." />
+                <EmptyBox message={tr('Sin sesiones de estudio en el periodo.')} />
               ) : (
                 <ResponsiveContainer width="100%" height={250}>
                   <PieChart>
@@ -719,14 +723,14 @@ export default function AcademicAnalytics() {
           </div>
 
           <SectionCard
-            title="Mapa de constancia"
-            subtitle="Intensidad de estudio de cada día del periodo"
+            title={tr('Mapa de constancia')}
+            subtitle={tr('Intensidad de estudio de cada día del periodo')}
           >
             <TooltipProvider delayDuration={200}>
               <div className="mx-auto max-w-xl space-y-2">
                 <div className="grid grid-cols-7 gap-1.5">
-                  {WEEKDAY_LABELS.map((d) => (
-                    <p key={d} className="text-center text-[10px] font-semibold text-muted-foreground">
+                  {dayInitials().map((d, index) => (
+                    <p key={index} className="text-center text-[10px] font-semibold text-muted-foreground">
                       {d}
                     </p>
                   ))}
@@ -745,22 +749,22 @@ export default function AcademicAnalytics() {
                       </TooltipTrigger>
                       <TooltipContent>
                         <p className="text-xs font-semibold capitalize">
-                          {format(cell.date, "EEEE d 'de' MMMM", { locale: es })}
+                          {format(cell.date, tr('EEEE d \'de\' MMMM'), { locale: dateLocale() })}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {formatMinutes(cell.minutes)} de estudio ·{' '}
-                          {cell.tasksDone === 1 ? '1 tarea' : `${cell.tasksDone} tareas`}
+                          {formatMinutes(cell.minutes)}{' '}{tr('de estudio ·')}{' '}
+                          {cell.tasksDone === 1 ? tr('1 tarea') : tr('{tasksDone} tareas', { tasksDone: cell.tasksDone })}
                         </p>
                       </TooltipContent>
                     </Tooltip>
                   ))}
                 </div>
                 <div className="flex items-center justify-end gap-1.5 pt-1">
-                  <span className="text-[10px] text-muted-foreground">Menos</span>
+                  <span className="text-[10px] text-muted-foreground">{tr('Menos')}</span>
                   {HEAT_LEVELS.map((level) => (
                     <div key={level} className={cn('h-2.5 w-2.5 rounded-sm', level)} />
                   ))}
-                  <span className="text-[10px] text-muted-foreground">Más</span>
+                  <span className="text-[10px] text-muted-foreground">{tr('Más')}</span>
                 </div>
               </div>
             </TooltipProvider>
@@ -789,11 +793,11 @@ export default function AcademicAnalytics() {
               <CardContent className="flex flex-wrap items-center justify-center gap-3 p-4">
                 <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                   <Target className="h-4 w-4 text-primary/70" />
-                  Tareas culminadas por importancia
+                  {tr('Tareas culminadas por importancia')}
                 </div>
                 {PRIORITIES.map((priority) => (
                   <Badge key={priority} variant="secondary" className="gap-1.5">
-                    {priority}
+                    {priorityLabel(priority)}
                     <span className="font-bold text-primary">{current.tasksByPriority[priority]}</span>
                   </Badge>
                 ))}

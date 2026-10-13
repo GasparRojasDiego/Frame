@@ -7,6 +7,8 @@ import { useCourse } from '@/context/CourseContext';
 import { songTitle } from '@/lib/music-search';
 import { cn } from '@/lib/utils';
 import type { Song } from '@/types';
+import { tr } from '@/lib/i18n';
+import { artistLabel } from '@/lib/enum-labels';
 
 // ============================================================
 // Selector de canciones en rejilla de dos columnas.
@@ -58,7 +60,7 @@ export default function SongPickerGrid({
   return (
     <div className="space-y-3">
       <Input
-        placeholder="Título o artista…"
+        placeholder={tr('Título o artista…')}
         value={search}
         onChange={(e) => onSearchChange(e.target.value)}
         className="h-9 border-primary/60 bg-card"
@@ -90,7 +92,7 @@ export default function SongPickerGrid({
                   <button
                     type="button"
                     onClick={() => playSong(song, { context: 'Música', queue: songs ?? [] })}
-                    title="Escuchar para reconocerla"
+                    title={tr('Escuchar para reconocerla')}
                     className="group relative h-12 w-12 shrink-0 overflow-hidden rounded-md bg-accent"
                   >
                     {song.picture ? (
@@ -119,7 +121,7 @@ export default function SongPickerGrid({
                       {songLabel(song)}
                     </p>
                     <p className="truncate text-[10px] text-muted-foreground">
-                      {song.artist || 'Artista desconocido'}
+                      {artistLabel(song.artist)}
                     </p>
                   </div>
 
@@ -129,7 +131,7 @@ export default function SongPickerGrid({
                     variant={added ? 'default' : 'outline'}
                     className="h-8 w-8 shrink-0"
                     disabled={added || Boolean(disabledReason)}
-                    title={added ? 'Ya está en la playlist' : 'Añadir a la playlist'}
+                    title={added ? tr('Ya está en la playlist') : tr('Añadir a la playlist')}
                     onClick={() => onAdd(song.id)}
                   >
                     {added ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
@@ -141,8 +143,8 @@ export default function SongPickerGrid({
         ) : (
           <p className="p-8 text-center text-sm text-muted-foreground">
             {(songs ?? []).length > 0
-              ? 'No se encontraron canciones.'
-              : 'No hay canciones en tu biblioteca.'}
+              ? tr('No se encontraron canciones.')
+              : tr('No hay canciones en tu biblioteca.')}
           </p>
         )}
       </ScrollArea>

@@ -9,6 +9,7 @@ import {
 import { IMPORTANCE_DOT, IMPORTANCE_LABEL, IMPORTANCE_STYLE, RECORDING_KIND_LABEL } from '@/lib/recordings';
 import { cn } from '@/lib/utils';
 import type { RecordingImportance, RecordingKind } from '@/types';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Desplegables de una grabación (1.6.4): la importancia, como en las
@@ -35,7 +36,7 @@ export function ImportancePicker({
           type="button"
           variant="outline"
           disabled={disabled}
-          aria-label={`Importancia: ${IMPORTANCE_LABEL[value]}`}
+          aria-label={tr('Importancia: {p}', { p: IMPORTANCE_LABEL[value] })}
           className={cn('h-10 w-full justify-between gap-2 px-3 text-xs font-semibold', IMPORTANCE_STYLE[value])}
         >
           <span className="flex min-w-0 items-center gap-2">
@@ -73,12 +74,12 @@ export function KindPicker({
           type="button"
           variant="fantasma"
           disabled={disabled}
-          aria-label={value ? `Tipo de audio: ${RECORDING_KIND_LABEL[value]}` : 'Tipo de audio'}
+          aria-label={value ? tr('Tipo de audio: {p}', { p: RECORDING_KIND_LABEL[value] }) : tr('Tipo de audio')}
           className="h-10 w-full justify-between gap-2 px-3 text-xs font-semibold"
         >
           <span className="flex min-w-0 items-center gap-2">
             <Tag className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">{value ? RECORDING_KIND_LABEL[value] : 'Elegir'}</span>
+            <span className="truncate">{value ? RECORDING_KIND_LABEL[value] : tr('Elegir')}</span>
           </span>
           <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" />
         </Button>

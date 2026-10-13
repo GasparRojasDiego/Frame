@@ -11,6 +11,7 @@ import { isRichNoteEmpty } from '@/lib/rich-note';
 import { useToast } from '@/hooks/use-toast';
 import NoteEditor from './NoteEditor';
 import { Play, Pause, StopCircle, X, Minimize2, Maximize2, Timer, Clock, NotebookPen } from 'lucide-react';
+import { intlLocale, tr } from '@/lib/i18n';
 
 // ============================================================
 // Hora oficial de Perú (America/Lima) con máxima precisión: al activarse se
@@ -66,7 +67,7 @@ export function PeruClock({ compact = false }: { compact?: boolean }) {
     };
   }, []);
 
-  const time = new Date(now + peruOffsetMs).toLocaleTimeString('es-PE', {
+  const time = new Date(now + peruOffsetMs).toLocaleTimeString(intlLocale(), {
     timeZone: 'America/Lima',
     hour: '2-digit',
     minute: '2-digit',
@@ -84,7 +85,7 @@ export function PeruClock({ compact = false }: { compact?: boolean }) {
   return (
     <div className="mt-2 flex items-center justify-center gap-1.5 text-muted-foreground">
       <PeruFlag className="h-2.5 w-[15px]" />
-      <span className="text-[10px] font-semibold">Perú</span>
+      <span className="text-[10px] font-semibold">{tr('Perú')}</span>
       <span className="font-mono text-sm font-bold text-foreground tabular-nums">{time}</span>
     </div>
   );
@@ -253,7 +254,7 @@ export default function MiniTimerCard() {
     const clean = noteText.trim();
     if (!hasSession || isRichNoteEmpty(clean)) return;
     addSessionNote({ text: clean, elapsedSec });
-    toast({ title: 'Avance anotado', description: `Minuto ${formatHMS(elapsedSec)} de la sesión.` });
+    toast({ title: tr('Avance anotado'), description: tr('Minuto {hMS} de la sesión.', { hMS: formatHMS(elapsedSec) }) });
     closeNote();
   };
 
@@ -303,7 +304,7 @@ export default function MiniTimerCard() {
         <div className="mb-2 flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
             <Timer className="h-4 w-4 text-primary" />
-            {timerMode === 'focus' ? 'Temporizador' : 'Cronómetro'}
+            {timerMode === 'focus' ? tr('Temporizador') : tr('Cronómetro')}
             {isTimerActive && (
               <span className="ml-1 inline-block h-2 w-2 animate-pulse rounded-full bg-primary" />
             )}
@@ -319,7 +320,7 @@ export default function MiniTimerCard() {
               )}
               onClick={() => (noteOpen ? closeNote() : setNoteOpen(true))}
               disabled={!hasSession}
-              title={hasSession ? 'Anotar un avance' : 'Inicia la sesión para anotar avances'}
+              title={hasSession ? tr('Anotar un avance') : tr('Inicia la sesión para anotar avances')}
             >
               <NotebookPen className="h-3.5 w-3.5" />
             </Button>
@@ -331,7 +332,7 @@ export default function MiniTimerCard() {
                 showPeruClock ? 'text-primary hover:text-primary' : 'text-muted-foreground'
               )}
               onClick={togglePeruClock}
-              title={showPeruClock ? 'Ocultar la hora de Perú' : 'Mostrar la hora de Perú'}
+              title={showPeruClock ? tr('Ocultar la hora de Perú') : tr('Mostrar la hora de Perú')}
             >
               <Clock className="h-3.5 w-3.5" />
             </Button>
@@ -359,33 +360,33 @@ export default function MiniTimerCard() {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-semibold text-muted-foreground">
-                Anotar avance
+                {tr('Anotar avance')}
               </span>
               <span className="font-mono text-xs font-bold tabular-nums text-primary">
                 {formatHMS(timerTime)}
               </span>
             </div>
             <NoteEditor
-              ariaLabel="Avance de la sesión"
+              ariaLabel={tr('Avance de la sesión')}
               value={noteText}
               onChange={setNoteText}
               onSubmit={submitNote}
               onCancel={closeNote}
-              placeholder="Escribe tu avance…"
+              placeholder={tr('Escribe tu avance…')}
               rows={4}
               autoFocus
               dense
             />
             <div className="flex justify-end gap-1.5">
               <Button variant="gris" className="h-7 px-2.5 py-0 text-[11px] font-semibold" onClick={closeNote}>
-                Cancelar
+                {tr('Cancelar')}
               </Button>
               <Button
                 className="h-7 px-3 py-0 text-[11px] font-semibold"
                 onClick={submitNote}
                 disabled={isRichNoteEmpty(noteText)}
               >
-                Anotar
+                {tr('Anotar')}
               </Button>
             </div>
           </div>
@@ -413,7 +414,7 @@ export default function MiniTimerCard() {
                 ) : (
                   <Play className="mr-2 h-4 w-4" />
                 )}
-                {isTimerActive ? 'Pausar' : sessionStartTime > 0 ? 'Reanudar' : 'Iniciar'}
+                {isTimerActive ? tr('Pausar') : sessionStartTime > 0 ? tr('Reanudar') : tr('Iniciar')}
               </Button>
               <Button
                 variant="secondary"
@@ -426,7 +427,7 @@ export default function MiniTimerCard() {
                 disabled={sessionStartTime === 0}
               >
                 <StopCircle className="mr-2 h-4 w-4" />
-                Finalizar
+                {tr('Finalizar')}
               </Button>
             </div>
           </>

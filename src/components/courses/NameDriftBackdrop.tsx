@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Fondo de la cabecera de una asignatura: su propio nombre, repetido muchas
@@ -16,7 +17,7 @@ const ROWS: { seconds: number; size: string; opacity: string; offset: string }[]
 const COPIES = 10;
 
 export default function NameDriftBackdrop({ name, className }: { name: string; className?: string }) {
-  const label = name.trim() || 'Asignatura';
+  const label = name.trim() || tr('Asignatura');
   const half = Array.from({ length: COPIES }, (_, index) => index);
 
   return (

@@ -29,6 +29,7 @@ import {
   toKey,
   type DayRange,
 } from './calendar-model';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Alta y edición de un evento del calendario LOCAL (1.6.7, Diego).
@@ -123,8 +124,8 @@ function DateField({
             variant="ghost"
             className="h-9 w-9 shrink-0 text-muted-foreground"
             onClick={onClear}
-            aria-label="Dejar un solo día"
-            title="Dejar un solo día"
+            aria-label={tr('Dejar un solo día')}
+            title={tr('Dejar un solo día')}
           >
             <X className="h-3.5 w-3.5" />
           </Button>
@@ -173,13 +174,13 @@ function KindSelect({
       }}
     >
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" className={dropdownButton} aria-label={`Tipo: ${current}`}>
+        <Button type="button" variant="outline" className={dropdownButton} aria-label={tr('Tipo: {current}', { current })}>
           <span className="truncate">{current}</span>
           <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] min-w-[12rem] p-1.5">
-        <div role="listbox" aria-label="Tipo" className="flex flex-col">
+        <div role="listbox" aria-label={tr('Tipo')} className="flex flex-col">
           {[...(legacy ? [kind] : []), ...EVENT_FORM_KINDS].map((option) => {
             const selected = option === kind;
             return (
@@ -211,11 +212,11 @@ function KindSelect({
                     commitCustom();
                   }
                 }}
-                placeholder="Escribe el tipo"
+                placeholder={tr('Escribe el tipo')}
                 className="h-8 text-sm"
                 autoFocus
               />
-              <Button type="button" size="icon" className="h-8 w-8 shrink-0" onClick={commitCustom} disabled={!draft.trim()} aria-label="Usar este tipo">
+              <Button type="button" size="icon" className="h-8 w-8 shrink-0" onClick={commitCustom} disabled={!draft.trim()} aria-label={tr('Usar este tipo')}>
                 <Check className="h-4 w-4" />
               </Button>
             </div>
@@ -226,7 +227,7 @@ function KindSelect({
               className="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               <Pencil className="h-3.5 w-3.5" />
-              Otro…
+              {tr('Otro…')}
             </button>
           )}
         </div>
@@ -264,7 +265,7 @@ function ResourcesMenu({
           >
             <span className="flex min-w-0 items-center gap-2 truncate">
               <Paperclip className="h-4 w-4 shrink-0" />
-              {count > 0 ? `${count} ${count === 1 ? 'recurso' : 'recursos'}` : 'Recursos'}
+              {count > 0 ? `${count} ${count === 1 ? tr('recurso') : tr('recursos')}` : tr('Recursos')}
             </span>
             <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
           </Button>
@@ -287,7 +288,7 @@ function ResourcesMenu({
                 className="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-secondary"
               >
                 <Link2 className="h-4 w-4 text-primary" />
-                Enlace…
+                {tr('Enlace…')}
               </button>
               <button
                 type="button"
@@ -298,7 +299,7 @@ function ResourcesMenu({
                 className="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-secondary"
               >
                 <FileText className="h-4 w-4 text-primary" />
-                Documento…
+                {tr('Documento…')}
               </button>
             </div>
           )}
@@ -395,10 +396,10 @@ export default function LocalEventForm({
     'flex h-full min-h-[7rem] flex-col items-center justify-center gap-2 rounded-lg border px-2 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
   return (
-    <form onSubmit={handleSubmit} className="contents">
+    <form onSubmit={handleSubmit} noValidate className="contents">
       <PanelHeader
-        word={isReminder ? 'Aviso' : 'Evento'}
-        title={isEdit ? (isReminder ? 'Editar recordatorio' : 'Editar evento') : isReminder ? 'Nuevo recordatorio' : 'Nuevo evento'}
+        word={isReminder ? tr('Aviso') : tr('Evento')}
+        title={isEdit ? (isReminder ? tr('Editar recordatorio') : tr('Editar evento')) : isReminder ? tr('Nuevo recordatorio') : tr('Nuevo evento')}
         onBack={onBack}
       />
 
@@ -406,13 +407,13 @@ export default function LocalEventForm({
         {/* ---------- Qué ---------- */}
         <div className="space-y-2">
           <label className="sr-only" htmlFor="local-event-title">
-            Título
+            {tr('Título')}
           </label>
           <Input
             id="local-event-title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder={isReminder ? '¿Qué te recuerdo?' : `Título (si lo dejas vacío: ${kindName})`}
+            placeholder={isReminder ? tr('¿Qué te recuerdo?') : tr('Título (si lo dejas vacío: {kindName})', { kindName })}
             className="h-11 text-base font-semibold"
             autoFocus
             autoComplete="off"
@@ -436,18 +437,18 @@ export default function LocalEventForm({
 
         {/* ---------- Cuándo ---------- */}
         <div className="space-y-3">
-          <SectionLabel>Cuándo</SectionLabel>
+          <SectionLabel>{tr('Cuándo')}</SectionLabel>
           <div className="grid grid-cols-4 items-stretch gap-2">
             <div className="col-span-2 space-y-2">
               <DateField
-                label="Desde"
+                label={tr('Desde')}
                 value={dates.start}
                 onChange={(day) => setDates({ start: day, end: dates.end < day ? day : dates.end })}
               />
               <DateField
-                label="Hasta"
+                label={tr('Hasta')}
                 value={dates.end}
-                empty={single ? 'Un solo día' : undefined}
+                empty={single ? tr('Un solo día') : undefined}
                 onChange={(day) => setDates(orderRange(dates.start, day))}
                 onClear={single ? undefined : () => setDates({ start: dates.start, end: dates.start })}
               />
@@ -473,12 +474,12 @@ export default function LocalEventForm({
               >
                 {!timed && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
               </span>
-              <span className="text-xs font-semibold leading-tight">Todo el día</span>
+              <span className="text-xs font-semibold leading-tight">{tr('Todo el día')}</span>
             </button>
             <button
               type="button"
               onClick={() => setPickingColor(true)}
-              aria-label={`Color: ${color}`}
+              aria-label={tr('Color: {color}', { color })}
               className={cn(box, 'border-border bg-card text-muted-foreground hover:border-primary/60 hover:text-foreground')}
             >
               {/* La paleta: el círculo cromático con el color elegido al centro. */}
@@ -492,7 +493,7 @@ export default function LocalEventForm({
                   style={{ background: color }}
                 />
               </span>
-              <span className="text-xs font-semibold leading-tight text-foreground">Color</span>
+              <span className="text-xs font-semibold leading-tight text-foreground">{tr('Color')}</span>
             </button>
           </div>
 
@@ -500,7 +501,7 @@ export default function LocalEventForm({
             <div className="space-y-3 duration-200 animate-in fade-in-0 slide-in-from-top-1 motion-reduce:animate-none">
               <div className="flex items-center justify-center gap-2">
                 <WheelColumn
-                  label="Hora"
+                  label={tr('Hora')}
                   values={HOURS}
                   value={safeHour}
                   format={two}
@@ -508,7 +509,7 @@ export default function LocalEventForm({
                 />
                 <span className="font-mono text-lg font-bold text-muted-foreground">:</span>
                 <WheelColumn
-                  label="Minutos"
+                  label={tr('Minutos')}
                   values={MINUTES}
                   value={safeMinute}
                   format={two}
@@ -516,10 +517,10 @@ export default function LocalEventForm({
                 />
               </div>
               <div className="space-y-1.5">
-                <span className="text-[11px] font-medium text-muted-foreground">Aviso</span>
-                <div className="flex flex-wrap gap-1.5" role="group" aria-label="Aviso">
+                <span className="text-[11px] font-medium text-muted-foreground">{tr('Aviso')}</span>
+                <div className="flex flex-wrap gap-1.5" role="group" aria-label={tr('Aviso')}>
                   <button type="button" aria-pressed={remind === undefined} onClick={() => setRemind(undefined)} className={pill(remind === undefined)}>
-                    Sin aviso
+                    {tr('Sin aviso')}
                   </button>
                   {REMIND_OPTIONS.map((option) => (
                     <button
@@ -540,7 +541,7 @@ export default function LocalEventForm({
 
         {/* ---------- Aspecto: cómo se verá en el calendario ---------- */}
         <div className="space-y-3">
-          <SectionLabel>Aspecto</SectionLabel>
+          <SectionLabel>{tr('Aspecto')}</SectionLabel>
           <div className="flex items-center justify-center gap-3" aria-hidden>
             <span
               className={cn('relative h-14 w-16 shrink-0 border border-border bg-background', !timed && PAINT_TINT)}
@@ -559,15 +560,15 @@ export default function LocalEventForm({
               )}
             </span>
             <span className="text-xs text-muted-foreground">
-              {timed ? 'Etiqueta con su hora en el día' : single ? 'La casilla se pinta' : 'Las casillas se pintan'}
+              {timed ? tr('Etiqueta con su hora en el día') : single ? tr('La casilla se pinta') : tr('Las casillas se pintan')}
             </span>
           </div>
         </div>
 
         {/* ---------- Nota ---------- */}
         <div className="space-y-3">
-          <SectionLabel>Nota</SectionLabel>
-          <NoteEditor value={description} onChange={setDescription} toolbarSide rows={3} placeholder="Opcional" ariaLabel="Nota" />
+          <SectionLabel>{tr('Nota')}</SectionLabel>
+          <NoteEditor value={description} onChange={setDescription} toolbarSide rows={3} placeholder={tr('Opcional')} ariaLabel={tr('Nota')} />
         </div>
       </div>
 
@@ -576,7 +577,7 @@ export default function LocalEventForm({
           confirmDelete ? (
             <Button type="button" variant="destructive" size="sm" onClick={onDelete}>
               <Trash2 />
-              Sí, eliminar
+              {tr('Sí, eliminar')}
             </Button>
           ) : (
             <Button
@@ -586,15 +587,15 @@ export default function LocalEventForm({
               onClick={() => setConfirmDelete(true)}
             >
               <Trash2 />
-              Eliminar
+              {tr('Eliminar')}
             </Button>
           )
         )}
         <div className="ml-auto flex gap-2">
           <Button type="button" variant="gris" onClick={onCancel}>
-            Cancelar
+            {tr('Cancelar')}
           </Button>
-          <Button type="submit">{isEdit ? 'Guardar' : isReminder ? 'Crear recordatorio' : 'Crear evento'}</Button>
+          <Button type="submit">{isEdit ? tr('Guardar') : isReminder ? tr('Crear recordatorio') : tr('Crear evento')}</Button>
         </div>
       </div>
 
@@ -604,7 +605,7 @@ export default function LocalEventForm({
         value={color}
         onChange={setColor}
         presets={EVENT_COLOR_ROWS}
-        title="Color del evento"
+        title={tr('Color del evento')}
       />
     </form>
   );

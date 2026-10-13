@@ -12,6 +12,7 @@
 // 404): su API de geocoding es sólo búsqueda por nombre.
 // ============================================================
 import { invoke, isTauri } from '@tauri-apps/api/core';
+import { getLang } from '@/lib/i18n';
 
 export type GeoSource = 'bigdatacloud' | 'photon' | 'nominatim' | 'ip' | 'manual' | 'coords';
 
@@ -71,7 +72,7 @@ async function fromBigDataCloud(lat: number, lon: number): Promise<ResolvedPlace
   const params = new URLSearchParams({
     latitude: String(lat),
     longitude: String(lon),
-    localityLanguage: 'es',
+    localityLanguage: getLang(),
   });
   const d = await getJson(`https://api.bigdatacloud.net/data/reverse-geocode-client?${params}`);
   const name = clean(d?.city) ?? clean(d?.locality) ?? clean(d?.principalSubdivision);
@@ -96,7 +97,7 @@ async function fromBigDataCloud(lat: number, lon: number): Promise<ResolvedPlace
 // ---------- Proveedor 2: Photon / Komoot (datos OpenStreetMap) ----------
 async function fromPhoton(lat: number, lon: number): Promise<ResolvedPlaceName | null> {
   // `lang` sólo admite default|de|en|fr — con 'es' responde HTTP 400.
-  const params = new URLSearchParams({ lat: String(lat), lon: String(lon), lang: 'default', limit: '1' });
+  const params = new URLSearchParams({ lat: String(lat), lon: String(lon), lang: getLang() === 'en' ? 'en' : 'default', limit: '1' });
   const d = await getJson(`https://photon.komoot.io/reverse?${params}`);
   const p = d?.features?.[0]?.properties;
   if (!p) return null;
@@ -123,7 +124,7 @@ async function fromNominatim(lat: number, lon: number): Promise<ResolvedPlaceNam
     lat: String(lat),
     lon: String(lon),
     zoom: '14',
-    'accept-language': 'es',
+    'accept-language': getLang(),
   });
   const d = await getJson(`https://nominatim.openstreetmap.org/reverse?${params}`);
   const a = d?.address ?? {};
@@ -156,9 +157,11 @@ const CACHE_MAX = 40;
 
 type CacheEntry = ResolvedPlaceName & { at: number };
 
-/** ~110 m de resolución: suficiente para no repetir peticiones al moverse por casa. */
+/** ~110 m de resolución: suficiente para no repetir peticiones al moverse por
+ *  casa. El idioma va en la clave: «Perú» y «Peru» son entradas distintas. */
 function cacheKey(lat: number, lon: number): string {
-  return `${lat.toFixed(3)},${lon.toFixed(3)}`;
+  const base = `${lat.toFixed(3)},${lon.toFixed(3)}`;
+  return getLang() === 'es' ? base : `${getLang()}:${base}`;
 }
 
 function loadCache(): Record<string, CacheEntry> {

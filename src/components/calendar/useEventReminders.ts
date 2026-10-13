@@ -3,6 +3,7 @@ import { notify } from '@/lib/notify';
 import type { LocalCalendarEvent } from '@/types';
 import { richNoteToLine } from '@/lib/rich-note';
 import { addDays, eventEnd, toKey } from './calendar-model';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Avisos de los eventos del calendario LOCAL.
@@ -28,10 +29,10 @@ const clock = (date: Date) =>
 
 function whenText(at: Date, now: Date): string {
   const minutes = Math.round((at.getTime() - now.getTime()) / 60_000);
-  if (minutes <= 1) return `Ahora · ${clock(at)}`;
-  if (minutes < 60) return `En ${minutes} min · a las ${clock(at)}`;
-  if (toKey(at) === toKey(now)) return `Hoy a las ${clock(at)}`;
-  return `Mañana a las ${clock(at)}`;
+  if (minutes <= 1) return tr('Ahora · {clock}', { clock: clock(at) });
+  if (minutes < 60) return tr('En {minutes} min · a las {clock}', { minutes, clock: clock(at) });
+  if (toKey(at) === toKey(now)) return tr('Hoy a las {clock}', { clock: clock(at) });
+  return tr('Mañana a las {clock}', { clock: clock(at) });
 }
 
 /** `scope`: sufijo único del usuario (la clave de sus eventos); null = sin sesión. */
@@ -87,8 +88,7 @@ export function useLocalEventReminders(events: LocalCalendarEvent[], scope: stri
 
           const note = event.description ? richNoteToLine(event.description) : '';
           void notify({
-            title: event.title,
-            body: `${whenText(at, now)}${note ? ` — ${note}` : ''}`,
+            text: () => ({ title: event.title, body: `${whenText(at, now)}${note ? ` — ${note}` : ''}` }),
             kind: 'recordatorio',
             route: '/calendario',
           });

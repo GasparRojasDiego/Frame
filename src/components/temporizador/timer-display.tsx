@@ -22,6 +22,8 @@ import FocusTimePicker from '@/components/temporizador/FocusTimePicker';
 import { useToast } from '@/hooks/use-toast';
 
 
+import { tr } from '@/lib/i18n';
+
 const MIN_TIME = 0; // 0 minutes
 // Tope del dial. Se sube de 3 h a 6 h: cubre cualquier bloque de estudio real
 // sin quitarle precisión al arrastre (el círculo completo sigue siendo manejable).
@@ -196,8 +198,8 @@ export default function TimerDisplay({ onSessionComplete, disabled = false }: Ti
     resetTimerState();
     setAngle(timeToAngle(0));
     toast({
-      title: 'Sesión descartada',
-      description: 'No se ha registrado tiempo de estudio ni avance de tareas.',
+      title: tr('Sesión descartada'),
+      description: tr('No se ha registrado tiempo de estudio ni avance de tareas.'),
     });
   }
 
@@ -282,12 +284,12 @@ export default function TimerDisplay({ onSessionComplete, disabled = false }: Ti
   
   const getButtonText = () => {
     if (!isActive && sessionStartTime > 0) {
-      return "Reanudar";
+      return tr('Reanudar');
     }
     if (isActive) {
-      return "Pausar";
+      return tr('Pausar');
     }
-    return "Iniciar";
+    return tr('Iniciar');
   };
   
   const [isNoteOpen, setNoteOpen] = useState(false);
@@ -362,7 +364,7 @@ export default function TimerDisplay({ onSessionComplete, disabled = false }: Ti
           )}
           disabled={modeButtonsDisabled}
         >
-          Temporizador
+          {tr('Temporizador')}
         </Button>
         <Button
           variant={mode === 'stopwatch' ? 'outline' : 'secondary'}
@@ -375,14 +377,14 @@ export default function TimerDisplay({ onSessionComplete, disabled = false }: Ti
           )}
           disabled={modeButtonsDisabled}
         >
-          Cronómetro
+          {tr('Cronómetro')}
         </Button>
         <DropdownMenu onOpenChange={(open) => open && void syncFloating()}>
           <DropdownMenuTrigger asChild>
             <Button
               variant="secondary"
               size="icon"
-              title="Vista flotante"
+              title={tr('Vista flotante')}
               // Al acercar el ratón ya se comprueba la ventana: cuando el menú
               // se abre, «Ocultar» está o no está, sin parpadeo.
               onPointerEnter={() => void syncFloating()}
@@ -396,7 +398,7 @@ export default function TimerDisplay({ onSessionComplete, disabled = false }: Ti
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center" className="w-48">
             <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-              Vista flotante
+              {tr('Vista flotante')}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem
@@ -404,14 +406,14 @@ export default function TimerDisplay({ onSessionComplete, disabled = false }: Ti
               className={cn(miniTimerView === 'full' && 'font-semibold text-primary')}
             >
               <PictureInPicture2 className="mr-2 h-4 w-4" />
-              Mediana
+              {tr('Mediana')}
             </DropdownMenuItem>
             <DropdownMenuItem
               onSelect={() => showFloating('compact')}
               className={cn(miniTimerView === 'compact' && 'font-semibold text-primary')}
             >
               <Minimize2 className="mr-2 h-4 w-4" />
-              Compacta
+              {tr('Compacta')}
             </DropdownMenuItem>
             {/* «Ocultar» solo existe si hay algo que ocultar. */}
             {floatingOpen && (
@@ -419,7 +421,7 @@ export default function TimerDisplay({ onSessionComplete, disabled = false }: Ti
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={() => setMiniTimerView('hidden')}>
                   <EyeOff className="mr-2 h-4 w-4" />
-                  Ocultar
+                  {tr('Ocultar')}
                 </DropdownMenuItem>
               </>
             )}
@@ -431,7 +433,7 @@ export default function TimerDisplay({ onSessionComplete, disabled = false }: Ti
               disabled={sessionStartTime === 0}
             >
               <NotebookPen className="mr-2 h-4 w-4" />
-              Anotar avance
+              {tr('Anotar avance')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -488,13 +490,13 @@ export default function TimerDisplay({ onSessionComplete, disabled = false }: Ti
               {dialHours > 0 && (
                 <span className="mb-1.5 font-mono text-2xl font-bold text-primary">
                   {dialHours}{' '}
-                  <span className="font-sans text-base font-semibold">{dialHours === 1 ? 'hora' : 'horas'}</span>
+                  <span className="font-sans text-base font-semibold">{dialHours === 1 ? tr('hora') : tr('horas')}</span>
                 </span>
               )}
               <span className="font-mono text-5xl font-bold text-foreground tabular-nums">{dialClock}</span>
               {dialHours > 0 && (
                 <span className="mt-1.5 text-[10px] font-semibold text-muted-foreground">
-                  min : s
+                  {tr('min : s')}
                 </span>
               )}
             </>
@@ -503,12 +505,12 @@ export default function TimerDisplay({ onSessionComplete, disabled = false }: Ti
             <button
               type="button"
               onClick={() => setPickerOpen(true)}
-              title="Elegir la duración exacta"
+              title={tr('Elegir la duración exacta')}
               className="group/face relative z-10 flex h-[78%] w-[78%] flex-col items-center justify-center rounded-full leading-none outline-none transition-colors hover:bg-primary/5 focus-visible:ring-2 focus-visible:ring-ring"
             >
               {face}
               <span className="absolute bottom-[18%] text-[10px] font-medium text-primary opacity-0 transition-opacity group-hover/face:opacity-100">
-                Pulsa para ajustar
+                {tr('Pulsa para ajustar')}
               </span>
             </button>
           ) : (
@@ -543,7 +545,7 @@ export default function TimerDisplay({ onSessionComplete, disabled = false }: Ti
 
       <div className="flex gap-4">
         <Button size="lg" onClick={handleStartPause} className="text-xs w-28" disabled={disabled || (mode === 'focus' && time === 0)}>
-          {isActive ? <Pause className="mr-2 h-5 w-5" /> : (getButtonText() === 'Reanudar' ? <RefreshCcw className="mr-2 h-5 w-5" /> : <Play className="mr-2 h-5 w-5" />)}
+          {isActive ? <Pause className="mr-2 h-5 w-5" /> : (sessionStartTime > 0 ? <RefreshCcw className="mr-2 h-5 w-5" /> : <Play className="mr-2 h-5 w-5" />)}
           {getButtonText()}
         </Button>
         <Button
@@ -557,7 +559,7 @@ export default function TimerDisplay({ onSessionComplete, disabled = false }: Ti
           onClick={handleFinishClick}
         >
           <StopCircle className="mr-2 h-5 w-5" />
-          Finalizar
+          {tr('Finalizar')}
         </Button>
       </div>
 

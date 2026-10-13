@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import {
   Download,
   FileText,
@@ -8,6 +7,8 @@ import {
   Link2,
   LoaderCircle,
   Music2,
+  Pause,
+  Play,
   Plus,
   RefreshCcw,
   Upload,
@@ -18,7 +19,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
+import { formatDuration } from '@/lib/recordings';
 import { useToast } from '@/hooks/use-toast';
+import { useSaveCopy } from '@/hooks/use-save-copy';
 import { cn } from '@/lib/utils';
 import { isTauri } from '@tauri-apps/api/core';
 import { openUrl } from '@tauri-apps/plugin-opener';
@@ -30,6 +34,7 @@ import {
   type StoredPick,
 } from '@/lib/file-handles';
 import EchoWord, { EchoHeader } from '@/components/shared/EchoWord';
+import { dateLocale, tr } from '@/lib/i18n';
 
 // ============================================================
 // Adjuntos de una tarea: documentos y enlaces.
@@ -95,6 +100,7 @@ function AttachmentViewer({
   const [text, setText] = useState<string | null>(null);
   const objectUrlRef = useRef<string | null>(null);
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
+  const saveCopy = useSaveCopy();
 
   const load = async (id: string) => {
     setState('loading');
@@ -134,15 +140,7 @@ function AttachmentViewer({
   }, [attachment?.id]);
 
   const handleDownloadCopy = () => {
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = file.name;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    if (file) void saveCopy(file, file.name);
   };
 
   const mime = file?.type ?? '';
@@ -151,15 +149,15 @@ function AttachmentViewer({
     <Dialog open={!!attachment} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="flex max-h-[88vh] max-w-3xl flex-col gap-0 overflow-hidden p-0">
         <DialogHeader className="shrink-0 px-5 py-3 relative overflow-hidden">
-          <EchoWord word="Adjunto" />
+          <EchoWord word={tr('Adjunto')} />
           <DialogTitle className="truncate pr-8 text-left text-base font-semibold text-foreground">
             {attachment?.label}
           </DialogTitle>
           {file && (
             <p className="text-left text-[11px] text-muted-foreground">
-              {prettySize(file.size)} · Última modificación:{' '}
-              {format(new Date(file.lastModified), "d 'de' MMMM yyyy, HH:mm", { locale: es })}
-              {attachment?.live === false && ' · copia congelada'}
+              {prettySize(file.size)}{' '}{tr('· Última modificación:')}{' '}
+              {format(new Date(file.lastModified), tr('d \'de\' MMMM yyyy, HH:mm'), { locale: dateLocale() })}
+              {attachment?.live === false && tr(' · copia congelada')}
             </p>
           )}
         </DialogHeader>
@@ -175,10 +173,9 @@ function AttachmentViewer({
           {state === 'missing' && (
             <div className="flex h-64 flex-col items-center justify-center gap-2 px-8 text-center">
               <FileWarning className="h-8 w-8 text-muted-foreground/60" />
-              <p className="text-sm font-semibold text-foreground">No se pudo abrir el archivo</p>
+              <p className="text-sm font-semibold text-foreground">{tr('No se pudo abrir el archivo')}</p>
               <p className="max-w-md text-xs text-muted-foreground">
-                Puede que lo hayas movido, renombrado o borrado, o que Frame haya perdido el permiso
-                de lectura. Vuelve a adjuntarlo para restablecer el enlace.
+                {tr('Puede que lo hayas movido, renombrado o borrado, o que Frame haya perdido el permiso de lectura. Vuelve a adjuntarlo para restablecer el enlace.')}
               </p>
             </div>
           )}
@@ -196,7 +193,7 @@ function AttachmentViewer({
               {isAudio(mime) && objectUrl && (
                 <div className="flex flex-col items-center gap-4 p-10">
                   <Music2 className="h-10 w-10 text-primary" />
-                  <audio controls src={objectUrl} className="w-full max-w-md" />
+                  <AudioPreview src={objectUrl} />
                 </div>
               )}
               {text !== null && (
@@ -210,12 +207,10 @@ function AttachmentViewer({
                 <div className="flex h-64 flex-col items-center justify-center gap-3 px-8 text-center">
                   <FileText className="h-9 w-9 text-primary/70" />
                   <p className="text-sm font-semibold text-foreground">
-                    Este tipo de documento se abre con su programa
+                    {tr('Este tipo de documento se abre con su programa')}
                   </p>
                   <p className="max-w-md text-xs text-muted-foreground">
-                    Frame no dibuja documentos de Word, Excel o PowerPoint dentro de la ventana,
-                    pero sí lee el archivo real: la fecha de arriba es la de tu última vez que lo
-                    guardaste, así que el avance queda a la vista.
+                    {tr('Frame no dibuja documentos de Word, Excel o PowerPoint dentro de la ventana, pero sí lee el archivo real: la fecha de arriba es la de tu última vez que lo guardaste, así que el avance queda a la vista.')}
                   </p>
                 </div>
               )}
@@ -232,11 +227,11 @@ function AttachmentViewer({
             disabled={state === 'loading'}
           >
             <RefreshCcw className="mr-1.5 h-3.5 w-3.5" />
-            Releer del disco
+            {tr('Releer del disco')}
           </Button>
           <Button variant="outline" size="sm" onClick={handleDownloadCopy} disabled={!file}>
             <Download className="mr-1.5 h-3.5 w-3.5" />
-            Guardar una copia
+            {tr('Guardar una copia')}
           </Button>
         </div>
       </DialogContent>
@@ -277,8 +272,8 @@ export function AttachFileDialog({
     );
     if (picks.some(({ picked }) => !picked.live)) {
       toast({
-        title: 'Adjuntado como copia',
-        description: 'Los cambios que hagas después en ese archivo no se verán aquí.',
+        title: tr('Adjuntado como copia'),
+        description: tr('Los cambios que hagas después en ese archivo no se verán aquí.'),
       });
     }
     onOpenChange(false);
@@ -308,11 +303,11 @@ export function AttachFileDialog({
       }}
     >
       <DialogContent className="max-w-md">
-        <EchoHeader word="Adjuntar">
+        <EchoHeader word={tr('Adjuntar')}>
           <DialogHeader>
-            <DialogTitle className="text-center text-xl font-bold text-primary">Adjuntar archivo</DialogTitle>
+            <DialogTitle className="text-center text-xl font-bold text-primary">{tr('Adjuntar archivo')}</DialogTitle>
             <DialogDescription className="sr-only">
-              Pulsa la zona para elegir archivos o arrástralos y suéltalos sobre ella.
+              {tr('Pulsa la zona para elegir archivos o arrástralos y suéltalos sobre ella.')}
             </DialogDescription>
           </DialogHeader>
         </EchoHeader>
@@ -353,9 +348,9 @@ export function AttachFileDialog({
         >
           {busy ? <LoaderCircle className="h-7 w-7 animate-spin text-primary" /> : <Upload className="h-7 w-7" />}
           <span className="text-sm font-semibold text-foreground">
-            {dragging ? 'Suelta los archivos aquí' : 'Haz clic para elegir archivos'}
+            {dragging ? tr('Suelta los archivos aquí') : tr('Haz clic para elegir archivos')}
           </span>
-          <span className="text-xs">o arrástralos y suéltalos aquí</span>
+          <span className="text-xs">{tr('o arrástralos y suéltalos aquí')}</span>
         </button>
       </DialogContent>
     </Dialog>
@@ -381,26 +376,26 @@ export function LinkForm({ onAdd }: { onAdd: (attachment: TaskAttachment) => voi
   };
   return (
     <div className="space-y-2">
-      <Label className="text-xs">Dirección</Label>
+      <Label className="text-xs">{tr('Dirección')}</Label>
       <Input
         value={urlValue}
         onChange={(e) => setUrlValue(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && add()}
-        placeholder="classroom.google.com/…"
+        placeholder={tr('classroom.google.com/…')}
         className="h-8 text-xs"
         autoFocus
       />
-      <Label className="text-xs">Nombre (opcional)</Label>
+      <Label className="text-xs">{tr('Nombre (opcional)')}</Label>
       <Input
         value={urlLabel}
         onChange={(e) => setUrlLabel(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && add()}
-        placeholder="Ej: rúbrica del profesor"
+        placeholder={tr('Ej: rúbrica del profesor')}
         className="h-8 text-xs"
       />
       <Button size="sm" className="w-full" onClick={add} disabled={!urlValue.trim()}>
         <Plus className="mr-1.5 h-3.5 w-3.5" />
-        Añadir enlace
+        {tr('Añadir enlace')}
       </Button>
     </div>
   );
@@ -431,8 +426,8 @@ export default function TaskAttachments({
   const addFiles = (added: TaskAttachment[]) => onChange([...attachments, ...added]);
   const addLink = (attachment: TaskAttachment) => onChange([...attachments, attachment]);
 
-  const fileTitle = fileCount > 0 ? `${fileCount} documento(s) adjunto(s)` : 'Adjuntar documentos';
-  const linkTitle = urlCount > 0 ? `${urlCount} enlace(s) adjunto(s)` : 'Adjuntar un enlace';
+  const fileTitle = fileCount > 0 ? tr('{fileCount} documento(s) adjunto(s)', { fileCount }) : tr('Adjuntar documentos');
+  const linkTitle = urlCount > 0 ? tr('{urlCount} enlace(s) adjunto(s)', { urlCount }) : tr('Adjuntar un enlace');
 
   return (
     <>
@@ -449,7 +444,7 @@ export default function TaskAttachments({
       ) : (
         <button type="button" onClick={() => setFileOpen(true)} title={fileTitle} className={cn(chipClassName, 'gap-1')}>
           <FileText className="h-3.5 w-3.5" />
-          {fileCount > 0 ? `${fileCount} doc.` : 'Documento'}
+          {fileCount > 0 ? `${fileCount} doc.` : tr('Documento')}
         </button>
       )}
 
@@ -467,7 +462,7 @@ export default function TaskAttachments({
           ) : (
             <button type="button" title={linkTitle} className={cn(chipClassName, 'gap-1')}>
               <Link2 className="h-3.5 w-3.5" />
-              {urlCount > 0 ? `${urlCount} enlace${urlCount === 1 ? '' : 's'}` : 'Enlace'}
+              {urlCount > 0 ? tr('{urlCount} enlace{p}', { urlCount, p: urlCount === 1 ? '' : 's' }) : tr('Enlace')}
             </button>
           )}
         </PopoverTrigger>
@@ -513,7 +508,7 @@ export function AttachmentChips({
                     ? void openExternal(attachment.url!)
                     : setViewing(attachment)
                 }
-                title={attachment.kind === 'url' ? attachment.url : 'Abrir el documento'}
+                title={attachment.kind === 'url' ? attachment.url : tr('Abrir el documento')}
                 className="inline-flex min-w-0 items-center gap-1 py-0.5 hover:text-primary"
               >
                 <Icon className="h-3 w-3 shrink-0 text-primary/80" />
@@ -523,7 +518,7 @@ export function AttachmentChips({
                 <button
                   type="button"
                   onClick={() => onRemove(attachment)}
-                  title="Quitar el adjunto"
+                  title={tr('Quitar el adjunto')}
                   className="shrink-0 rounded-full p-0.5 hover:text-destructive"
                 >
                   <X className="h-3 w-3" />
@@ -535,5 +530,62 @@ export function AttachmentChips({
       </div>
       <AttachmentViewer attachment={viewing} onClose={() => setViewing(null)} />
     </>
+  );
+}
+
+/**
+ * Audio adjunto con controles propios: los del navegador hablan en el idioma
+ * de Windows, no en el de Frame (1.6.7).
+ */
+function AudioPreview({ src }: { src: string }) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [time, setTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  const toggle = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (audio.paused) void audio.play().catch(() => undefined);
+    else audio.pause();
+  };
+
+  return (
+    <div className="flex w-full max-w-md items-center gap-3">
+      <audio
+        ref={audioRef}
+        src={src}
+        preload="metadata"
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onEnded={() => setPlaying(false)}
+        onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
+        onLoadedMetadata={(e) => {
+          const d = e.currentTarget.duration;
+          if (Number.isFinite(d) && d > 0) setDuration(d);
+        }}
+      />
+      <Button size="icon" className="h-10 w-10 shrink-0 rounded-full" onClick={toggle} aria-label={playing ? tr('Pausar') : tr('Reproducir')}>
+        {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 pl-0.5" />}
+      </Button>
+      <div className="min-w-0 flex-1">
+        <Slider
+          value={[Math.min(time, duration)]}
+          min={0}
+          max={duration || 1}
+          step={0.5}
+          disabled={!duration}
+          onValueChange={([value]) => {
+            if (audioRef.current) audioRef.current.currentTime = value;
+            setTime(value);
+          }}
+          aria-label={tr('Posición del audio')}
+        />
+        <div className="mt-1.5 flex justify-between text-[11px] tabular-nums text-muted-foreground">
+          <span>{formatDuration(time)}</span>
+          <span>{formatDuration(duration)}</span>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -1,3 +1,5 @@
+import { tr } from '@/lib/i18n';
+
 // ============================================================
 // Lector mínimo de archivos .zip (sin dependencias).
 //
@@ -30,11 +32,11 @@ export async function listZip(file: Blob): Promise<ZipEntry[]> {
       break;
     }
   }
-  if (eocd < 0) throw new Error('No es un archivo .zip válido.');
+  if (eocd < 0) throw new Error(tr('No es un archivo .zip válido.'));
   const count = tail.getUint16(eocd + 10, true);
   const dirSize = tail.getUint32(eocd + 12, true);
   const dirOffset = tail.getUint32(eocd + 16, true);
-  if (dirOffset === 0xffffffff) throw new Error('El .zip es demasiado grande (ZIP64).');
+  if (dirOffset === 0xffffffff) throw new Error(tr('El .zip es demasiado grande (ZIP64).'));
 
   const dir = await view(file, dirOffset, dirOffset + dirSize);
   const decoder = new TextDecoder('utf-8');
@@ -58,7 +60,7 @@ export async function listZip(file: Blob): Promise<ZipEntry[]> {
 
 export async function readZipEntry(file: Blob, entry: ZipEntry): Promise<Uint8Array> {
   const header = await view(file, entry.offset, entry.offset + 30);
-  if (header.getUint32(0, true) !== 0x04034b50) throw new Error(`Entrada dañada: ${entry.name}`);
+  if (header.getUint32(0, true) !== 0x04034b50) throw new Error(tr('Entrada dañada: {name}', { name: entry.name }));
   const start = entry.offset + 30 + header.getUint16(26, true) + header.getUint16(28, true);
   const data = file.slice(start, start + entry.compressedSize);
   if (entry.method === 0) return new Uint8Array(await data.arrayBuffer());
@@ -66,7 +68,7 @@ export async function readZipEntry(file: Blob, entry: ZipEntry): Promise<Uint8Ar
     const stream = data.stream().pipeThrough(new DecompressionStream('deflate-raw'));
     return new Uint8Array(await new Response(stream).arrayBuffer());
   }
-  throw new Error(`Compresión no admitida en ${entry.name}`);
+  throw new Error(tr('Compresión no admitida en {name}', { name: entry.name }));
 }
 
 export async function readZipText(file: Blob, entry: ZipEntry): Promise<string> {

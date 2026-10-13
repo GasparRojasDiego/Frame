@@ -23,8 +23,9 @@ import {
   endOfWeek,
   parseISO,
 } from 'date-fns';
-import { es } from 'date-fns/locale';
 import type { StudyGoals } from '@/types';
+import { dateLocale, tr } from '@/lib/i18n';
+import { dayTitle } from '@/lib/day-names';
 
 // ============================================================
 // Calendario de ENFOQUE: la calificación (o el tiempo) de cada día.
@@ -44,7 +45,6 @@ interface GradesCalendarProps {
   onEditSession?: (session: StudySession) => void;
 }
 
-const DAYS_OF_WEEK = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
 /** getDay() (0 = domingo) → clave de StudyGoals. */
 const GOAL_KEYS: (keyof StudyGoals)[] = [
@@ -174,18 +174,18 @@ export default function GradesCalendar({
         <Button
           variant="ghost"
           size="icon"
-          title="Mes anterior"
+          title={tr('Mes anterior')}
           onClick={() => setCurrentDate((p) => new Date(p.getFullYear(), p.getMonth() - 1, 1))}
         >
           <ChevronLeft className="h-5 w-5" />
         </Button>
         <h2 className="text-lg font-semibold text-primary font-headline first-letter:uppercase text-center">
-          {format(currentDate, 'MMMM yyyy', { locale: es })}
+          {format(currentDate, tr('MMMM yyyy'), { locale: dateLocale() })}
         </h2>
         <Button
           variant="ghost"
           size="icon"
-          title="Mes siguiente"
+          title={tr('Mes siguiente')}
           onClick={() => setCurrentDate((p) => new Date(p.getFullYear(), p.getMonth() + 1, 1))}
         >
           <ChevronRight className="h-5 w-5" />
@@ -195,9 +195,9 @@ export default function GradesCalendar({
       <Card className="bg-transparent border-0 shadow-none">
         <CardContent className="p-0">
           <div className="grid grid-cols-7 border-t-2 border-l-2 border-border">
-            {DAYS_OF_WEEK.map((d) => (
+            {Array.from({ length: 7 }, (_, index) => dayTitle(index)).map((d, index) => (
               <div
-                key={d}
+                key={index}
                 className="text-center text-xs font-bold text-muted-foreground p-2 border-r-2 border-b-2 border-border bg-card/80"
               >
                 {d}
@@ -221,7 +221,7 @@ export default function GradesCalendar({
                       key={key}
                       type="button"
                       onClick={() => setDetailDay(day)}
-                      title={format(day, "EEEE d 'de' MMMM", { locale: es })}
+                      title={format(day, tr('EEEE d \'de\' MMMM'), { locale: dateLocale() })}
                       className={cn(
                         'border-r-2 border-b-2 border-border p-1 flex flex-col gap-1 bg-background min-h-24 text-left transition-colors hover:bg-secondary/30',
                         !isCurrentMonth && 'text-muted-foreground/60'
@@ -254,7 +254,7 @@ export default function GradesCalendar({
                         )}
                         {daySessions.length > 0 && (
                           <p className="text-center text-[10px] text-muted-foreground">
-                            {daySessions.length} {daySessions.length === 1 ? 'sesión' : 'sesiones'}
+                            {daySessions.length} {daySessions.length === 1 ? tr('sesión') : tr('sesiones')}
                           </p>
                         )}
                       </div>
@@ -290,12 +290,12 @@ export default function GradesCalendar({
             <>
               {/* ---------- Cabecera: el día de la semana, con su eco ---------- */}
               <div className="relative shrink-0 overflow-hidden px-6 pb-3 pt-6">
-                {detailDay && <EchoWord word={format(detailDay, 'EEEE', { locale: es })} />}
+                {detailDay && <EchoWord word={format(detailDay, tr('EEEE'), { locale: dateLocale() })} />}
                 <DialogTitle className="relative text-center text-xl font-bold text-primary first-letter:uppercase">
-                  {detailDay && format(detailDay, 'EEEE d', { locale: es })}
+                  {detailDay && format(detailDay, tr('EEEE d'), { locale: dateLocale() })}
                 </DialogTitle>
                 <DialogDescription className="sr-only">
-                  Tiempo estudiado, meta, cifras y sesiones de estudio del día.
+                  {tr('Tiempo estudiado, meta, cifras y sesiones de estudio del día.')}
                 </DialogDescription>
               </div>
 
@@ -307,12 +307,10 @@ export default function GradesCalendar({
                     className="text-center"
                     title={
                       detailGoal
-                        ? `${goalPercent ?? 0}% de la meta · ${
-                            detailGoal.historic
-                              ? 'meta reconstruida a partir de la calificación de ese día'
-                              : 'meta configurada para este día de la semana'
-                          }`
-                        : 'Este día de la semana no tiene meta'
+                        ? tr('{p}% de la meta · {p2}', { p: goalPercent ?? 0, p2: detailGoal.historic
+                              ? tr('meta reconstruida a partir de la calificación de ese día')
+                              : tr('meta configurada para este día de la semana') })
+                        : tr('Este día de la semana no tiene meta')
                     }
                   >
                     <p className="whitespace-nowrap font-headline tabular-nums leading-none">
@@ -323,7 +321,7 @@ export default function GradesCalendar({
                           {formatMinutes(detailGoal.minutes)}
                         </span>
                       ) : (
-                        <span className="text-xs font-medium text-muted-foreground">sin meta</span>
+                        <span className="text-xs font-medium text-muted-foreground">{tr('sin meta')}</span>
                       )}
                     </p>
                     {goalPercent !== null && (
@@ -336,7 +334,7 @@ export default function GradesCalendar({
                     )}
                     {/* La calificación, debajo de la barra (1.6.6). */}
                     <p className="mt-2 text-xs">
-                      <span className="text-muted-foreground">Calificación </span>
+                      <span className="text-muted-foreground">{tr('Calificación')}{' '}</span>
                       <span className="font-bold tabular-nums text-primary">
                         {detailPerf ? `${detailPerf.score.toFixed(1)} ${detailPerf.grade}` : '—'}
                       </span>
@@ -348,9 +346,9 @@ export default function GradesCalendar({
 
                   {/* Etiqueta a la izquierda, dato a su derecha. */}
                   <dl className="mx-auto w-full max-w-[13rem] space-y-1 text-xs">
-                    <Pair label="Sesiones" value={detailSessions.length} />
+                    <Pair label={tr('Sesiones')} value={detailSessions.length} />
                     <Pair
-                      label="Enfoque medio"
+                      label={tr('Enfoque medio')}
                       value={
                         detailFocusAvg !== null ? (
                           <>
@@ -368,7 +366,7 @@ export default function GradesCalendar({
                 {/* Cuándo se estudió, como dato breve. */}
                 {detailDayparts && (
                   <p className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px]">
-                    <Clock3 className="h-3 w-3 text-primary" aria-label="Cuándo estudiaste" />
+                    <Clock3 className="h-3 w-3 text-primary" aria-label={tr('Cuándo estudiaste')} />
                     {detailDayparts.buckets.map((bucket) => {
                       const top = bucket.key === detailDayparts.top.key && bucket.minutes > 0;
                       return (
@@ -390,7 +388,7 @@ export default function GradesCalendar({
               <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
                 {detailSessions.length === 0 ? (
                   <p className="py-10 text-center text-sm text-muted-foreground">
-                    No hay sesiones de estudio registradas este día.
+                    {tr('No hay sesiones de estudio registradas este día.')}
                   </p>
                 ) : (
                   <div className="grid grid-cols-2 gap-3">

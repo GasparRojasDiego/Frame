@@ -1,4 +1,5 @@
 import type { StudySession } from '@/types';
+import { trc } from '@/lib/i18n';
 
 // ============================================================
 // ¿En qué momento del día se estudió? Mañana, tarde y noche.
@@ -26,9 +27,9 @@ interface DaypartSummary {
 /** Reparto por franjas de las sesiones cuyo punto medio cae entre `from` y `to` (ms). */
 export function studyDayparts(sessions: StudySession[], from: number, to: number): DaypartSummary | null {
   const buckets: DaypartBucket[] = [
-    { key: 'manana', label: 'Mañana', hint: '5–12 h', minutes: 0 },
-    { key: 'tarde', label: 'Tarde', hint: '12–19 h', minutes: 0 },
-    { key: 'noche', label: 'Noche', hint: '19–5 h', minutes: 0 },
+    { key: 'manana', label: trc('momento del día', 'Mañana'), hint: '5–12 h', minutes: 0 },
+    { key: 'tarde', label: trc('momento del día', 'Tarde'), hint: '12–19 h', minutes: 0 },
+    { key: 'noche', label: trc('momento del día', 'Noche'), hint: '19–5 h', minutes: 0 },
   ];
   let total = 0;
   let count = 0;

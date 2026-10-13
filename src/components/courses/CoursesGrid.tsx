@@ -27,6 +27,8 @@ import CourseCollectionDialog from '@/components/courses/CourseCollectionDialog'
 import type { Space } from '@/types';
 import { useCardImageStyle, useReportReferenceWidth } from '@/lib/card-image-height';
 import { cn } from '@/lib/utils';
+import { intlLocale, tr } from '@/lib/i18n';
+import { priorityLabel } from '@/lib/enum-labels';
 
 const PRIORITY_COLOR: Record<TaskPriority, string> = {
   Alta: 'text-red-400',
@@ -91,7 +93,7 @@ function CourseCard({
               colección se quedaba fuera para siempre. */}
           <button
             className="rounded-full bg-background/70 p-1.5 text-muted-foreground backdrop-blur transition-colors hover:text-primary"
-            title="Colección de esta asignatura"
+            title={tr('Colección de esta asignatura')}
             onClick={(e) => {
               e.stopPropagation();
               setCollectionOpen(true);
@@ -101,7 +103,7 @@ function CourseCard({
           </button>
           <button
             className="rounded-full bg-background/70 p-1.5 text-muted-foreground backdrop-blur transition-colors hover:text-primary"
-            title={image ? 'Cambiar imagen' : 'Elegir imagen'}
+            title={image ? tr('Cambiar imagen') : tr('Elegir imagen')}
             onClick={(e) => {
               e.stopPropagation();
               setPickerAspect(aspectOf(imageBoxRef.current));
@@ -127,7 +129,7 @@ function CourseCard({
             onOpenChange={setPickerOpen}
             onSelect={handleSelectImage}
             aspect={pickerAspect}
-            title={`Imagen de ${course.name}`}
+            title={tr('Imagen de {name}', { name: course.name })}
           />
         )}
       </div>
@@ -147,18 +149,18 @@ function CourseCard({
       <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 px-4 py-2.5 text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <BookOpen className="h-3.5 w-3.5 text-primary" />
-          {pendingTasks.length} {pendingTasks.length === 1 ? 'tarea' : 'tareas'}
+          {pendingTasks.length} {pendingTasks.length === 1 ? tr('tarea') : tr('tareas')}
         </span>
         <span className="flex items-center gap-1.5">
           <StickyNote className="h-3.5 w-3.5 text-primary" />
-          {noteCount} {noteCount === 1 ? 'nota' : 'notas'}
+          {noteCount === 1 ? tr('1 nota') : tr('{count} notas', { count: noteCount })}
         </span>
         {nextTask && (
           <span className="flex items-center gap-1.5">
             <CalendarClock className="h-3.5 w-3.5 text-primary" />
-            {new Date(nextTask.dueDate!).toLocaleDateString('es', { day: 'numeric', month: 'short' })}
+            {new Date(nextTask.dueDate!).toLocaleDateString(intlLocale(), { day: 'numeric', month: 'short' })}
             <span className={cn('font-semibold', PRIORITY_COLOR[nextTask.priority])}>
-              · {nextTask.priority}
+              · {priorityLabel(nextTask.priority)}
             </span>
           </span>
         )}
@@ -206,11 +208,11 @@ function SpaceCard({
           <WaveBackdrop />
         )}
         <span className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-background/70 px-2 py-0.5 text-[10px] font-semibold text-primary backdrop-blur">
-          <Layers className="h-3 w-3" /> Colección
+          <Layers className="h-3 w-3" />{' '}{tr('Colección')}
         </span>
         <button
           className="absolute right-2 top-2 rounded-full bg-background/70 p-1.5 text-muted-foreground opacity-0 backdrop-blur transition-opacity hover:text-primary group-hover:opacity-100"
-          title={image ? 'Cambiar imagen' : 'Elegir imagen'}
+          title={image ? tr('Cambiar imagen') : tr('Elegir imagen')}
           onClick={(e) => {
             e.stopPropagation();
             setPickerAspect(aspectOf(imageBoxRef.current));
@@ -225,7 +227,7 @@ function SpaceCard({
             onOpenChange={setPickerOpen}
             onSelect={handleSelectImage}
             aspect={pickerAspect}
-            title={`Imagen de ${space.name}`}
+            title={tr('Imagen de {name}', { name: space.name })}
           />
         )}
       </div>
@@ -239,11 +241,11 @@ function SpaceCard({
       <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 px-4 py-2.5 text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <GraduationCap className="h-3.5 w-3.5 text-primary" />
-          {courseCount} {courseCount === 1 ? 'asignatura' : 'asignaturas'}
+          {courseCount} {courseCount === 1 ? tr('asignatura') : tr('asignaturas')}
         </span>
         <span className="flex items-center gap-1.5">
           <BookOpen className="h-3.5 w-3.5 text-primary" />
-          {pendingCount} {pendingCount === 1 ? 'tarea pendiente' : 'tareas pendientes'}
+          {pendingCount} {pendingCount === 1 ? tr('tarea pendiente') : tr('tareas pendientes')}
         </span>
       </div>
     </Card>
@@ -329,7 +331,7 @@ export default function CoursesGrid() {
               setOpenSpaceId(null);
               router.replace('/knowledge', { scroll: false });
             }}
-            title="Volver a Asignaturas"
+            title={tr('Volver a Asignaturas')}
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -354,7 +356,7 @@ export default function CoursesGrid() {
           )}
 
           <span className="shrink-0 text-xs text-muted-foreground">
-            {openSpaceCourses.length} asignaturas
+            {openSpaceCourses.length}{' '}{tr('asignaturas')}
           </span>
 
           <div className="ml-auto flex shrink-0 items-center gap-1">
@@ -366,7 +368,7 @@ export default function CoursesGrid() {
                   className="h-8 w-8 text-green-500 hover:text-green-600"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={commitRename}
-                  title="Guardar el nombre"
+                  title={tr('Guardar el nombre')}
                 >
                   <Check className="h-4 w-4" />
                 </Button>
@@ -376,7 +378,7 @@ export default function CoursesGrid() {
                   className="h-8 w-8 text-muted-foreground hover:text-foreground"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => setRenaming(false)}
-                  title="Descartar"
+                  title={tr('Descartar')}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -390,7 +392,7 @@ export default function CoursesGrid() {
                   setRenameValue(openSpace.name);
                   setRenaming(true);
                 }}
-                title="Cambiar el nombre de la colección"
+                title={tr('Cambiar el nombre de la colección')}
               >
                 <Pencil className="h-4 w-4" />
               </Button>
@@ -413,9 +415,9 @@ export default function CoursesGrid() {
       {isEmpty ? (
         <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
           <GraduationCap className="h-12 w-12 text-muted-foreground/50" />
-          <h3 className="text-lg font-semibold text-foreground">No hay asignaturas todavía</h3>
+          <h3 className="text-lg font-semibold text-foreground">{tr('No hay asignaturas todavía')}</h3>
           <p className="text-xs text-muted-foreground">
-            Usa el botón "Añadir" para crear tu primera asignatura o colección.
+            {tr('Usa el botón "Añadir" para crear tu primera asignatura o colección.')}
           </p>
         </div>
       ) : (

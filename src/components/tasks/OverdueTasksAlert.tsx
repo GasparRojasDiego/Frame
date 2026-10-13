@@ -9,8 +9,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { useCourse } from '@/context/CourseContext';
 import { format, parseISO, startOfDay } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { EchoHeader } from '@/components/shared/EchoWord';
+import { dateLocale, tr } from '@/lib/i18n';
 
 // ============================================================
 // Alerta de tareas VENCIDAS: cuando una tarea pasó su fecha de entrega, al
@@ -71,16 +71,16 @@ export default function OverdueTasksAlert() {
   return (
     <Dialog open={isOpen} onOpenChange={(o) => !o && snooze()}>
       <DialogContent className="max-w-lg">
-        <EchoHeader word="Vencidas">
+        <EchoHeader word={tr('Vencidas')}>
           <DialogHeader>
             <DialogTitle className="flex items-center justify-center gap-2 text-xl font-bold text-primary">
               <AlertTriangle className="h-5 w-5 text-yellow-500" />
-              Tareas vencidas
+              {tr('Tareas vencidas')}
             </DialogTitle>
             <DialogDescription className="text-center text-xs">
               {overdue.length === 1
-                ? 'Una tarea pasó su fecha de entrega. Decide qué hacer con ella:'
-                : `${overdue.length} tareas pasaron su fecha de entrega. Decide qué hacer con cada una:`}
+                ? tr('Una tarea pasó su fecha de entrega. Decide qué hacer con ella:')
+                : tr('{length} tareas pasaron su fecha de entrega. Decide qué hacer con cada una:', { length: overdue.length })}
             </DialogDescription>
           </DialogHeader>
         </EchoHeader>
@@ -92,19 +92,18 @@ export default function OverdueTasksAlert() {
                 <div className="rounded-md border border-border/60 p-3">
                   <p className="truncate text-sm font-semibold text-foreground">{task.name}</p>
                   <p className="text-[11px] text-muted-foreground">
-                    {task.courseName ? `${task.courseName} · ` : ''}vencía el{' '}
-                    {format(parseISO(task.dueDate!), "d 'de' MMMM", { locale: es })} · {task.progress || 0}%
+                    {task.courseName ? `${task.courseName} · ` : ''}{tr('vencía el')}{' '}
+                    {format(parseISO(task.dueDate!), tr('d \'de\' MMMM'), { locale: dateLocale() })} · {task.progress || 0}%
                   </p>
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button size="sm" variant="outline" className="h-7 text-[11px] border-primary bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary">
-                          <CalendarClock className="mr-1 h-3 w-3" /> Reprogramar
+                          <CalendarClock className="mr-1 h-3 w-3" />{' '}{tr('Reprogramar')}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
                         <Calendar
-                          locale={es}
                           selected={undefined}
                           onSelect={(date) => {
                             if (date) updateTask(task.id, { dueDate: (date as Date).toISOString() });
@@ -118,7 +117,7 @@ export default function OverdueTasksAlert() {
                       className="h-7 text-[11px] text-green-500 hover:text-green-500"
                       onClick={() => deleteTask(task.id)}
                     >
-                      <CheckCircle2 className="mr-1 h-3 w-3" /> Culminada
+                      <CheckCircle2 className="mr-1 h-3 w-3" />{' '}{tr('Culminada')}
                     </Button>
                     <Button
                       size="sm"
@@ -126,7 +125,7 @@ export default function OverdueTasksAlert() {
                       className="h-7 text-[11px] text-red-400 hover:text-red-400"
                       onClick={() => removeTask(task.id)}
                     >
-                      <Trash2 className="mr-1 h-3 w-3" /> Eliminar
+                      <Trash2 className="mr-1 h-3 w-3" />{' '}{tr('Eliminar')}
                     </Button>
                   </div>
                 </div>
@@ -138,7 +137,7 @@ export default function OverdueTasksAlert() {
 
         <div className="flex justify-center">
           <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={snooze}>
-            Más tarde
+            {tr('Más tarde')}
           </Button>
         </div>
       </DialogContent>

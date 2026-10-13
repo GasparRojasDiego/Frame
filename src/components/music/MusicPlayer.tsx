@@ -24,6 +24,8 @@ import { playbackClock } from '@/lib/playback-clock';
 import { songTitle } from '@/lib/music-search';
 import { cn } from '@/lib/utils';
 import { withSong } from '@/hooks/use-song-highlight';
+import { tr } from '@/lib/i18n';
+import { artistLabel, playbackContextLabel } from '@/lib/enum-labels';
 
 // Tope de canciones ilegibles encadenadas que el reproductor salta solo antes
 // de detenerse: evita recorrer en bucle una biblioteca entera sin audio.
@@ -58,7 +60,7 @@ export default function MusicPlayer() {
 
     // Marquee state
     const songName = currentSong ? songTitle(currentSong) : '';
-    const artistName = currentSong?.artist?.trim() || 'Artista desconocido';
+    const artistName = artistLabel(currentSong?.artist);
     const titleContainerRef = useRef<HTMLDivElement>(null);
     const [isOverflowing, setIsOverflowing] = useState(false);
     
@@ -409,7 +411,7 @@ export default function MusicPlayer() {
                             size="icon" 
                             className={cn("h-8 w-8", isShuffle && "bg-primary/20 text-primary border border-primary")}
                             onClick={toggleShuffle}
-                            title="Aleatorio"
+                            title={tr('Aleatorio')}
                         >
                             <Shuffle className="h-5 w-5" />
                         </Button>
@@ -467,7 +469,7 @@ export default function MusicPlayer() {
                             }}
                             className="w-24"
                         />
-                        <Button variant="ghost" size="icon" onClick={handleLikeClick} title="Favorita">
+                        <Button variant="ghost" size="icon" onClick={handleLikeClick} title={tr('Favorita')}>
                             <Heart className={cn("h-5 w-5", currentSong.isFavorite && "fill-primary text-primary")} />
                         </Button>
                     </div>
@@ -477,8 +479,8 @@ export default function MusicPlayer() {
                         size="icon"
                         className="absolute bottom-2 right-2 h-7 w-7 text-muted-foreground hover:text-primary"
                         onClick={() => setNowPlayingOpen(true)}
-                        title="Ver la canción a pantalla completa, con su letra"
-                        aria-label="Abrir la vista Reproduciendo"
+                        title={tr('Ver la canción a pantalla completa, con su letra')}
+                        aria-label={tr('Abrir la vista Reproduciendo')}
                     >
                         <Maximize2 className="h-4 w-4" />
                     </Button>
@@ -490,10 +492,10 @@ export default function MusicPlayer() {
                             // Lleva a la playlist (o a Música) y ubica la canción que suena,
                             // con el mismo parpadeo azul de «Próxima tarea».
                             onClick={() => router.push(currentSong ? withSong(playingContextHref, currentSong.id) : playingContextHref)}
-                            title={`Ir a ${playingContext}`}
+                            title={tr('Ir a {place}', { place: playbackContextLabel(playingContext) })}
                             className="w-full truncate rounded px-2 text-center text-xs font-semibold text-muted-foreground transition-colors hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
-                            {playingContext}
+                            {playbackContextLabel(playingContext)}
                         </button>
                     )}
                 </div>

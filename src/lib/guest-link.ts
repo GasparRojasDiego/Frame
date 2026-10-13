@@ -26,8 +26,6 @@ import type { UserProfile } from '@/types';
 
 const PENDING_KEY = 'frameGuestLinkPending';
 const linkedKey = (guestId: string) => `guestLinkedTo_${guestId}`;
-/** Perfil por defecto de quien entra como invitado (se puede cambiar en Ajustes). */
-export const GUEST_NAME = 'Invitado';
 
 export interface PendingGuestLink {
   v: 1;
@@ -44,12 +42,14 @@ export interface PendingGuestLink {
 
 // --- Progreso (lo pinta GuestLinkOverlay) ---
 
-type GuestLinkPhase = 'idle' | 'merging' | 'uploading' | 'done' | 'error';
+type GuestLinkPhase = 'idle' | 'ask' | 'merging' | 'uploading' | 'done' | 'error';
 
 interface GuestLinkState {
   phase: GuestLinkPhase;
   message?: string;
   result?: ImportResult;
+  /** Solo en «ask»: la respuesta del usuario. */
+  answer?: (bring: boolean) => void;
 }
 
 let state: GuestLinkState = { phase: 'idle' };
@@ -58,6 +58,24 @@ const listeners = new Set<() => void>();
 export function setGuestLinkState(next: GuestLinkState): void {
   state = next;
   listeners.forEach((listener) => listener());
+}
+
+/**
+ * ¿Se suman a la cuenta los datos de invitado de este equipo? Lo pregunta el
+ * propio Frame (GuestLinkOverlay), no el `confirm` del navegador: ese habla
+ * en el idioma de Windows, no en el de la app (1.6.7).
+ */
+export function askToBringGuest(guestName?: string): Promise<boolean> {
+  return new Promise((resolve) =>
+    setGuestLinkState({
+      phase: 'ask',
+      message: guestName,
+      answer: (bring) => {
+        setGuestLinkState({ phase: 'idle' });
+        resolve(bring);
+      },
+    })
+  );
 }
 
 export const useGuestLinkState = () =>

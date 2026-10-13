@@ -1,6 +1,7 @@
 import type { Session, User, AuthChangeEvent } from '@supabase/supabase-js';
 import { getRecoveryClient, getSupabase } from './client';
 import { removeCloudImages } from '@/lib/image-sync';
+import { getLang, tr } from '@/lib/i18n';
 
 const siteUrl =
   import.meta.env.VITE_SITE_URL ||
@@ -14,26 +15,26 @@ const siteUrl =
 export function describeAuthError(message: string | null | undefined): string {
   const raw = (message ?? '').trim();
   const m = raw.toLowerCase();
-  if (!raw) return 'Algo salió mal. Inténtalo de nuevo.';
+  if (!raw) return tr('Algo salió mal. Inténtalo de nuevo.');
   if (m.includes('email rate limit') || m.includes('over_email_send_rate_limit'))
-    return 'Ahora mismo no se pueden enviar más correos de confirmación. Espera una hora o entra con Google, que no necesita correo.';
+    return tr('Ahora mismo no se pueden enviar más correos de confirmación. Espera una hora o entra con Google, que no necesita correo.');
   if (m.includes('rate limit') || m.includes('too many requests'))
-    return 'Demasiados intentos seguidos. Espera un par de minutos y vuelve a probar.';
-  if (m.includes('invalid login credentials')) return 'Correo o contraseña incorrectos.';
+    return tr('Demasiados intentos seguidos. Espera un par de minutos y vuelve a probar.');
+  if (m.includes('invalid login credentials')) return tr('Correo o contraseña incorrectos.');
   if (m.includes('email not confirmed'))
-    return 'Tu correo aún no está confirmado: abre el enlace que te enviamos (mira también en spam).';
+    return tr('Tu correo aún no está confirmado: abre el enlace que te enviamos (mira también en spam).');
   if (m.includes('already registered') || m.includes('already been registered') || m.includes('user already'))
-    return 'Ese correo ya tiene una cuenta. Inicia sesión en lugar de registrarte.';
+    return tr('Ese correo ya tiene una cuenta. Inicia sesión en lugar de registrarte.');
   if (m.includes('password should be at least') || m.includes('weak password'))
-    return 'La contraseña debe tener al menos 6 caracteres.';
+    return tr('La contraseña debe tener al menos 6 caracteres.');
   if (m.includes('unable to validate email') || m.includes('invalid email'))
-    return 'Ese correo no parece válido. Revísalo.';
+    return tr('Ese correo no parece válido. Revísalo.');
   if (m.includes('signups not allowed') || m.includes('signup is disabled'))
-    return 'El registro de cuentas nuevas está desactivado por ahora.';
+    return tr('El registro de cuentas nuevas está desactivado por ahora.');
   if (m.includes('failed to fetch') || m.includes('networkerror') || m.includes('load failed') || m.includes('network request'))
-    return 'No se pudo contactar con el servidor. Revisa tu conexión a internet e inténtalo de nuevo.';
+    return tr('No se pudo contactar con el servidor. Revisa tu conexión a internet e inténtalo de nuevo.');
   if (m.includes('id token') || m.includes('audience'))
-    return 'Google respondió, pero el servidor de Frame no aceptó la identidad. Inténtalo de nuevo en un minuto.';
+    return tr('Google respondió, pero el servidor de Frame no aceptó la identidad. Inténtalo de nuevo en un minuto.');
   return raw;
 }
 
@@ -58,7 +59,7 @@ export async function signUpWithEmail(
   names?: PersonNames
 ): Promise<AuthResult> {
   const supabase = getSupabase();
-  if (!supabase) return { user: null, session: null, error: 'Supabase no está configurado.' };
+  if (!supabase) return { user: null, session: null, error: tr('Supabase no está configurado.') };
 
   const metadata: Record<string, string> = { username: username.trim() };
   if (names) {
@@ -84,7 +85,7 @@ export async function signUpWithEmail(
 
 export async function signInWithEmail(email: string, password: string): Promise<AuthResult> {
   const supabase = getSupabase();
-  if (!supabase) return { user: null, session: null, error: 'Supabase no está configurado.' };
+  if (!supabase) return { user: null, session: null, error: tr('Supabase no está configurado.') };
 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   return { user: data.user, session: data.session, error: error?.message ?? null };
@@ -99,20 +100,20 @@ const PASSWORD_RECOVERY_URL = 'https://gasparrojasdiego.github.io/frame-app/recu
  */
 export async function requestPasswordReset(email: string): Promise<{ error: string | null }> {
   const supabase = getRecoveryClient();
-  if (!supabase) return { error: 'Supabase no está configurado.' };
+  if (!supabase) return { error: tr('Supabase no está configurado.') };
   const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: PASSWORD_RECOVERY_URL });
   return { error: error?.message ?? null };
 }
 
 export async function signInWithGoogle(): Promise<{ error: string | null }> {
   const supabase = getSupabase();
-  if (!supabase) return { error: 'Supabase no está configurado.' };
+  if (!supabase) return { error: tr('Supabase no está configurado.') };
 
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
       redirectTo: siteUrl,
-      queryParams: { access_type: 'offline', prompt: 'consent' },
+      queryParams: { access_type: 'offline', prompt: 'consent', hl: getLang() },
     },
   });
 
@@ -123,7 +124,7 @@ export async function signInWithGoogle(): Promise<{ error: string | null }> {
 // OAuth nativo de la app de escritorio (PKCE + loopback).
 export async function signInWithGoogleIdToken(idToken: string): Promise<AuthResult> {
   const supabase = getSupabase();
-  if (!supabase) return { user: null, session: null, error: 'Supabase no está configurado.' };
+  if (!supabase) return { user: null, session: null, error: tr('Supabase no está configurado.') };
 
   // Una red de colegio parpadea: solo se repite lo que es fallo de red o del
   // servidor, nunca un «no» de Supabase (repetirlo no cambiaría la respuesta).
@@ -188,12 +189,12 @@ export async function getActiveSession(): Promise<Session | null> {
 // Sincroniza el username en el metadata de Auth y en la tabla profiles.
 export async function updateUsername(username: string): Promise<{ error: string | null }> {
   const supabase = getSupabase();
-  if (!supabase) return { error: 'Supabase no está configurado.' };
+  if (!supabase) return { error: tr('Supabase no está configurado.') };
 
   const trimmed = username.trim();
   const { data: userData } = await supabase.auth.getUser();
   const user = userData.user;
-  if (!user) return { error: 'Sesión inválida.' };
+  if (!user) return { error: tr('Sesión inválida.') };
 
   const { error: metaError } = await supabase.auth.updateUser({ data: { username: trimmed } });
   if (metaError) return { error: metaError.message };
@@ -208,7 +209,7 @@ export async function updateUsername(username: string): Promise<{ error: string 
 /** Guarda nombres y apellidos en los metadatos de la cuenta (viajan con la sesión). */
 export async function updatePersonNames(names: PersonNames): Promise<{ error: string | null }> {
   const supabase = getSupabase();
-  if (!supabase) return { error: 'Supabase no está configurado.' };
+  if (!supabase) return { error: tr('Supabase no está configurado.') };
   const first = tidyName(names.firstNames);
   const last = tidyName(names.lastNames);
   const { error } = await supabase.auth.updateUser({

@@ -1,3 +1,5 @@
+import { tr } from '@/lib/i18n';
+
 // ============================================================
 // Portadas a su tamaño útil.
 //
@@ -21,7 +23,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('imagen ilegible'));
+    img.onerror = () => reject(new Error(tr('imagen ilegible')));
     img.src = src;
   });
 }

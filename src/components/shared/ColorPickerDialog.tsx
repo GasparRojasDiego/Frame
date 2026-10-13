@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { EchoHeader } from '@/components/shared/EchoWord';
 import { cn } from '@/lib/utils';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Selector de color (1.6.7): un recuadro centrado, como los de los programas
@@ -145,7 +146,7 @@ export default function ColorPickerDialog({
   value,
   onChange,
   presets,
-  title = 'Color',
+  title = tr('Color'),
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -204,11 +205,11 @@ export default function ColorPickerDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
-        <EchoHeader word="Color">
+        <EchoHeader word={tr('Color')}>
           <DialogHeader>
             <DialogTitle className="text-center text-xl font-bold text-primary">{title}</DialogTitle>
             <DialogDescription className="sr-only">
-              Elige el color en el cuadro y las barras, escribe sus valores o toma uno de la paleta.
+              {tr('Elige el color en el cuadro y las barras, escribe sus valores o toma uno de la paleta.')}
             </DialogDescription>
           </DialogHeader>
         </EchoHeader>
@@ -216,8 +217,8 @@ export default function ColorPickerDialog({
         <div className="space-y-4">
           {/* Antes y después */}
           <div className="flex h-9 overflow-hidden rounded-md border border-border" style={{ background: CHECKER }}>
-            <span className="flex-1" style={{ background: value }} title="Color actual" />
-            <span className="flex-1" style={{ background: current }} title="Color nuevo" />
+            <span className="flex-1" style={{ background: value }} title={tr('Color actual')} />
+            <span className="flex-1" style={{ background: current }} title={tr('Color nuevo')} />
           </div>
 
           {/* Saturación (horizontal) y brillo (vertical) del tono elegido */}
@@ -225,8 +226,8 @@ export default function ColorPickerDialog({
             {...square}
             role="slider"
             tabIndex={0}
-            aria-label="Saturación y brillo"
-            aria-valuetext={`Saturación ${Math.round(color.s * 100)} %, brillo ${Math.round(color.v * 100)} %`}
+            aria-label={tr('Saturación y brillo')}
+            aria-valuetext={tr('Saturación {p} %, brillo {p2} %', { p: Math.round(color.s * 100), p2: Math.round(color.v * 100) })}
             onKeyDown={onSquareKey}
             className="relative h-44 cursor-crosshair touch-none rounded-md outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             style={{
@@ -241,7 +242,7 @@ export default function ColorPickerDialog({
           </div>
 
           <Slider
-            label="Tono"
+            label={tr('Tono')}
             value={color.h}
             max={360}
             step={1}
@@ -251,7 +252,7 @@ export default function ColorPickerDialog({
             format={(h) => `${Math.round(h)}°`}
           />
           <Slider
-            label="Transparencia"
+            label={tr('Transparencia')}
             value={color.a * 100}
             max={100}
             step={1}
@@ -302,7 +303,7 @@ export default function ColorPickerDialog({
                         const parsed = parseHexColor(hex);
                         if (parsed) update(parsed);
                       }}
-                      aria-label={`Color ${hex}`}
+                      aria-label={tr('Color {hex}', { hex })}
                       title={hex}
                       className={cn(
                         'h-6 rounded-md border border-black/10 transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/15',
@@ -319,7 +320,7 @@ export default function ColorPickerDialog({
 
         <DialogFooter>
           <Button variant="gris" onClick={() => onOpenChange(false)}>
-            Cancelar
+            {tr('Cancelar')}
           </Button>
           <Button
             onClick={() => {
@@ -327,7 +328,7 @@ export default function ColorPickerDialog({
               onOpenChange(false);
             }}
           >
-            Usar este color
+            {tr('Usar este color')}
           </Button>
         </DialogFooter>
       </DialogContent>

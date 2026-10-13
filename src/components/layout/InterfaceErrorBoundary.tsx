@@ -2,6 +2,7 @@ import React from 'react';
 import { AlertTriangle, RotateCcw, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePathname } from '@/lib/navigation';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Red de seguridad. Frame no vuelve a quedarse en blanco.
@@ -77,14 +78,13 @@ class Boundary extends React.Component<Props, State> {
 
           <div className="space-y-1.5">
             <h2 className="font-headline text-lg font-bold">
-              {isRoot ? 'Frame no pudo abrirse' : 'Esta interfaz no pudo abrirse'}
+              {isRoot ? tr('Frame no pudo abrirse') : tr('Esta interfaz no pudo abrirse')}
             </h2>
             <p className="text-sm text-muted-foreground">
               {isRoot
-                ? 'Algo falló al arrancar. '
-                : 'El resto de Frame sigue funcionando: puedes cambiar de interfaz desde el menú lateral. '}
-              <strong className="text-foreground">Tus datos no se han perdido</strong> — nada se ha
-              borrado ni modificado.
+                ? tr('Algo falló al arrancar. ')
+                : tr('El resto de Frame sigue funcionando: puedes cambiar de interfaz desde el menú lateral. ')}
+              <strong className="text-foreground">{tr('Tus datos no se han perdido')}</strong>{' '}{tr('— nada se ha borrado ni modificado.')}
             </p>
           </div>
 
@@ -97,7 +97,7 @@ class Boundary extends React.Component<Props, State> {
               }
             >
               <RotateCcw className="mr-2 h-4 w-4" />
-              Reintentar
+              {tr('Reintentar')}
             </Button>
             <Button
               variant="ghost"
@@ -108,7 +108,7 @@ class Boundary extends React.Component<Props, State> {
               <ChevronDown
                 className={`mr-1 h-3 w-3 transition-transform ${showDetail ? 'rotate-180' : ''}`}
               />
-              Detalle técnico
+              {tr('Detalle técnico')}
             </Button>
           </div>
 

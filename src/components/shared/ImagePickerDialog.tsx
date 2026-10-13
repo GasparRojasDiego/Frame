@@ -12,6 +12,7 @@ import {
   type NativePictureCategory,
 } from '@/lib/native-pictures';
 import { EchoHeader } from '@/components/shared/EchoWord';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Selector de imagen unificado de Frame: al presionar un botón de
@@ -30,7 +31,7 @@ export default function ImagePickerDialog({
   open,
   onOpenChange,
   onSelect,
-  title = 'Elegir imagen',
+  title = tr('Elegir imagen'),
   aspect,
 }: {
   open: boolean;
@@ -101,10 +102,10 @@ export default function ImagePickerDialog({
       }}
     >
       <DialogContent className="max-w-2xl" onClick={(e) => e.stopPropagation()}>
-        <EchoHeader word={cropSrc ? 'Encuadrar' : 'Imagen'}>
+        <EchoHeader word={cropSrc ? tr('Encuadrar') : tr('Imagen')}>
           <DialogHeader>
             <DialogTitle className="text-xl text-primary font-bold text-center">
-              {cropSrc ? 'Encuadra la imagen' : title}
+              {cropSrc ? tr('Encuadra la imagen') : title}
             </DialogTitle>
           </DialogHeader>
         </EchoHeader>
@@ -174,11 +175,11 @@ export default function ImagePickerDialog({
         {/* Segunda opción: subir material propio */}
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">
-            ¿Prefieres tu propia imagen? Súbela desde tu equipo.
+            {tr('¿Prefieres tu propia imagen? Súbela desde tu equipo.')}
           </p>
           <Button variant="outline" size="sm" className="text-xs" onClick={() => fileRef.current?.click()}>
             <Upload className="mr-2 h-4 w-4" />
-            Subir imagen
+            {tr('Subir imagen')}
           </Button>
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
         </div>

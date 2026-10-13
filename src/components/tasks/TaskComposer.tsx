@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { getDate } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { Bell, CalendarIcon, Flag, Hourglass, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -32,6 +31,8 @@ import {
 } from '@/components/tasks/task-badges';
 import { cn } from '@/lib/utils';
 import type { Task, TaskAttachment, TaskDifficulty, TaskKind, TaskPriority } from '@/types';
+import { tr } from '@/lib/i18n';
+import { difficultyLabel, priorityLabel, taskKindLabel } from '@/lib/enum-labels';
 
 // ============================================================
 // La tarjeta de crear tarea.
@@ -87,7 +88,7 @@ export default function TaskComposer({
   /** Se desactiva el botón mientras falte algo fuera del formulario. */
   disabled = false,
   disabledReason,
-  submitLabel = 'Añadir Tarea',
+  submitLabel = tr('Añadir Tarea'),
 }: {
   onCreate: (draft: TaskDraft) => void;
   className?: string;
@@ -150,7 +151,7 @@ export default function TaskComposer({
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Nombre"
+            placeholder={tr('Nombre')}
             className="border-0 rounded-b-none h-auto font-semibold text-sm bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
           />
           <div className="px-4">
@@ -160,7 +161,7 @@ export default function TaskComposer({
             ref={descriptionRef}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Descripción"
+            placeholder={tr('Descripción')}
             className="border-0 rounded-t-none text-xs text-muted-foreground bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 resize-none overflow-hidden text-justify"
             rows={1}
           />
@@ -172,7 +173,7 @@ export default function TaskComposer({
                 estimado, recordatorio, documentos y enlaces. */}
             <Popover open={isCalendarOpen} onOpenChange={setCalendarOpen}>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="icon" className="w-10 h-10" title="Fecha de entrega">
+                <Button variant="outline" size="icon" className="w-10 h-10" title={tr('Fecha de entrega')}>
                   {dueDate ? (
                     <span className="text-sm font-bold text-primary">{getDate(dueDate)}</span>
                   ) : (
@@ -182,7 +183,6 @@ export default function TaskComposer({
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
                 <Calendar
-                  locale={es}
                   selected={dueDate}
                   onSelect={(date) => {
                     setDueDate(date as Date | undefined);
@@ -199,7 +199,7 @@ export default function TaskComposer({
                 <Button
                   variant="outline"
                   size="icon"
-                  title={kind ? `Tipo: ${kind}` : 'Tipo de pendiente'}
+                  title={kind ? tr('Tipo: {kind}', { kind: taskKindLabel(kind) }) : tr('Tipo de pendiente')}
                   className={cn('h-10 w-10 transition-colors', kind && 'border-primary bg-primary/15 text-primary')}
                 >
                   {(() => {
@@ -214,7 +214,7 @@ export default function TaskComposer({
                   return (
                     <DropdownMenuItem key={option} onSelect={() => setKind(option)}>
                       <KindIcon className="mr-2 h-4 w-4 text-primary" />
-                      <span className="font-semibold">{option}</span>
+                      <span className="font-semibold">{taskKindLabel(option)}</span>
                     </DropdownMenuItem>
                   );
                 })}
@@ -226,7 +226,7 @@ export default function TaskComposer({
                 <Button
                   variant="outline"
                   size="icon"
-                  title={priority ? `Importancia: ${priority}` : 'Importancia'}
+                  title={priority ? tr('Importancia: {priority}', { priority: priorityLabel(priority) }) : tr('Importancia')}
                   className={cn('w-10 h-10 transition-colors', priority && priorityStyles[priority].badge)}
                 >
                   <Flag className={cn('h-4 w-4', !priority && 'text-foreground')} />
@@ -237,19 +237,19 @@ export default function TaskComposer({
                   onSelect={() => setPriority('Alta')}
                   className={cn('font-semibold', priorityStyles['Alta'].dropdownItem)}
                 >
-                  Alta
+                  {priorityLabel('Alta')}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onSelect={() => setPriority('Media')}
                   className={cn('font-semibold', priorityStyles['Media'].dropdownItem)}
                 >
-                  Media
+                  {priorityLabel('Media')}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onSelect={() => setPriority('Baja')}
                   className={cn('font-semibold', priorityStyles['Baja'].dropdownItem)}
                 >
-                  Baja
+                  {priorityLabel('Baja')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -260,7 +260,7 @@ export default function TaskComposer({
                 <Button
                   variant="outline"
                   size="icon"
-                  title={difficulty ? `Dificultad: ${difficulty}` : 'Dificultad'}
+                  title={difficulty ? tr('Dificultad: {difficulty}', { difficulty: difficultyLabel(difficulty) }) : tr('Dificultad')}
                   className={cn('h-10 w-10 transition-colors', difficulty && DIFFICULTY_META[difficulty].badge)}
                 >
                   <DifficultyBars level={difficulty} />
@@ -270,7 +270,7 @@ export default function TaskComposer({
                 {TASK_DIFFICULTIES.map((level) => (
                   <DropdownMenuItem key={level} onSelect={() => setDifficulty(level)}>
                     <DifficultyBars level={level} className="mr-2" />
-                    <span className={cn('font-semibold', DIFFICULTY_META[level].text)}>{level}</span>
+                    <span className={cn('font-semibold', DIFFICULTY_META[level].text)}>{difficultyLabel(level)}</span>
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -282,7 +282,7 @@ export default function TaskComposer({
                 <Button
                   variant="outline"
                   size="icon"
-                  title={estimate > 0 ? `Tiempo estimado: ${formatEstimate(estimate)}` : 'Tiempo estimado para culminar'}
+                  title={estimate > 0 ? tr('Tiempo estimado: {estimate}', { estimate: formatEstimate(estimate) }) : tr('Tiempo estimado para culminar')}
                   className={cn(
                     'w-10 h-10 transition-colors',
                     estimate > 0 && 'bg-primary/20 text-primary border-primary'

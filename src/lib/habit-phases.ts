@@ -1,4 +1,5 @@
 import type { Habit, HabitPhase } from '@/types';
+import { tr, trc } from '@/lib/i18n';
 
 // ============================================================
 // Hábitos por fases del día.
@@ -21,15 +22,15 @@ interface PhaseInfo {
 }
 
 export const HABIT_PHASES: PhaseInfo[] = [
-  { id: 'morning', label: 'Mañana', startHour: 5, range: '5:00 – 11:59' },
-  { id: 'afternoon', label: 'Tarde', startHour: 12, range: '12:00 – 18:59' },
-  { id: 'night', label: 'Noche', startHour: 19, range: 'desde las 19:00' },
+  { id: 'morning', get label() { return trc('momento del día', 'Mañana'); }, startHour: 5, range: '5:00 – 11:59' },
+  { id: 'afternoon', get label() { return trc('momento del día', 'Tarde'); }, startHour: 12, range: '12:00 – 18:59' },
+  { id: 'night', get label() { return trc('momento del día', 'Noche'); }, startHour: 19, get range() { return tr('desde las 19:00'); } },
 ];
 
-export const ALL_DAY_LABEL = 'Todo el día';
+export const allDayLabel = (): string => tr('Todo el día');
 
 export const phaseLabel = (phase: HabitPhase | undefined): string =>
-  HABIT_PHASES.find((p) => p.id === phase)?.label ?? ALL_DAY_LABEL;
+  HABIT_PHASES.find((p) => p.id === phase)?.label ?? allDayLabel();
 
 /** Orden de presentación: mañana, tarde, noche y, al final, todo el día. */
 export const phaseRank = (phase: HabitPhase | undefined): number => {

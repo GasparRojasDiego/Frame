@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { sessionHasFocus, sessionSubjects } from '@/components/temporizador/session-info';
 import { useCardImageStyle } from '@/lib/card-image-height';
 import type { StudySession } from '@/types';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Una sesión de estudio como tarjeta.
@@ -192,7 +193,7 @@ export default function SessionCard({
   const hasFocus = sessionHasFocus(session);
   const canEdit = Boolean(onEdit) && isSessionEditable(session);
   const names = subjects.map((subject) => subject.name);
-  const label = names.length > 0 ? names.join(' · ') : 'Sin asignatura';
+  const label = names.length > 0 ? names.join(' · ') : tr('Sin asignatura');
 
   return (
     <div
@@ -204,8 +205,8 @@ export default function SessionCard({
       <button
         type="button"
         onClick={onOpen}
-        title="Ver el detalle de la sesión"
-        aria-label={`Ver la sesión de ${label}, ${formatDurationLabel(seconds)}`}
+        title={tr('Ver el detalle de la sesión')}
+        aria-label={tr('Ver la sesión de {label}, {durationLabel}', { label, durationLabel: formatDurationLabel(seconds) })}
         className="block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
       >
         {/* --- Tarjeta de la asignatura: portada y nombre --- */}
@@ -231,7 +232,7 @@ export default function SessionCard({
         <span className="block border-t border-border/60 px-3 py-1.5" title={label}>
           {names.length === 0 ? (
             <span className="block truncate text-center text-sm font-bold text-muted-foreground">
-              Sin asignatura
+              {tr('Sin asignatura')}
             </span>
           ) : (
             <span className="block truncate text-center text-sm font-bold">
@@ -264,7 +265,7 @@ export default function SessionCard({
             <span className="block text-xs font-bold tabular-nums leading-tight text-foreground">
               {formatDurationLabel(seconds)}
             </span>
-            <span className="block text-[9px] leading-tight text-muted-foreground">Tiempo</span>
+            <span className="block text-[9px] leading-tight text-muted-foreground">{tr('Tiempo')}</span>
           </span>
           {hasFocus && (
             <>
@@ -274,7 +275,7 @@ export default function SessionCard({
                   {session.perception}
                   <span className="text-[10px] font-semibold text-muted-foreground">/20</span>
                 </span>
-                <span className="block text-[9px] leading-tight text-muted-foreground">Rendimiento</span>
+                <span className="block text-[9px] leading-tight text-muted-foreground">{tr('Rendimiento')}</span>
               </span>
             </>
           )}
@@ -294,8 +295,8 @@ export default function SessionCard({
             size="icon"
             className="h-6 w-6 [&_svg]:size-3.5"
             onClick={onEdit}
-            title="Corregir esta sesión"
-            aria-label="Corregir esta sesión"
+            title={tr('Corregir esta sesión')}
+            aria-label={tr('Corregir esta sesión')}
           >
             <Pencil />
           </Button>

@@ -30,6 +30,10 @@ base64 = "0.22"
 # Explorador de archivos de Windows para «Importar» en Música.
 rfd = "0.15"
 
+[target.'cfg(windows)'.dependencies]
+# «Pegar» del menú propio de los campos de texto: lee el portapapeles.
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_DataExchange", "Win32_System_Memory", "Win32_System_Ole"] }
+
 [profile.release]
 # Binario mínimo: casi todo el trabajo nativo es de entrada y salida (archivos,
 # red), así que optimizar por tamaño ("z") no se nota en velocidad.

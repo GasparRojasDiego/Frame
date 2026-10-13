@@ -3,6 +3,7 @@
 // (multi-cuenta: Classroom puede ir con la institucional y Gmail con la
 // personal), con refresh automático. Cachean la última respuesta para offline.
 import { getAccessToken, profileSuffix, type IntegrationKey } from './auth';
+import { tr } from '@/lib/i18n';
 
 async function gfetch<T>(integration: IntegrationKey, url: string, init?: RequestInit): Promise<T> {
   const token = await getAccessToken(integration);
@@ -16,7 +17,7 @@ async function gfetch<T>(integration: IntegrationKey, url: string, init?: Reques
   });
   if (!resp.ok) {
     const body = await resp.json().catch(() => null);
-    throw new Error(body?.error?.message ?? `Error de Google (${resp.status})`);
+    throw new Error(body?.error?.message ?? tr('Error de Google ({status})', { status: resp.status }));
   }
   if (resp.status === 204) return undefined as T;
   return resp.json() as Promise<T>;
@@ -72,7 +73,7 @@ export async function listGmailMessages(maxResults = 25): Promise<GmailMessage[]
         id: m.id,
         threadId: m.threadId,
         from: fromRaw.replace(/<.*>/, '').replace(/"/g, '').trim() || fromRaw,
-        subject: header('Subject') || '(sin asunto)',
+        subject: header('Subject') || tr('(sin asunto)'),
         snippet: (m.snippet ?? '').replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&'),
         date: new Date(Number(m.internalDate)).toISOString(),
         unread: (m.labelIds ?? []).includes('UNREAD'),

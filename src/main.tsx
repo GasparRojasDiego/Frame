@@ -4,6 +4,8 @@ import { HashRouter } from 'react-router-dom';
 import { isTauri } from '@tauri-apps/api/core';
 import { RootErrorBoundary } from '@/components/layout/InterfaceErrorBoundary';
 import { initTheme } from '@/lib/theme';
+import { prepareLang, useLang } from '@/lib/i18n';
+import TextFieldMenu, { openTextFieldMenu, textFieldAt } from '@/components/layout/TextFieldMenu';
 import '@/app/globals.css';
 
 // Cada ventana carga SOLO lo suyo: la flotante de Estudio y el vistazo al
@@ -26,10 +28,11 @@ initTheme();
 // que el usuario no pidió. Se desactiva.
 //
 // Con UNA excepción: los campos de texto. Ahí el menú es el de cortar, copiar
-// y pegar —útil y sin nada de navegación—, y quitarlo solo estorbaría.
+// y pegar —útil y sin nada de navegación—, y quitarlo solo estorbaría. Si el
+// del sistema hablara otro idioma que Frame, sale el de Frame (1.6.7).
 document.addEventListener('contextmenu', (event) => {
-  const target = event.target as HTMLElement | null;
-  if (target?.closest?.('input, textarea, [contenteditable="true"]')) return;
+  const field = textFieldAt(event.target);
+  if (field && !openTextFieldMenu(event, field)) return;
   event.preventDefault();
 });
 
@@ -88,10 +91,13 @@ if (!isMiniTimerWindow && !isSchedulePeekWindow) {
   });
 }
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    {/* Última línea de defensa: envuelve TODO, contextos incluidos, para que
-        ningún fallo pueda dejar la ventana en blanco y sin explicación. */}
+/** Raíz suscrita al idioma: al cambiarlo, toda la interfaz se repinta en el
+ *  acto (el árbol se crea aquí dentro, así que nada se queda sin repintar). */
+function LangRoot() {
+  useLang();
+  return (
+    // Última línea de defensa: envuelve TODO, contextos incluidos, para que
+    // ningún fallo pueda dejar la ventana en blanco y sin explicación.
     <RootErrorBoundary>
       <Suspense fallback={null}>
         {isMiniTimerWindow ? (
@@ -104,6 +110,17 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           </HashRouter>
         )}
       </Suspense>
+      <TextFieldMenu />
     </RootErrorBoundary>
-  </React.StrictMode>
-);
+  );
+}
+
+// El diccionario del idioma guardado se carga antes del primer pintado: nunca
+// se ve un parpadeo en el otro idioma.
+void prepareLang().finally(() => {
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <LangRoot />
+    </React.StrictMode>
+  );
+});

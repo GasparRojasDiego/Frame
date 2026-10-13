@@ -31,6 +31,7 @@ import {
 } from '@/lib/updater';
 import { APP_VERSION } from '@/lib/version';
 import { cn } from '@/lib/utils';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Recuadro de actualización (desde la 1.6.2).
@@ -47,18 +48,18 @@ import { cn } from '@/lib/utils';
 // ============================================================
 
 const STEP_META: Record<UpdateStep, { label: string; icon: ElementType }> = {
-  download: { label: 'Descargar', icon: Download },
-  verify: { label: 'Verificar firma', icon: ShieldCheck },
-  install: { label: 'Instalar', icon: PackageOpen },
-  restart: { label: 'Reiniciar', icon: RotateCw },
+  download: { get label() { return tr('Descargar'); }, icon: Download },
+  verify: { get label() { return tr('Verificar firma'); }, icon: ShieldCheck },
+  install: { get label() { return tr('Instalar'); }, icon: PackageOpen },
+  restart: { get label() { return tr('Reiniciar'); }, icon: RotateCw },
 };
 
 type StepStatus = 'pending' | 'current' | 'waiting' | 'done';
 
 const SPEED_CAPTION: Record<Exclude<SpeedSource, 'medida'>, (speed: string) => string> = {
-  anterior: (speed) => `Según tu última descarga (${speed})`,
-  conexion: (speed) => `Según tu conexión (≈ ${speed})`,
-  supuesta: () => 'Aproximado: aún no hay medidas de este equipo',
+  anterior: (speed) => tr('Según tu última descarga ({speed})', { speed }),
+  conexion: (speed) => tr('Según tu conexión (≈ {speed})', { speed }),
+  supuesta: () => tr('Aproximado: aún no hay medidas de este equipo'),
 };
 
 /** Por qué no se puede actualizar ahora (o, si ya se descarga, a qué esperará
@@ -66,17 +67,17 @@ const SPEED_CAPTION: Record<Exclude<SpeedSource, 'medida'>, (speed: string) => s
 function busyMessage(studying: boolean, music: boolean, recording: boolean, downloading: boolean): string {
   // [lo que espera, lo que se pide]
   const parts: [string, string][] = [];
-  if (studying) parts.push(['termines tu sesión de estudio', 'termina tu sesión de estudio']);
-  if (recording) parts.push(['termines y guardes la grabación', 'termina y guarda la grabación']);
-  if (music) parts.push(['pauses la música', 'pausa la música']);
+  if (studying) parts.push([tr('termines tu sesión de estudio'), tr('termina tu sesión de estudio')]);
+  if (recording) parts.push([tr('termines y guardes la grabación'), tr('termina y guarda la grabación')]);
+  if (music) parts.push([tr('pauses la música'), tr('pausa la música')]);
   const list = (items: string[]) =>
     items.length > 1 ? `${items.slice(0, -1).join(', ')} y ${items[items.length - 1]}` : items[0] ?? '';
   const wait = list(parts.map(([w]) => w));
   const ask = list(parts.map(([, a]) => a));
-  const cut = parts.length > 1 ? 'las cortaría' : 'la cortaría';
+  const cut = parts.length > 1 ? tr('las cortaría') : tr('la cortaría');
   return downloading
-    ? `Al terminar la descarga esperará a que ${wait}: el reinicio ${cut}.`
-    : `${ask.charAt(0).toUpperCase()}${ask.slice(1)} para actualizar: el reinicio ${cut}.`;
+    ? tr('Al terminar la descarga esperará a que {wait}: el reinicio {cut}.', { wait, cut })
+    : tr('{p}{p2} para actualizar: el reinicio {cut}.', { p: ask.charAt(0).toUpperCase(), p2: ask.slice(1), cut });
 }
 
 /**
@@ -139,9 +140,9 @@ export default function UpdateDialog() {
       <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
         {/* Cabecera: «ACTUALIZAR» a la deriva detrás del título. */}
         <DialogHeader className="relative overflow-hidden bg-gradient-to-b from-primary/10 to-transparent px-6 pb-4 pt-6">
-          <EchoWord word="Actualizar" />
-          <DialogTitle className="relative text-center text-xl font-bold text-primary">Frame {version}</DialogTitle>
-          <DialogDescription className="relative text-center text-xs">Tienes la {APP_VERSION}</DialogDescription>
+          <EchoWord word={tr('Actualizar')} />
+          <DialogTitle className="relative text-center text-xl font-bold text-primary">Frame{' '}{version}</DialogTitle>
+          <DialogDescription className="relative text-center text-xs">{tr('Tienes la')}{' '}{APP_VERSION}</DialogDescription>
         </DialogHeader>
         <div className="mx-6 border-t border-border/70" />
 
@@ -149,12 +150,12 @@ export default function UpdateDialog() {
           {!started ? (
             <>
               <div className="grid grid-cols-2 gap-3">
-                <Figure icon={HardDriveDownload} label="Peso" value={sizeLabel} hint="del instalador" />
+                <Figure icon={HardDriveDownload} label={tr('Peso')} value={sizeLabel} hint={tr('del instalador')} />
                 <Figure
                   icon={Timer}
-                  label="Tiempo estimado"
+                  label={tr('Tiempo estimado')}
                   value={`≈ ${formatDuration(estimate.remainingMs)}`}
-                  hint="hasta poder usarla"
+                  hint={tr('hasta poder usarla')}
                 />
               </div>
               <p className="-mt-2 text-center text-[11px] text-muted-foreground">
@@ -173,13 +174,13 @@ export default function UpdateDialog() {
                 <p className="mt-2 text-xs tabular-nums text-muted-foreground">
                   {phase === 'downloading'
                     ? update.downloaded > 0
-                      ? `${formatBytes(update.downloaded)} de ${sizeLabel}${update.speed ? ` · ${formatSpeed(update.speed)}` : ''}`
-                      : 'Conectando…'
+                      ? tr('{bytes} de {sizeLabel}{p}', { bytes: formatBytes(update.downloaded), sizeLabel, p: update.speed ? ` · ${formatSpeed(update.speed)}` : '' })
+                      : tr('Conectando…')
                     : phase === 'verifying'
-                      ? `${sizeLabel} descargados · comprobando la firma`
+                      ? tr('{sizeLabel} descargados · comprobando la firma', { sizeLabel })
                       : phase === 'ready'
-                        ? 'Descargada y verificada: lista para instalar'
-                        : 'Frame se cerrará y volverá a abrirse sola'}
+                        ? tr('Descargada y verificada: lista para instalar')
+                        : tr('Frame se cerrará y volverá a abrirse sola')}
                 </p>
               </div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
@@ -190,8 +191,8 @@ export default function UpdateDialog() {
               </div>
               {phase !== 'ready' && (
                 <p className="text-center text-sm text-foreground">
-                  Quedan <span className="font-semibold tabular-nums">≈ {formatDuration(remaining)}</span>
-                  <span className="text-muted-foreground"> hasta poder usarla</span>
+                  {tr('Quedan')}{' '}<span className="font-semibold tabular-nums">≈ {formatDuration(remaining)}</span>
+                  <span className="text-muted-foreground">{' '}{tr('hasta poder usarla')}</span>
                 </p>
               )}
             </div>
@@ -234,9 +235,9 @@ export default function UpdateDialog() {
                   <span className={cn('flex-1', status === 'current' && 'font-semibold')}>{label}</span>
                   <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
                     {status === 'done'
-                      ? 'Hecho'
+                      ? tr('Hecho')
                       : status === 'waiting'
-                        ? 'En espera'
+                        ? tr('En espera')
                         : `≈ ${formatDuration(estimate.steps[step])}`}
                   </span>
                 </li>
@@ -249,7 +250,7 @@ export default function UpdateDialog() {
               {busyMessage(isTimerActive, isPlaying, recording, phase === 'downloading' || phase === 'verifying')}
             </Notice>
           )}
-          {error && !started && <Notice>{error}</Notice>}
+          {error && !started && <Notice>{tr(error)}</Notice>}
         </div>
 
         <div className="mx-6 border-t border-border/70" />
@@ -257,33 +258,33 @@ export default function UpdateDialog() {
           {!started ? (
             <>
               <Button variant="gris" onClick={closeUpdateDialog}>
-                Cancelar
+                {tr('Cancelar')}
               </Button>
               <Button onClick={() => void startUpdateInstall()} disabled={blocked}>
                 <Download />
-                {error ? 'Reintentar' : 'Actualizar ahora'}
+                {error ? tr('Reintentar') : tr('Actualizar ahora')}
               </Button>
             </>
           ) : phase === 'ready' ? (
             <>
               <Button variant="fantasma" onClick={closeUpdateDialog}>
-                Ocultar
+                {tr('Ocultar')}
               </Button>
               <Button onClick={() => void startUpdateInstall()} disabled={blocked}>
                 <PackageOpen />
-                Instalar ahora
+                {tr('Instalar ahora')}
               </Button>
             </>
           ) : phase === 'installing' ? (
             <Button disabled>
               <LoaderCircle className="motion-safe:animate-spin" />
-              Instalando…
+              {tr('Instalando…')}
             </Button>
           ) : (
             // La descarga sigue aunque el recuadro se cierre; el anillo del
             // testigo muestra el avance y un clic lo vuelve a abrir.
             <Button variant="fantasma" onClick={closeUpdateDialog}>
-              Ocultar
+              {tr('Ocultar')}
             </Button>
           )}
         </div>

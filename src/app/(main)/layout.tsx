@@ -23,9 +23,9 @@ import AppCloseGuard from '@/components/layout/AppCloseGuard';
 import { findGuestToAdopt, rememberAdoptionAnswer } from '@/lib/guest-migration';
 import {
   clearGuestLinkPending,
-  GUEST_NAME,
   mergeGuestIntoAccount,
   readPendingGuestLink,
+  askToBringGuest,
   setGuestLinkState,
   usernameFromGoogle,
   type PendingGuestLink,
@@ -55,6 +55,9 @@ import { useToast } from '@/hooks/use-toast';
 import type { Session } from '@supabase/supabase-js';
 
 
+
+import { tr, useLang } from '@/lib/i18n';
+import { GUEST_NAME, usernameLabel } from '@/lib/enum-labels';
 
 function AppLayout({ children, userProfile }: { children: ReactNode; userProfile: UserProfile | null }) {
     const { currentSong, isPlaying, isTimerActive, hasInteracted, isPlayerVisible, setPlayerVisible, isSidebarCollapsed } = useCourse();
@@ -126,9 +129,9 @@ function AppLayout({ children, userProfile }: { children: ReactNode; userProfile
         onStorageQuotaError((key) => {
             toast({
                 variant: 'destructive',
-                title: 'No hay espacio para guardar',
+                title: tr('No hay espacio para guardar'),
                 description:
-                    `Frame no pudo guardar «${key}». Libera espacio en el equipo o borra grabaciones y música que ya no uses; hasta entonces tus cambios podrían no conservarse.`,
+                    tr('Frame no pudo guardar «{key}». Libera espacio en el equipo o borra grabaciones y música que ya no uses; hasta entonces tus cambios podrían no conservarse.', { key }),
             });
         });
         return () => onStorageQuotaError(null);
@@ -290,6 +293,7 @@ function AppLayout({ children, userProfile }: { children: ReactNode; userProfile
 }
 
 function MainApp({ children, userProfile }: { children: ReactNode; userProfile: UserProfile | null }) {
+  const lang = useLang();
   const [interruptedSession, setInterruptedSession] = useState<InterruptedSession | null>(null);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
 
@@ -362,7 +366,13 @@ function MainApp({ children, userProfile }: { children: ReactNode; userProfile: 
 
   return (
     <CourseProvider userProfile={userProfile}>
-      <AppLayout userProfile={userProfile}>{children}</AppLayout>
+      <AppLayout userProfile={userProfile}>
+        {/* Al cambiar de idioma, la página abierta se monta de nuevo: así nada
+            de lo que calculó (y guardó en memoria) se queda en el idioma
+            anterior. El resto (barra lateral, reproductor, datos) solo se
+            repinta: la música y el temporizador siguen como estaban. */}
+        <React.Fragment key={lang}>{children}</React.Fragment>
+      </AppLayout>
       <Toaster />
       {/* Alerta diaria de tareas vencidas (reprogramar/culminar/eliminar) */}
       <OverdueTasksAlert />
@@ -552,9 +562,7 @@ function AppController({ children }: { children: React.ReactNode }) {
         // queda un perfil de invitado con datos: se ofrece sumarlo.
         const guest = findGuestToAdopt(user.id);
         if (guest) {
-          const bring = window.confirm(
-            `En este equipo usaste Frame como invitado${guest.username ? ` («${guest.username}»)` : ''} y hay datos guardados (asignaturas, tareas, sesiones, anotaciones, grabaciones o el calendario).\n\n¿Quieres sumarlas a tu cuenta?\n\nAceptar: se suman a tu cuenta (sin borrar nada de lo que ya tenía) y se respaldan en la nube.\nCancelar: tu cuenta sigue como está (los datos de invitado no se borran).`
-          );
+          const bring = await askToBringGuest(guest.username ? usernameLabel(guest.username) : undefined);
           rememberAdoptionAnswer(user.id);
           if (bring) {
             setGuestLinkState({ phase: 'merging' });
@@ -585,7 +593,7 @@ function AppController({ children }: { children: React.ReactNode }) {
           username:
             linkedGuest.username && linkedGuest.username !== GUEST_NAME
               ? linkedGuest.username.slice(0, 12)
-              : usernameFromGoogle(linkedGuest.firstNames, 'Estudiante'),
+              : usernameFromGoogle(linkedGuest.firstNames, tr('Estudiante')),
           firstNames: tidyName(linkedGuest.firstNames ?? ''),
           lastNames: tidyName(linkedGuest.lastNames ?? ''),
         };

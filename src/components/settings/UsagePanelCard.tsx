@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { isFrameOwner } from '@/lib/owner';
 import { useRouter } from '@/lib/navigation';
 import type { UserProfile } from '@/types';
+import { tr } from '@/lib/i18n';
 
 /**
  * «Panel de uso», dentro del menú de la rueda de la cuenta (Ajustes). Solo lo
@@ -31,7 +32,7 @@ export default function UsagePanelButton({
       }}
     >
       <BarChart3 className="h-4 w-4" />
-      Panel de uso
+      {tr('Panel de uso')}
     </Button>
   );
 }

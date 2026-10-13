@@ -8,6 +8,7 @@ import {
 import { useCourse } from '@/context/CourseContext';
 import { cn } from '@/lib/utils';
 import { PlaylistItem } from './PlaylistItem';
+import { tr } from '@/lib/i18n';
 
 /** Cuánto hay que mantener pulsada una playlist para poder moverla. */
 const HOLD_MS = 420;
@@ -170,7 +171,7 @@ export function PlaylistList({ collapsed = false }: { collapsed?: boolean }) {
         >
           <span className="flex items-center gap-2">
             <ListMusic className="h-3.5 w-3.5" />
-            Mis playlists
+            {tr('Mis playlists')}
           </span>
           {isPlaylistsOpen ? (
             <ChevronDown className="h-4 w-4" />
@@ -180,7 +181,7 @@ export function PlaylistList({ collapsed = false }: { collapsed?: boolean }) {
         </div>
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className="flex flex-col gap-1 mt-4" title="Mantén pulsada una playlist para moverla">
+        <div className="flex flex-col gap-1 mt-4" title={tr('Mantén pulsada una playlist para moverla')}>
           {items}
         </div>
       </CollapsibleContent>

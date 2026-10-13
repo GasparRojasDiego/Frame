@@ -1,10 +1,10 @@
 import { addDays, differenceInCalendarDays, format, isValid, parseISO, startOfDay, startOfWeek, subDays } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { GOAL_DAY_KEYS, UNASSIGNED_SUBJECT } from '@/lib/academic-metrics';
+import { GOAL_DAY_KEYS, unassignedSubject } from '@/lib/academic-metrics';
 import { sessionSeconds } from '@/lib/duration';
 import { isScheduled } from '@/lib/habit-schedule';
 import { currentStreak } from '@/lib/streak';
 import type { ArchivedTask, Course, DailyPerformance, Habit, StreakGoal, StudyGoals, StudySession, Task } from '@/types';
+import { dateLocale, tr } from '@/lib/i18n';
 
 // ============================================================
 // Las frases de la barra superior.
@@ -69,18 +69,18 @@ const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
 /** «hoy», «mañana», «el jueves» o «el 24 de octubre». */
 function whenLabel(due: Date, today: Date): string {
   const diff = differenceInCalendarDays(due, today);
-  if (diff === 0) return 'hoy';
-  if (diff === 1) return 'mañana';
-  if (diff < 7) return `el ${format(due, 'EEEE', { locale: es })}`;
-  return `el ${format(due, "d 'de' MMMM", { locale: es })}`;
+  if (diff === 0) return tr('hoy');
+  if (diff === 1) return tr('mañana');
+  if (diff < 7) return tr('el {p}', { p: format(due, tr('EEEE'), { locale: dateLocale() }) });
+  return tr('el {p}', { p: format(due, tr('d \'de\' MMMM'), { locale: dateLocale() }) });
 }
 
 /** Saludo según la hora: la frase neutra cuando aún no hay nada que contar. */
 function greetingPhrase(now: Date, name?: string): HeaderPhrase {
   const hour = now.getHours();
-  const salute = hour >= 5 && hour < 12 ? 'Buenos días' : hour >= 12 && hour < 20 ? 'Buenas tardes' : 'Buenas noches';
+  const salute = hour >= 5 && hour < 12 ? tr('Buenos días') : hour >= 12 && hour < 20 ? tr('Buenas tardes') : tr('Buenas noches');
   const first = name?.trim().split(/\s+/)[0];
-  return { id: 'saludo', text: first ? `${salute}, ${first}` : `${salute}, te damos la bienvenida a Frame` };
+  return { id: 'saludo', text: first ? `${salute}, ${first}` : tr('{salute}, te damos la bienvenida a Frame', { salute }) };
 }
 
 /**
@@ -117,7 +117,7 @@ export function buildHeaderPhrases(data: PhraseData): HeaderPhrase[] {
     if (inRange(t, weekStart, tomorrowStart)) {
       weekMin += minutes;
       // El tiempo se reparte a partes iguales entre las asignaturas de la sesión.
-      const subjects = session.subjects?.length ? session.subjects : [UNASSIGNED_SUBJECT];
+      const subjects = session.subjects?.length ? session.subjects : [unassignedSubject()];
       for (const subject of subjects) {
         weekBySubject.set(subject, (weekBySubject.get(subject) ?? 0) + minutes / subjects.length);
       }
@@ -178,75 +178,75 @@ export function buildHeaderPhrases(data: PhraseData): HeaderPhrase[] {
   const next = upcoming[0];
   if (next && differenceInCalendarDays(next.due, today) <= 14) {
     const course = data.courses?.find((c) => c.id === next.task.courseId);
-    push('entrega-proxima', `Tu próxima entrega: ${course?.name ?? next.task.name}, ${whenLabel(next.due, today)}`);
+    push('entrega-proxima', tr('Tu próxima entrega: {p}, {whenLabel}', { p: course?.name ?? next.task.name, whenLabel: whenLabel(next.due, today) }));
   }
-  push('entregas-semana', dueThisWeek >= 2 && `Esta semana te esperan ${dueThisWeek} entregas`);
+  push('entregas-semana', dueThisWeek >= 2 && tr('Esta semana te esperan {dueThisWeek} entregas', { dueThisWeek }));
 
   // 2. Hoy.
-  push('estudio-hoy', todayMin >= 1 && `Hoy llevas ${spanLabel(todayMin)} de estudio`);
+  push('estudio-hoy', todayMin >= 1 && tr('Hoy llevas {spanLabel} de estudio', { spanLabel: spanLabel(todayMin) }));
   const goal = data.studyGoals?.[GOAL_DAY_KEYS[now.getDay()]] ?? 0;
   // Sin nada estudiado hoy, la meta no es un dato: acompaña a las demás frases
   // en este puesto, pero sola no tapa el saludo (las metas vienen puestas).
   const bareGoalAt = goal > 0 && todayMin < 1 ? phrases.length : -1;
   if (goal > 0) {
-    if (todayMin >= goal) push('meta-hoy', `Meta de hoy cumplida: ${spanLabel(goal)}`);
-    else if (todayMin >= 1) push('meta-hoy', `Te faltan ${spanLabel(Math.max(1, goal - todayMin))} para tu meta de hoy`);
+    if (todayMin >= goal) push('meta-hoy', tr('Meta de hoy cumplida: {spanLabel}', { spanLabel: spanLabel(goal) }));
+    else if (todayMin >= 1) push('meta-hoy', tr('Te faltan {spanLabel} para tu meta de hoy', { spanLabel: spanLabel(Math.max(1, goal - todayMin)) }));
   }
   push(
     'tareas-hoy',
-    doneToday >= 1 && `${doneToday} ${plural(doneToday, 'tarea culminada', 'tareas culminadas')} hoy`
+    doneToday >= 1 && tr('{doneToday} {plural} hoy', { doneToday, plural: plural(doneToday, tr('tarea culminada'), tr('tareas culminadas')) })
   );
   if (habitsToday.length > 0 && habitsDoneToday > 0) {
     push(
       'habitos-hoy',
       habitsDoneToday >= habitsToday.length
         ? habitsToday.length === 1
-          ? 'Tu hábito de hoy, hecho'
-          : `Los ${habitsToday.length} hábitos de hoy, hechos`
-        : `${habitsDoneToday} de ${habitsToday.length} hábitos de hoy hechos`
+          ? tr('Tu hábito de hoy, hecho')
+          : tr('Los {length} hábitos de hoy, hechos', { length: habitsToday.length })
+        : tr('{habitsDoneToday} de {length} hábitos de hoy hechos', { habitsDoneToday, length: habitsToday.length })
     );
   }
-  push('racha', streak >= 2 && `Llevas ${streak} días de racha`);
+  push(tr('racha'), streak >= 2 && tr('Llevas {streak} días de racha', { streak }));
 
   // 3. Esta semana (sin repetir lo que ya dijo «hoy», p. ej. un lunes).
-  push('estudio-semana', weekMin - todayMin >= 1 && `Esta semana llevas ${spanLabel(weekMin)} de estudio`);
+  push('estudio-semana', weekMin - todayMin >= 1 && tr('Esta semana llevas {spanLabel} de estudio', { spanLabel: spanLabel(weekMin) }));
   push(
     'tareas-semana',
-    doneWeek > doneToday && `${doneWeek} ${plural(doneWeek, 'tarea culminada', 'tareas culminadas')} esta semana`
+    doneWeek > doneToday && tr('{doneWeek} {plural} esta semana', { doneWeek, plural: plural(doneWeek, tr('tarea culminada'), tr('tareas culminadas')) })
   );
   // Cuenta marcas (un hábito marcado cinco días son cinco), no hábitos.
   push(
     'habitos-semana',
     habitChecksWeek > habitsDoneToday &&
       (habitChecksWeek === 1
-        ? 'Esta semana ya marcaste un hábito'
-        : `Esta semana marcaste tus hábitos ${habitChecksWeek} veces`)
+        ? tr('Esta semana ya marcaste un hábito')
+        : tr('Esta semana marcaste tus hábitos {habitChecksWeek} veces', { habitChecksWeek }))
   );
   const [topSubject, topMinutes] =
     [...weekBySubject.entries()]
-      .filter(([subject]) => subject !== UNASSIGNED_SUBJECT)
+      .filter(([subject]) => subject !== unassignedSubject())
       .sort((a, b) => b[1] - a[1])[0] ?? [];
-  push('asignatura-semana', topSubject && (topMinutes ?? 0) >= 30 && `Tu asignatura de la semana: ${topSubject}`);
+  push('asignatura-semana', topSubject && (topMinutes ?? 0) >= 30 && tr('Tu asignatura de la semana: {topSubject}', { topSubject }));
   push(
     'supera-semana',
-    lastWeekMin >= 1 && weekMin > lastWeekMin && 'Ya superas tu estudio de la semana pasada'
+    lastWeekMin >= 1 && weekMin > lastWeekMin && tr('Ya superas tu estudio de la semana pasada')
   );
 
   // 4. Ayer y la semana pasada.
-  push('estudio-ayer', yesterdayMin >= 1 && `Ayer estudiaste ${spanLabel(yesterdayMin)}`);
+  push('estudio-ayer', yesterdayMin >= 1 && tr('Ayer estudiaste {spanLabel}', { spanLabel: spanLabel(yesterdayMin) }));
   const yesterdayPerf = (data.dailyPerformances ?? []).find((p) => p.date === dayKey(new Date(yesterdayStart)));
   push(
     'nota-ayer',
-    yesterdayPerf && (yesterdayPerf.grade === 'A' || yesterdayPerf.grade === 'AD') && `Ayer cerraste el día con ${yesterdayPerf.grade}`
+    yesterdayPerf && (yesterdayPerf.grade === 'A' || yesterdayPerf.grade === 'AD') && tr('Ayer cerraste el día con {grade}', { grade: yesterdayPerf.grade })
   );
-  push('estudio-semana-pasada', lastWeekMin >= 1 && `La semana pasada estudiaste ${spanLabel(lastWeekMin)}`);
+  push('estudio-semana-pasada', lastWeekMin >= 1 && tr('La semana pasada estudiaste {spanLabel}', { spanLabel: spanLabel(lastWeekMin) }));
   push(
     'tareas-semana-pasada',
     doneLastWeek >= 1 &&
-      `La semana pasada culminaste ${doneLastWeek} ${plural(doneLastWeek, 'tarea', 'tareas')}`
+      tr('La semana pasada culminaste {doneLastWeek} {plural}', { doneLastWeek, plural: plural(doneLastWeek, tr('tarea'), tr('tareas')) })
   );
 
   if (phrases.length === 0) return [greetingPhrase(now, data.name)];
-  if (bareGoalAt >= 0) phrases.splice(bareGoalAt, 0, { id: 'meta-hoy', text: `Tu meta de hoy: ${spanLabel(goal)} de estudio` });
+  if (bareGoalAt >= 0) phrases.splice(bareGoalAt, 0, { id: 'meta-hoy', text: tr('Tu meta de hoy: {spanLabel} de estudio', { spanLabel: spanLabel(goal) }) });
   return phrases;
 }

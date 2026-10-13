@@ -24,7 +24,6 @@ import RealNameRow from '@/components/settings/RealNameRow';
 import { getThemePreference, setThemePreference, type ThemePreference } from '@/lib/theme';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { differenceInCalendarDays, format, parseISO } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { saveImage } from '@/lib/music-db';
 import { useStoredImage } from '@/hooks/use-stored-image';
@@ -38,34 +37,75 @@ import LegalDocument from '@/components/settings/LegalDocument';
 import { INFO_VERSION, infoDocument } from '@/lib/legal/info';
 import { TERMS_VERSION, termsDocument } from '@/lib/legal/terms';
 import { SUPPORT_VERSION, supportDocument } from '@/lib/legal/support';
+import { infoDocumentEn } from '@/lib/legal/info-en';
+import { termsDocumentEn } from '@/lib/legal/terms-en';
+import { supportDocumentEn } from '@/lib/legal/support-en';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 import { updateUsername } from '@/lib/supabase/auth';
 import StreakStatusCard from '@/components/settings/StreakStatusCard';
 import EchoWord from '@/components/shared/EchoWord';
 
 
+import { dateLocale, getLang, setLang, tr, useLang, type Lang } from '@/lib/i18n';
+import { usernameLabel } from '@/lib/enum-labels';
+
 const daysOfWeek: { key: keyof StudyGoals; label: string }[] = [
-  { key: 'monday', label: 'Lunes' },
-  { key: 'tuesday', label: 'Martes' },
-  { key: 'wednesday', label: 'Miércoles' },
-  { key: 'thursday', label: 'Jueves' },
-  { key: 'friday', label: 'Viernes' },
-  { key: 'saturday', label: 'Sábado' },
-  { key: 'sunday', label: 'Domingo' },
+  { key: 'monday', get label() { return tr('Lunes'); } },
+  { key: 'tuesday', get label() { return tr('Martes'); } },
+  { key: 'wednesday', get label() { return tr('Miércoles'); } },
+  { key: 'thursday', get label() { return tr('Jueves'); } },
+  { key: 'friday', get label() { return tr('Viernes'); } },
+  { key: 'saturday', get label() { return tr('Sábado'); } },
+  { key: 'sunday', get label() { return tr('Domingo'); } },
 ];
+
+// Idioma de la interfaz (1.6.7): cambia al instante, sin reiniciar. Cada
+// idioma se nombra en sí mismo («Español», «English»), como pidió Diego: así
+// quien cambió sin querer encuentra el suyo.
+function LanguageSelector() {
+  const lang = useLang();
+  const options: { value: Lang; label: string }[] = [
+    { value: 'es', label: 'Español' },
+    { value: 'en', label: 'English' },
+  ];
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <p className="font-bold text-muted-foreground text-xs">{tr('Idioma')}</p>
+      <div className="flex items-center gap-1.5">
+        {options.map(({ value, label }) => (
+          <Button
+            key={value}
+            variant="ghost"
+            lang={value}
+            aria-pressed={lang === value}
+            className={cn(
+              'h-9 rounded-md border px-2.5 text-[11px] font-semibold',
+              lang === value
+                ? 'border-primary/50 bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary'
+                : 'border-border bg-transparent text-muted-foreground hover:bg-secondary'
+            )}
+            onClick={() => void setLang(value)}
+          >
+            {label}
+          </Button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // Selector de tema de la app: claro (arena) / oscuro / según el dispositivo.
 // El cambio es inmediato y persiste entre sesiones (localStorage).
 function ThemeSelector() {
   const [pref, setPref] = useState<ThemePreference>(() => getThemePreference());
   const options: { value: ThemePreference; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-    { value: 'light', label: 'Tema claro', icon: Sun },
-    { value: 'dark', label: 'Tema oscuro', icon: Moon },
-    { value: 'system', label: 'Tema del dispositivo', icon: Monitor },
+    { value: 'light', label: tr('Tema claro'), icon: Sun },
+    { value: 'dark', label: tr('Tema oscuro'), icon: Moon },
+    { value: 'system', label: tr('Tema del dispositivo'), icon: Monitor },
   ];
   return (
     <div className="flex flex-col items-center gap-2">
-      <p className="font-bold text-muted-foreground text-xs">Tema</p>
+      <p className="font-bold text-muted-foreground text-xs">{tr('Tema')}</p>
       <div className="flex items-center gap-3">
         {options.map(({ value, label, icon: Icon }) => (
           <Button
@@ -145,8 +185,8 @@ export default function SettingsPage() {
     updateStudyGoals(localGoals);
     setIsEditingGoals(false);
     toast({
-        title: "Metas guardadas",
-        description: "Tus metas diarias de estudio se actualizaron.",
+        title: tr('Metas guardadas'),
+        description: tr('Tus metas diarias de estudio se actualizaron.'),
     });
   };
   
@@ -168,16 +208,16 @@ export default function SettingsPage() {
     if (editedUsername.trim().length === 0) {
         toast({
             variant: "destructive",
-            title: "Error",
-            description: "El nombre de usuario no puede estar vacío.",
+            title: tr('Error'),
+            description: tr('El nombre de usuario no puede estar vacío.'),
         });
         return;
     }
     if (editedUsername.trim().length > 12) {
         toast({
             variant: "destructive",
-            title: "Error",
-            description: "El nombre de usuario no puede tener más de 12 caracteres.",
+            title: tr('Error'),
+            description: tr('El nombre de usuario no puede tener más de 12 caracteres.'),
         });
         return;
     }
@@ -203,8 +243,8 @@ export default function SettingsPage() {
     setIsEditingProfile(false);
     
     toast({
-        title: "Perfil guardado",
-        description: "Tu información de perfil ha sido actualizada.",
+        title: tr('Perfil guardado'),
+        description: tr('Tu información de perfil ha sido actualizada.'),
     });
     window.dispatchEvent(new CustomEvent('profileUpdated'));
   };
@@ -272,39 +312,41 @@ export default function SettingsPage() {
     }
     setIsEditingStreakGoal(false);
     toast({
-        title: "Meta de racha guardada",
-        description: "Tu meta ha sido actualizada.",
+        title: tr('Meta de racha guardada'),
+        description: tr('Tu meta ha sido actualizada.'),
     });
   };
 
   // Los tres documentos de la app, con los datos de esta instalación ya
-  // interpolados (versión, identificador y fecha de la compilación).
+  // interpolados (versión, identificador y fecha de la compilación). En
+  // inglés, su traducción (el español es el que manda: cláusula 29).
   const LEGAL_DIALOGS = useMemo(() => {
+    const english = getLang() === 'en';
     const appVersion = APP_VERSION;
-    const installId = accountCode(userProfile?.id) ?? 'sin identificador';
-    const stamp = format(parseISO(BUILD_DATE), "d 'de' MMMM 'de' yyyy", { locale: es });
+    const installId = accountCode(userProfile?.id) ?? tr('sin identificador');
+    const stamp = format(parseISO(BUILD_DATE), tr('d \'de\' MMMM \'de\' yyyy'), { locale: dateLocale() });
 
     return [
       {
         key: 'info',
-        label: 'Información del sistema',
-        title: 'Información y novedades',
-        subtitle: `Frame ${appVersion} · documento versión ${INFO_VERSION}`,
-        markdown: infoDocument({ appVersion, installId, releaseDate: stamp }),
+        label: tr('Información del sistema'),
+        title: tr('Información y novedades'),
+        subtitle: tr('Frame {appVersion} · documento versión {INFO_VERSION}', { appVersion, INFO_VERSION }),
+        markdown: (english ? infoDocumentEn : infoDocument)({ appVersion, installId, releaseDate: stamp }),
       },
       {
         key: 'terms',
-        label: 'Términos de servicio',
-        title: 'Términos, condiciones y privacidad',
-        subtitle: `Versión ${TERMS_VERSION} · Legislación peruana · Ley N.º 29733 y Ley N.º 29571`,
-        markdown: termsDocument({ appVersion, effectiveDate: stamp }),
+        label: tr('Términos de servicio'),
+        title: tr('Términos, condiciones y privacidad'),
+        subtitle: tr('Versión {TERMS_VERSION} · Legislación peruana · Ley N.º 29733 y Ley N.º 29571', { TERMS_VERSION }),
+        markdown: (english ? termsDocumentEn : termsDocument)({ appVersion, effectiveDate: stamp }),
       },
       {
         key: 'support',
-        label: 'Reportar un error',
-        title: 'Soporte y reporte de errores',
-        subtitle: `Versión ${SUPPORT_VERSION} · Incluye el puerto seguro para vulnerabilidades`,
-        markdown: supportDocument({ appVersion, installId, effectiveDate: stamp }),
+        label: tr('Reportar un error'),
+        title: tr('Soporte y reporte de errores'),
+        subtitle: tr('Versión {SUPPORT_VERSION} · Incluye el puerto seguro para vulnerabilidades', { SUPPORT_VERSION }),
+        markdown: (english ? supportDocumentEn : supportDocument)({ appVersion, installId, effectiveDate: stamp }),
       },
     ];
   }, [userProfile]);
@@ -331,12 +373,12 @@ export default function SettingsPage() {
             de colgar de una esquina.
             ------------------------------------------------------------------ */}
         <div className="rounded-xl border border-border/70 bg-card/40 p-5">
-          <div className="flex flex-col gap-6 xl:flex-row xl:items-center">
+          <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:gap-5">
             {/* --- Identidad --- */}
-            <div className="flex shrink-0 items-center gap-5">
+            <div className="flex shrink-0 items-center gap-4 2xl:gap-5">
               <div
                 className={cn(
-                  'flex h-28 w-28 items-center justify-center overflow-hidden rounded-full bg-secondary',
+                  'flex h-28 w-28 items-center justify-center overflow-hidden rounded-full bg-secondary xl:h-24 xl:w-24 2xl:h-28 2xl:w-28',
                   isEditingProfile && 'cursor-pointer animate-pulse-border-infinite border-2 border-primary'
                 )}
                 onClick={() => {
@@ -347,7 +389,7 @@ export default function SettingsPage() {
                 }}
               >
                 {profileAvatar ? (
-                  <Image src={profileAvatar} alt="Profile Avatar" width={112} height={112} className="h-full w-full object-cover" />
+                  <Image src={profileAvatar} alt={tr('Foto de perfil')} width={112} height={112} className="h-full w-full object-cover" />
                 ) : (
                   <User className="h-14 w-14 text-primary" />
                 )}
@@ -364,7 +406,7 @@ export default function SettingsPage() {
                         if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
                         if (e.key === 'Escape') handleCancelEditProfile();
                       }}
-                      placeholder="Username"
+                      placeholder={tr('Nombre de usuario')}
                       className="h-9 w-48 font-headline text-xl font-bold"
                       maxLength={12}
                       autoFocus
@@ -372,14 +414,14 @@ export default function SettingsPage() {
                   ) : (
                     <>
                       <h1 className="truncate font-headline text-xl font-bold text-foreground">
-                        {userProfile?.username}
+                        {usernameLabel(userProfile?.username)}
                       </h1>
                       <Button
                         onClick={handleStartEditingProfile}
                         size="icon"
                         variant="ghost"
                         className="h-7 w-7 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
-                        title="Cambiar el nombre"
+                        title={tr('Cambiar el nombre')}
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
@@ -389,7 +431,7 @@ export default function SettingsPage() {
 
                 <RealNameRow userProfile={userProfile} />
                 <p className="text-xs text-muted-foreground">
-                  {userProfile?.isGuest ? 'Sesión local · solo en este equipo' : (userProfile?.email ?? 'Cuenta sincronizada')}
+                  {userProfile?.isGuest ? tr('Sesión local · solo en este equipo') : (userProfile?.email ?? tr('Cuenta sincronizada'))}
                 </p>
                 {/* Identificador de la cuenta. Toda cuenta tiene uno, también
                     las de correo y Google, que antes salían sin él (ver
@@ -401,14 +443,14 @@ export default function SettingsPage() {
                       const code = accountCode(userProfile?.id);
                       if (!code) return;
                       void navigator.clipboard?.writeText(code).then(
-                        () => toast({ title: 'ID copiado', description: code }),
+                        () => toast({ title: tr('ID copiado'), description: code }),
                         () => undefined
                       );
                     }}
                     className="group/id flex items-center gap-1.5 rounded px-1 -mx-1 font-mono text-[11px] tabular-nums text-muted-foreground/80 transition-colors hover:bg-primary/10 hover:text-primary"
-                    title="Copiar el ID de tu cuenta"
+                    title={tr('Copiar el ID de tu cuenta')}
                   >
-                    ID {accountCode(userProfile?.id)}
+                    {tr('ID')}{' '}{accountCode(userProfile?.id)}
                     <Copy className="h-3 w-3 opacity-0 transition-opacity group-hover/id:opacity-100" />
                   </button>
                 )}
@@ -420,27 +462,35 @@ export default function SettingsPage() {
               <div className="flex flex-col justify-center gap-1 rounded-lg border border-border/60 bg-gradient-to-b from-primary/[0.07] to-transparent px-4 py-3">
                 <span className="flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground">
                   <CalendarDays className="h-3.5 w-3.5 shrink-0 text-primary" />
-                  Miembro desde
+                  {tr('Miembro desde')}
                 </span>
-                <span className="font-headline text-base font-bold text-foreground">
+                <span className="whitespace-nowrap font-headline text-base font-bold text-foreground">
                   {userProfile?.createdAt
-                    ? format(parseISO(userProfile.createdAt), "d 'de' MMMM, yyyy", { locale: es })
+                    ? format(parseISO(userProfile.createdAt), tr('d \'de\' MMMM, yyyy'), { locale: dateLocale() })
                     : '—'}
                 </span>
                 <span className="text-[10px] text-muted-foreground">
                   {userProfile?.createdAt
-                    ? `${differenceInCalendarDays(new Date(), parseISO(userProfile.createdAt))} días con Frame`
-                    : 'sin fecha registrada'}
+                    ? (() => {
+                        const days = Math.max(1, differenceInCalendarDays(new Date(), parseISO(userProfile.createdAt)));
+                        return days === 1 ? tr('1 día con Frame') : tr('{days} días con Frame', { days });
+                      })()
+                    : tr('sin fecha registrada')}
                 </span>
               </div>
             </div>
 
+            {/* --- Idioma, a la izquierda de la divisoria (1.6.7). --- */}
+            <div className="flex shrink-0 items-start">
+              <LanguageSelector />
+            </div>
+
             {/* --- Ajustes: tema y cuenta, juntos y etiquetados. La rueda abre
                 un menú pequeño a su lado (AccountCard), no un recuadro. --- */}
-            <div className="flex shrink-0 items-start gap-6 border-t border-border/60 pt-4 xl:border-l xl:border-t-0 xl:pl-6 xl:pt-0">
+            <div className="flex shrink-0 items-start gap-5 border-t border-border/60 pt-4 xl:border-l xl:border-t-0 xl:pl-5 xl:pt-0">
               <ThemeSelector />
               <div className="flex flex-col items-center gap-2">
-                <p className="text-xs font-bold text-muted-foreground">Cuenta</p>
+                <p className="text-xs font-bold text-muted-foreground">{tr('Cuenta')}</p>
                 <AccountMenu userProfile={userProfile} />
               </div>
             </div>
@@ -450,7 +500,7 @@ export default function SettingsPage() {
         <div className="space-y-2 pt-6">
             <div className="flex justify-center items-center relative mb-6">
                 <h2 className="text-xl font-semibold leading-none tracking-tight text-center text-primary">
-                    Metas diarias de estudio
+                    {tr('Metas diarias de estudio')}
                 </h2>
                 <div className="absolute right-0 flex items-center gap-2">
                     {isEditingGoals ? (
@@ -463,7 +513,7 @@ export default function SettingsPage() {
                             </Button>
                         </>
                     ) : (
-                        <Button variant="ghost" size="icon" onClick={() => setIsEditingGoals(true)} className="h-8 w-8 text-muted-foreground" title="Editar las metas">
+                        <Button variant="ghost" size="icon" onClick={() => setIsEditingGoals(true)} className="h-8 w-8 text-muted-foreground" title={tr('Editar las metas')}>
                             <Pencil className="h-5 w-5" />
                         </Button>
                     )}
@@ -494,10 +544,10 @@ export default function SettingsPage() {
             </div>
             {selectionMode === 'rendimiento' && (
               <div className="text-center text-muted-foreground text-xs space-x-4 pt-2">
-                <span><span className="font-bold text-foreground">AD:</span> 18-20</span>
+                <span><span className="font-bold text-foreground">{tr('AD:')}</span> 18-20</span>
                 <span><span className="font-bold text-foreground">A:</span> 14 - 17.9</span>
                 <span><span className="font-bold text-foreground">B:</span> 11 - 13.9</span>
-                <span><span className="font-bold text-foreground">C:</span> &lt; 11</span>
+                <span><span className="font-bold text-foreground">C:</span>{' '}{tr('< 11')}</span>
               </div>
             )}
         </div>
@@ -516,13 +566,13 @@ export default function SettingsPage() {
                 <div className="flex flex-col gap-4 h-full">
                     <Tabs value={selectionMode} onValueChange={(value) => setSelectionMode(value as 'rendimiento' | 'tiempo')} className="w-full">
                         <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="rendimiento" className="border-r">Rendimiento</TabsTrigger>
-                            <TabsTrigger value="tiempo">Tiempo</TabsTrigger>
+                            <TabsTrigger value="rendimiento" className="border-r">{tr('Rendimiento')}</TabsTrigger>
+                            <TabsTrigger value="tiempo">{tr('Tiempo')}</TabsTrigger>
                         </TabsList>
                     </Tabs>
                     <Card className="w-full group/streak flex flex-col flex-grow">
                         <CardHeader className="relative flex flex-row items-center justify-center p-4">
-                            <CardTitle className="text-lg font-bold text-primary flex-grow text-center">Meta de racha</CardTitle>
+                            <CardTitle className="text-lg font-bold text-primary flex-grow text-center">{tr('Meta de racha')}</CardTitle>
                             <div className="absolute right-4">
                                 {isEditingStreakGoal ? (
                                     <div className="flex items-center gap-1">
@@ -530,7 +580,7 @@ export default function SettingsPage() {
                                         <Button onClick={handleCancelEditStreakGoal} size="icon" variant="ghost" className="h-7 w-7 text-red-500 hover:text-red-600"><X className="h-4 w-4" /></Button>
                                     </div>
                                 ) : (
-                                    <Button onClick={handleStartEditStreakGoal} title="Cambiar la meta de racha" size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground opacity-0 group-hover/streak:opacity-100 transition-opacity"><Pencil className="h-4 w-4" /></Button>
+                                    <Button onClick={handleStartEditStreakGoal} title={tr('Cambiar la meta de racha')} size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground opacity-0 group-hover/streak:opacity-100 transition-opacity"><Pencil className="h-4 w-4" /></Button>
                                 )}
                             </div>
                         </CardHeader>
@@ -563,7 +613,7 @@ export default function SettingsPage() {
                                     ) : (
                                         <span className="text-2xl font-bold">{streakGoal.minutes}</span>
                                     )}
-                                    <span className="text-sm text-muted-foreground">min</span>
+                                    <span className="text-sm text-muted-foreground">{tr('min')}</span>
                                 </div>
                             )}
                         </CardContent>
@@ -577,7 +627,7 @@ export default function SettingsPage() {
                 <div className="relative min-h-[34rem] lg:min-h-0">
                 <Card className="flex flex-col lg:absolute lg:inset-0">
                     <CardHeader className="p-4 pb-3">
-                        <CardTitle className="text-center text-lg font-bold text-primary">Informes</CardTitle>
+                        <CardTitle className="text-center text-lg font-bold text-primary">{tr('Informes')}</CardTitle>
                     </CardHeader>
                     <CardContent className="flex min-h-0 flex-1 flex-col p-4 pt-3">
                         <ReportCenter userProfile={userProfile} />
@@ -588,7 +638,7 @@ export default function SettingsPage() {
         </div>
 
         <p className="pt-12 text-xs text-center text-muted-foreground">
-          Frame {APP_VERSION} · Tus datos viven en este equipo · © 2026 VT Asvent
+          Frame{' '}{APP_VERSION}{' '}{tr('· Tus datos viven en este equipo · © 2026 VT Asvent')}
         </p>
 
         {/* ------------------------------------------------------------------
@@ -645,18 +695,18 @@ export default function SettingsPage() {
                 setProfileAvatar(croppedImage);
                 window.dispatchEvent(new CustomEvent('profileUpdated'));
                 toast({
-                    title: "Avatar actualizado",
-                    description: "Tu nueva foto de perfil ha sido guardada.",
+                    title: tr('Avatar actualizado'),
+                    description: tr('Tu nueva foto de perfil ha sido guardada.'),
                 });
                 } catch (e: any) {
                 console.error("Failed to save avatar:", e);
                 const isQuotaError = e.name === 'QuotaExceededError';
                 toast({
                     variant: "destructive",
-                    title: isQuotaError ? "Imagen Demasiado Grande" : "Error al Guardar",
+                    title: isQuotaError ? tr('Imagen Demasiado Grande') : tr('Error al Guardar'),
                     description: isQuotaError
-                    ? "La imagen es demasiado grande. Por favor, elige un archivo más pequeño."
-                    : "Ocurrió un error inesperado al guardar el avatar.",
+                    ? tr('La imagen es demasiado grande. Por favor, elige un archivo más pequeño.')
+                    : tr('Ocurrió un error inesperado al guardar el avatar.'),
                 });
                 } finally {
                 setCropperOpen(false);

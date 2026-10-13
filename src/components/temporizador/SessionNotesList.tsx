@@ -5,6 +5,7 @@ import { formatHMS } from '@/lib/duration';
 import RichNoteView from '@/components/temporizador/RichNoteView';
 import { cn } from '@/lib/utils';
 import type { SessionNote } from '@/types';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Los avances de una sesión, en orden.
@@ -77,7 +78,7 @@ export default function SessionNotesList({
               variant="ghost"
               className="h-6 w-6 shrink-0 text-muted-foreground/60 transition-colors hover:text-destructive"
               onClick={() => onDelete(note.id)}
-              title="Quitar esta anotación"
+              title={tr('Quitar esta anotación')}
             >
               <Trash2 className="h-3 w-3" />
             </Button>
@@ -93,7 +94,7 @@ export function SessionNotesHeading({ count }: { count: number }) {
   return (
     <p className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
       <NotebookPen className="h-3.5 w-3.5 text-primary" />
-      Avances anotados
+      {tr('Avances anotados')}
       <span className="font-normal text-muted-foreground/70">({count})</span>
     </p>
   );

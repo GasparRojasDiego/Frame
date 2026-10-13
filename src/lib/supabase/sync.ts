@@ -91,9 +91,9 @@ async function syncOnce(uid: string): Promise<{
   wrote?: boolean;
 }> {
   const supabase = getSupabase();
-  if (!supabase) return { ok: false, applied: false, error: 'Supabase no está configurado.' };
+  if (!supabase) return { ok: false, applied: false, error: tr('Supabase no está configurado.') };
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
-    return { ok: false, applied: false, error: 'Sin conexión.' };
+    return { ok: false, applied: false, error: tr('Sin conexión.') };
   }
 
   // `getSession` lee la sesión guardada en el equipo; `getUser` hacía una
@@ -101,7 +101,7 @@ async function syncOnce(uid: string): Promise<{
   // La autoridad real es la RLS de la tabla: con un token ajeno no escribe.
   const { data: sessionData } = await supabase.auth.getSession();
   if (sessionData.session?.user?.id !== uid) {
-    return { ok: false, applied: false, error: 'Sesión inválida.' };
+    return { ok: false, applied: false, error: tr('Sesión inválida.') };
   }
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
@@ -157,7 +157,7 @@ async function syncOnce(uid: string): Promise<{
           return {
             ok: false,
             applied: false,
-            error: 'La nube cambió mientras se sincronizaba; se reintentará luego.',
+            error: tr('La nube cambió mientras se sincronizaba; se reintentará luego.'),
           };
         }
         await new Promise((resolve) => setTimeout(resolve, 150 * attempt));
@@ -174,7 +174,7 @@ async function syncOnce(uid: string): Promise<{
         return {
           ok: false,
           applied: false,
-          error: 'Los datos cambiaron mientras se sincronizaba; se reintentará luego.',
+          error: tr('Los datos cambiaron mientras se sincronizaba; se reintentará luego.'),
         };
       }
       continue;
@@ -190,7 +190,7 @@ async function syncOnce(uid: string): Promise<{
       return {
         ok: false,
         applied: false,
-        error: 'No hay espacio en el equipo para guardar lo que llegó de la nube.',
+        error: tr('No hay espacio en el equipo para guardar lo que llegó de la nube.'),
       };
     }
     commitState(uid, merged);
@@ -198,7 +198,7 @@ async function syncOnce(uid: string): Promise<{
     return { ok: true, applied: outcome.changed, error: null, wrote: true };
   }
 
-  return { ok: false, applied: false, error: 'No se pudo sincronizar.' };
+  return { ok: false, applied: false, error: tr('No se pudo sincronizar.') };
 }
 
 // ------------------------------------------------------------
@@ -254,6 +254,7 @@ function recordSyncAttempt(uid: string, ok: boolean, error: string | null): void
  * sesión y la creación de perfil.
  */
 import { isAccountDeletionInProgress } from '@/lib/account-deletion';
+import { tr } from '@/lib/i18n';
 
 export async function pushToCloud(
   uid: string

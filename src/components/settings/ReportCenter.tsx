@@ -8,7 +8,6 @@ import {
   isSameYear,
   isSameISOWeek,
 } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { Check, ChevronDown, FileText, LoaderCircle, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,6 +31,8 @@ import { buildPendingReport, pendingReportFileBase, pendingSummary } from '@/lib
 import type { ReportFormat } from '@/lib/report-export';
 import { cn } from '@/lib/utils';
 import type { UserProfile } from '@/types';
+import { dateLocale, getLang, tr } from '@/lib/i18n';
+import { usernameLabel } from '@/lib/enum-labels';
 
 // ============================================================
 // Informes (Ajustes).
@@ -45,14 +46,14 @@ import type { UserProfile } from '@/types';
 type ReportKind = 'performance' | 'pending';
 
 const KINDS: { key: ReportKind; label: string }[] = [
-  { key: 'performance', label: 'Rendimiento' },
-  { key: 'pending', label: 'Pendientes' },
+  { key: 'performance', get label() { return tr('Rendimiento'); } },
+  { key: 'pending', get label() { return tr('Pendientes'); } },
 ];
 
 const SCOPES: { key: ReportScope; label: string }[] = [
-  { key: 'semana', label: 'Semanal' },
-  { key: 'mes', label: 'Mensual' },
-  { key: 'anio', label: 'Anual' },
+  { key: 'semana', get label() { return tr('Semanal'); } },
+  { key: 'mes', get label() { return tr('Mensual'); } },
+  { key: 'anio', get label() { return tr('Anual'); } },
 ];
 
 const STEP: Record<ReportScope, (date: Date, amount: number) => Date> = {
@@ -67,8 +68,8 @@ const BACK: Record<ReportScope, number> = { semana: 26, mes: 12, anio: 3 };
 const AHEAD: Record<ReportScope, number> = { semana: 8, mes: 6, anio: 1 };
 
 const FORMATS: { format: ReportFormat; label: string; icon: typeof FileText; title: string }[] = [
-  { format: 'pdf', label: 'PDF', icon: Printer, title: 'Imprimir o guardar como PDF' },
-  { format: 'docx', label: 'Word', icon: FileText, title: 'Documento de Word, editable' },
+  { format: 'pdf', label: 'PDF', icon: Printer, get title() { return tr('Imprimir o guardar como PDF'); } },
+  { format: 'docx', label: 'Word', icon: FileText, get title() { return tr('Documento de Word, editable'); } },
 ];
 
 /** Botón rectangular «fantasma» que despliega sus opciones. */
@@ -122,7 +123,7 @@ export default function ReportCenter({ userProfile }: { userProfile: UserProfile
   /** Desplazamiento respecto del periodo actual (negativo = pasado). */
   const [offset, setOffset] = useState(0);
 
-  const studentName = userProfile?.username || 'Estudiante';
+  const studentName = userProfile?.username ? usernameLabel(userProfile.username) : tr('Estudiante');
   const reference = useMemo(() => STEP[scope](new Date(), offset), [scope, offset]);
   const { start, end } = reportRange(scope, reference);
   const label = rangeLabel(scope, start, end);
@@ -139,9 +140,9 @@ export default function ReportCenter({ userProfile }: { userProfile: UserProfile
         scope === 'semana' ? isSameISOWeek(date, now) : scope === 'mes' ? isSameMonth(date, now) : isSameYear(date, now);
       const text =
         scope === 'semana'
-          ? `${format(range.start, 'd MMM', { locale: es })} – ${format(range.end, 'd MMM yyyy', { locale: es })}`
+          ? `${format(range.start, tr('d MMM'), { locale: dateLocale() })} – ${format(range.end, tr('d MMM yyyy'), { locale: dateLocale() })}`
           : rangeLabel(scope, range.start, range.end);
-      list.push({ key: step, label: same ? `${text} (actual)` : text });
+      list.push({ key: step, label: same ? tr('{text} (actual)', { text }) : text });
     }
     return list;
   }, [kind, scope]);
@@ -184,9 +185,17 @@ export default function ReportCenter({ userProfile }: { userProfile: UserProfile
     [performance, kind, pendingInput]
   );
 
-  const stamp = scope === 'anio' ? format(start, 'yyyy') : scope === 'mes' ? format(start, 'yyyy-MM') : format(start, "RRRR-'S'II");
+  // El nombre del archivo, en el idioma de Frame; la telemetría recibe
+  // siempre el español, para que las cifras no se partan por idioma.
+  const english = getLang() === 'en';
+  const stampOf = (week: string) =>
+    scope === 'anio' ? format(start, 'yyyy') : scope === 'mes' ? format(start, 'yyyy-MM') : format(start, `RRRR-'${week}'II`);
+  const period = english ? { semana: 'week', mes: 'month', anio: 'year' }[scope] : scope;
   const fileBase =
-    kind === 'performance' ? `Frame-Rendimiento-${scope}-${stamp}` : pendingReportFileBase(new Date(), `${scope}-${stamp}`);
+    kind === 'performance'
+      ? tr('Frame-Rendimiento-{p}', { p: `${period}-${stampOf(english ? 'W' : 'S')}` })
+      : pendingReportFileBase(new Date(), `${period}-${stampOf(english ? 'W' : 'S')}`);
+  const reportId = `Frame-${kind === 'performance' ? 'Rendimiento' : 'Pendientes'}-${scope}-${stampOf('S')}`;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
@@ -217,20 +226,20 @@ export default function ReportCenter({ userProfile }: { userProfile: UserProfile
       <div className="grid grid-cols-2 gap-2 rounded-lg border border-primary bg-primary/10 p-3 text-center sm:grid-cols-4">
         {performance ? (
           <>
-            <Stat label="Estudio" value={hm(performance.totalMinutes)} strong />
-            <Stat label="Sesiones" value={String(performance.sessionCount)} />
-            <Stat label="Tareas culminadas" value={String(performance.tasksDone)} />
+            <Stat label={tr('Estudio')} value={hm(performance.totalMinutes)} strong />
+            <Stat label={tr('Sesiones')} value={String(performance.sessionCount)} />
+            <Stat label={tr('Tareas culminadas')} value={String(performance.tasksDone)} />
             <Stat
-              label="Calificación media"
+              label={tr('Calificación media')}
               value={performance.gradeAverage !== null ? performance.gradeAverage.toFixed(1) : '—'}
             />
           </>
         ) : pending ? (
           <>
-            <Stat label="Pendientes" value={String(pending.pending)} strong />
-            <Stat label="Vencidas" value={String(pending.overdue)} />
-            <Stat label="Asignaturas" value={String(pending.subjects)} />
-            <Stat label="Tiempo estimado" value={pending.estimatedMinutes > 0 ? hm(pending.estimatedMinutes) : '—'} />
+            <Stat label={tr('Pendientes')} value={String(pending.pending)} strong />
+            <Stat label={tr('Vencidas')} value={String(pending.overdue)} />
+            <Stat label={tr('Asignaturas')} value={String(pending.subjects)} />
+            <Stat label={tr('Tiempo estimado')} value={pending.estimatedMinutes > 0 ? hm(pending.estimatedMinutes) : '—'} />
           </>
         ) : null}
       </div>
@@ -243,7 +252,7 @@ export default function ReportCenter({ userProfile }: { userProfile: UserProfile
             key={fmt}
             variant={fmt === 'docx' ? 'default' : 'fantasma'}
             disabled={busy !== null || !doc}
-            onClick={() => doc && void run(() => doc, fileBase, fmt)}
+            onClick={() => doc && void run(() => doc, fileBase, fmt, reportId)}
             title={title}
           >
             {busy === fmt ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Icon className="mr-2 h-4 w-4" />}

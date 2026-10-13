@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { CircleSlash } from 'lucide-react';
 import { DndContext } from '@dnd-kit/core';
+import { dndAccessibility } from '@/lib/dnd-a11y';
 import { SortableContext } from '@dnd-kit/sortable';
 import { TaskCard } from '@/components/tasks/TaskCard';
 import {
@@ -11,7 +12,6 @@ import {
   parseISO,
   startOfISOWeek,
 } from 'date-fns';
-import { es } from 'date-fns/locale';
 import {
   CalendarCheck2,
   ChevronLeft,
@@ -29,6 +29,8 @@ import { useCourse } from '@/context/CourseContext';
 import { cn } from '@/lib/utils';
 import { sessionSeconds, formatMinutes } from '@/lib/duration';
 import { DIFFICULTY_META, DifficultyBars, TASK_KIND_META } from '@/components/tasks/task-badges';
+import { dateLocale, tr } from '@/lib/i18n';
+import { difficultyLabel, priorityLabel, taskKindLabel } from '@/lib/enum-labels';
 
 // ============================================================
 // Registro de tareas culminadas.
@@ -63,15 +65,15 @@ function punctuality(task: ArchivedTask): { label: string; tone: string } | null
       return {
         label:
           days === 0
-            ? 'Entregada el mismo día'
+            ? tr('Entregada el mismo día')
             : early === 1
-              ? '1 día de antelación'
-              : `${early} días de antelación`,
+              ? tr('1 día de antelación')
+              : tr('{early} días de antelación', { early }),
         tone: 'border-emerald-500/50 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
       };
     }
     return {
-      label: days === 1 ? '1 día de retraso' : `${days} días de retraso`,
+      label: days === 1 ? tr('1 día de retraso') : tr('{days} días de retraso', { days }),
       tone: 'border-rose-500/50 bg-rose-500/10 text-rose-600 dark:text-rose-400',
     };
   } catch {
@@ -123,22 +125,22 @@ export function CompletedTaskCard({ task, studiedMinutes }: { task: ArchivedTask
       )}
 
       <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-border/60 pl-1.5 pt-2 text-[11px] text-muted-foreground">
-        <span className="flex items-center gap-1" title={`Tipo: ${kind}`}>
+        <span className="flex items-center gap-1" title={tr('Tipo: {kind}', { kind: taskKindLabel(kind) })}>
           <KindIcon className="h-3.5 w-3.5 text-muted-foreground/80" />
-          {kind}
+          {taskKindLabel(kind)}
         </span>
 
         {task.difficulty && (
           <span
             className={cn('flex items-center gap-1', DIFFICULTY_META[task.difficulty].text)}
-            title={`Dificultad: ${task.difficulty}`}
+            title={tr('Dificultad: {difficulty}', { difficulty: difficultyLabel(task.difficulty) })}
           >
             <DifficultyBars level={task.difficulty} />
-            {task.difficulty}
+            {difficultyLabel(task.difficulty)}
           </span>
         )}
 
-        <span className="flex items-center gap-1" title="Importancia">
+        <span className="flex items-center gap-1" title={tr('Importancia')}>
           <span
             className={cn(
               'h-1.5 w-1.5 rounded-full',
@@ -149,15 +151,15 @@ export function CompletedTaskCard({ task, studiedMinutes }: { task: ArchivedTask
                   : 'bg-emerald-400'
             )}
           />
-          {task.priority}
+          {priorityLabel(task.priority)}
         </span>
 
-        <span className="ml-auto flex items-center gap-1 font-medium text-foreground" title="Tiempo de estudio dedicado a esta tarea">
+        <span className="ml-auto flex items-center gap-1 font-medium text-foreground" title={tr('Tiempo de estudio dedicado a esta tarea')}>
           <Timer className="h-3.5 w-3.5 text-primary" />
-          {studiedMinutes > 0 ? formatMinutes(Math.round(studiedMinutes)) : 'sin sesiones'}
+          {studiedMinutes > 0 ? formatMinutes(Math.round(studiedMinutes)) : tr('sin sesiones')}
           {task.estimatedMinutes ? (
             <span className="font-normal text-muted-foreground">
-              {' '}/ {formatMinutes(task.estimatedMinutes)} est.
+              {' '}/ {formatMinutes(task.estimatedMinutes)}{' '}{tr('est.')}
             </span>
           ) : null}
         </span>
@@ -166,13 +168,13 @@ export function CompletedTaskCard({ task, studiedMinutes }: { task: ArchivedTask
       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 pl-1.5 text-[10px] text-muted-foreground/90">
         <span className="flex items-center gap-1">
           <CalendarCheck2 className="h-3 w-3 text-emerald-500" />
-          Culminada el{' '}
-          {archived ? format(archived, "d 'de' MMMM yyyy, h:mm a", { locale: es }) : '—'}
+          {tr('Culminada el')}{' '}
+          {archived ? format(archived, tr('d \'de\' MMMM yyyy, h:mm a'), { locale: dateLocale() }) : '—'}
         </span>
         {task.dueDate && (
           <span className="flex items-center gap-1">
             <Clock3 className="h-3 w-3" />
-            Fecha de entrega: {format(parseISO(task.dueDate), "d 'de' MMMM yyyy", { locale: es })}
+            {tr('Fecha de entrega:')}{' '}{format(parseISO(task.dueDate), tr('d \'de\' MMMM yyyy'), { locale: dateLocale() })}
           </span>
         )}
       </div>
@@ -204,14 +206,14 @@ function IncompleteTasksSection() {
       >
         <span className="flex items-center gap-2 text-xs font-bold text-amber-600 dark:text-amber-400">
           <CircleSlash className="h-4 w-4" />
-          Tareas incompletas · {incompleteTasks.length}
+          {tr('Tareas incompletas ·')}{' '}{incompleteTasks.length}
         </span>
-        <span className="text-[11px] text-muted-foreground">{open ? 'Ocultar' : 'Mostrar'}</span>
+        <span className="text-[11px] text-muted-foreground">{open ? tr('Ocultar') : tr('Mostrar')}</span>
       </button>
       {open && (
         // La tarjeta es ordenable en pendientes; aquí no se ordena, pero
         // necesita su contexto para montarse igual.
-        <DndContext>
+        <DndContext accessibility={dndAccessibility()}>
           <SortableContext items={incompleteTasks.map((task) => task.id)}>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {incompleteTasks.map((task) => (
@@ -296,7 +298,7 @@ export default function CompletedTasksView() {
     return { minutes, onTime, withDeadline };
   }, [monthTasks, studied]);
 
-  const monthLabel = format(monthCursor, "MMMM 'de' yyyy", { locale: es });
+  const monthLabel = format(monthCursor, tr('MMMM \'de\' yyyy'), { locale: dateLocale() });
   const hasAnyArchived = (archivedTasks ?? []).length > 0;
 
   const shiftMonth = (delta: number) =>
@@ -308,7 +310,7 @@ export default function CompletedTasksView() {
         <IncompleteTasksSection />
         <Card className="flex h-32 items-center justify-center border-dashed">
           <p className="text-sm text-muted-foreground">
-            Aún no hay tareas culminadas. Cuando completes una, quedará guardada aquí.
+            {tr('Aún no hay tareas culminadas. Cuando completes una, quedará guardada aquí.')}
           </p>
         </Card>
       </div>
@@ -321,13 +323,13 @@ export default function CompletedTasksView() {
       {/* ---------- Navegación por mes + búsqueda ---------- */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => shiftMonth(-1)} title="Mes anterior">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => shiftMonth(-1)} title={tr('Mes anterior')}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="min-w-[10rem] text-center font-headline text-sm font-bold text-primary">
             {monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}
           </span>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => shiftMonth(1)} title="Mes siguiente">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => shiftMonth(1)} title={tr('Mes siguiente')}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
@@ -335,7 +337,7 @@ export default function CompletedTasksView() {
         <div className="relative w-full sm:w-64">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Tarea, asignatura o detalle…"
+            placeholder={tr('Tarea, asignatura o detalle…')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="h-8 border-primary/60 bg-card pl-8 text-xs"
@@ -346,25 +348,25 @@ export default function CompletedTasksView() {
       {/* ---------- Resumen del mes: la cifra que pide la auxiliar ---------- */}
       <Card className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-4">
         <div>
-          <p className="text-[10px] text-muted-foreground">Tareas culminadas</p>
+          <p className="text-[10px] text-muted-foreground">{tr('Tareas culminadas')}</p>
           <p className="font-headline text-2xl font-bold tabular-nums text-primary">
             {monthTasks.length}
           </p>
         </div>
         <div>
-          <p className="text-[10px] text-muted-foreground">Tiempo dedicado</p>
+          <p className="text-[10px] text-muted-foreground">{tr('Tiempo dedicado')}</p>
           <p className="font-headline text-2xl font-bold tabular-nums text-foreground">
             {totals.minutes > 0 ? formatMinutes(Math.round(totals.minutes)) : '—'}
           </p>
         </div>
         <div>
-          <p className="text-[10px] text-muted-foreground">Entregadas a tiempo</p>
+          <p className="text-[10px] text-muted-foreground">{tr('Entregadas a tiempo')}</p>
           <p className="font-headline text-2xl font-bold tabular-nums text-foreground">
             {totals.withDeadline > 0 ? `${totals.onTime}/${totals.withDeadline}` : '—'}
           </p>
         </div>
         <div>
-          <p className="text-[10px] text-muted-foreground">Semanas con entregas</p>
+          <p className="text-[10px] text-muted-foreground">{tr('Semanas con entregas')}</p>
           <p className="font-headline text-2xl font-bold tabular-nums text-foreground">
             {weeks.length}
           </p>
@@ -376,13 +378,13 @@ export default function CompletedTasksView() {
         <Card className="flex flex-col items-center justify-center gap-2 border-dashed py-12 text-center">
           <TrendingUp className="h-7 w-7 text-muted-foreground/60" />
           <p className="text-sm font-semibold text-foreground">
-            {query ? 'Ninguna tarea coincide con la búsqueda' : `Sin tareas culminadas en ${monthLabel}`}
+            {query ? tr('Ninguna tarea coincide con la búsqueda') : tr('Sin tareas culminadas en {monthLabel}', { monthLabel })}
           </p>
           {monthsWithData.length > 0 && !query && (
             <p className="text-xs text-muted-foreground">
-              Con registro en: {monthsWithData
+              {tr('Con registro en:')}{' '}{monthsWithData
                 .slice(0, 6)
-                .map((k) => format(parseISO(`${k}-01`), 'MMM yyyy', { locale: es }))
+                .map((k) => format(parseISO(`${k}-01`), tr('MMM yyyy'), { locale: dateLocale() }))
                 .join(' · ')}
             </p>
           )}
@@ -396,20 +398,20 @@ export default function CompletedTasksView() {
                 <h3 className="text-xs font-bold text-foreground">
                   {/* La semana ISO puede empezar en el mes anterior: en ese
                       caso se nombra también el mes de partida. */}
-                  Semana del{' '}
+                  {tr('Semana del')}{' '}
                   {format(
                     week.start,
-                    week.start.getMonth() === week.end.getMonth() ? 'd' : "d 'de' MMMM",
-                    { locale: es }
+                    week.start.getMonth() === week.end.getMonth() ? 'd' : tr('d \'de\' MMMM'),
+                    { locale: dateLocale() }
                   )}{' '}
-                  al {format(week.end, "d 'de' MMMM", { locale: es })}
+                  {tr('al')}{' '}{format(week.end, tr('d \'de\' MMMM'), { locale: dateLocale() })}
                 </h3>
                 <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">
-                  {week.tasks.length} {week.tasks.length === 1 ? 'tarea' : 'tareas'}
+                  {week.tasks.length} {week.tasks.length === 1 ? tr('tarea') : tr('tareas')}
                 </span>
                 {weekMinutes > 0 && (
                   <span className="text-[10px] text-muted-foreground">
-                    {formatMinutes(Math.round(weekMinutes))} de estudio
+                    {formatMinutes(Math.round(weekMinutes))}{' '}{tr('de estudio')}
                   </span>
                 )}
                 <span className="h-px flex-1 bg-border" />

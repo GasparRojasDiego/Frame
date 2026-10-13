@@ -4,6 +4,7 @@ import GuestLinkDialog from '@/components/auth/GuestLinkDialog';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import type { UserProfile } from '@/types';
+import { tr } from '@/lib/i18n';
 
 /**
  * Botón pequeño con la «G» de Google al borde derecho del perfil, solo para
@@ -23,8 +24,8 @@ export default function GuestLinkBadge({ userProfile, collapsed = false }: { use
     <>
       <button
         type="button"
-        aria-label="Vincular tu cuenta (Google o correo)"
-        title="Vincula tu cuenta para no perder tu progreso"
+        aria-label={tr('Vincular tu cuenta (Google o correo)')}
+        title={tr('Vincula tu cuenta para no perder tu progreso')}
         onClick={(event) => {
           // Por si algún día queda dentro de un enlace: nunca abrir Ajustes.
           event.stopPropagation();

@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { eachDayOfInterval, format, parseISO, startOfToday, subDays } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { Flame, Target, Trophy } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useCourse } from '@/context/CourseContext';
@@ -8,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { sessionSeconds, formatMinutes } from '@/lib/duration';
 import type { DailyPerformance } from '@/types';
 import { EchoTileHeader } from '@/components/shared/EchoWord';
+import { dateLocale, tr } from '@/lib/i18n';
 
 // ============================================================
 // Estado de la racha, junto a la meta que la define.
@@ -82,8 +82,8 @@ export default function StreakStatusCard() {
         const key = format(day, 'yyyy-MM-dd');
         return {
           key,
-          label: format(day, 'EEEEE', { locale: es }),
-          title: format(day, "EEEE d 'de' MMMM", { locale: es }),
+          label: format(day, tr('EEEEE'), { locale: dateLocale() }),
+          title: format(day, tr('EEEE d \'de\' MMMM'), { locale: dateLocale() }),
           met: met(key),
           minutes: minutesByDay.get(key) ?? 0,
         };
@@ -95,16 +95,16 @@ export default function StreakStatusCard() {
 
   const goalLabel =
     selectionMode === 'rendimiento'
-      ? `calificación ${streakGoal.grade} o mejor`
-      : `${formatMinutes(streakGoal.minutes || 0)} de estudio`;
+      ? tr('calificación {grade} o mejor', { grade: streakGoal.grade })
+      : tr('{minutes} de estudio', { minutes: formatMinutes(streakGoal.minutes || 0) });
 
   return (
     <Card className="flex flex-col">
       <CardContent className="flex flex-1 flex-col gap-3 p-4">
-        <EchoTileHeader word="Racha">
+        <EchoTileHeader word={tr('Racha')}>
           <div className="flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground">
             <Flame className={cn('h-4 w-4', data.current > 0 ? 'text-primary' : 'text-muted-foreground/60')} />
-            Tu racha
+            {tr('Tu racha')}
           </div>
         </EchoTileHeader>
 
@@ -114,7 +114,7 @@ export default function StreakStatusCard() {
               {data.current}
             </p>
             <p className="text-[10px] text-muted-foreground">
-              {data.current === 1 ? 'día seguido' : 'días seguidos'}
+              {data.current === 1 ? tr('día seguido') : tr('días seguidos')}
             </p>
           </div>
           <div className="rounded-lg bg-secondary/40 py-2">
@@ -122,7 +122,7 @@ export default function StreakStatusCard() {
               <Trophy className="h-4 w-4 text-primary" />
               {data.best}
             </p>
-            <p className="text-[10px] text-muted-foreground">mejor racha</p>
+            <p className="text-[10px] text-muted-foreground">{tr('mejor racha')}</p>
           </div>
         </div>
 
@@ -130,7 +130,7 @@ export default function StreakStatusCard() {
         <div className="space-y-1.5">
           <p className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
             <Target className="h-3 w-3 text-primary" />
-            Últimos {STRIP_DAYS} días · meta: {goalLabel}
+            {tr('Últimos')}{' '}{STRIP_DAYS}{' '}{tr('días · meta:')}{' '}{goalLabel}
           </p>
           <div className="flex items-end gap-1">
             {data.strip.map((day) => (
@@ -141,8 +141,8 @@ export default function StreakStatusCard() {
                     day.met ? 'bg-primary' : day.minutes > 0 ? 'bg-primary/30' : 'bg-secondary'
                   )}
                   title={`${day.title}${
-                    day.minutes > 0 ? ` · ${formatMinutes(Math.round(day.minutes))}` : ' · sin estudio'
-                  }${day.met ? ' · meta cumplida' : ''}`}
+                    day.minutes > 0 ? ` · ${formatMinutes(Math.round(day.minutes))}` : tr(' · sin estudio')
+                  }${day.met ? tr(' · meta cumplida') : ''}`}
                 />
                 <span className="text-[8px] uppercase text-muted-foreground/70">{day.label}</span>
               </div>
@@ -152,8 +152,8 @@ export default function StreakStatusCard() {
 
         <p className="mt-auto text-center text-[10px] leading-relaxed text-muted-foreground/80">
           {data.current === 0
-            ? 'La racha arranca en cuanto cumplas la meta de un día.'
-            : `Llevas ${data.current} ${data.current === 1 ? 'día' : 'días'} cumpliendo. El día de hoy aún cuenta hasta medianoche.`}
+            ? tr('La racha arranca en cuanto cumplas la meta de un día.')
+            : tr('Llevas {current} {p} cumpliendo. El día de hoy aún cuenta hasta medianoche.', { current: data.current, p: data.current === 1 ? tr('día') : tr('días') })}
         </p>
       </CardContent>
     </Card>

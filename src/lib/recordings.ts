@@ -7,6 +7,7 @@
  */
 
 import type { RecordingImportance, RecordingKind } from '@/types';
+import { tr } from '@/lib/i18n';
 
 /**
  * Color de cada grado de importancia, el mismo en la lista de grabaciones,
@@ -20,9 +21,9 @@ export const IMPORTANCE_STYLE: Record<RecordingImportance, string> = {
 };
 
 export const IMPORTANCE_LABEL: Record<RecordingImportance, string> = {
-  baja: 'Baja',
-  media: 'Media',
-  alta: 'Alta',
+  get baja() { return tr('Baja'); },
+  get media() { return tr('Media'); },
+  get alta() { return tr('Alta'); },
 };
 
 /** Punto de color de cada importancia (en los desplegables). */
@@ -33,10 +34,10 @@ export const IMPORTANCE_DOT: Record<RecordingImportance, string> = {
 };
 
 export const RECORDING_KIND_LABEL: Record<RecordingKind, string> = {
-  tarea: 'Tarea',
-  recordatorio: 'Recordatorio',
-  explicacion: 'Explicación',
-  personal: 'Personal',
+  get tarea() { return tr('Tarea'); },
+  get recordatorio() { return tr('Recordatorio'); },
+  get explicacion() { return tr('Explicación'); },
+  get personal() { return tr('Personal'); },
 };
 
 /** Desde la 1.4.8 solo existe la grabación continua: un audio, un archivo. */

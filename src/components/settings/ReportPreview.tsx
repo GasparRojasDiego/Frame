@@ -3,6 +3,7 @@ import { LoaderCircle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { renderDocHtml, type DocModel } from '@/lib/report-doc';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Vista previa REAL del informe: el mismo HTML que se imprime como PDF
@@ -110,7 +111,7 @@ export default function ReportPreview({ doc, fill = false }: { doc: DocModel | n
                   style={{ width: PAGE_W * scale, height: PAGE_H * scale }}
                 >
                   <iframe
-                    title={`Página ${index + 1}`}
+                    title={tr('Página {p}', { p: index + 1 })}
                     srcDoc={source}
                     tabIndex={-1}
                     className="pointer-events-none origin-top-left border-0"

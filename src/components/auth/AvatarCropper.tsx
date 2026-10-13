@@ -1,6 +1,7 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import ImageCropper from '@/components/shared/ImageCropper';
 import { EchoHeader } from '@/components/shared/EchoWord';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Encuadre de la foto de perfil: el mismo encuadre que el resto de imágenes
@@ -20,10 +21,10 @@ const AvatarCropper = ({ imageSrc, onClose, onSave }: AvatarCropperProps) => {
   return (
     <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
-        <EchoHeader word="Encuadrar">
+        <EchoHeader word={tr('Encuadrar')}>
           <DialogHeader>
-            <DialogTitle className="text-center">Encuadrar la foto</DialogTitle>
-            <DialogDescription className="sr-only">Elige qué parte de la imagen será tu foto de perfil.</DialogDescription>
+            <DialogTitle className="text-center">{tr('Encuadrar la foto')}</DialogTitle>
+            <DialogDescription className="sr-only">{tr('Elige qué parte de la imagen será tu foto de perfil.')}</DialogDescription>
           </DialogHeader>
         </EchoHeader>
         <div className="pt-2">
@@ -32,7 +33,7 @@ const AvatarCropper = ({ imageSrc, onClose, onSave }: AvatarCropperProps) => {
             aspect={1}
             round
             outputWidth={256}
-            cancelLabel="Cancelar"
+            cancelLabel={tr('Cancelar')}
             onCancel={onClose}
             onConfirm={(dataUrl) => onSave(dataUrl)}
           />

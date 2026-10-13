@@ -22,6 +22,7 @@ import { check, type Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { toast } from '@/hooks/use-toast';
 import { APP_VERSION } from '@/lib/version';
+import { intlLocale, tr } from '@/lib/i18n';
 
 /**
  * Compilación para Microsoft Store (scripts/empaquetar-msix.ps1): la Store
@@ -147,7 +148,7 @@ async function runCheck(options?: { silent?: boolean }): Promise<void> {
       releasePending();
       setState({ phase: 'idle', version: null, progress: null, size: null, dialogOpen: false });
       if (!options?.silent) {
-        toast({ title: 'Frame está actualizado', description: 'Ya tienes la última versión.' });
+        toast({ title: tr('Frame está actualizado'), description: tr('Ya tienes la última versión.') });
       }
       return;
     }
@@ -174,8 +175,8 @@ async function runCheck(options?: { silent?: boolean }): Promise<void> {
     if (!alreadyAnnounced || !options?.silent) {
       localStorage.setItem(ANNOUNCED_KEY, update.version);
       toast({
-        title: `Frame ${update.version} disponible`,
-        description: 'Pulsa el icono de descarga junto a tu perfil para ver cuánto pesa y cuánto tarda.',
+        title: tr('Frame {version} disponible', { version: update.version }),
+        description: tr('Pulsa el icono de descarga junto a tu perfil para ver cuánto pesa y cuánto tarda.'),
       });
     }
   } catch (e) {
@@ -429,7 +430,7 @@ export async function startUpdateInstall(): Promise<void> {
     // Sin handle (falló un intento anterior): se consulta de nuevo.
     const update = pending ?? (await check({ timeout: 20_000 }));
     if (!update) {
-      toast({ title: 'Frame está actualizado', description: 'No hay nada que instalar.' });
+      toast({ title: tr('Frame está actualizado'), description: tr('No hay nada que instalar.') });
       setState({ phase: 'idle', version: null, progress: null, stepStartedAt: null, dialogOpen: false });
       return;
     }
@@ -469,7 +470,7 @@ async function downloadAndVerify(update: Update): Promise<void> {
     clearTimeout(stallTimer);
     stallTimer = setTimeout(() => {
       abandoned = true;
-      stall(new Error('La descarga dejó de recibir datos'));
+      stall(new Error(tr('La descarga dejó de recibir datos')));
     }, STALL_MS);
   };
 
@@ -639,8 +640,8 @@ export function recordUpdateLanding(): void {
     });
   }
   toast({
-    title: `Frame ${APP_VERSION} instalada`,
-    description: `La actualización tardó ${formatDuration(total)}.`,
+    title: tr('Frame {APP_VERSION} instalada', { APP_VERSION }),
+    description: tr('La actualización tardó {duration}.', { duration: formatDuration(total) }),
   });
 }
 
@@ -652,7 +653,7 @@ const MB = 1024 * 1024;
 
 export function formatBytes(bytes: number): string {
   if (bytes < MB) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
-  return `${(bytes / MB).toLocaleString('es', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MB`;
+  return `${(bytes / MB).toLocaleString(intlLocale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MB`;
 }
 
 export function formatSpeed(bytesPerSecond: number): string {
@@ -661,7 +662,7 @@ export function formatSpeed(bytesPerSecond: number): string {
 
 /** «menos de 1 s», «24 s», «1 min 20 s», «12 min». */
 export function formatDuration(ms: number): string {
-  if (ms < 1000) return 'menos de 1 s';
+  if (ms < 1000) return tr('menos de 1 s');
   const seconds = Math.round(ms / 1000);
   if (seconds < 60) return `${seconds} s`;
   if (ms >= 10 * 60_000) return `${Math.round(ms / 60_000)} min`;

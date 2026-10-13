@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { WifiOff } from 'lucide-react';
 import { CONNECTION_FLASH_EVENT, getConnectionState } from '@/lib/connection-status';
 import { cn } from '@/lib/utils';
+import { tr } from '@/lib/i18n';
 
 /** Momento en que la campana recibe el aviso (la hace latir un instante). */
 export const BELL_PING_EVENT = 'frame:bell-ping';
@@ -84,7 +85,7 @@ export default function ConnectionNotice({ uid }: { uid: string }) {
         )}
       >
         <WifiOff className="h-3.5 w-3.5 text-amber-500" />
-        Sin conexión
+        {tr('Sin conexión')}
       </div>
     </div>
   );

@@ -13,6 +13,8 @@ import {
 import { addSongFileToDB } from '@/lib/music-db';
 import { foldName, resolveSongName } from '@/lib/song-names';
 import type { Song } from '@/types';
+import { tr } from '@/lib/i18n';
+import { UNKNOWN_ARTIST } from '@/lib/enum-labels';
 
 // ============================================================
 // «Importar» (Música): canciones o carpetas que el usuario ya tiene.
@@ -137,9 +139,6 @@ const dirName = (path: string) => (path.includes('/') ? path.slice(0, path.lastI
 const joinPath = (dir: string, path: string) => (dir ? `${dir}/${path}` : path);
 const withoutExportNumber = (name: string) => name.replace(EXPORT_NUMBER_PREFIX, '').trim() || name;
 const sameFileKey = (file: PickedFile) => joinPath(dirName(file.rel), baseName(file.name)).toLowerCase();
-
-/** Artista de relleno de las canciones sin artista. */
-export const UNKNOWN_ARTIST = 'Desconocido';
 
 // ------------------------------------------------------------
 // Explorador y lectura
@@ -449,11 +448,11 @@ export async function storeImportedSongs(
     onProgress(i, plan.entries.length, song.title || label);
 
     if (entry.audio.size === 0) {
-      outcome.skipped.push({ name: label, reason: 'el archivo está vacío' });
+      outcome.skipped.push({ name: label, reason: tr('el archivo está vacío') });
       continue;
     }
     if (entry.audio.size > MAX_AUDIO_BYTES) {
-      outcome.skipped.push({ name: label, reason: 'pesa más de 1 GB' });
+      outcome.skipped.push({ name: label, reason: tr('pesa más de 1 GB') });
       continue;
     }
 
@@ -461,18 +460,18 @@ export async function storeImportedSongs(
     try {
       file = new File([await readBytes(entry.audio)], song.fileName, { type: AUDIO_MIME[entry.ext] ?? 'audio/mpeg' });
     } catch {
-      outcome.skipped.push({ name: label, reason: 'ya no está donde estaba o no se pudo abrir' });
+      outcome.skipped.push({ name: label, reason: tr('ya no está donde estaba o no se pudo abrir') });
       continue;
     }
 
     const tags: AudioTags = await readAudioTags(file).catch(() => ({}));
     if (tags.unsupported) {
-      outcome.skipped.push({ name: label, reason: `formato ${tags.unsupported}, que Frame no reproduce` });
+      outcome.skipped.push({ name: label, reason: tr('formato {unsupported}, que Frame no reproduce', { unsupported: tags.unsupported }) });
       continue;
     }
     const probe = await probeAudio(file);
     if (!probe.playable) {
-      outcome.skipped.push({ name: label, reason: 'no suena: archivo dañado o formato no compatible' });
+      outcome.skipped.push({ name: label, reason: tr('no suena: archivo dañado o formato no compatible') });
       continue;
     }
     const duration = probe.duration ?? tags.duration;
@@ -494,7 +493,7 @@ export async function storeImportedSongs(
 
     const key = sameSongKey(song);
     if (key && seenSongs.has(key)) {
-      outcome.skipped.push({ name: label, reason: 'ya está en tu biblioteca con otro nombre de archivo' });
+      outcome.skipped.push({ name: label, reason: tr('ya está en tu biblioteca con otro nombre de archivo') });
       continue;
     }
 
@@ -516,10 +515,10 @@ export async function storeImportedSongs(
       await addSongFileToDB(song.id, file);
     } catch (error) {
       if (isQuotaError(error)) {
-        outcome.stoppedFor = 'el disco del equipo se quedó sin espacio';
+        outcome.stoppedFor = tr('el disco del equipo se quedó sin espacio');
         break;
       }
-      outcome.skipped.push({ name: label, reason: 'no se pudo guardar dentro de Frame' });
+      outcome.skipped.push({ name: label, reason: tr('no se pudo guardar dentro de Frame') });
       continue;
     }
     batch.push(song);

@@ -21,6 +21,8 @@ import { sessionSeconds, formatHMS } from '@/lib/duration';
 import { addDays, isBefore, parseISO, startOfToday, format, isSameDay, isToday } from 'date-fns';
 
 
+import { tr } from '@/lib/i18n';
+
 const getGradeForScore = (score: number): DailyPerformance['grade'] => {
     if (score >= 18) return 'AD';
     if (score >= 14) return 'A';
@@ -101,8 +103,8 @@ export default function TimerPage() {
           size="icon"
           className="h-7 w-7 text-muted-foreground hover:text-primary"
           onClick={toggleFace}
-          title={cardFace === 'metricas' ? 'Vídeos de estudio' : 'Tiempo de estudio y métricas de hoy'}
-          aria-label={cardFace === 'metricas' ? 'Ver los vídeos de estudio' : 'Volver a las métricas de hoy'}
+          title={cardFace === 'metricas' ? tr('Vídeos de estudio') : tr('Tiempo de estudio y métricas de hoy')}
+          aria-label={cardFace === 'metricas' ? tr('Ver los vídeos de estudio') : tr('Volver a las métricas de hoy')}
         >
           <Icon className="h-4 w-4" />
         </Button>
@@ -288,20 +290,20 @@ export default function TimerPage() {
           {/* Un único recuadro, EXACTAMENTE tan alto como la pila que sustituye
               (de la cabecera de «Tiempo de estudio» al pie de «Métricas de hoy»). */}
           <Card className="flex w-full flex-col" style={{ height: stackHeight ?? 440 }}>
-            <CardHeader className="pb-3 pt-4" echo="Vídeos">
+            <CardHeader className="pb-3 pt-4" echo={tr('Vídeos')}>
               <div className="flex items-center justify-between gap-2">
                 <Button
                   size="sm"
                   variant="fantasma"
                   className="h-7 shrink-0 gap-1.5 px-2.5 text-[11px]"
                   onClick={() => setVideoPickerOpen(true)}
-                  title="Buscar en YouTube sin salir de Estudio"
+                  title={tr('Buscar en YouTube sin salir de Estudio')}
                 >
                   <Plus className="h-3.5 w-3.5" />
-                  Añadir
+                  {tr('Añadir')}
                 </Button>
                 <CardTitle className="text-center font-headline text-sm tracking-wider text-muted-foreground">
-                  Vídeos de estudio
+                  {tr('Vídeos de estudio')}
                 </CardTitle>
                 {faceArrows}
               </div>
@@ -316,7 +318,7 @@ export default function TimerPage() {
           <Card className="w-full">
             <CardHeader className="relative pt-4 pb-3">
               <CardTitle className="text-center font-headline tracking-wider text-muted-foreground text-sm">
-                Tiempo de estudio
+                {tr('Tiempo de estudio')}
               </CardTitle>
               <div className="absolute right-3 top-2.5">{faceArrows}</div>
             </CardHeader>
@@ -326,7 +328,7 @@ export default function TimerPage() {
                   <div>
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-lg font-bold font-headline text-primary">{formatHMS(dailyStudySeconds)} / {formatHMS(totalGoalSeconds)}</span>
-                      <span className="text-xs text-primary">Tiempo</span>
+                      <span className="text-xs text-primary">{tr('Tiempo')}</span>
                     </div>
                     <Progress value={minutesProgress} className="h-2" indicatorClassName="bg-primary" />
                   </div>
@@ -357,7 +359,7 @@ export default function TimerPage() {
           >
             <CardHeader className="pb-3 pt-4">
               <CardTitle className="text-center text-sm font-headline text-muted-foreground">
-                Métricas de hoy
+                {tr('Métricas de hoy')}
               </CardTitle>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col min-h-0 pb-4 pt-3">
@@ -378,7 +380,7 @@ export default function TimerPage() {
                   </div>
                 </ScrollArea>
               ) : (
-                <p className="text-xs text-muted-foreground text-center pt-2">Hoy todavía no registras sesiones.</p>
+                <p className="text-xs text-muted-foreground text-center pt-2">{tr('Hoy todavía no registras sesiones.')}</p>
               )}
             </CardContent>
           </Card>

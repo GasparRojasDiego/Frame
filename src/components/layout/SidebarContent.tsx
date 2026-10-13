@@ -35,6 +35,8 @@ import { useStoredImage } from '@/hooks/use-stored-image';
 import { GmailNavIcon } from '@/components/integrations/GmailPanel';
 import { ClassroomNavIcon } from '@/components/integrations/ClassroomIcon';
 import { YoutubeNavIcon } from '@/components/integrations/YoutubeIcon';
+import { tr } from '@/lib/i18n';
+import { usernameLabel } from '@/lib/enum-labels';
 
 interface NavItem {
   href: string;
@@ -52,18 +54,18 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   // Lo de cada día.
-  { href: '/', label: 'Inicio', icon: Home, group: 0 },
-  { href: '/temporizador', label: 'Estudio', icon: Timer, group: 0 },
-  { href: '/habitos', label: 'Hábitos', icon: Repeat, group: 0 },
+  { href: '/', get label() { return tr('Inicio'); }, icon: Home, group: 0 },
+  { href: '/temporizador', get label() { return tr('Estudio'); }, icon: Timer, group: 0 },
+  { href: '/habitos', get label() { return tr('Hábitos'); }, icon: Repeat, group: 0 },
   // Lo académico.
-  { href: '/knowledge', label: 'Asignaturas', icon: GraduationCap, activeFor: ['/cursos'], group: 1 },
-  { href: '/tareas', label: 'Tareas', icon: BookOpen, group: 1 },
-  { href: '/calendario', label: 'Calendario', icon: CalendarDays, group: 1 },
+  { href: '/knowledge', get label() { return tr('Asignaturas'); }, icon: GraduationCap, activeFor: ['/cursos'], group: 1 },
+  { href: '/tareas', get label() { return tr('Tareas'); }, icon: BookOpen, group: 1 },
+  { href: '/calendario', get label() { return tr('Calendario'); }, icon: CalendarDays, group: 1 },
   // Las herramientas de Google integradas.
   { href: '/youtube', label: 'YouTube', icon: YoutubeNavIcon, group: 2 },
   { href: '/gmail', label: 'Gmail', icon: GmailNavIcon, group: 2 },
   { href: '/classroom', label: 'Classroom', icon: ClassroomNavIcon, group: 2 },
-  { href: '/music', label: 'Música', icon: Music, ghostFor: ['/playlists'], group: 3 },
+  { href: '/music', get label() { return tr('Música'); }, icon: Music, ghostFor: ['/playlists'], group: 3 },
 ];
 
 /**
@@ -81,7 +83,7 @@ function SessionClock({ className, spinning }: { className?: string; spinning: b
         spinning && 'animate-spin [animation-duration:3s]',
         className
       )}
-      aria-label={spinning ? 'Sesión de estudio en curso' : 'Sesión de estudio en pausa'}
+      aria-label={spinning ? tr('Sesión de estudio en curso') : tr('Sesión de estudio en pausa')}
     />
   );
 }
@@ -167,12 +169,12 @@ export function SidebarContent({
               <button
                 type="button"
                 onClick={toggleSidebarCollapsed}
-                title={collapsed ? 'Expandir menú' : 'Contraer menú'}
+                title={collapsed ? tr('Expandir menú') : tr('Contraer menú')}
                 className="h-8 w-8 rounded-full flex items-center justify-center overflow-hidden transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <FrameLogo className="h-8 w-8" />
               </button>
-              {!collapsed && <h1 className="select-none text-xl font-bold text-foreground">FRAME</h1>}
+              {!collapsed && <h1 className="select-none text-xl font-bold text-foreground">{tr('FRAME')}</h1>}
             </div>
             {!collapsed && showCloseButton && onLinkClick && (
               <Button
@@ -257,10 +259,10 @@ export function SidebarContent({
               collapsed ? 'justify-center px-0' : 'justify-start gap-3'
             )}
             onClick={() => setCreatePlaylistOpen(true)}
-            title={collapsed ? 'Añadir playlist' : undefined}
+            title={collapsed ? tr('Añadir playlist') : undefined}
           >
             <PlusCircle className="h-4 w-4 text-primary" />
-            {!collapsed && <span>Añadir playlist</span>}
+            {!collapsed && <span>{tr('Añadir playlist')}</span>}
           </Button>
           <PlaylistList collapsed={collapsed} />
         </div>
@@ -278,17 +280,17 @@ export function SidebarContent({
               className={cn('w-full h-auto p-2', collapsed ? 'justify-center' : 'justify-start')}
               asChild
             >
-              <Link href="/settings" onClick={onLinkClick} title={collapsed ? (userProfile?.username ?? 'Perfil') : undefined}>
+              <Link href="/settings" onClick={onLinkClick} title={collapsed ? (userProfile?.username ?? tr('Perfil')) : undefined}>
                 <div className={cn('flex w-full items-center', !collapsed && 'gap-3')}>
                   {profileAvatar ? (
                     <div className="flex h-5 w-5 items-center justify-center rounded-full bg-secondary overflow-hidden">
-                      <Image src={profileAvatar} alt="Profile Avatar" width={20} height={20} className="h-full w-full object-cover" />
+                      <Image src={profileAvatar} alt={tr('Foto de perfil')} width={20} height={20} className="h-full w-full object-cover" />
                     </div>
                   ) : (
                     <User className="h-5 w-5 text-primary" />
                   )}
                   {!collapsed && (
-                    <span className="text-xs font-medium text-foreground">{userProfile?.username ?? 'Invitado'}</span>
+                    <span className="text-xs font-medium text-foreground">{usernameLabel(userProfile?.username)}</span>
                   )}
                 </div>
               </Link>
@@ -319,20 +321,20 @@ export function SidebarContent({
           ------------------------------------------------------------------ */}
       <Dialog open={hostDialogs && isCreatePlaylistOpen} onOpenChange={setCreatePlaylistOpen}>
         <DialogContent className="max-w-2xl">
-          <EchoHeader word="Playlist">
+          <EchoHeader word={tr('Playlist')}>
             <DialogHeader>
-              <DialogTitle className="text-xl text-primary font-bold text-center">Nueva playlist</DialogTitle>
+              <DialogTitle className="text-xl text-primary font-bold text-center">{tr('Nueva playlist')}</DialogTitle>
             </DialogHeader>
           </EchoHeader>
 
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="playlistName" className="text-xs">Nombre de la playlist</Label>
+              <Label htmlFor="playlistName" className="text-xs">{tr('Nombre de la playlist')}</Label>
               <Input
                 id="playlistName"
                 value={newPlName}
                 onChange={(e) => setNewPlName(e.target.value)}
-                placeholder="Ej: Mi mezcla de entrenamiento"
+                placeholder={tr('Ej: Mi mezcla de entrenamiento')}
                 className="border-primary focus-visible:ring-primary"
               />
             </div>
@@ -345,7 +347,7 @@ export function SidebarContent({
               disabledReason={
                 newPlName.trim()
                   ? undefined
-                  : "Ponle nombre a la playlist para empezar a añadir canciones."
+                  : tr('Ponle nombre a la playlist para empezar a añadir canciones.')
               }
             />
           </div>
@@ -356,11 +358,11 @@ export function SidebarContent({
             <div className="flex shrink-0 items-center gap-3">
               <p className="text-[11px] text-muted-foreground">
                 {selectedSongIds.length === 0
-                  ? 'Ninguna canción añadida todavía'
-                  : `${selectedSongIds.length} ${selectedSongIds.length === 1 ? 'canción añadida' : 'canciones añadidas'}`}
+                  ? tr('Ninguna canción añadida todavía')
+                  : `${selectedSongIds.length} ${selectedSongIds.length === 1 ? tr('canción añadida') : tr('canciones añadidas')}`}
               </p>
               <Button onClick={() => setCreatePlaylistOpen(false)} disabled={selectedSongIds.length === 0}>
-                Listo
+                {tr('Listo')}
               </Button>
             </div>
           </DialogFooter>

@@ -8,6 +8,7 @@ import {
   sendNotification,
 } from '@tauri-apps/plugin-notification';
 import { getNotificationPrefs, logNotification, type LogKind } from '@/lib/notification-log';
+import { inBothLangs } from '@/lib/i18n';
 
 let audioEl: HTMLAudioElement | null = null;
 
@@ -35,8 +36,8 @@ export async function ensureNotificationPermission(): Promise<boolean> {
 }
 
 interface NotifyOptions {
-  title: string;
-  body: string;
+  /** El texto se construye aquí dentro para guardarlo en los dos idiomas. */
+  text: () => { title: string; body: string };
   /** reproduce el chime de Frame (por defecto true) */
   sound?: boolean;
   /** Cómo se anota en la campana (por defecto, «aviso»). */
@@ -45,10 +46,13 @@ interface NotifyOptions {
   route?: string;
 }
 
-export async function notify({ title, body, sound = true, kind = 'aviso', route }: NotifyOptions): Promise<void> {
+export async function notify({ text, sound = true, kind = 'aviso', route }: NotifyOptions): Promise<void> {
+  const { title, body } = text();
   // Todo queda en el registro de la campana, aunque las notificaciones estén
   // desactivadas: así se puede repasar lo que pasó.
-  logNotification({ kind, title, detail: body, route });
+  const both = inBothLangs(text);
+  const texts = Object.fromEntries(Object.entries(both).map(([lang, t]) => [lang, { title: t!.title, detail: t!.body }]));
+  logNotification({ kind, title, detail: body, route, texts });
   const prefs = getNotificationPrefs();
   if (!prefs.enabled) return;
   if (!prefs.sound) sound = false;

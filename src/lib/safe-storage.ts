@@ -1,3 +1,5 @@
+import { tr } from '@/lib/i18n';
+
 // ============================================================
 // Escritura y lectura BLINDADAS de localStorage.
 //
@@ -71,7 +73,7 @@ export function safeWrite<T>(key: string, value: T): boolean {
     // Releer y comparar: una escritura truncada se detecta AQUÍ y no meses
     // después, cuando ya no hay nada que recuperar.
     if (window.localStorage.getItem(key) !== payload) {
-      throw new Error('la relectura no coincide con lo escrito');
+      throw new Error(tr('la relectura no coincide con lo escrito'));
     }
     return true;
   } catch (error) {

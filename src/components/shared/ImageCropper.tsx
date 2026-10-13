@@ -3,6 +3,7 @@ import { LoaderCircle, Minus, Move, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Encuadre de una imagen antes de guardarla.
@@ -49,7 +50,7 @@ export default function ImageCropper({
   round = false,
   outputWidth,
   busy = false,
-  cancelLabel = 'Elegir otra',
+  cancelLabel = tr('Elegir otra'),
   onCancel,
   onConfirm,
 }: ImageCropperProps) {
@@ -163,7 +164,7 @@ export default function ImageCropper({
       canvas.width = outW;
       canvas.height = outH;
       const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Sin lienzo');
+      if (!ctx) throw new Error(tr('Sin lienzo'));
       ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(image, sx, sy, cropW, cropH, 0, 0, outW, outH);
       await onConfirm(canvas.toDataURL('image/jpeg', 0.9));
@@ -228,16 +229,16 @@ export default function ImageCropper({
       </div>
 
       <div className="flex items-center gap-3">
-        <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => setZoomClamped(zoom - 0.2)} title="Alejar">
+        <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => setZoomClamped(zoom - 0.2)} title={tr('Alejar')}>
           <Minus className="h-4 w-4" />
         </Button>
         <Slider value={[zoom]} min={1} max={MAX_ZOOM} step={0.01} onValueChange={([value]) => setZoomClamped(value)} className="flex-1" />
-        <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => setZoomClamped(zoom + 0.2)} title="Acercar">
+        <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => setZoomClamped(zoom + 0.2)} title={tr('Acercar')}>
           <Plus className="h-4 w-4" />
         </Button>
       </div>
       <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-muted-foreground">
-        <Move className="h-3.5 w-3.5" /> Arrastra el recuadro; acerca con la rueda o el deslizador.
+        <Move className="h-3.5 w-3.5" />{' '}{tr('Arrastra el recuadro; acerca con la rueda o el deslizador.')}
       </p>
 
       <div className="flex justify-end gap-2">
@@ -246,7 +247,7 @@ export default function ImageCropper({
         </Button>
         <Button type="button" onClick={() => void confirm()} disabled={working || !image}>
           {working && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
-          Guardar
+          {tr('Guardar')}
         </Button>
       </div>
     </div>

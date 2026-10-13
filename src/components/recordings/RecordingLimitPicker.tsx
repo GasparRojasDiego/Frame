@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Minus, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LIMIT_MAX_MINUTES, LIMIT_MIN_MINUTES, clampLimit } from '@/components/recordings/recording-limit';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Límite de la grabación, en horas y minutos.
@@ -96,7 +97,7 @@ function LimitColumn({
         className={round}
         onClick={() => step(1)}
         disabled={value >= max}
-        aria-label={`${label}: uno más`}
+        aria-label={tr('{label}: uno más', { label })}
       >
         <Plus className="h-5 w-5" />
       </button>
@@ -139,7 +140,7 @@ function LimitColumn({
         className={round}
         onClick={() => step(-1)}
         disabled={value <= min}
-        aria-label={`${label}: uno menos`}
+        aria-label={tr('{label}: uno menos', { label })}
       >
         <Minus className="h-5 w-5" />
       </button>
@@ -179,9 +180,9 @@ export default function RecordingLimitPicker({
 
   return (
     <div className={cn('flex items-stretch gap-2', className)}>
-      <LimitColumn label="Horas" value={hours} min={lowHours} max={maxHours} onChange={(h) => set(h * 60 + minutes)} />
+      <LimitColumn label={tr('Horas')} value={hours} min={lowHours} max={maxHours} onChange={(h) => set(h * 60 + minutes)} />
       <LimitColumn
-        label="Minutos"
+        label={tr('Minutos')}
         value={minutes}
         min={minMinutesNow}
         max={maxMinutesNow}

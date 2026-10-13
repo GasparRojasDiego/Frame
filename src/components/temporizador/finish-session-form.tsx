@@ -27,6 +27,7 @@ import EchoWord from '@/components/shared/EchoWord';
 import { cn } from '@/lib/utils';
 import { formatHMS } from '@/lib/duration';
 import { isRichNoteEmpty } from '@/lib/rich-note';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Cierre de una sesión de estudio.
@@ -131,9 +132,9 @@ export default function FinishSessionForm({
           <DialogHeader className="shrink-0 space-y-0 text-left sm:text-left">
             {/* Título y datos de la sesión, con «SESIÓN» a la deriva detrás. */}
             <div className="relative overflow-hidden px-6 pb-3 pt-5">
-              <EchoWord word="Sesión" />
+              <EchoWord word={tr('Sesión')} />
               <DialogTitle className="relative text-center text-lg font-bold tracking-wider text-primary">
-                Sesión terminada
+                {tr('Sesión terminada')}
               </DialogTitle>
 
               <div
@@ -144,7 +145,7 @@ export default function FinishSessionForm({
               >
                 <div className="space-y-0.5 text-center">
                   <p className="text-[10px] text-muted-foreground">
-                    Tiempo estudiado
+                    {tr('Tiempo estudiado')}
                   </p>
                   <p className="font-headline text-2xl font-bold tabular-nums text-primary">
                     {formatHMS(studiedSeconds)}
@@ -155,7 +156,7 @@ export default function FinishSessionForm({
                   <div>
                     <div className="flex items-center justify-between">
                       <Label htmlFor="perception" className="text-[10px] text-muted-foreground">
-                        Nivel de enfoque
+                        {tr('Nivel de enfoque')}
                       </Label>
                       <span
                         className={cn(
@@ -185,7 +186,7 @@ export default function FinishSessionForm({
                         needsFocus ? 'text-amber-600 dark:text-amber-400' : 'text-transparent'
                       )}
                     >
-                      Mueve la barra: sin enfoque no se puede registrar.
+                      {tr('Mueve la barra: sin enfoque no se puede registrar.')}
                     </p>
                   </div>
                 )}
@@ -215,8 +216,8 @@ export default function FinishSessionForm({
                   className="flex items-center gap-1.5 text-[10px] text-muted-foreground"
                 >
                   <NotebookPen className="h-3.5 w-3.5 text-primary" />
-                  ¿Qué hiciste?
-                  <span className="text-muted-foreground/70">(opcional)</span>
+                  {tr('¿Qué hiciste?')}
+                  <span className="text-muted-foreground/70">{tr('(opcional)')}</span>
                 </Label>
                 {/* Texto con formato y listas, como un Word en pequeño. */}
                 <NoteEditor
@@ -224,7 +225,7 @@ export default function FinishSessionForm({
                   ariaLabelledBy="session-notes-label"
                   value={notes}
                   onChange={setNotes}
-                  placeholder="Resolví los ejercicios 12 al 20; me atasqué en la derivada de la cadena…"
+                  placeholder={tr('Resolví los ejercicios 12 al 20; me atasqué en la derivada de la cadena…')}
                   rows={3}
                   dense
                   toolbarSide
@@ -259,7 +260,7 @@ export default function FinishSessionForm({
               onClick={() => setConfirmDiscard(true)}
             >
               <Trash2 className="h-4 w-4" />
-              Descartar
+              {tr('Descartar')}
             </Button>
 
             {/* Lo que falta, dicho en el pie y no en un aviso emergente: el
@@ -269,10 +270,10 @@ export default function FinishSessionForm({
               {(needsFocus || needsSubject) && (
                 <span className="text-right text-[10px] leading-tight text-amber-600 dark:text-amber-400">
                   {needsFocus && needsSubject
-                    ? 'Falta el enfoque y la asignatura'
+                    ? tr('Falta el enfoque y la asignatura')
                     : needsFocus
-                      ? 'Falta marcar tu enfoque'
-                      : 'Falta marcar la asignatura'}
+                      ? tr('Falta marcar tu enfoque')
+                      : tr('Falta marcar la asignatura')}
                 </span>
               )}
               <Button
@@ -283,13 +284,13 @@ export default function FinishSessionForm({
                 className="min-w-[9rem]"
                 title={
                   needsFocus
-                    ? 'Marca tu nivel de enfoque (1-20) para registrar la sesión'
+                    ? tr('Marca tu nivel de enfoque (1-20) para registrar la sesión')
                     : needsSubject
-                      ? 'Marca al menos una asignatura para registrar la sesión'
+                      ? tr('Marca al menos una asignatura para registrar la sesión')
                       : undefined
                 }
               >
-                Registrar sesión
+                {tr('Registrar sesión')}
               </Button>
             </div>
           </div>
@@ -301,15 +302,13 @@ export default function FinishSessionForm({
       <AlertDialog open={confirmDiscard} onOpenChange={setConfirmDiscard}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Descartar esta sesión?</AlertDialogTitle>
+            <AlertDialogTitle>{tr('¿Descartar esta sesión?')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Se tirarán los {formatHMS(studiedSeconds)} de esta sesión: no contarán en tu tiempo de
-              estudio, no afectarán a tu calificación del día y no harán avanzar ninguna tarea.
-              Úsalo si el cronómetro se quedó corriendo o lo encendiste sin querer.
+              {tr('Se tirarán los')}{' '}{formatHMS(studiedSeconds)}{' '}{tr('de esta sesión: no contarán en tu tiempo de estudio, no afectarán a tu calificación del día y no harán avanzar ninguna tarea. Úsalo si el cronómetro se quedó corriendo o lo encendiste sin querer.')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Volver</AlertDialogCancel>
+            <AlertDialogCancel>{tr('Volver')}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
@@ -317,7 +316,7 @@ export default function FinishSessionForm({
                 onDiscard();
               }}
             >
-              Descartar
+              {tr('Descartar')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

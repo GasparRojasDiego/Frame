@@ -7,6 +7,7 @@ import GoogleEmbed from '@/components/integrations/GoogleEmbed';
 import { formatVideoDuration, readYoutubeVideo, youtubeIdFromUrl, type YoutubeVideoInfo } from '@/lib/study-videos';
 import type { StudyVideo } from '@/types';
 import EchoWord from '@/components/shared/EchoWord';
+import { errorText, tr } from '@/lib/i18n';
 
 // ============================================================
 // Buscar un vídeo de estudio sin salir de Enfoque.
@@ -24,9 +25,7 @@ import EchoWord from '@/components/shared/EchoWord';
 // ============================================================
 
 const cleanError = (e: unknown): string =>
-  String(e)
-    .replace(/^(Error:\s*|Invoke error:\s*)/i, '')
-    .slice(0, 180);
+  errorText(String(e).replace(/^(Error:\s*|Invoke error:\s*)/i, '')).slice(0, 180);
 
 export default function YoutubePickerDialog({
   open,
@@ -57,12 +56,12 @@ export default function YoutubePickerDialog({
       const url = await invoke<string>('youtube_embed_current_url');
       const id = youtubeIdFromUrl(url);
       if (!id) {
-        setError('Abre primero el vídeo que quieres guardar: esta página no es un vídeo.');
+        setError(tr('Abre primero el vídeo que quieres guardar: esta página no es un vídeo.'));
         return;
       }
       setInfo(await readYoutubeVideo(id));
     } catch (e) {
-      setError(cleanError(e) || 'No se pudo leer el vídeo.');
+      setError(cleanError(e) || tr('No se pudo leer el vídeo.'));
     } finally {
       setLoading(false);
     }
@@ -86,20 +85,20 @@ export default function YoutubePickerDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex h-[86vh] max-w-5xl flex-col gap-0 overflow-hidden p-0">
         <div className="relative flex shrink-0 items-center justify-between gap-3 overflow-hidden px-4 py-2.5">
-          <EchoWord word="Buscar" />
+          <EchoWord word={tr('Buscar')} />
           <DialogTitle className="relative flex items-center gap-2 text-sm font-bold text-primary">
             <Video className="h-4 w-4" />
-            Buscar un vídeo de estudio
+            {tr('Buscar un vídeo de estudio')}
           </DialogTitle>
           <Button
             size="sm"
             className="relative mr-8"
             onClick={() => void inspect()}
             disabled={sheetOpen}
-            title="Guardar el vídeo que estás viendo"
+            title={tr('Guardar el vídeo que estás viendo')}
           >
             <Plus className="mr-1.5 h-4 w-4" />
-            Añadir
+            {tr('Añadir')}
           </Button>
         </div>
         <div aria-hidden className="mx-4 h-px shrink-0 bg-border" />
@@ -114,7 +113,7 @@ export default function YoutubePickerDialog({
                 {loading && (
                   <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
                     <LoaderCircle className="h-4 w-4 animate-spin" />
-                    Leyendo el vídeo…
+                    {tr('Leyendo el vídeo…')}
                   </div>
                 )}
 
@@ -125,7 +124,7 @@ export default function YoutubePickerDialog({
                     </p>
                     <Button variant="ghost" size="sm" className="w-full" onClick={() => setError(null)}>
                       <ArrowLeft className="mr-1.5 h-4 w-4" />
-                      Volver a YouTube
+                      {tr('Volver a YouTube')}
                     </Button>
                   </>
                 )}
@@ -148,11 +147,11 @@ export default function YoutubePickerDialog({
                     <div className="grid gap-2">
                       <Button size="sm" onClick={pick}>
                         <Plus className="mr-1.5 h-4 w-4" />
-                        Guardar
+                        {tr('Guardar')}
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => setInfo(null)}>
                         <ArrowLeft className="mr-1.5 h-4 w-4" />
-                        Seguir buscando
+                        {tr('Seguir buscando')}
                       </Button>
                     </div>
                   </>

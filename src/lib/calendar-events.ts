@@ -7,6 +7,7 @@
 // ============================================================
 
 import type { LocalCalendarEvent, LocalEventDisplay, LocalEventKind } from '@/types';
+import { tr } from '@/lib/i18n';
 
 interface EventKindMeta {
   label: string;
@@ -19,17 +20,17 @@ interface EventKindMeta {
  * editando con su nombre.
  */
 export const EVENT_KIND_META: Record<LocalEventKind, EventKindMeta> = {
-  entrega: { label: 'Entrega' },
-  evento: { label: 'Evento' },
-  examen: { label: 'Evaluación' },
-  personal: { label: 'Personal' },
-  otro: { label: 'Otro' },
-  libre: { label: 'Día libre' },
-  vacaciones: { label: 'Vacaciones' },
-  reunion: { label: 'Reunión' },
-  salida: { label: 'Salida de estudio' },
-  cumple: { label: 'Cumpleaños' },
-  recordatorio: { label: 'Recordatorio' },
+  entrega: { get label() { return tr('Entrega'); } },
+  evento: { get label() { return tr('Evento'); } },
+  examen: { get label() { return tr('Evaluación'); } },
+  personal: { get label() { return tr('Personal'); } },
+  otro: { get label() { return tr('Otro'); } },
+  libre: { get label() { return tr('Día libre'); } },
+  vacaciones: { get label() { return tr('Vacaciones'); } },
+  reunion: { get label() { return tr('Reunión'); } },
+  salida: { get label() { return tr('Salida de estudio'); } },
+  cumple: { get label() { return tr('Cumpleaños'); } },
+  recordatorio: { get label() { return tr('Recordatorio'); } },
 };
 
 /** Los tipos del desplegable del formulario, en este orden; después, «Otro…». */

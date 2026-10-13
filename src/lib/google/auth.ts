@@ -17,6 +17,7 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { listen } from '@tauri-apps/api/event';
+import { getLang, tr } from '@/lib/i18n';
 
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 
@@ -241,10 +242,10 @@ class AuthCancelled extends Error {
 
 async function authorize({ scopes, prompt, loginHint }: AuthorizeOptions): Promise<StoredTokens> {
   if (!isTauri()) {
-    throw new Error('Las integraciones de Google requieren la app de escritorio Frame.');
+    throw new Error(tr('Las integraciones de Google requieren la app de escritorio Frame.'));
   }
   if (!CLIENT_ID) {
-    throw new Error('Falta VITE_GOOGLE_CLIENT_ID en el archivo .env.');
+    throw new Error(tr('Falta VITE_GOOGLE_CLIENT_ID en el archivo .env.'));
   }
 
   const { verifier, challenge } = await pkcePair();
@@ -266,6 +267,8 @@ async function authorize({ scopes, prompt, loginHint }: AuthorizeOptions): Promi
       state,
       access_type: 'offline',
       include_granted_scopes: 'true',
+      // La pantalla de Google, en el idioma de Frame (no en el de Windows).
+      hl: getLang(),
     });
     if (prompt) params.set('prompt', prompt);
     if (loginHint) params.set('login_hint', loginHint);
@@ -318,16 +321,16 @@ async function authorize({ scopes, prompt, loginHint }: AuthorizeOptions): Promi
     } catch (e) {
       if (e instanceof AuthCancelled) {
         void invoke('oauth_cancel_wait', { port }).catch(() => undefined);
-        throw new Error('Inicio de sesión cancelado.');
+        throw new Error(tr('Inicio de sesión cancelado.'));
       }
       throw e;
     } finally {
       stopClosedWatch?.();
       if (inApp) void invoke('close_auth_window').catch(() => undefined);
     }
-    if (cb.error) throw new Error(`Google rechazó la autorización: ${cb.error}`);
-    if (cb.state !== state) throw new Error('Estado OAuth inválido (posible intento de suplantación).');
-    if (!cb.code) throw new Error('Google no devolvió un código de autorización.');
+    if (cb.error) throw new Error(tr('Google rechazó la autorización: {error}', { error: cb.error }));
+    if (cb.state !== state) throw new Error(tr('Estado OAuth inválido (posible intento de suplantación).'));
+    if (!cb.code) throw new Error(tr('Google no devolvió un código de autorización.'));
 
     // 4. Intercambiar el código por tokens (en el proceso nativo).
     const form: Record<string, string> = {
@@ -349,7 +352,7 @@ async function authorize({ scopes, prompt, loginHint }: AuthorizeOptions): Promi
       idToken: json.id_token,
     };
   }
-  throw new Error(lastError || 'No se pudo iniciar la escucha OAuth local.');
+  throw new Error(lastError || tr('No se pudo iniciar la escucha OAuth local.'));
 }
 
 /** Perfil de la cuenta dueña de un access token. */
@@ -357,7 +360,7 @@ async function fetchIdentity(accessToken: string): Promise<GoogleIdentity> {
   const resp = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-  if (!resp.ok) throw new Error('No se pudo obtener el perfil de Google.');
+  if (!resp.ok) throw new Error(tr('No se pudo obtener el perfil de Google.'));
   const info = await resp.json();
   return {
     sub: info.sub,
@@ -390,12 +393,12 @@ function saveAccount(identity: GoogleIdentity, tokens: StoredTokens): GoogleAcco
 /** Devuelve un access token válido para la integración, refrescándolo si expiró. */
 export async function getAccessToken(key: IntegrationKey = 'identity'): Promise<string> {
   const account = accountFor(key);
-  if (!account) throw new Error('Google no está conectado.');
+  if (!account) throw new Error(tr('Google no está conectado.'));
   const { tokens, identity } = account;
   if (Date.now() < tokens.expiresAt) return tokens.accessToken;
 
   if (!tokens.refreshToken) {
-    throw new Error('La sesión de Google expiró. Vuelve a conectar tu cuenta.');
+    throw new Error(tr('La sesión de Google expiró. Vuelve a conectar tu cuenta.'));
   }
   const form: Record<string, string> = {
     client_id: CLIENT_ID!,
@@ -414,7 +417,7 @@ export async function getAccessToken(key: IntegrationKey = 'identity'): Promise<
     if (/invalid_grant|expired|revoked/i.test(msg)) {
       saveAccount(identity, { ...tokens, refreshToken: undefined });
       throw new Error(
-        `La autorización de Google para ${identity.email} caducó. Vuelve a conectar la cuenta.`
+        tr('La autorización de Google para {email} caducó. Vuelve a conectar la cuenta.', { email: identity.email })
       );
     }
     throw e;

@@ -15,13 +15,14 @@
 // ============================================================
 
 import { differenceInCalendarDays, format, parseISO, startOfDay } from 'date-fns';
-import { es } from 'date-fns/locale';
 import type { Course, Space, Task } from '@/types';
 import { hm } from '@/lib/performance-report';
 import type { DocBlock, DocCell, DocModel, DocTone } from '@/lib/report-doc';
+import { dateLocale, tr } from '@/lib/i18n';
+import { difficultyLabel, priorityLabel, taskKindLabel } from '@/lib/enum-labels';
 
-const LOOSE_SPACE = 'Sin colección';
-const UNASSIGNED = 'Sin asignatura';
+const looseSpace = () => tr('Sin colección');
+const unassigned = () => tr('Sin asignatura');
 
 /** Cuántos caracteres de la descripción entran en la celda sin romper la tabla. */
 const DESCRIPTION_LIMIT = 240;
@@ -70,7 +71,7 @@ export function pendingSummary(input: PendingReportInput): PendingSummary {
       const due = safeParse(task.dueDate);
       return due !== null && startOfDay(due) < today;
     }).length,
-    subjects: new Set(rows.map((task) => task.courseName || UNASSIGNED)).size,
+    subjects: new Set(rows.map((task) => task.courseName || unassigned())).size,
     estimatedMinutes: rows.reduce((acc, task) => acc + (task.estimatedMinutes ?? 0), 0),
   };
 }
@@ -93,15 +94,15 @@ function safeParse(value: string | null | undefined): Date | null {
 
 /** Etiqueta y color del plazo: es la columna que primero se mira. */
 function deadlineLabel(daysLeft: number | null): { text: string; tone: DocTone } {
-  if (daysLeft === null) return { text: 'Sin fecha', tone: 'muted' };
+  if (daysLeft === null) return { text: tr('Sin fecha'), tone: 'muted' };
   if (daysLeft < 0) {
     const late = Math.abs(daysLeft);
-    return { text: late === 1 ? 'Vencida ayer' : `Vencida hace ${late} días`, tone: 'danger' };
+    return { text: late === 1 ? tr('Vencida ayer') : tr('Vencida hace {late} días', { late }), tone: 'danger' };
   }
-  if (daysLeft === 0) return { text: 'Hoy', tone: 'danger' };
-  if (daysLeft === 1) return { text: 'Mañana', tone: 'warn' };
-  if (daysLeft <= 7) return { text: `En ${daysLeft} días`, tone: 'warn' };
-  return { text: `En ${daysLeft} días`, tone: 'ink' };
+  if (daysLeft === 0) return { text: tr('Hoy'), tone: 'danger' };
+  if (daysLeft === 1) return { text: tr('Mañana'), tone: 'warn' };
+  if (daysLeft <= 7) return { text: tr('En {daysLeft} días', { daysLeft }), tone: 'warn' };
+  return { text: tr('En {daysLeft} días', { daysLeft }), tone: 'ink' };
 }
 
 const difficultyTone = (value: string): DocTone =>
@@ -121,16 +122,16 @@ function taskNote(task: Task): string | undefined {
         : description
     );
   }
-  if ((task.progress ?? 0) > 0) pieces.push(`avance ${Math.round(task.progress)} %`);
+  if ((task.progress ?? 0) > 0) pieces.push(tr('avance {p} %', { p: Math.round(task.progress) }));
   const attachments = task.attachments?.length ?? 0;
-  if (attachments > 0) pieces.push(attachments === 1 ? '1 adjunto' : `${attachments} adjuntos`);
+  if (attachments > 0) pieces.push(attachments === 1 ? tr('1 adjunto') : tr('{attachments} adjuntos', { attachments }));
   return pieces.length > 0 ? pieces.join('  ·  ') : undefined;
 }
 
 const estimatedText = (minutes: number): string => (minutes > 0 ? hm(minutes) : '—');
 
 /** Filas del bloque 1: el detalle completo de una asignatura. */
-const DETAIL_HEAD = ['Tarea', 'Categoría', 'Dificultad', 'Importancia', 'Fecha límite', 'Plazo', 'Estimado'];
+const detailHead = () => [tr('Tarea'), tr('Categoría'), tr('Dificultad'), tr('Importancia'), tr('Fecha límite'), tr('Plazo'), tr('Estimado')];
 const DETAIL_WEIGHTS = [34, 11, 11, 11, 15, 10, 8];
 const DETAIL_ALIGNS: ('left' | 'right')[] = ['left', 'left', 'left', 'left', 'left', 'left', 'right'];
 
@@ -138,17 +139,17 @@ function detailRow(row: PendingRow): DocCell[] {
   const deadline = deadlineLabel(row.daysLeft);
   return [
     { text: row.task.name, bold: true, note: taskNote(row.task) },
-    { text: row.task.kind ?? 'Tarea' },
-    { text: row.task.difficulty ?? '—', tone: difficultyTone(row.task.difficulty ?? '') },
-    { text: row.task.priority, tone: priorityTone(row.task.priority) },
-    { text: row.due ? format(row.due, "EEE d 'de' MMM yyyy", { locale: es }) : '—', tone: row.due ? 'ink' : 'muted' },
+    { text: taskKindLabel(row.task.kind ?? 'Tarea') },
+    { text: row.task.difficulty ? difficultyLabel(row.task.difficulty) : '—', tone: difficultyTone(row.task.difficulty ?? '') },
+    { text: priorityLabel(row.task.priority), tone: priorityTone(row.task.priority) },
+    { text: row.due ? format(row.due, tr('EEE d \'de\' MMM yyyy'), { locale: dateLocale() }) : '—', tone: row.due ? 'ink' : 'muted' },
     { text: deadline.text, tone: deadline.tone, bold: deadline.tone === 'danger' },
     { text: estimatedText(row.estimated), align: 'right' },
   ];
 }
 
 /** Filas del bloque 2: mismas tareas, ordenadas por el calendario. */
-const MONTH_HEAD = ['Día', 'Asignatura', 'Tarea', 'Categoría', 'Dificultad', 'Importancia', 'Estimado'];
+const monthHead = () => [tr('Día'), tr('Asignatura'), tr('Tarea'), tr('Categoría'), tr('Dificultad'), tr('Importancia'), tr('Estimado')];
 const MONTH_WEIGHTS = [10, 20, 30, 11, 11, 10, 8];
 const MONTH_ALIGNS: ('left' | 'right')[] = ['left', 'left', 'left', 'left', 'left', 'left', 'right'];
 
@@ -156,22 +157,22 @@ function monthRow(row: PendingRow): DocCell[] {
   const deadline = deadlineLabel(row.daysLeft);
   return [
     {
-      text: row.due ? format(row.due, 'EEE d', { locale: es }) : '—',
+      text: row.due ? format(row.due, tr('EEE d'), { locale: dateLocale() }) : '—',
       bold: true,
       tone: deadline.tone,
       note: row.due ? deadline.text : undefined,
     },
     { text: row.courseName },
     { text: row.task.name, note: taskNote(row.task) },
-    { text: row.task.kind ?? 'Tarea' },
-    { text: row.task.difficulty ?? '—', tone: difficultyTone(row.task.difficulty ?? '') },
-    { text: row.task.priority, tone: priorityTone(row.task.priority) },
+    { text: taskKindLabel(row.task.kind ?? 'Tarea') },
+    { text: row.task.difficulty ? difficultyLabel(row.task.difficulty) : '—', tone: difficultyTone(row.task.difficulty ?? '') },
+    { text: priorityLabel(row.task.priority), tone: priorityTone(row.task.priority) },
     { text: estimatedText(row.estimated), align: 'right' },
   ];
 }
 
 export function pendingReportFileBase(now: Date = new Date(), stamp?: string): string {
-  return `Frame-Pendientes-${stamp ?? format(now, 'yyyy-MM-dd')}`;
+  return tr('Frame-Pendientes-{p}', { p: stamp ?? format(now, 'yyyy-MM-dd') });
 }
 
 interface PendingDocOptions {
@@ -192,7 +193,7 @@ export function buildPendingReport(
   const num = () => String(sectionIndex++).padStart(2, '0');
   const now = input.now ?? new Date();
   const today = startOfDay(now);
-  const generatedAt = format(now, "d 'de' MMMM 'de' yyyy, HH:mm", { locale: es });
+  const generatedAt = format(now, tr('d \'de\' MMMM \'de\' yyyy, HH:mm'), { locale: dateLocale() });
 
   // Colección de cada asignatura. El orden de `spaces` es el que el usuario
   // eligió en Asignaturas, así que el informe lo respeta tal cual.
@@ -217,7 +218,7 @@ export function buildPendingReport(
     .map((original) => {
     const task = {
       ...original,
-      name: original.name?.trim() || 'Sin título',
+      name: original.name?.trim() || tr('Sin título'),
       priority: original.priority ?? 'Media',
     };
     const due = safeParse(task.dueDate);
@@ -225,8 +226,8 @@ export function buildPendingReport(
       task,
       due,
       daysLeft: due ? differenceInCalendarDays(startOfDay(due), today) : null,
-      courseName: task.courseName || UNASSIGNED,
-      spaceName: spaceOfCourse.get(task.courseId) ?? LOOSE_SPACE,
+      courseName: task.courseName || unassigned(),
+      spaceName: spaceOfCourse.get(task.courseId) ?? looseSpace(),
       estimated: task.estimatedMinutes ?? 0,
     };
   });
@@ -251,40 +252,38 @@ export function buildPendingReport(
   if (!options.omitCover) {
     blocks.push({
       kind: 'cover',
-      eyebrow: 'Registro académico',
-      title: 'Informe de tareas pendientes',
+      eyebrow: tr('Registro académico'),
+      title: tr('Informe de tareas pendientes'),
       subtitle:
         rows.length === 0
-          ? 'Sin tareas pendientes'
-          : `${rows.length} ${rows.length === 1 ? 'tarea pendiente' : 'tareas pendientes'} en ${subjectCount} ${
-              subjectCount === 1 ? 'asignatura' : 'asignaturas'
-            }`,
+          ? tr('Sin tareas pendientes')
+          : tr('{length} {p} en {subjectCount} {p2}', { length: rows.length, p: rows.length === 1 ? tr('tarea pendiente') : tr('tareas pendientes'), subjectCount, p2: subjectCount === 1 ? tr('asignatura') : tr('asignaturas') }),
       meta: [
-        { label: 'Estudiante', value: input.studentName },
-        ...(input.range ? [{ label: 'Periodo', value: input.range.label }] : []),
-        { label: 'Pendientes', value: String(rows.length) },
-        { label: 'Vencidas', value: String(overdueCount) },
-        { label: 'Generado', value: generatedAt },
+        { label: tr('Estudiante'), value: input.studentName },
+        ...(input.range ? [{ label: tr('Periodo'), value: input.range.label }] : []),
+        { label: tr('Pendientes'), value: String(rows.length) },
+        { label: tr('Vencidas'), value: String(overdueCount) },
+        { label: tr('Generado'), value: generatedAt },
       ],
       footnote:
-        'Fotografía del momento: refleja lo que quedaba por hacer al generar el documento. Las tareas culminadas después ya no figuran aquí.',
+        tr('Fotografía del momento: refleja lo que quedaba por hacer al generar el documento. Las tareas culminadas después ya no figuran aquí.'),
     });
   }
 
   if (rows.length === 0) {
     blocks.push({
       kind: 'callout',
-      title: 'Sin pendientes',
-      text: 'No hay ninguna tarea pendiente en este momento. Todo lo registrado está culminado.',
+      title: tr('Sin pendientes'),
+      text: tr('No hay ninguna tarea pendiente en este momento. Todo lo registrado está culminado.'),
       tone: 'ok',
     });
     if (!options.omitCover) {
       blocks.push({
         kind: 'footer',
-        text: 'Documento generado automáticamente por Frame a partir de las tareas del propio estudiante.',
+        text: tr('Documento generado automáticamente por Frame a partir de las tareas del propio estudiante.'),
       });
     }
-    return { title: 'Informe de tareas pendientes', blocks };
+    return { title: tr('Informe de tareas pendientes'), blocks };
   }
 
   // ---------- Resumen ----------
@@ -308,35 +307,35 @@ export function buildPendingReport(
   blocks.push({
     kind: 'section',
     index: num(),
-    title: 'Panorama de lo pendiente',
-    note: `${rows.length} ${rows.length === 1 ? 'tarea' : 'tareas'}`,
+    title: tr('Panorama de lo pendiente'),
+    note: `${rows.length} ${rows.length === 1 ? tr('tarea') : tr('tareas')}`,
   });
   blocks.push({
     kind: 'kpis',
     items: [
       {
-        label: 'Pendientes',
+        label: tr('Pendientes'),
         value: String(rows.length),
-        note: `${subjectCount} ${subjectCount === 1 ? 'asignatura' : 'asignaturas'}`,
+        note: `${subjectCount} ${subjectCount === 1 ? tr('asignatura') : tr('asignaturas')}`,
       },
-      { label: 'Vencidas', value: String(overdue.length), note: 'fecha límite ya pasada' },
+      { label: tr('Vencidas'), value: String(overdue.length), note: tr('fecha límite ya pasada') },
       {
-        label: 'Próximos 7 días',
+        label: tr('Próximos 7 días'),
         value: String(nextWeek.length),
-        note: `${dueToday.length} ${dueToday.length === 1 ? 'vence hoy' : 'vencen hoy'}`,
+        note: `${dueToday.length} ${dueToday.length === 1 ? tr('vence hoy') : tr('vencen hoy')}`,
       },
-      { label: 'Sin fecha límite', value: String(undated.length), note: 'sin plazo asignado' },
+      { label: tr('Sin fecha límite'), value: String(undated.length), note: tr('sin plazo asignado') },
       {
-        label: 'Tiempo estimado',
+        label: tr('Tiempo estimado'),
         value: totalEstimated > 0 ? hm(totalEstimated) : '—',
-        note: `${withEstimate} de ${rows.length} con estimación`,
+        note: tr('{withEstimate} de {length} con estimación', { withEstimate, length: rows.length }),
       },
-      { label: 'Importancia alta', value: String(high), note: `media ${medium} · baja ${low}` },
-      { label: 'Dificultad difícil', value: String(hard), note: `media ${mediumHard} · fácil ${easy}` },
+      { label: tr('Importancia alta'), value: String(high), note: tr('media {medium} · baja {low}', { medium, low }) },
+      { label: tr('Dificultad difícil'), value: String(hard), note: tr('media {mediumHard} · fácil {easy}', { mediumHard, easy }) },
       {
-        label: 'Siguiente entrega',
+        label: tr('Siguiente entrega'),
         value: nextUp ? deadlineLabel(nextUp.daysLeft).text : '—',
-        note: nextUp ? `${nextUp.task.name} · ${nextUp.courseName}` : 'sin entregas por delante',
+        note: nextUp ? `${nextUp.task.name} · ${nextUp.courseName}` : tr('sin entregas por delante'),
       },
     ],
   });
@@ -346,36 +345,34 @@ export function buildPendingReport(
   const urgentText = (() => {
     const pieces: string[] = [];
     pieces.push(
-      `Quedan ${rows.length} ${rows.length === 1 ? 'tarea pendiente' : 'tareas pendientes'} repartidas en ${subjectCount} ${
-        subjectCount === 1 ? 'asignatura' : 'asignaturas'
-      }`
+      tr('Quedan {length} {p} repartidas en {subjectCount} {p2}', { length: rows.length, p: rows.length === 1 ? tr('tarea pendiente') : tr('tareas pendientes'), subjectCount, p2: subjectCount === 1 ? tr('asignatura') : tr('asignaturas') })
     );
-    if (totalEstimated > 0) pieces.push(`, con ${hm(totalEstimated)} de trabajo estimado`);
+    if (totalEstimated > 0) pieces.push(tr(', con {hm} de trabajo estimado', { hm: hm(totalEstimated) }));
     pieces.push('. ');
     if (overdue.length > 0) {
       pieces.push(
-        `${overdue.length} ${overdue.length === 1 ? 'está vencida' : 'están vencidas'} y ${
-          dueToday.length > 0 ? `${dueToday.length} ${dueToday.length === 1 ? 'vence' : 'vencen'} hoy` : 'ninguna vence hoy'
+        `${overdue.length} ${overdue.length === 1 ? tr('está vencida') : tr('están vencidas')} y ${
+          dueToday.length > 0 ? tr('{length} {p} hoy', { length: dueToday.length, p: dueToday.length === 1 ? tr('vence') : tr('vencen') }) : tr('ninguna vence hoy')
         }. `
       );
     } else if (dueToday.length > 0) {
-      pieces.push(`Ninguna está vencida; ${dueToday.length} ${dueToday.length === 1 ? 'vence' : 'vencen'} hoy. `);
+      pieces.push(tr('Ninguna está vencida; {length} {p} hoy. ', { length: dueToday.length, p: dueToday.length === 1 ? tr('vence') : tr('vencen') }));
     } else {
-      pieces.push('Ninguna está vencida. ');
+      pieces.push(tr('Ninguna está vencida. '));
     }
     if (nextUp) {
-      pieces.push(`La siguiente entrega es «${nextUp.task.name}» de ${nextUp.courseName}, ${deadlineLabel(nextUp.daysLeft).text.toLowerCase()}. `);
+      pieces.push(tr('La siguiente entrega es «{name}» de {courseName}, {p}. ', { name: nextUp.task.name, courseName: nextUp.courseName, p: deadlineLabel(nextUp.daysLeft).text.toLowerCase() }));
     }
     if (undated.length > 0) {
       pieces.push(
-        `${undated.length} ${undated.length === 1 ? 'tarea no tiene' : 'tareas no tienen'} fecha límite: sin plazo no entran en ninguna planificación.`
+        tr('{length} {p} fecha límite: sin plazo no entran en ninguna planificación.', { length: undated.length, p: undated.length === 1 ? tr('tarea no tiene') : tr('tareas no tienen') })
       );
     }
     return pieces.join('').trim();
   })();
   blocks.push({
     kind: 'callout',
-    title: 'Lectura de la carga',
+    title: tr('Lectura de la carga'),
     text: urgentText,
     tone: overdue.length > 0 ? 'danger' : 'accent',
   });
@@ -392,67 +389,67 @@ export function buildPendingReport(
     }))
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'es'));
 
-  blocks.push({ kind: 'section', index: num(), title: 'Dónde está la carga' });
+  blocks.push({ kind: 'section', index: num(), title: tr('Dónde está la carga') });
   const maxCourse = Math.max(1, ...byCourse.map((c) => c.count));
   blocks.push({
     kind: 'bars',
-    caption: 'Pendientes por asignatura',
+    caption: tr('Pendientes por asignatura'),
     items: byCourse.map((course) => ({
       label: course.name,
       value: String(course.count),
       percent: (course.count / maxCourse) * 100,
       note: [
-        course.overdue > 0 ? `${course.overdue} vencidas` : null,
+        course.overdue > 0 ? tr('{overdue} vencidas', { overdue: course.overdue }) : null,
         course.estimated > 0 ? hm(course.estimated) : null,
       ]
         .filter(Boolean)
         .join(' · '),
       tone: (course.overdue > 0 ? 'danger' : 'accent') as DocTone,
     })),
-    legend: 'En rojo, las asignaturas con alguna entrega vencida.',
+    legend: tr('En rojo, las asignaturas con alguna entrega vencida.'),
   });
   blocks.push({
     kind: 'stacked',
-    caption: 'Reparto por importancia',
+    caption: tr('Reparto por importancia'),
     items: [
-      { label: 'Alta', percent: high, value: String(high), tone: 'danger' },
-      { label: 'Media', percent: medium, value: String(medium), tone: 'warn' },
-      { label: 'Baja', percent: low, value: String(low), tone: 'muted' },
+      { label: tr('Alta'), percent: high, value: String(high), tone: 'danger' },
+      { label: tr('Media'), percent: medium, value: String(medium), tone: 'warn' },
+      { label: tr('Baja'), percent: low, value: String(low), tone: 'muted' },
     ],
   });
   blocks.push({
     kind: 'stacked',
-    caption: 'Reparto por dificultad',
+    caption: tr('Reparto por dificultad'),
     items: [
-      { label: 'Difícil', percent: hard, value: String(hard), tone: 'danger' },
-      { label: 'Media', percent: mediumHard, value: String(mediumHard), tone: 'warn' },
-      { label: 'Fácil', percent: easy, value: String(easy), tone: 'ok' },
+      { label: tr('Difícil'), percent: hard, value: String(hard), tone: 'danger' },
+      { label: tr('Media'), percent: mediumHard, value: String(mediumHard), tone: 'warn' },
+      { label: tr('Fácil'), percent: easy, value: String(easy), tone: 'ok' },
     ],
   });
 
   // ---------- Situación por plazo ----------
   const tranches: { label: string; rows: PendingRow[]; tone: DocTone }[] = [
-    { label: 'Vencidas', rows: overdue, tone: 'danger' },
-    { label: 'Vencen hoy', rows: dueToday, tone: 'danger' },
+    { label: tr('Vencidas'), rows: overdue, tone: 'danger' },
+    { label: tr('Vencen hoy'), rows: dueToday, tone: 'danger' },
     {
-      label: 'Próximos 7 días',
+      label: tr('Próximos 7 días'),
       rows: rows.filter((r) => r.daysLeft !== null && r.daysLeft >= 1 && r.daysLeft <= 7),
       tone: 'warn',
     },
     {
-      label: 'De 8 a 30 días',
+      label: tr('De 8 a 30 días'),
       rows: rows.filter((r) => r.daysLeft !== null && r.daysLeft >= 8 && r.daysLeft <= 30),
       tone: 'ink',
     },
-    { label: 'Más de 30 días', rows: rows.filter((r) => r.daysLeft !== null && r.daysLeft > 30), tone: 'ink' },
-    { label: 'Sin fecha límite', rows: undated, tone: 'muted' },
+    { label: tr('Más de 30 días'), rows: rows.filter((r) => r.daysLeft !== null && r.daysLeft > 30), tone: 'ink' },
+    { label: tr('Sin fecha límite'), rows: undated, tone: 'muted' },
   ];
 
-  blocks.push({ kind: 'section', index: num(), title: 'Situación por plazo' });
+  blocks.push({ kind: 'section', index: num(), title: tr('Situación por plazo') });
   const maxTranche = Math.max(1, ...tranches.map((t) => t.rows.length));
   blocks.push({
     kind: 'bars',
-    caption: 'Tareas por tramo de vencimiento',
+    caption: tr('Tareas por tramo de vencimiento'),
     items: tranches.map((tranche) => ({
       label: tranche.label,
       value: String(tranche.rows.length),
@@ -466,7 +463,7 @@ export function buildPendingReport(
   });
   blocks.push({
     kind: 'table',
-    head: ['Tramo', 'Tareas', 'Importancia alta', 'Tiempo estimado'],
+    head: [tr('Tramo'), tr('Tareas'), tr('Importancia alta'), tr('Tiempo estimado')],
     weights: [40, 15, 20, 25],
     aligns: ['left', 'right', 'right', 'right'],
     rows: tranches.map((tranche) => [
@@ -486,16 +483,16 @@ export function buildPendingReport(
   // ---------- Las siguientes entregas, en línea de tiempo ----------
   const upcoming = byDeadline.filter((r) => r.due).slice(0, 8);
   if (upcoming.length > 0) {
-    blocks.push({ kind: 'section', index: num(), title: 'Lo que viene primero' });
+    blocks.push({ kind: 'section', index: num(), title: tr('Lo que viene primero') });
     blocks.push({
       kind: 'timeline',
       items: upcoming.map((row) => ({
-        when: format(row.due as Date, "EEE d 'de' MMM", { locale: es }),
+        when: format(row.due as Date, tr('EEE d \'de\' MMM'), { locale: dateLocale() }),
         title: row.task.name,
         note: [
           row.courseName,
           deadlineLabel(row.daysLeft).text,
-          row.task.priority !== 'Baja' ? `importancia ${row.task.priority.toLowerCase()}` : null,
+          row.task.priority !== 'Baja' ? tr('importancia {p}', { p: row.task.priority.toLowerCase() }) : null,
           row.estimated > 0 ? hm(row.estimated) : null,
         ]
           .filter(Boolean)
@@ -510,18 +507,18 @@ export function buildPendingReport(
     if (!options.omitCover) {
       blocks.push({
         kind: 'footer',
-        text: `Documento generado automáticamente por Frame el ${generatedAt} a partir de las tareas del propio estudiante.`,
+        text: tr('Documento generado automáticamente por Frame el {generatedAt} a partir de las tareas del propio estudiante.', { generatedAt }),
       });
     }
-    return { title: 'Informe de tareas pendientes', blocks };
+    return { title: tr('Informe de tareas pendientes'), blocks };
   }
 
   // ---------- Bloque 1: por colección y asignatura ----------
   blocks.push({ kind: 'pagebreak' });
-  blocks.push({ kind: 'section', index: num(), title: 'Pendientes por colección y asignatura' });
+  blocks.push({ kind: 'section', index: num(), title: tr('Pendientes por colección y asignatura') });
   blocks.push({
     kind: 'paragraph',
-    text: 'Cada asignatura con su lista completa. Dentro de cada una, las tareas van de la entrega más próxima a la más lejana; las que no tienen fecha quedan al final.',
+    text: tr('Cada asignatura con su lista completa. Dentro de cada una, las tareas van de la entrega más próxima a la más lejana; las que no tienen fecha quedan al final.'),
     tone: 'muted',
   });
 
@@ -544,9 +541,9 @@ export function buildPendingReport(
       level: 1,
       text: spaceName,
       note: [
-        `${spaceRows.length} ${spaceRows.length === 1 ? 'pendiente' : 'pendientes'}`,
-        `${spaceCourses.length} ${spaceCourses.length === 1 ? 'asignatura' : 'asignaturas'}`,
-        spaceOverdue > 0 ? `${spaceOverdue} vencidas` : null,
+        `${spaceRows.length} ${spaceRows.length === 1 ? tr('pendiente') : tr('pendientes')}`,
+        `${spaceCourses.length} ${spaceCourses.length === 1 ? tr('asignatura') : tr('asignaturas')}`,
+        spaceOverdue > 0 ? tr('{spaceOverdue} vencidas', { spaceOverdue }) : null,
         spaceEstimated > 0 ? `${hm(spaceEstimated)} estimados` : null,
       ]
         .filter(Boolean)
@@ -563,8 +560,8 @@ export function buildPendingReport(
         level: 2,
         text: courseName,
         note: [
-          `${courseRows.length} ${courseRows.length === 1 ? 'tarea' : 'tareas'}`,
-          courseOverdue > 0 ? `${courseOverdue} vencidas` : null,
+          `${courseRows.length} ${courseRows.length === 1 ? tr('tarea') : tr('tareas')}`,
+          courseOverdue > 0 ? tr('{courseOverdue} vencidas', { courseOverdue }) : null,
           courseEstimated > 0 ? hm(courseEstimated) : null,
         ]
           .filter(Boolean)
@@ -572,7 +569,7 @@ export function buildPendingReport(
       });
       blocks.push({
         kind: 'table',
-        head: DETAIL_HEAD,
+        head: detailHead(),
         weights: DETAIL_WEIGHTS,
         aligns: DETAIL_ALIGNS,
         rows: courseRows.map(detailRow),
@@ -582,10 +579,10 @@ export function buildPendingReport(
 
   // ---------- Bloque 2: mes a mes ----------
   blocks.push({ kind: 'pagebreak' });
-  blocks.push({ kind: 'section', index: num(), title: 'Pendientes mes a mes' });
+  blocks.push({ kind: 'section', index: num(), title: tr('Pendientes mes a mes') });
   blocks.push({
     kind: 'paragraph',
-    text: 'Las mismas tareas ordenadas por el calendario, para ver la carga real de cada mes. Los meses ya pasados que siguen apareciendo contienen entregas vencidas.',
+    text: tr('Las mismas tareas ordenadas por el calendario, para ver la carga real de cada mes. Los meses ya pasados que siguen apareciendo contienen entregas vencidas.'),
     tone: 'muted',
   });
 
@@ -597,15 +594,15 @@ export function buildPendingReport(
     const monthRows = byDeadline.filter((r) => r.due && format(r.due, 'yyyy-MM') === monthKey);
     const monthOverdue = monthRows.filter((r) => r.daysLeft !== null && r.daysLeft < 0).length;
     const monthEstimated = monthRows.reduce((acc, r) => acc + r.estimated, 0);
-    const monthLabel = format(parseISO(`${monthKey}-01T00:00:00`), "MMMM 'de' yyyy", { locale: es });
+    const monthLabel = format(parseISO(`${monthKey}-01T00:00:00`), tr('MMMM \'de\' yyyy'), { locale: dateLocale() });
 
     blocks.push({
       kind: 'subheading',
       level: 1,
       text: monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1),
       note: [
-        `${monthRows.length} ${monthRows.length === 1 ? 'entrega' : 'entregas'}`,
-        monthOverdue > 0 ? `${monthOverdue} vencidas` : null,
+        `${monthRows.length} ${monthRows.length === 1 ? tr('entrega') : tr('entregas')}`,
+        monthOverdue > 0 ? tr('{monthOverdue} vencidas', { monthOverdue }) : null,
         monthEstimated > 0 ? `${hm(monthEstimated)} estimados` : null,
       ]
         .filter(Boolean)
@@ -613,7 +610,7 @@ export function buildPendingReport(
     });
     blocks.push({
       kind: 'table',
-      head: MONTH_HEAD,
+      head: monthHead(),
       weights: MONTH_WEIGHTS,
       aligns: MONTH_ALIGNS,
       rows: monthRows.map(monthRow),
@@ -624,12 +621,12 @@ export function buildPendingReport(
     blocks.push({
       kind: 'subheading',
       level: 1,
-      text: 'Sin fecha límite',
-      note: `${undated.length} ${undated.length === 1 ? 'tarea' : 'tareas'} · ponerles plazo es lo primero`,
+      text: tr('Sin fecha límite'),
+      note: tr('{length} {p} · ponerles plazo es lo primero', { length: undated.length, p: undated.length === 1 ? tr('tarea') : tr('tareas') }),
     });
     blocks.push({
       kind: 'table',
-      head: MONTH_HEAD,
+      head: monthHead(),
       weights: MONTH_WEIGHTS,
       aligns: MONTH_ALIGNS,
       rows: undated
@@ -642,9 +639,9 @@ export function buildPendingReport(
   if (!options.omitCover) {
     blocks.push({
       kind: 'footer',
-      text: `Frame · VT Asvent — Informe de tareas pendientes generado el ${generatedAt} a partir de las tareas del propio estudiante. Refleja la situación en ese instante: las tareas culminadas después ya no figuran aquí.`,
+      text: tr('Frame · VT Asvent — Informe de tareas pendientes generado el {generatedAt} a partir de las tareas del propio estudiante. Refleja la situación en ese instante: las tareas culminadas después ya no figuran aquí.', { generatedAt }),
     });
   }
 
-  return { title: 'Informe de tareas pendientes', blocks };
+  return { title: tr('Informe de tareas pendientes'), blocks };
 }

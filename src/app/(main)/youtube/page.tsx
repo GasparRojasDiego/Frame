@@ -2,6 +2,7 @@ import { isTauri } from '@tauri-apps/api/core';
 import { Card } from '@/components/ui/card';
 import { YoutubeLogo } from '@/components/integrations/YoutubeIcon';
 import GoogleEmbed from '@/components/integrations/GoogleEmbed';
+import { tr } from '@/lib/i18n';
 
 // Interfaz "YouTube": el YouTube real incrustado, a sangre y centrado.
 //
@@ -23,7 +24,7 @@ export default function YoutubePage() {
         <Card className="mx-4 my-auto flex items-center gap-3 p-4 md:mx-8">
           <YoutubeLogo className="h-6 w-8 shrink-0" />
           <p className="text-xs text-muted-foreground">
-            El recuadro de YouTube integrado está disponible en la app de escritorio Frame.
+            {tr('El recuadro de YouTube integrado está disponible en la app de escritorio Frame.')}
           </p>
         </Card>
       )}

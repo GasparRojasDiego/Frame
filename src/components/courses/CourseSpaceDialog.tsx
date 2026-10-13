@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { SubjectMultiPicker } from '@/components/courses/SubjectPicker';
 import { cn } from '@/lib/utils';
 import { CATALOG_SUBJECTS } from '@/lib/subjects';
+import { tr } from '@/lib/i18n';
 
 // Diálogo unificado "Asignatura nueva / Categoría nueva".
 // Antes vivía en el sidebar; ahora se abre desde la interfaz Asignaturas.
@@ -43,9 +44,12 @@ export default function CourseSpaceDialog() {
     }
   }, [isCreateCourseOpen, setNewCourseName, setNewTeacherName]);
 
+  // El catálogo en el idioma de la interfaz: en inglés se marca y se crea
+  // «Mathematics», no «Matemática».
+  const catalog: string[] = CATALOG_SUBJECTS.map((subject) => tr(subject));
   /** Sugerencia del CNEB que coincide con el nombre escrito (si alguna). */
   const typedName = newCourseName.trim().toLowerCase();
-  const typedSubject = CATALOG_SUBJECTS.find(
+  const typedSubject = catalog.find(
     (subject) => subject.toLowerCase() === typedName && !existingNames.has(typedName)
   );
   // Con una sola marcada, la marca sale del nombre (como al escribirlo); con
@@ -90,16 +94,16 @@ export default function CourseSpaceDialog() {
   return (
     <Dialog open={isCreateCourseOpen} onOpenChange={setCreateCourseOpen}>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
-        <EchoHeader word={addDialogView === 'course' ? 'Asignatura' : 'Colección'}>
+        <EchoHeader word={addDialogView === 'course' ? tr('Asignatura') : tr('Colección')}>
         <DialogHeader>
           <div className="flex items-center justify-center gap-4">
             <Button size="icon" variant="ghost" className="h-9 w-9 text-primary" onClick={() => setAddDialogView('course')} disabled={addDialogView === 'course'}>
               <ChevronLeft className="h-6 w-6" />
             </Button>
             <DialogTitle className="text-xl text-primary font-bold text-center">
-              {addDialogView === 'course' ? 'Asignatura nueva' : 'Colección nueva'}
+              {addDialogView === 'course' ? tr('Asignatura nueva') : tr('Colección nueva')}
             </DialogTitle>
-            <Button size="icon" variant="ghost" className="h-9 w-9 text-primary" onClick={() => setAddDialogView('theme')} disabled={addDialogView === 'theme'} title="Crear una colección">
+            <Button size="icon" variant="ghost" className="h-9 w-9 text-primary" onClick={() => setAddDialogView('theme')} disabled={addDialogView === 'theme'} title={tr('Crear una colección')}>
               <ChevronRight className="h-6 w-6" />
             </Button>
           </div>
@@ -109,26 +113,26 @@ export default function CourseSpaceDialog() {
         {addDialogView === 'course' ? (
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="courseName" className="text-xs">Nombre de la asignatura</Label>
+              <Label htmlFor="courseName" className="text-xs">{tr('Nombre de la asignatura')}</Label>
               {/* Con varias áreas marcadas, cada una se crea con su nombre. */}
               <Input
                 id="courseName"
                 value={newCourseName}
                 onChange={(e) => setNewCourseName(e.target.value)}
                 disabled={batch}
-                placeholder={batch ? `${marked.length} predeterminadas marcadas abajo` : 'Ej: Física Cuántica'}
+                placeholder={batch ? tr('{length} predeterminadas marcadas abajo', { length: marked.length }) : tr('Ej: Física Cuántica')}
                 className="bg-card border-primary"
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="teacherName" className="text-xs">
-                {batch ? 'Nombre del profesor (opcional, para todas)' : 'Nombre del profesor (opcional)'}
+                {batch ? tr('Nombre del profesor (opcional, para todas)') : tr('Nombre del profesor (opcional)')}
               </Label>
               <Input
                 id="teacherName"
                 value={newTeacherName}
                 onChange={(e) => setNewTeacherName(e.target.value)}
-                placeholder="Ej: Sr. Pérez"
+                placeholder={tr('Ej: Sr. Pérez')}
                 className="bg-card border-primary"
               />
             </div>
@@ -140,11 +144,11 @@ export default function CourseSpaceDialog() {
                 tienes se ven, pero no se pueden marcar. */}
             <div role="separator" className="flex items-center gap-3 px-2 pt-3">
               <span aria-hidden className="h-px flex-1 bg-border/70" />
-              <span className="text-[11px] font-semibold text-muted-foreground">Predeterminadas</span>
+              <span className="text-[11px] font-semibold text-muted-foreground">{tr('Predeterminadas')}</span>
               <span aria-hidden className="h-px flex-1 bg-border/70" />
             </div>
             <div className="grid grid-cols-2 gap-1.5">
-              {CATALOG_SUBJECTS.map((subject) => {
+              {catalog.map((subject) => {
                 const owned = existingNames.has(subject.toLowerCase());
                 const chosen = !owned && marked.includes(subject);
                 return (
@@ -154,7 +158,7 @@ export default function CourseSpaceDialog() {
                     role="checkbox"
                     disabled={owned}
                     aria-checked={chosen}
-                    title={owned ? 'Ya tienes esta asignatura' : undefined}
+                    title={owned ? tr('Ya tienes esta asignatura') : undefined}
                     onClick={() => toggleSubject(subject)}
                     className={cn(
                       'flex min-w-0 items-center gap-2 rounded-md border px-2.5 py-1.5 text-left text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
@@ -182,12 +186,12 @@ export default function CourseSpaceDialog() {
         ) : (
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="spaceName" className="text-xs">Nombre de la colección</Label>
+              <Label htmlFor="spaceName" className="text-xs">{tr('Nombre de la colección')}</Label>
               <Input
                 id="spaceName"
                 value={newSpaceName}
                 onChange={(e) => setNewSpaceName(e.target.value)}
-                placeholder="Ej: Primer Semestre"
+                placeholder={tr('Ej: Primer Semestre')}
                 className="bg-card border-primary"
               />
             </div>
@@ -199,16 +203,16 @@ export default function CourseSpaceDialog() {
               <SubjectMultiPicker
                 values={selectedCourseIdsForSpace}
                 onChange={setSelectedCourseIdsForSpace}
-                title="¿Qué asignaturas agrupa?"
+                title={tr('¿Qué asignaturas agrupa?')}
               />
               <p className="text-center text-[10px] text-muted-foreground">
-                Mínimo dos. Si una ya está en otra colección, pasa a esta.
+                {tr('Mínimo dos. Si una ya está en otra colección, pasa a esta.')}
               </p>
             </div>
           </div>
         )}
         <DialogFooter>
-          <Button variant="gris" onClick={() => setCreateCourseOpen(false)}>Cancelar</Button>
+          <Button variant="gris" onClick={() => setCreateCourseOpen(false)}>{tr('Cancelar')}</Button>
           <Button
             onClick={addDialogView === 'course' ? handleCreateCourse : handleCreateSpace}
             disabled={
@@ -219,7 +223,7 @@ export default function CourseSpaceDialog() {
                 : !newSpaceName.trim() || selectedCourseIdsForSpace.length < 2
             }
           >
-            {addDialogView === 'course' && batch && freshPicked.length >= 2 ? `Crear ${freshPicked.length} asignaturas` : 'Crear'}
+            {addDialogView === 'course' && batch && freshPicked.length >= 2 ? tr('Crear {length} asignaturas', { length: freshPicked.length }) : tr('Crear')}
           </Button>
         </DialogFooter>
       </DialogContent>

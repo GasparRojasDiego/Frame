@@ -1,0 +1,185 @@
+// ============================================================
+// Versión inglesa de «Información y novedades» (1.6.7). El texto español
+// (info.ts) es el que manda; este lo traduce fielmente. Al cambiar uno, se
+// cambia el otro.
+// ============================================================
+
+import { TERMS_VERSION } from './terms';
+
+export function infoDocumentEn({
+  appVersion,
+  installId,
+  releaseDate,
+}: {
+  appVersion: string;
+  installId: string;
+  releaseDate: string;
+}): string {
+  return `# Frame
+
+**Version ${appVersion}** · Stable channel · Build ${appVersion} (NSIS x64) · ${releaseDate}
+Academic productivity system for Windows and Android
+Developed by **VT Asvent**, a software development entity in formation · Peru
+
+Available in Spanish and English (Settings → “Language”).
+
+Frame brings together in a single application what usually takes five: managing subjects and tasks, timing your study with a daily grade, habit tracking, a calendar, a player for your own music, voice recording and Google’s services. Its academic core works offline, all your information is saved first on your own computer and, with an account, it syncs in seconds with Frame for Android.
+
+---
+
+## 1 · System requirements
+
+**Operating system.** Windows 10 version 1809 (build 17763) or later, or Windows 11, on x64 computers. For tablets and phones there’s **Frame for Android** (Android 8.0 or later), downloaded from the same page and sharing account and data. There’s no version for macOS, Linux or iOS.
+
+**Required component.** Frame uses the **Microsoft Edge WebView2** runtime, distributed by Microsoft and included by default in Windows 11 and in up-to-date Windows 10 installations. If it isn’t present, the installer detects it and asks to install it. Without this component the application doesn’t start.
+
+**Resources.** 4 GB of memory and 300 MB of free space, plus the space taken by your music library and your recordings, which grows with no limit set by the application.
+
+**Internet connection.** It isn’t needed for the academic core —subjects, tasks, study sessions, habits, the local calendar, your music and your recordings—. It is needed to create your account and sign in —once inside, all of the above keeps working without it—, for cloud sync, the YouTube, Gmail and Classroom screens, study videos, the weather card and checking for updates.
+
+**System permissions.** Frame asks for access to the microphone for voice recording, to the file system for attachments, covers, reports and the music library, and for permission to show native notifications and an always-on-top window above other applications (the clock’s floating view). These permissions are used only for the functions described.
+
+---
+
+## 2 · Your account identifier
+
+**${installId}**
+
+It’s a twelve-digit **pseudonymous** identifier, the same one the Terms call the “installation identifier”. It’s derived from the internal, random code that the account service assigned to your account when it was created; for local profiles from before version 1.4.9 it was generated at random when the profile was created. It isn’t derived from your name, your email, your hardware or any data from your computer, and on its own it doesn’t identify you.
+
+It has a single purpose: making sure a support report or a request about your data is linked to the right account without you having to give your email. You can also see it in Settings, next to your profile, and it’s copied with one click. Always include it when you write to support. Don’t post it on forums or social media: although it doesn’t identify you, it does uniquely identify your account.
+
+Since it belongs to your account, it’s the same on every computer where you sign in and it doesn’t change even if you uninstall and reinstall Frame.
+
+---
+
+## 3 · Where each piece of data lives
+
+Frame distinguishes three storage places. Knowing the difference is what prevents an irreversible loss.
+
+**On your computer, always.** Everything you record is written first to your disk: subjects, collections, tasks, attachments, study sessions, grades, habits, local calendar events, resources, images, voice recordings and your music library. Recordings are also kept as audio files (M4A) in \`Documents\\Frame\\Grabaciones\`, accessible outside the application.
+
+**In your account, if you signed in.** Your **academic state** —subjects, tasks, sessions, grades, habits, events, schedules and settings— is replicated in the cloud and merged across computers in seconds. This replica is what lets you switch machines, or use your phone, without losing anything. Your **profile picture**, the **schedule image** and the images of your **playlists, subjects and collections** travel too, in a private folder of your account.
+
+**Nowhere but your computer, always.** **Music** (with its covers and lyrics), **voice recordings** and **attachments** are excluded from the cloud because of their size. To have your music on another device, copy your files there and import them.
+
+**A guest profile has nothing in the cloud.** “Continue as a guest” creates a local profile to try Frame instantly: all of its information lives only on this computer. To keep it safe, link your account with Google or with your email (the “G” next to your profile, at the bottom of the menu, or Settings → gear → “Link my account”): everything moves to your account, is added to what it already had without deleting anything and gets backed up.
+
+---
+
+## 4 · What this version includes
+
+### 4.1 Academic core
+
+Subjects with a cover image, groupable into collections, with a teacher and their own statistics; resources (notes, links, files and recordings) arranged in their own tab, and a permanent record of what was completed.
+
+The **“+”** button in the top bar creates a task or a note without going to the subject; a note with no subject stays as a card at the bottom of Home. Tasks with a description, subject, due date, priority, type, difficulty, estimated time and a progress percentage that you can adjust by hand or that rises on its own with your study sessions in proportion to the estimated time. Reminders task by task, with days, time and repetition. Attachments linked to the original file on your disk —chosen with one click or dragged, one or several, onto the “Attach file” box—: if you keep editing it, Frame always sees the current version.
+
+An archive of completed and incomplete tasks, with time spent and punctuality; a daily notice of overdue tasks to reschedule, complete or drop them. Next to “Filters”, how many tasks you see and how much their estimated time adds up to.
+
+**Import from Notion** (Settings → account gear) brings your tasks and dates from the export of a Notion database (the .zip or the .csv), without connecting to your account.
+
+### 4.2 Study and measuring your study
+
+Timer or stopwatch, with an always-visible **floating view** in two sizes. In **performance mode** you rate your concentration from 1 to 20 and Frame calculates the day’s grade (AD, A, B, C); in **time mode** only the minutes against your goal count.
+
+When you finish, the form records the exact time, your focus, the subjects and tasks you worked on and **what you did, with a text editor with bold, italics and lists**; subjects and their tasks are chosen with cards. During the session you can log progress with its minute. If Frame closes with a session running, when you come back the same day you can resume it.
+
+Each session is a card with its subject, its time and its performance, and it opens with all its detail. A grades calendar with the detail of each day (time against the goal, sessions, average focus, grade and when you studied: morning, afternoon or evening), weekly or monthly academic progress and YouTube study videos, watched with its player.
+
+### 4.3 Analysis and reports
+
+The top bar shows phrases with your recent data that change on their own. Home sums up your day: weather, schedule, yesterday’s grade, streak, weekly average, next task, “Your week in data” and the competency matrix (pending workload per subject, not a measure of knowledge). Habits with times of day, rings, a typical week and a consistency map. Performance and pending-tasks **reports** in PDF and Word —weekly, monthly or yearly—, in Settings, with a summary and the real preview of the document.
+
+### 4.4 Calendar, Google and music
+
+An offline local calendar: one-day or multi-day events, reminders with alerts, cell colors and selecting several days at once by dragging; **YouTube, Gmail and Classroom** built into the sidebar. A library with **your own music**: “Import” brings loose songs or whole folders from your computer —MP3, M4A, AAC, OGG, Opus, FLAC, WAV and WebM— with their cover (the one the file carries, an image with the same name or the folder’s) and their lyrics (the ones in their tags, or an .lrc or .txt with the same name); it separates the title from the artist even if the file has no tags and warns you about what it can’t play. It plays with synced lyrics —which you can also add later, from a file of yours, in “Now playing”—, playlists with their total length and favorites; clicking the playlist name in the player finds the song that’s playing. Voice recording from any screen (\`Ctrl+Shift+F\`), with the limit you choose, up to 4 hours. Updates show their size, the estimated time and the real progress before and during installation.
+
+---
+
+## 5 · Known limits and expected behavior
+
+They’re documented here so none of them surprises you. They aren’t bugs.
+
+Frame tells you about each new version (the “Update now” button and the bell) and **doesn’t install without your confirmation**.
+
+Closing the window closes Frame. If a study session is running, it first offers to pause it, log it or keep studying. Reminders sound while Frame is open.
+
+Document attachments stop resolving if the original file is moved, renamed or deleted: attach it again.
+
+The competency radar and the daily grades are calculated exclusively from the data you record. They don’t come from any institution and have no academic validity.
+
+Music, recordings and attachments aren’t backed up in the cloud.
+
+Frame doesn’t search for or download music, videos, covers or lyrics: it shows the lyrics and cover that your files carry or the ones you add; what earlier versions already saved on your computer is kept. Formats that the Windows audio engine doesn’t play (WMA, AIFF, ALAC, APE and others) aren’t imported, and Frame tells you which ones were left out.
+
+Google’s screens require a connection and being signed in to Google, and how they work depends entirely on Google.
+
+---
+
+## 6 · Third-party components and services
+
+Frame is built on third-party software distributed under open licenses, listed in full in the **Third-party notices** section of the Terms and Conditions.
+
+Google’s services —Gmail, YouTube and Classroom— are operated by Google LLC; their availability, content and terms depend on Google. Cloud backup and authentication run on **Supabase** infrastructure.
+
+The weather forecast comes from **Open-Meteo**.
+
+Notion is a trademark of Notion Labs, Inc.; the extension only reads the files you export yourself and doesn’t connect to its service.
+
+Frame **plays audio files present on your computer**. The application doesn’t provide a music catalog or any license over protected works: you’re responsible for holding the necessary rights over the files you add to your library.
+
+---
+
+## 7 · Version channel and update cycle
+
+Frame is distributed on a single, **stable** channel. Numbering follows the \`MAJOR.MINOR.PATCH\` scheme. When an update changes the data format, Frame migrates it automatically on the first launch.
+
+Support is offered for the current stable version and the one immediately before it. Older versions may stop syncing with the backup service without individual notice.
+
+---
+
+## 8 · Version history
+
+**${appVersion} — ${releaseDate}**
+
+*1.6.7:* **Frame in English**: Settings → “Language” switches the whole app between Spanish and English instantly, without restarting · **redesigned calendar**: centered month with arrows only, shorter cells and thin borders; “New event” with the type in a drop-down (including one you type yourself), resources, “All day” that paints the cell, a color picker and a formatted note; when clearing several days with more than one activity, a list to check what gets deleted · the detail of each **study session**, with its data in three thirds · **privacy between profiles**: each account on the same computer sees only its own music, its schedule image and its weather · **Frame weighs less**: cleaned-up code and recompressed images · the sign-in screen, without the ring that followed the cursor · **your music, in depth**: Frame reads the tags of MP3, M4A, FLAC, OGG, Opus, WAV and WebM —title, artist, album, cover, lyrics (synced ones too) and length—, separates the title from the artist even if the file has no tags, uses the folder’s cover if the song has none and warns when importing about what it can’t play and why · **lyrics are yours alone**: Frame stops searching for them online; it shows the ones the song carries or the ones you add from an .lrc or .txt file in “Now playing” · **playlists** show their total length and their header blends the image into the background with no cuts · **Tasks**: next to “Filters”, how many tasks you see and how much their estimated time adds up to · the **Help center** is retired · the background word stays only in the boxes that open with a click, and still; it only moves in each subject · the stacked formatting buttons are as tall as the writing box · in Music, no arrows at the bottom of the list · Terms and Privacy Policy 4.9: no lyrics services or conversations with the help.
+
+*1.6.6:* **Help center** by topics and questions, with no bar or history, with a **dodecahedron** that spins sideways and phrases that change at 6, 12 and 18 o’clock · **each subject**: “Classes” becomes **“Resources”** (notes, links, files and recordings, in order) and the monthly schedule is retired · **cropping** with the whole image in view and what isn’t used, darkened · cards keep the image **proportion** you choose · **Home**: “Yesterday”, “Weekly average”, “Streak days” and “Next task” redesigned · **Settings**: “Your streak” under Performance and Time, with **Reports** to its right · headers with a divider line and a background word in every box · text without sustained capitals · note formatting without underline, undo or redo · Terms and Privacy Policy 4.8: the schedule-import clause is removed.
+
+*1.6.5:* **the help’s answers, rewritten** for beginners: friendly, in paragraphs, with bold text and saying where each button is; it understands more ways of asking · “Show me how” is retired · the help’s figure is now a **soccer ball**, “Related” folds away and the button gets a new **two-star** icon · **“New note”** and recordings, with the formatting buttons stacked on the left · **tasks**: buttons in the order date, type, priority, difficulty, estimated time, reminder, document and link; **“Attach file”** with one click or by dragging several files; the estimated time is picked with hour and minute wheels · collection and subject cards follow the **image height** you choose (up to 200) on every screen · **each session’s detail** with its subject’s image from edge to edge · Privacy Policy 4.7: it no longer mentions the “Discover” tours, which no longer exist.
+
+*1.6.4:* **Help center** with “History” on the left (by day), a figure of pentagons that breathes while you type, rotating phrases and a new **“Fun facts”** topic · **the bell keeps a log** of your notifications, with their time, and a gear for the sound, turning them on or clearing them · **“New note”** and the description of recordings with formatting buttons like in Word · **“Save recording”**: priority and **audio type** in drop-downs · **lyrics recognized online return** · **89 new images** in the gallery · a gear in Subjects for the **image height** · the corner notices no longer get stuck when minimizing · when a session ends in the floating view, Frame comes to the front.
+
+*1.6.3:* **renewed Help center**: a conversation like in a chat, topics on cards instead of guessing the question, “Show me how” and “New conversation”, with its button in the top bar · **Reports in Settings**: performance and pending tasks, weekly, monthly or yearly, with a summary and the **real preview** of the document · **side menu** in three blocks · **Calendar** local only and with the grid of the Study calendar: Frame stops connecting to Google Calendar · cancel and discard buttons in gray; red only for confirming a deletion · the Study timer, centered · “Create” respects the dark theme.
+
+*1.6.2:* **the top bar talks about you**: phrases with your recent data that change on their own · **Reports center** in the top bar · **notes without a subject** on Home · **Study**: session cards with their detail, a Word-like text editor, subjects and tasks chosen with cards · **redesigned local calendar**: several days at once, reminders and cell colors · recordings with the limit you choose (up to 4 h) · **updating** shows size, estimated time and real progress · Settings with a small account menu and “Import from Notion” · the Help keeps one conversation each time you open Frame · **fixed**: Music’s “Import” didn’t open the file explorer (“current webview is not a WebviewWindow”).
+
+*1.6.1:* **the Help gets its own screen**: a round button at the bottom right opens it full screen, with the menu and the top bar in view, and Apex next to the bar; your questions stay in “Conversations” · **a lighter Home**: the sphere is gone · **“Focus” is renamed “Study”** in the menu · **your music, from your computer**: Music’s “Import” button opens the file explorer to bring loose songs or whole folders, with their cover and lyrics; Frame stops downloading songs, videos, covers and lyrics · Music always starts at the top of the first folder of 100 when Frame opens · Subjects offers the ten areas of the **CNEB** · voice recordings are saved in M4A · **Frame weighs much less and uses less processor**: the installer drops to a fraction of the previous one and animations stop when they’re not visible · the presentation screen and “Export music” are gone.
+
+*1.6.0:* the help answered full screen and kept your conversations · **“Discover”**: after the answer, a guided tour darkens the screen, lights up only the button that matters and moves along with you until the action is completed, with **Apex**, VT Asvent’s mascot, changing poses beside you · **the help understands many more questions**: typos, colloquial phrases and breakdowns (“won’t load”, “no sound”) included · new answers: music volume and controls, out-of-sync lyrics, tasks in the wrong subject and the most frequent problems.
+
+*1.5.9:* **simpler code**: 17 % fewer lines, without the functions that were no longer used · **the calculator, dictionary and translator are gone**: the extensions keep the Notion importer · **“Suggestions” and “Educational Institution” are gone**: bugs and proposals are sent by email to vt.asvent@gmail.com.
+
+*1.5.8:* **Home gets help**: a bar to ask in your own words how to use any Frame feature; it answers instantly and offline from a guide written feature by feature · when a session ends, “What did you do?” accepts a **list of progress items** as well as continuous text · the playlist name in the player **takes you to the song that’s playing** · **YouTube** returns to the sidebar · **fixed**: account images weren’t being uploaded to the cloud because of a file name the service rejected; now they do travel · failures that break a screen are reported automatically, with their location in the code and never with your content.
+
+*1.5.6:* **linking your account, closer at hand**: anyone using a guest profile has a small “G” next to their profile, at the bottom of the menu; it opens the same sign-in box, with Google or with email and password, and everything of theirs moves to the account without losing anything · **“Offline”**: a brief notice at the bottom left that goes up to the bell and stays there as a notification; if the session was closed, you sign in again from it.
+
+*1.5.5:* **images travel between your devices**: the profile picture, the schedule image and those of your playlists, subjects and collections appear on their own on your phone or tablet, and the other way around, in seconds · when cropping an image you can also zoom by pinching on a touch screen.
+
+*1.5.4:* **live sync**: what you change on your phone or tablet appears on your laptop in a few seconds, and the other way around · **the session is no longer lost**: if the cloud closes your session on its own, you stay in Frame with your data and a strip offers to sign you back in · **crop images** with zoom, in a frame with the exact shape of the slot · the day in the grades calendar shows **when you studied** (morning, afternoon or evening).
+
+*1.5.3:* **“Continue as a guest” is back**: you get in instantly, with no account or forms, to try Frame · **link with Google without losing anything**: everything the guest did moves to their account, is added to what it already had without deleting or duplicating, and gets backed up in the cloud.
+
+Full history: on the Frame download page.
+
+---
+
+## 9 · Applicable documents
+
+Terms and Conditions of Use and Privacy Policy, version ${TERMS_VERSION}, in force since ${releaseDate} · “Terms of service” screen
+Acceptable Use Policy · Annex C of the Terms
+Third-party software notices · Annex E of the Terms
+
+Contact: vt.asvent@gmail.com · VT Asvent`;
+}

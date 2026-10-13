@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { Mic, Pause, Play, Square, LoaderCircle, Clock, Settings, Trash2, EyeOff } from 'lucide-react';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import {
@@ -46,6 +45,7 @@ import {
   setRecorderBusy,
   type RecordingSettings,
 } from '@/lib/recordings';
+import { dateLocale, tr, useLang } from '@/lib/i18n';
 
 type Phase = 'confirm' | 'recording' | 'form' | 'saving';
 
@@ -113,7 +113,7 @@ const asciiJson = (text: string): string =>
 
 const autoNameFor = (iso: string) => {
   const date = iso ? new Date(iso) : new Date();
-  return `Grabación ${format(Number.isNaN(date.getTime()) ? new Date() : date, 'd MMM HH:mm', { locale: es })}`;
+  return tr('Grabación {p}', { p: format(Number.isNaN(date.getTime()) ? new Date() : date, tr('d MMM HH:mm'), { locale: dateLocale() }) });
 };
 
 /** Rueda de la esquina superior izquierda del diálogo: el límite de la
@@ -168,8 +168,8 @@ function RecordingSettingsPopover({
           type="button"
           variant="ghost"
           size="icon"
-          aria-label="Límite de grabación"
-          title="Límite de grabación"
+          aria-label={tr('Límite de grabación')}
+          title={tr('Límite de grabación')}
           className="absolute left-[13px] top-[13px] h-[22px] w-[22px] rounded-sm text-muted-foreground opacity-70 transition-opacity hover:bg-primary/10 hover:text-primary hover:opacity-100"
         >
           <Settings className="h-4 w-4" />
@@ -179,7 +179,7 @@ function RecordingSettingsPopover({
       <PopoverContent align="start" side="bottom" sideOffset={8} className="w-72 space-y-3 p-4">
         <RecordingLimitPicker value={draft ?? settings.maxMinutes} floor={floor} onChange={change} />
         <p className="text-center text-[11px] text-muted-foreground">
-          {draft !== null ? 'El nuevo límite rige al cerrar este ajuste' : 'Se detiene sola al llegar al límite'}
+          {draft !== null ? tr('El nuevo límite rige al cerrar este ajuste') : tr('Se detiene sola al llegar al límite')}
         </p>
       </PopoverContent>
     </Popover>
@@ -349,8 +349,8 @@ export default function RecordingDialog({
       if (segments.length === 0) {
         toast({
           variant: 'destructive',
-          title: 'Grabación vacía',
-          description: 'No se capturó audio suficiente. Inténtalo de nuevo.',
+          title: tr('Grabación vacía'),
+          description: tr('No se capturó audio suficiente. Inténtalo de nuevo.'),
         });
         onOpenChange(false);
         resetAll();
@@ -364,14 +364,14 @@ export default function RecordingDialog({
 
       if (reason === 'max') {
         toast({
-          title: 'Límite de grabación alcanzado',
-          description: `Se detuvo al llegar a ${minutesLabel(settingsRef.current.maxMinutes)}. Ya puedes guardarla.`,
+          title: tr('Límite de grabación alcanzado'),
+          description: tr('Se detuvo al llegar a {minutesLabel}. Ya puedes guardarla.', { minutesLabel: minutesLabel(settingsRef.current.maxMinutes) }),
         });
       } else if (reason === 'error') {
         toast({
           variant: 'destructive',
-          title: 'La grabación se interrumpió',
-          description: 'Se conserva todo lo grabado hasta el fallo.',
+          title: tr('La grabación se interrumpió'),
+          description: tr('Se conserva todo lo grabado hasta el fallo.'),
         });
       }
     },
@@ -599,8 +599,8 @@ export default function RecordingDialog({
       console.error('No se pudo iniciar la grabación', e);
       toast({
         variant: 'destructive',
-        title: 'Micrófono no disponible',
-        description: 'Frame no pudo acceder al micrófono de tu laptop. Revisa los permisos de Windows.',
+        title: tr('Micrófono no disponible'),
+        description: tr('Frame no pudo acceder al micrófono de tu laptop. Revisa los permisos de Windows.'),
       });
       onOpenChange(false);
     }
@@ -650,7 +650,7 @@ export default function RecordingDialog({
         setSaveProgress({ current: i + 1, total });
         if (segment.saved) continue; // reintento tras un fallo: no duplicar
 
-        const finalName = total > 1 ? `${base} (Parte ${i + 1})` : base;
+        const finalName = total > 1 ? tr('{base} (Parte {p})', { base, p: i + 1 }) : base;
         const recording: Recording = {
           id: segment.id,
           name: finalName,
@@ -693,8 +693,8 @@ export default function RecordingDialog({
             // carpeta de Grabaciones y no estaba.
             toast({
               variant: 'destructive',
-              title: 'No se pudo guardar el archivo en el disco',
-              description: 'La grabación está a salvo dentro de Frame. Puedes descargarla desde su ficha.',
+              title: tr('No se pudo guardar el archivo en el disco'),
+              description: tr('La grabación está a salvo dentro de Frame. Puedes descargarla desde su ficha.'),
               duration: 10000,
             });
           }
@@ -706,8 +706,8 @@ export default function RecordingDialog({
 
       const courseName = courseId !== 'none' ? courses.find((c) => c.id === courseId)?.name : null;
       toast({
-        title: total > 1 ? `Grabación guardada en ${total} partes` : 'Grabación guardada',
-        description: courseName ? `"${base}" quedó en ${courseName}.` : `"${base}" quedó en Inicio.`,
+        title: total > 1 ? tr('Grabación guardada en {total} partes', { total }) : tr('Grabación guardada'),
+        description: courseName ? tr('"{base}" quedó en {courseName}.', { base, courseName }) : tr('"{base}" quedó en Inicio.', { base }),
       });
       onOpenChange(false);
       resetAll();
@@ -718,8 +718,8 @@ export default function RecordingDialog({
       setPhase('form');
       toast({
         variant: 'destructive',
-        title: 'Error al guardar',
-        description: 'No se pudo guardar el audio. Inténtalo de nuevo.',
+        title: tr('Error al guardar'),
+        description: tr('No se pudo guardar el audio. Inténtalo de nuevo.'),
       });
     }
   }, [addRecording, courseId, courses, description, importance, kind, name, onOpenChange, resetAll, toast]);
@@ -737,7 +737,7 @@ export default function RecordingDialog({
       })
     );
     setConfirmDiscard(false);
-    toast({ title: 'Grabación descartada', description: 'El audio se eliminó definitivamente de tu equipo.' });
+    toast({ title: tr('Grabación descartada'), description: tr('El audio se eliminó definitivamente de tu equipo.') });
     onOpenChange(false);
     resetAll();
   }, [onOpenChange, resetAll, toast]);
@@ -790,13 +790,16 @@ export default function RecordingDialog({
     [doSave, onOpenChange, phase, resetAll, stopSession]
   );
 
+  const lang = useLang();
   const recordedAtLabel = useMemo(() => {
     if (!sessionStartedAtRef.current || phase === 'confirm') return '';
     const date = new Date(sessionStartedAtRef.current);
     return Number.isNaN(date.getTime())
       ? ''
-      : format(date, "EEEE d 'de' MMMM · HH:mm", { locale: es });
-  }, [phase]);
+      : format(date, tr('EEEE d \'de\' MMMM · HH:mm'), { locale: dateLocale() });
+    // `lang` no se lee dentro: renueva la fecha al cambiar de idioma.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, lang]);
 
   const isMultiPart = parts.length > 1;
 
@@ -812,10 +815,10 @@ export default function RecordingDialog({
         {phase === 'confirm' && (
           <>
             <div className="relative -mx-6 -mt-6 mb-2 overflow-hidden px-6 pb-4 pt-6">
-              <EchoWord word="Grabar" />
+              <EchoWord word={tr('Grabar')} />
               <DialogHeader className="relative">
-                <DialogTitle className="text-center text-xl font-bold text-primary">Grabación</DialogTitle>
-                <DialogDescription className="text-center text-xs">Micrófono del equipo</DialogDescription>
+                <DialogTitle className="text-center text-xl font-bold text-primary">{tr('Grabación')}</DialogTitle>
+                <DialogDescription className="text-center text-xs">{tr('Micrófono del equipo')}</DialogDescription>
               </DialogHeader>
               <HeaderRule />
             </div>
@@ -824,17 +827,17 @@ export default function RecordingDialog({
                 <Mic className="h-7 w-7 text-primary" />
               </div>
               <p className="text-center text-[10px] text-muted-foreground">
-                Máximo {minutesLabel(settings.maxMinutes)}
+                {tr('Máximo')}{' '}{minutesLabel(settings.maxMinutes)}
               </p>
             </div>
             <DialogFooter className="sm:justify-center gap-2">
               <Button variant="gris" onClick={() => handleOpenChange(false)}>
-                Cancelar
+                {tr('Cancelar')}
               </Button>
               {/* autoFocus: con Ctrl+Shift+F basta presionar Enter para empezar */}
               <Button autoFocus onClick={() => void startRecording()}>
                 <Mic className="mr-2 h-4 w-4" />
-                Iniciar grabación
+                {tr('Iniciar grabación')}
               </Button>
             </DialogFooter>
           </>
@@ -844,7 +847,7 @@ export default function RecordingDialog({
           <>
             <DialogHeader>
               <DialogTitle className="text-center text-xl font-bold text-primary">
-                {isPaused ? 'Grabación en pausa' : 'Grabando…'}
+                {isPaused ? tr('Grabación en pausa') : tr('Grabando…')}
               </DialogTitle>
             </DialogHeader>
             <div className="flex flex-col items-center gap-4 py-3">
@@ -871,22 +874,22 @@ export default function RecordingDialog({
               <div className="flex gap-3">
                 <Button variant="fantasma" className="w-32" onClick={togglePause}>
                   {isPaused ? <Play className="mr-2 h-4 w-4" /> : <Pause className="mr-2 h-4 w-4" />}
-                  {isPaused ? 'Reanudar' : 'Pausar'}
+                  {isPaused ? tr('Reanudar') : tr('Pausar')}
                 </Button>
                 <Button
                   className="w-32 bg-red-600 text-white hover:bg-red-700"
                   onClick={() => stopSession('user')}
                 >
                   <Square className="mr-2 h-4 w-4" />
-                  Terminar
+                  {tr('Terminar')}
                 </Button>
               </div>
               <p className="text-[10px] text-muted-foreground">
-                Máximo {minutesLabel(settings.maxMinutes)}
+                {tr('Máximo')}{' '}{minutesLabel(settings.maxMinutes)}
               </p>
               <p className="flex items-center gap-1.5 rounded-full bg-muted/60 px-3 py-1 text-[10px] text-muted-foreground">
                 <EyeOff className="h-3 w-3" />
-                Puedes cerrar este recuadro: la grabación sigue.
+                {tr('Puedes cerrar este recuadro: la grabación sigue.')}
               </p>
             </div>
           </>
@@ -897,7 +900,7 @@ export default function RecordingDialog({
             {/* Cabecera: qué se grabó, cuándo y cuánto dura. Sin degradado: el
                 eco basta para darle vida. */}
             <div className="relative -mx-6 -mt-6 mb-1 overflow-hidden rounded-t-lg px-6 pb-5 pt-6">
-              <EchoWord word="Guardar" />
+              <EchoWord word={tr('Guardar')} />
               {/* Icono · título · hueco · X. La duración va centrada en el hueco
                   que queda entre el final de «Guardar grabación» y la X. */}
               <div className="relative flex items-center">
@@ -905,7 +908,7 @@ export default function RecordingDialog({
                   <Mic className="h-7 w-7" />
                 </div>
                 <DialogHeader className="shrink-0 space-y-0.5 text-left">
-                  <DialogTitle className="whitespace-nowrap text-xl font-bold">Guardar grabación</DialogTitle>
+                  <DialogTitle className="whitespace-nowrap text-xl font-bold">{tr('Guardar grabación')}</DialogTitle>
                   {/* Ancho cero y mínimo del 100 %: la fecha y las partes no
                       ensanchan la columna, que mide justo lo que el título, y
                       el hueco empieza donde acaba él. En pantallas estrechas
@@ -917,7 +920,7 @@ export default function RecordingDialog({
                     </DialogDescription>
                     {isMultiPart && (
                       <p className="whitespace-nowrap text-[11px] font-semibold text-primary">
-                        {parts.length} partes de la misma grabación
+                        {parts.length}{' '}{tr('partes de la misma grabación')}
                       </p>
                     )}
                   </div>
@@ -928,7 +931,7 @@ export default function RecordingDialog({
                       {formatDuration(totalDuration)}
                     </p>
                     <p className="mt-1 text-[10px] font-semibold text-muted-foreground">
-                      duración
+                      {tr('duración')}
                     </p>
                   </div>
                 </div>
@@ -943,7 +946,7 @@ export default function RecordingDialog({
               {/* Nombre (mitad del ancho), importancia y tipo (un cuarto cada uno). */}
               <div className="grid gap-4 sm:grid-cols-4">
                 <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="recName" className="text-xs">Nombre</Label>
+                  <Label htmlFor="recName" className="text-xs">{tr('Nombre')}</Label>
                   <Input
                     id="recName"
                     value={name}
@@ -953,17 +956,17 @@ export default function RecordingDialog({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs">Importancia</Label>
+                  <Label className="text-xs">{tr('Importancia')}</Label>
                   <ImportancePicker value={importance} onChange={setImportance} disabled={phase === 'saving'} />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs">Tipo</Label>
+                  <Label className="text-xs">{tr('Tipo')}</Label>
                   <KindPicker value={kind} onChange={setKind} disabled={phase === 'saving'} />
                 </div>
               </div>
               {isMultiPart && (
                 <p className="-mt-2 text-[10px] text-muted-foreground">
-                  Cada parte se guardará como «{name.trim() || autoNameFor(sessionStartedAtRef.current)} (Parte N)».
+                  {tr('Cada parte se guardará como «{name} (Parte N)».', { name: name.trim() || autoNameFor(sessionStartedAtRef.current) })}
                 </p>
               )}
               {isMultiPart && (
@@ -973,9 +976,9 @@ export default function RecordingDialog({
                       key={part.id}
                       className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground"
                     >
-                      <span className="truncate">Parte {i + 1}</span>
+                      <span className="truncate">{tr('Parte')}{' '}{i + 1}</span>
                       <span className="shrink-0 tabular-nums">
-                        {format(new Date(part.recordedAt), 'HH:mm', { locale: es })} ·{' '}
+                        {format(new Date(part.recordedAt), 'HH:mm', { locale: dateLocale() })} ·{' '}
                         {formatDuration(part.durationSec)}
                       </span>
                     </div>
@@ -983,15 +986,15 @@ export default function RecordingDialog({
                 </div>
               )}
               <div className="space-y-2">
-                <Label htmlFor="recDesc" className="text-xs">Descripción (opcional)</Label>
+                <Label htmlFor="recDesc" className="text-xs">{tr('Descripción (opcional)')}</Label>
                 {/* Botones de formato (como en Word) apilados y, separado, el recuadro. */}
                 <div className={cn(phase === 'saving' && 'pointer-events-none opacity-60')}>
                   <NoteEditor
                     id="recDesc"
                     value={description}
                     onChange={setDescription}
-                    placeholder="¿De qué trata este audio?"
-                    ariaLabel="Descripción de la grabación"
+                    placeholder={tr('¿De qué trata este audio?')}
+                    ariaLabel={tr('Descripción de la grabación')}
                     rows={3}
                     toolbarSide
                   />
@@ -1025,20 +1028,20 @@ export default function RecordingDialog({
                 disabled={phase === 'saving'}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Descartar audio
+                {tr('Descartar audio')}
               </Button>
               <Button onClick={() => void doSave()} disabled={phase === 'saving'} className="w-44">
                 {phase === 'saving' ? (
                   <>
                     <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
                     {saveProgress && saveProgress.total > 1
-                      ? `Guardando parte ${saveProgress.current} de ${saveProgress.total}…`
-                      : 'Guardando…'}
+                      ? tr('Guardando parte {current} de {total}…', { current: saveProgress.current, total: saveProgress.total })
+                      : tr('Guardando…')}
                   </>
                 ) : isMultiPart ? (
-                  `Guardar ${parts.length} partes`
+                  tr('Guardar {length} partes', { length: parts.length })
                 ) : (
-                  'Guardar'
+                  tr('Guardar')
                 )}
               </Button>
             </DialogFooter>
@@ -1058,19 +1061,18 @@ export default function RecordingDialog({
         <AlertDialog open={confirmDiscard} onOpenChange={setConfirmDiscard}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>¿Descartar esta grabación?</AlertDialogTitle>
+              <AlertDialogTitle>{tr('¿Descartar esta grabación?')}</AlertDialogTitle>
               <AlertDialogDescription>
-                El audio de {formatDuration(totalDuration)} se eliminará definitivamente de tu equipo y no podrá
-                recuperarse.
+                {tr('El audio de')}{' '}{formatDuration(totalDuration)}{' '}{tr('se eliminará definitivamente de tu equipo y no podrá recuperarse.')}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Conservar</AlertDialogCancel>
+              <AlertDialogCancel>{tr('Conservar')}</AlertDialogCancel>
               <AlertDialogAction
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 onClick={() => void discardRecording()}
               >
-                Sí, descartar
+                {tr('Sí, descartar')}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

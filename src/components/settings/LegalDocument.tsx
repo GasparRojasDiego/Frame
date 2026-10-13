@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Renderizador de los documentos de la app (información, términos y
@@ -40,7 +41,7 @@ function inline(text: string, keyPrefix: string): React.ReactNode[] {
       out.push(
         <span
           key={key}
-          title="Dato pendiente de completar antes de publicar"
+          title={tr('Dato pendiente de completar antes de publicar')}
           className="rounded bg-amber-500/15 px-1 font-medium text-amber-600 dark:text-amber-400"
         >
           {token.slice(1, -1).toLowerCase()}

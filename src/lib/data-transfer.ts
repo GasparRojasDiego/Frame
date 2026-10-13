@@ -3,6 +3,7 @@ import { applyLocalData, collectLocalData, type LocalSnapshot } from '@/lib/stor
 import { scheduleImageKey } from '@/lib/profile-scope';
 import { APP_VERSION } from '@/lib/version';
 import type { Recording, UserProfile } from '@/types';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Traslado de datos entre perfiles y cuentas.
@@ -138,7 +139,7 @@ export async function importTransferFile(file: TransferFile, uid: string, mode: 
 
   const applied = applyLocalData(uid, next);
   if (!applied.ok) {
-    throw new Error('No hay espacio suficiente en el almacenamiento del equipo para traer todos los datos.');
+    throw new Error(tr('No hay espacio suficiente en el almacenamiento del equipo para traer todos los datos.'));
   }
 
   // Imágenes y adjuntos: nunca se pisa una imagen que el destino ya tenga, salvo al reemplazar.

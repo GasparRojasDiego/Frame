@@ -23,6 +23,7 @@ import {
   writeStudyVideos,
 } from '@/lib/study-videos';
 import type { StudyVideo } from '@/types';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Vídeos de estudio: el recuadro grande que sustituye a «Tiempo de estudio» y
@@ -116,7 +117,7 @@ function PlayerView({ video, onBack }: { video: StudyVideo; onBack: () => void }
           variant="ghost"
           className="h-7 w-7 shrink-0 text-muted-foreground hover:text-primary"
           onClick={onBack}
-          title="Cerrar el vídeo y volver a la lista"
+          title={tr('Cerrar el vídeo y volver a la lista')}
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
@@ -179,19 +180,19 @@ export default function StudyVideosPanel({
       setVideos(readStudyVideos(uid));
 
       if (result === 'duplicate') {
-        toast({ title: 'Ya lo tenías', description: 'Ese vídeo ya está en tus vídeos de estudio.' });
+        toast({ title: tr('Ya lo tenías'), description: tr('Ese vídeo ya está en tus vídeos de estudio.') });
         return;
       }
       if (result === 'full') {
         toast({
           variant: 'destructive',
-          title: 'Lista llena',
-          description: `Caben ${MAX_STUDY_VIDEOS} vídeos. Quita alguno antes de añadir otro.`,
+          title: tr('Lista llena'),
+          description: tr('Caben {MAX_STUDY_VIDEOS} vídeos. Quita alguno antes de añadir otro.', { MAX_STUDY_VIDEOS }),
         });
         return;
       }
 
-      toast({ title: 'Vídeo guardado', description: video.title });
+      toast({ title: tr('Vídeo guardado'), description: video.title });
     },
     [uid, toast]
   );
@@ -229,8 +230,7 @@ export default function StudyVideosPanel({
         <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
           <Video className="h-7 w-7 text-muted-foreground/60" />
           <p className="px-4 text-xs text-muted-foreground">
-            Guarda aquí los vídeos que usas para estudiar. Pulsa «Añadir vídeo» y busca en YouTube
-            sin salir de esta pantalla.
+            {tr('Guarda aquí los vídeos que usas para estudiar. Pulsa «Añadir vídeo» y busca en YouTube sin salir de esta pantalla.')}
           </p>
         </div>
       ) : (
@@ -279,7 +279,7 @@ export default function StudyVideosPanel({
                       variant="ghost"
                       className="h-6 w-6 rounded bg-black/70 text-white hover:bg-destructive hover:text-white"
                       onClick={() => remove(video)}
-                      title="Quitar de la lista"
+                      title={tr('Quitar de la lista')}
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>

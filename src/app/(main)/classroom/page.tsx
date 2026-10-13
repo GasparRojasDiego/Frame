@@ -2,6 +2,7 @@ import { Card } from '@/components/ui/card';
 import { isTauri } from '@tauri-apps/api/core';
 import { ClassroomLogo } from '@/components/integrations/ClassroomIcon';
 import GoogleEmbed from '@/components/integrations/GoogleEmbed';
+import { tr } from '@/lib/i18n';
 
 // Interfaz "Classroom": el Google Classroom REAL incrustado, a sangre, igual
 // que Drive y Gmail. Comparte la sesión de Google de los otros recuadros.
@@ -16,7 +17,7 @@ export default function ClassroomPage() {
         <Card className="mx-4 my-auto flex items-center gap-3 p-4 md:mx-8">
           <ClassroomLogo className="h-7 w-7 shrink-0" />
           <p className="text-xs text-muted-foreground">
-            El recuadro de Classroom integrado está disponible en la app de escritorio Frame.
+            {tr('El recuadro de Classroom integrado está disponible en la app de escritorio Frame.')}
           </p>
         </Card>
       )}

@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { format, parseISO, startOfDay, differenceInCalendarDays } from 'date-fns';
-import { es } from 'date-fns/locale';
 import {
   AlertTriangle,
   Bell,
@@ -26,6 +25,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   clearLog,
+  entryText,
   markAllRead,
   markRead,
   setNotificationPrefs,
@@ -46,6 +46,7 @@ import { useRouter } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 import { signInAgain, useConnectionState } from '@/lib/connection-status';
 import { BELL_PING_EVENT } from '@/components/layout/ConnectionNotice';
+import { dateLocale, inBothLangs, tr, useLang } from '@/lib/i18n';
 
 interface AppNotification {
   id: string;
@@ -55,17 +56,18 @@ interface AppNotification {
   courseId?: string;
   title: string;
   detail: string;
+  texts?: LogEntry['texts'];
 }
 
 const KIND_META: Record<LogKind, { icon: React.ElementType; className: string; label: string }> = {
-  vencida: { icon: AlertTriangle, className: 'text-red-500 bg-red-500/10 border-red-500/30', label: 'Vencida' },
-  hoy: { icon: Clock, className: 'text-amber-500 bg-amber-500/10 border-amber-500/30', label: 'Vence hoy' },
-  proxima: { icon: CalendarClock, className: 'text-primary bg-primary/10 border-primary/30', label: 'Próxima' },
-  actualizacion: { icon: Download, className: 'text-primary bg-primary/15 border-primary/40', label: 'Actualización' },
-  conexion: { icon: WifiOff, className: 'text-amber-500 bg-amber-500/10 border-amber-500/30', label: 'Sin conexión' },
-  recordatorio: { icon: BellRing, className: 'text-primary bg-primary/10 border-primary/30', label: 'Recordatorio' },
-  sesion: { icon: Timer, className: 'text-primary bg-primary/10 border-primary/30', label: 'Estudio' },
-  aviso: { icon: Info, className: 'text-muted-foreground bg-muted border-border', label: 'Aviso' },
+  vencida: { icon: AlertTriangle, className: 'text-red-500 bg-red-500/10 border-red-500/30', get label() { return tr('Vencida'); } },
+  hoy: { icon: Clock, className: 'text-amber-500 bg-amber-500/10 border-amber-500/30', get label() { return tr('Vence hoy'); } },
+  proxima: { icon: CalendarClock, className: 'text-primary bg-primary/10 border-primary/30', get label() { return tr('Próxima'); } },
+  actualizacion: { icon: Download, className: 'text-primary bg-primary/15 border-primary/40', get label() { return tr('Actualización'); } },
+  conexion: { icon: WifiOff, className: 'text-amber-500 bg-amber-500/10 border-amber-500/30', get label() { return tr('Sin conexión'); } },
+  recordatorio: { icon: BellRing, className: 'text-primary bg-primary/10 border-primary/30', get label() { return tr('Recordatorio'); } },
+  sesion: { icon: Timer, className: 'text-primary bg-primary/10 border-primary/30', get label() { return tr('Estudio'); } },
+  aviso: { icon: Info, className: 'text-muted-foreground bg-muted border-border', get label() { return tr('Aviso'); } },
 };
 
 /** Las que la campana calcula (y dejan de estar vigentes); el resto llegan una vez. */
@@ -113,77 +115,90 @@ export default function NotificationCenter() {
   }, [seenKey]);
 
   // Todos los pendientes con fecha: vencidos, de hoy y de los próximos 3 días.
+  const lang = useLang();
   const notifications = useMemo<AppNotification[]>(() => {
-    const today = startOfDay(new Date());
-    const courseName = (id: string) => courses.find((c) => c.id === id)?.name ?? 'Sin asignatura';
-    const items: AppNotification[] = [];
+    // Se construyen en los dos idiomas: el registro guarda ambos (ver
+    // notification-log) y la campana muestra el de la interfaz.
+    const build = (): AppNotification[] => {
+      const today = startOfDay(new Date());
+      const courseName = (id: string) => courses.find((c) => c.id === id)?.name ?? tr('Sin asignatura');
+      const items: AppNotification[] = [];
 
-    // Conexión (solo cuentas: un invitado no sincroniza nada).
-    if (userProfile && !userProfile.isGuest) {
-      if (connection.sessionLostFor === userProfile.id) {
+      // Conexión (solo cuentas: un invitado no sincroniza nada).
+      if (userProfile && !userProfile.isGuest) {
+        if (connection.sessionLostFor === userProfile.id) {
+          items.push({
+            id: 'sesion-perdida',
+            kind: 'conexion',
+            title: tr('Sin conexión con tu cuenta'),
+            detail: tr('Pulsa para volver a entrar; tus datos siguen aquí'),
+          });
+        } else if (connection.offlineSince !== null) {
+          items.push({
+            id: `sin-internet-${connection.offlineSince}`,
+            kind: 'conexion',
+            title: tr('Sin conexión'),
+            detail: tr('Tus cambios se guardan aquí y se sincronizan al volver'),
+          });
+        }
+      }
+
+      // Versión nueva publicada: va la PRIMERA, por delante de las tareas.
+      // Pulsarla no instala: abre el recuadro de actualización, que es donde se
+      // ve el peso, el tiempo estimado y se confirma.
+      if (update.version) {
         items.push({
-          id: 'sesion-perdida',
-          kind: 'conexion',
-          title: 'Sin conexión con tu cuenta',
-          detail: 'Pulsa para volver a entrar; tus datos siguen aquí',
-        });
-      } else if (connection.offlineSince !== null) {
-        items.push({
-          id: `sin-internet-${connection.offlineSince}`,
-          kind: 'conexion',
-          title: 'Sin conexión',
-          detail: 'Tus cambios se guardan aquí y se sincronizan al volver',
+          id: `actualizacion-${update.version}`,
+          kind: 'actualizacion',
+          title: tr('Frame {version} disponible', { version: update.version }),
+          detail: tr('Pulsa para ver el peso y el tiempo estimado'),
         });
       }
-    }
 
-    // Versión nueva publicada: va la PRIMERA, por delante de las tareas.
-    // Pulsarla no instala: abre el recuadro de actualización, que es donde se
-    // ve el peso, el tiempo estimado y se confirma.
-    if (update.version) {
-      items.push({
-        id: `actualizacion-${update.version}`,
-        kind: 'actualizacion',
-        title: `Frame ${update.version} disponible`,
-        detail: 'Pulsa para ver el peso y el tiempo estimado',
-      });
-    }
-
-    for (const task of tasks) {
-      if (!task.dueDate || (task.progress ?? 0) >= 100) continue;
-      let due: Date;
-      try {
-        due = startOfDay(parseISO(task.dueDate));
-      } catch {
-        continue;
+      for (const task of tasks) {
+        if (!task.dueDate || (task.progress ?? 0) >= 100) continue;
+        let due: Date;
+        try {
+          due = startOfDay(parseISO(task.dueDate));
+        } catch {
+          continue;
+        }
+        const diff = differenceInCalendarDays(due, today);
+        const when = format(due, tr('d \'de\' MMMM'), { locale: dateLocale() });
+        const base = { taskId: task.id, courseId: task.courseId, detail: `${courseName(task.courseId)} · ${when}` };
+        if (diff < 0) {
+          items.push({
+            ...base,
+            id: `vencida-${task.id}-${task.dueDate}`,
+            kind: 'vencida',
+            title: task.name,
+          });
+        } else if (diff === 0) {
+          items.push({ ...base, id: `hoy-${task.id}-${task.dueDate}`, kind: 'hoy', title: task.name });
+        } else if (diff <= 3) {
+          items.push({ ...base, id: `proxima-${task.id}-${task.dueDate}`, kind: 'proxima', title: task.name });
+        }
       }
-      const diff = differenceInCalendarDays(due, today);
-      const when = format(due, "d 'de' MMMM", { locale: es });
-      const base = { taskId: task.id, courseId: task.courseId, detail: `${courseName(task.courseId)} · ${when}` };
-      if (diff < 0) {
-        items.push({
-          ...base,
-          id: `vencida-${task.id}-${task.dueDate}`,
-          kind: 'vencida',
-          title: task.name,
-        });
-      } else if (diff === 0) {
-        items.push({ ...base, id: `hoy-${task.id}-${task.dueDate}`, kind: 'hoy', title: task.name });
-      } else if (diff <= 3) {
-        items.push({ ...base, id: `proxima-${task.id}-${task.dueDate}`, kind: 'proxima', title: task.name });
-      }
-    }
 
-    // La actualización encabeza: es la única accionable en un clic.
-    const order: Record<AppNotification['kind'], number> = {
-      conexion: -2,
-      actualizacion: -1,
-      vencida: 0,
-      hoy: 1,
-      proxima: 2,
+      // La actualización encabeza: es la única accionable en un clic.
+      const order: Record<AppNotification['kind'], number> = {
+        conexion: -2,
+        actualizacion: -1,
+        vencida: 0,
+        hoy: 1,
+        proxima: 2,
+      };
+      return items.sort((a, b) => order[a.kind] - order[b.kind]);
     };
-    return items.sort((a, b) => order[a.kind] - order[b.kind]);
-  }, [tasks, courses, update.version, connection, userProfile]);
+    const both = inBothLangs(build);
+    const shown = (lang === 'en' ? both.en : both.es) ?? both.es ?? [];
+    return shown.map((item, index) => ({
+      ...item,
+      texts: Object.fromEntries(
+        Object.entries(both).map(([code, list]) => [code, { title: list![index].title, detail: list![index].detail }])
+      ),
+    }));
+  }, [tasks, courses, update.version, connection, userProfile, lang]);
 
   // Lo vigente se anota en el registro (con la hora en que apareció); lo que
   // ya pasó sigue en el registro como historial.
@@ -223,9 +238,9 @@ export default function NotificationCenter() {
     const date = new Date(at);
     const days = differenceInCalendarDays(startOfDay(new Date()), startOfDay(date));
     const hour = format(date, 'HH:mm');
-    if (days === 0) return `Hoy, ${hour}`;
-    if (days === 1) return `Ayer, ${hour}`;
-    return `${format(date, "d 'de' MMM", { locale: es })}, ${hour}`;
+    if (days === 0) return tr('Hoy, {hour}', { hour });
+    if (days === 1) return tr('Ayer, {hour}', { hour });
+    return `${format(date, tr('d \'de\' MMM'), { locale: dateLocale() })}, ${hour}`;
   };
 
   const renderItem = (entry: LogEntry) => {
@@ -248,16 +263,16 @@ export default function NotificationCenter() {
           </span>
           <span className="min-w-0 flex-1">
             <span className="flex items-baseline gap-2">
-              <span className="min-w-0 flex-1 truncate text-xs font-semibold text-foreground">{entry.title}</span>
+              <span className="min-w-0 flex-1 truncate text-xs font-semibold text-foreground">{entryText(entry).title}</span>
               <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">{whenLabel(entry.at)}</span>
             </span>
             <span className="block text-[11px] leading-snug text-muted-foreground">
               {meta.label}
-              {past ? ' · ya no está vigente' : ''} · {entry.detail}
+              {past ? tr(' · ya no está vigente') : ''} · {entryText(entry).detail}
             </span>
           </span>
         </button>
-        {!entry.read && <span aria-label="Sin leer" className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary" />}
+        {!entry.read && <span aria-label={tr('Sin leer')} className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary" />}
       </div>
     );
   };
@@ -270,7 +285,7 @@ export default function NotificationCenter() {
         <Button
           size="icon"
           variant={isOpen ? 'default' : 'fantasma'}
-          title="Notificaciones"
+          title={tr('Notificaciones')}
           data-notification-bell
           className={cn(
             'relative h-9 w-9 rounded-md border border-primary',
@@ -292,7 +307,7 @@ export default function NotificationCenter() {
           {/* Engranaje: sonido, notificaciones y borrar el registro. */}
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
-              <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground" title="Ajustes de notificaciones">
+              <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground" title={tr('Ajustes de notificaciones')}>
                 <Settings className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -302,19 +317,19 @@ export default function NotificationCenter() {
                 onCheckedChange={(checked) => setNotificationPrefs({ sound: !!checked })}
                 onSelect={(event) => event.preventDefault()}
               >
-                Sonido de las notificaciones
+                {tr('Sonido de las notificaciones')}
               </DropdownMenuCheckboxItem>
               <DropdownMenuCheckboxItem
                 checked={prefs.enabled}
                 onCheckedChange={(checked) => setNotificationPrefs({ enabled: !!checked })}
                 onSelect={(event) => event.preventDefault()}
               >
-                Notificaciones activadas
+                {tr('Notificaciones activadas')}
               </DropdownMenuCheckboxItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={() => clearLog()} disabled={log.length === 0}>
                 <Trash2 className="mr-2 h-3.5 w-3.5" />
-                Borrar todas las notificaciones
+                {tr('Borrar todas las notificaciones')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -326,13 +341,13 @@ export default function NotificationCenter() {
             disabled={badgeCount === 0}
           >
             <CheckCheck className="mr-1.5 h-3.5 w-3.5" />
-            Marcar como leído
+            {tr('Marcar como leído')}
           </Button>
           <Button
             size="icon"
             variant="ghost"
             className="ml-auto h-7 w-7 text-muted-foreground"
-            title="Cerrar"
+            title={tr('Cerrar')}
             onClick={() => setOpen(false)}
           >
             <X className="h-3.5 w-3.5" />
@@ -344,7 +359,7 @@ export default function NotificationCenter() {
         {log.length === 0 ? (
           <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
             <Bell className="h-8 w-8 text-muted-foreground/40" />
-            <p className="text-xs font-semibold text-foreground">Estás al día</p>
+            <p className="text-xs font-semibold text-foreground">{tr('Estás al día')}</p>
           </div>
         ) : (
           // Todo el registro, con su propio desplazamiento.

@@ -26,7 +26,6 @@ import {
   startOfMonth,
   startOfYear,
 } from 'date-fns';
-import { es } from 'date-fns/locale';
 import type {
   ArchivedTask,
   Course,
@@ -39,13 +38,14 @@ import type {
 import { sessionSeconds } from '@/lib/duration';
 import { richNoteToLine } from '@/lib/rich-note';
 import type { DocBlock, DocModel, DocTone } from '@/lib/report-doc';
+import { dateLocale, tr } from '@/lib/i18n';
 
 export type ReportScope = 'semana' | 'mes' | 'anio';
 
 const SCOPE_LABEL: Record<ReportScope, string> = {
-  semana: 'Informe semanal',
-  mes: 'Informe mensual',
-  anio: 'Informe anual',
+  get semana() { return tr('Informe semanal'); },
+  get mes() { return tr('Informe mensual'); },
+  get anio() { return tr('Informe anual'); },
 };
 
 /** getDay() (0 = domingo) → clave de StudyGoals. */
@@ -53,8 +53,8 @@ const GOAL_KEYS: (keyof StudyGoals)[] = [
   'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday',
 ];
 
-const UNASSIGNED = 'Sin asignatura';
-const LOOSE_SPACE = 'Sin colección';
+const unassigned = () => tr('Sin asignatura');
+const looseSpace = () => tr('Sin colección');
 
 /** Rango del periodo: del primer día al último, ambos incluidos. */
 export function reportRange(scope: ReportScope, reference: Date): { start: Date; end: Date } {
@@ -65,8 +65,8 @@ export function reportRange(scope: ReportScope, reference: Date): { start: Date;
 
 export function rangeLabel(scope: ReportScope, start: Date, end: Date): string {
   if (scope === 'anio') return format(start, 'yyyy');
-  if (scope === 'mes') return format(start, "MMMM 'de' yyyy", { locale: es });
-  return `${format(start, "d 'de' MMMM", { locale: es })} — ${format(end, "d 'de' MMMM 'de' yyyy", { locale: es })}`;
+  if (scope === 'mes') return format(start, tr('MMMM \'de\' yyyy'), { locale: dateLocale() });
+  return `${format(start, tr('d \'de\' MMMM'), { locale: dateLocale() })} — ${format(end, tr('d \'de\' MMMM \'de\' yyyy'), { locale: dateLocale() })}`;
 }
 
 interface ReportBar {
@@ -193,7 +193,7 @@ export function buildReport(input: BuildInput): ReportData {
       const prefix = format(month, 'yyyy-MM');
       let minutes = 0;
       for (const [key, value] of dayMinutes) if (key.startsWith(prefix)) minutes += value;
-      return { label: format(month, 'MMM', { locale: es }), minutes };
+      return { label: format(month, tr('MMM'), { locale: dateLocale() }), minutes };
     });
     // La meta anual se suma día a día: cada día tiene la suya según el día de
     // la semana que le tocó.
@@ -222,8 +222,8 @@ export function buildReport(input: BuildInput): ReportData {
       return {
         label:
           scope === 'semana'
-            ? format(day, 'EEEE d', { locale: es })
-            : format(day, 'd EEE', { locale: es }),
+            ? format(day, tr('EEEE d'), { locale: dateLocale() })
+            : format(day, tr('d EEE'), { locale: dateLocale() }),
         minutes,
         goal,
       };
@@ -236,7 +236,7 @@ export function buildReport(input: BuildInput): ReportData {
   const bestDayEntry = [...dayMinutes.entries()].sort((a, b) => b[1] - a[1])[0];
   const bestDay = bestDayEntry
     ? {
-        label: format(parseISO(`${bestDayEntry[0]}T00:00:00`), "EEEE d 'de' MMMM", { locale: es }),
+        label: format(parseISO(`${bestDayEntry[0]}T00:00:00`), tr('EEEE d \'de\' MMMM'), { locale: dateLocale() }),
         minutes: bestDayEntry[1],
       }
     : null;
@@ -246,8 +246,8 @@ export function buildReport(input: BuildInput): ReportData {
   const longest = longestSession
     ? {
         minutes: minutesOf(longestSession),
-        date: format(parseISO(longestSession.startTime), "d 'de' MMMM", { locale: es }),
-        subjects: longestSession.subjects?.join(', ') || UNASSIGNED,
+        date: format(parseISO(longestSession.startTime), tr('d \'de\' MMMM'), { locale: dateLocale() }),
+        subjects: longestSession.subjects?.join(', ') || unassigned(),
       }
     : null;
 
@@ -256,7 +256,7 @@ export function buildReport(input: BuildInput): ReportData {
   // partes iguales, la misma regla con la que Frame reparte el avance.
   const subjectMinutes = new Map<string, { minutes: number; sessions: number }>();
   for (const s of periodSessions) {
-    const names = s.subjects?.length ? s.subjects : [UNASSIGNED];
+    const names = s.subjects?.length ? s.subjects : [unassigned()];
     const share = minutesOf(s) / names.length;
     for (const name of names) {
       const entry = subjectMinutes.get(name) ?? { minutes: 0, sessions: 0 };
@@ -284,7 +284,7 @@ export function buildReport(input: BuildInput): ReportData {
   }
   const spaceMinutes = new Map<string, { minutes: number; sessions: number }>();
   for (const row of bySubject) {
-    const spaceName = spaceOfCourseName.get(row.name) ?? LOOSE_SPACE;
+    const spaceName = spaceOfCourseName.get(row.name) ?? looseSpace();
     const entry = spaceMinutes.get(spaceName) ?? { minutes: 0, sessions: 0 };
     entry.minutes += row.minutes;
     entry.sessions += row.sessions;
@@ -343,7 +343,7 @@ export function buildReport(input: BuildInput): ReportData {
   }
   const pendingBySpaceMap = new Map<string, number>();
   for (const [courseName, v] of pendingByCourseMap) {
-    const spaceName = spaceOfCourseName.get(courseName) ?? LOOSE_SPACE;
+    const spaceName = spaceOfCourseName.get(courseName) ?? looseSpace();
     pendingBySpaceMap.set(spaceName, (pendingBySpaceMap.get(spaceName) ?? 0) + v.count);
   }
 
@@ -374,13 +374,13 @@ export function buildReport(input: BuildInput): ReportData {
           // se deduce restando la duración.
           const realStart = ended ? new Date(ended.getTime() - sessionSeconds(s) * 1000) : null;
           return {
-            date: started ? format(started, 'dd/MM/yyyy') : '—',
+            date: started ? format(started, tr('dd/MM/yyyy')) : '—',
             time:
               realStart && ended
                 ? `${format(realStart, 'HH:mm')}–${format(ended, 'HH:mm')}`
                 : '—',
             minutes: minutesOf(s),
-            subjects: s.subjects?.join(', ') || UNASSIGNED,
+            subjects: s.subjects?.join(', ') || unassigned(),
             type: s.sessionType,
             focus: s.mode === 'rendimiento' ? s.perception : null,
             // Sin marcas de formato y en una línea: va como nota bajo la celda.
@@ -391,7 +391,7 @@ export function buildReport(input: BuildInput): ReportData {
   return {
     scope,
     periodLabel: rangeLabel(scope, start, end),
-    generatedAt: format(new Date(), "d 'de' MMMM 'de' yyyy, HH:mm", { locale: es }),
+    generatedAt: format(new Date(), tr('d \'de\' MMMM \'de\' yyyy, HH:mm'), { locale: dateLocale() }),
     studentName,
 
     totalMinutes,
@@ -465,43 +465,41 @@ const WHEEL: DocTone[] = ['accent', 'ok', 'warn', 'danger', 'ink', 'muted'];
  */
 function readPeriod(data: ReportData): string {
   if (data.sessionCount === 0 && data.tasksDone === 0) {
-    return 'No hay actividad registrada en este periodo: ni sesiones de estudio ni tareas culminadas.';
+    return tr('No hay actividad registrada en este periodo: ni sesiones de estudio ni tareas culminadas.');
   }
   const parts: string[] = [];
   parts.push(
-    `Se registraron ${hm(data.totalMinutes)} de estudio en ${data.sessionCount} ${
-      data.sessionCount === 1 ? 'sesión' : 'sesiones'
-    }, repartidas en ${data.activeDays} de los ${data.periodDays} días del periodo`
+    tr('Se registraron {hm} de estudio en {sessionCount} {p}, repartidas en {activeDays} de los {periodDays} días del periodo', { hm: hm(data.totalMinutes), sessionCount: data.sessionCount, p: data.sessionCount === 1 ? tr('sesión') : tr('sesiones'), activeDays: data.activeDays, periodDays: data.periodDays })
   );
   if (data.goalMinutes > 0) {
     const ratio = Math.round(share(data.totalMinutes, data.goalMinutes));
     parts.push(
-      ratio >= 100 ? `, por encima de la meta acumulada (${ratio} %)` : `, un ${ratio} % de la meta acumulada`
+      ratio >= 100 ? tr(', por encima de la meta acumulada ({ratio} %)', { ratio }) : tr(', un {ratio} % de la meta acumulada', { ratio })
     );
   }
   parts.push('. ');
   if (data.bySubject.length > 0) {
     const first = data.bySubject[0];
     parts.push(
-      `La asignatura con más tiempo fue ${first.name}, con ${hm(first.minutes)} (${Math.round(first.percent)} % del total)`
+      tr('La asignatura con más tiempo fue {name}, con {hm} ({p} % del total)', { name: first.name, hm: hm(first.minutes), p: Math.round(first.percent) })
     );
     if (data.bySubject.length > 2) {
       const tail = data.bySubject[data.bySubject.length - 1];
-      parts.push(`, y la que menos, ${tail.name}, con ${hm(tail.minutes)}`);
+      parts.push(tr(', y la que menos, {name}, con {hm}', { name: tail.name, hm: hm(tail.minutes) }));
     }
     parts.push('. ');
   }
   if (data.tasksDone > 0) {
-    parts.push(`Se culminaron ${data.tasksDone} ${data.tasksDone === 1 ? 'tarea' : 'tareas'}`);
+    parts.push(tr('Se culminaron {tasksDone} {p}', { tasksDone: data.tasksDone, p: data.tasksDone === 1 ? tr('tarea') : tr('tareas') }));
     if (data.tasksWithDeadline > 0) {
       parts.push(
-        `, ${data.tasksOnTime} de ellas dentro del plazo (${Math.round(share(data.tasksOnTime, data.tasksWithDeadline))} % de puntualidad)`
+        tr(', {tasksOnTime} de ellas dentro del plazo ({p} % de puntualidad)', { tasksOnTime: data.tasksOnTime, p: Math.round(share(data.tasksOnTime, data.tasksWithDeadline)) })
       );
     }
     parts.push('. ');
   }
   if (data.pendingTotal > 0) {
-    parts.push(`Quedan ${data.pendingTotal} tareas pendientes al cierre del informe.`);
+    parts.push(tr('Quedan {pendingTotal} tareas pendientes al cierre del informe.', { pendingTotal: data.pendingTotal }));
   }
   return parts.join('').replace(/\s+\./g, '.').trim();
 }
@@ -511,16 +509,16 @@ function rhythmBars(data: ReportData): DocBlock {
   const max = Math.max(1, ...data.byPeriod.map((b) => Math.max(b.minutes, b.goal ?? 0)));
   return {
     kind: 'bars',
-    caption: 'Minutos por día frente a la meta',
+    caption: tr('Minutos por día frente a la meta'),
     items: data.byPeriod.map((b) => ({
       label: capitalize(b.label),
       value: b.minutes > 0 ? hm(b.minutes) : '—',
       percent: share(b.minutes, max),
       target: b.goal && b.goal > 0 ? share(b.goal, max) : undefined,
-      note: b.goal && b.goal > 0 ? `meta ${hm(b.goal)}` : undefined,
+      note: b.goal && b.goal > 0 ? tr('meta {hm}', { hm: hm(b.goal) }) : undefined,
       tone: b.goal && b.goal > 0 && b.minutes >= b.goal ? ('ok' as DocTone) : ('accent' as DocTone),
     })),
-    legend: 'La línea vertical sobre cada barra marca la meta de ese día; en verde, los días que la alcanzaron.',
+    legend: tr('La línea vertical sobre cada barra marca la meta de ese día; en verde, los días que la alcanzaron.'),
   };
 }
 
@@ -538,13 +536,13 @@ function subjectMix(data: ReportData): DocBlock | null {
   if (rest.length > 0) {
     const restPct = rest.reduce((sum, r) => sum + r.percent, 0);
     items.push({
-      label: `Otras ${rest.length}`,
+      label: tr('Otras {length}', { length: rest.length }),
       percent: restPct,
       value: `${Math.round(restPct)} %`,
       tone: 'muted' as DocTone,
     });
   }
-  return { kind: 'stacked', caption: 'Composición del tiempo de estudio', items };
+  return { kind: 'stacked', caption: tr('Composición del tiempo de estudio'), items };
 }
 
 /** Embudo de tareas: de las que existían a las entregadas dentro de plazo. */
@@ -555,25 +553,25 @@ function taskFunnel(data: ReportData): DocBlock | null {
     kind: 'funnel',
     steps: [
       {
-        label: 'Tareas del periodo',
+        label: tr('Tareas del periodo'),
         value: String(data.tasksDone + data.pendingTotal),
         percent: 100,
-        note: 'culminadas y pendientes',
+        note: tr('culminadas y pendientes'),
       },
       {
-        label: 'Culminadas',
+        label: tr('Culminadas'),
         value: String(data.tasksDone),
         percent: share(data.tasksDone, universe),
         note: `${Math.round(share(data.tasksDone, universe))} %`,
       },
       {
-        label: 'Con fecha límite',
+        label: tr('Con fecha límite'),
         value: String(data.tasksWithDeadline),
         percent: share(data.tasksWithDeadline, universe),
         note: `${Math.round(share(data.tasksWithDeadline, universe))} %`,
       },
       {
-        label: 'Entregadas a tiempo',
+        label: tr('Entregadas a tiempo'),
         value: String(data.tasksOnTime),
         percent: share(data.tasksOnTime, universe),
         note: `${Math.round(share(data.tasksOnTime, universe))} %`,
@@ -604,80 +602,80 @@ function performanceBlocks(data: ReportData, options: PerformanceDocOptions = {}
 
   const goalNote =
     data.goalDaysSet > 0
-      ? `${data.goalDaysMet} de ${data.goalDaysSet} días con meta cumplida`
-      : 'sin metas configuradas';
+      ? tr('{goalDaysMet} de {goalDaysSet} días con meta cumplida', { goalDaysMet: data.goalDaysMet, goalDaysSet: data.goalDaysSet })
+      : tr('sin metas configuradas');
   const punctuality =
     data.tasksWithDeadline > 0 ? `${Math.round(share(data.tasksOnTime, data.tasksWithDeadline))} %` : '—';
 
   // ---------- Panorama ----------
-  blocks.push({ kind: 'section', index: num(), title: 'Panorama del periodo', note: capitalize(data.periodLabel) });
+  blocks.push({ kind: 'section', index: num(), title: tr('Panorama del periodo'), note: capitalize(data.periodLabel) });
   blocks.push({
     kind: 'kpis',
     items: [
-      { label: 'Tiempo de estudio', value: hm(data.totalMinutes), note: `${data.sessionCount} sesiones` },
+      { label: tr('Tiempo de estudio'), value: hm(data.totalMinutes), note: tr('{sessionCount} sesiones', { sessionCount: data.sessionCount }) },
       {
-        label: 'Días con estudio',
+        label: tr('Días con estudio'),
         value: `${data.activeDays} / ${data.periodDays}`,
-        note: `media de ${hm(data.averageActiveDay)} por día activo`,
+        note: tr('media de {hm} por día activo', { hm: hm(data.averageActiveDay) }),
       },
       {
-        label: 'Tareas culminadas',
+        label: tr('Tareas culminadas'),
         value: String(data.tasksDone),
-        note: `${data.tasksOnTime} a tiempo de ${data.tasksWithDeadline} con fecha`,
+        note: tr('{tasksOnTime} a tiempo de {tasksWithDeadline} con fecha', { tasksOnTime: data.tasksOnTime, tasksWithDeadline: data.tasksWithDeadline }),
       },
       {
-        label: 'Cumplimiento de meta',
+        label: tr('Cumplimiento de meta'),
         value: data.goalMinutes > 0 ? `${Math.round(share(data.totalMinutes, data.goalMinutes))} %` : '—',
         note: goalNote,
       },
       {
-        label: 'Sesión más larga',
+        label: tr('Sesión más larga'),
         value: data.longest ? hm(data.longest.minutes) : '—',
         note: data.longest ? `${data.longest.date} · ${data.longest.subjects}` : undefined,
       },
-      { label: 'Mejor día', value: data.bestDay ? hm(data.bestDay.minutes) : '—', note: data.bestDay?.label },
-      { label: 'Puntualidad', value: punctuality, note: 'entregas dentro de plazo' },
+      { label: tr('Mejor día'), value: data.bestDay ? hm(data.bestDay.minutes) : '—', note: data.bestDay?.label },
+      { label: tr('Puntualidad'), value: punctuality, note: tr('entregas dentro de plazo') },
       {
-        label: 'Calificación media',
+        label: tr('Calificación media'),
         value: data.gradeAverage !== null ? `${data.gradeAverage.toFixed(1)} / 20` : '—',
         note:
           data.gradeAverage !== null
-            ? `AD ${data.gradeCounts.AD} · A ${data.gradeCounts.A} · B ${data.gradeCounts.B} · C ${data.gradeCounts.C}`
-            : 'sin registro de rendimiento',
+            ? tr('AD {AD} · A {A} · B {B} · C {C}', { AD: data.gradeCounts.AD, A: data.gradeCounts.A, B: data.gradeCounts.B, C: data.gradeCounts.C })
+            : tr('sin registro de rendimiento'),
       },
     ],
   });
-  blocks.push({ kind: 'callout', title: 'Lectura del periodo', text: readPeriod(data) });
+  blocks.push({ kind: 'callout', title: tr('Lectura del periodo'), text: readPeriod(data) });
 
   // ---------- Ritmo ----------
   blocks.push({
     kind: 'section',
     index: num(),
-    title: 'Ritmo de estudio',
+    title: tr('Ritmo de estudio'),
   });
   blocks.push(rhythmBars(data));
 
   // ---------- Asignaturas ----------
   if (data.bySubject.length > 0) {
-    blocks.push({ kind: 'section', index: num(), title: 'Reparto por asignatura' });
+    blocks.push({ kind: 'section', index: num(), title: tr('Reparto por asignatura') });
     const mix = subjectMix(data);
     if (mix) blocks.push(mix);
     const maxSubject = Math.max(1, ...data.bySubject.map((r) => r.minutes));
     blocks.push({
       kind: 'bars',
-      caption: 'Tiempo dedicado',
+      caption: tr('Tiempo dedicado'),
       items: data.bySubject.map((row) => ({
         label: row.name,
         value: hm(row.minutes),
         percent: share(row.minutes, maxSubject),
-        note: `${row.sessions} ${row.sessions === 1 ? 'sesión' : 'sesiones'} · ${Math.round(row.percent)} % del total`,
+        note: tr('{sessions} {p} · {p2} % del total', { sessions: row.sessions, p: row.sessions === 1 ? tr('sesión') : tr('sesiones'), p2: Math.round(row.percent) }),
       })),
     });
     if (data.bySpace.length > 0) {
       const maxSpace = Math.max(1, ...data.bySpace.map((r) => r.minutes));
       blocks.push({
         kind: 'bars',
-        caption: 'Por colección',
+        caption: tr('Por colección'),
         items: data.bySpace.map((row) => ({
           label: row.name,
           value: hm(row.minutes),
@@ -690,14 +688,14 @@ function performanceBlocks(data: ReportData, options: PerformanceDocOptions = {}
   }
 
   // ---------- Tareas ----------
-  blocks.push({ kind: 'section', index: num(), title: 'Tareas y entregas' });
+  blocks.push({ kind: 'section', index: num(), title: tr('Tareas y entregas') });
   const funnel = taskFunnel(data);
   if (funnel) blocks.push(funnel);
   if (data.tasksDoneByCourse.length > 0) {
     blocks.push({
       kind: 'table',
-      caption: 'Tareas culminadas por asignatura',
-      head: ['Asignatura', 'Culminadas', 'Tiempo dedicado'],
+      caption: tr('Tareas culminadas por asignatura'),
+      head: [tr('Asignatura'), tr('Culminadas'), tr('Tiempo dedicado')],
       aligns: ['left', 'right', 'right'],
       weights: [56, 20, 24],
       rows: data.tasksDoneByCourse.map((row) => [
@@ -710,8 +708,8 @@ function performanceBlocks(data: ReportData, options: PerformanceDocOptions = {}
   if (data.pendingByCourse.length > 0) {
     blocks.push({
       kind: 'table',
-      caption: 'Pendientes al cierre',
-      head: ['Asignatura', 'Pendientes', 'Vencidas'],
+      caption: tr('Pendientes al cierre'),
+      head: [tr('Asignatura'), tr('Pendientes'), tr('Vencidas')],
       aligns: ['left', 'right', 'right'],
       weights: [56, 22, 22],
       rows: data.pendingByCourse.map((row) => [
@@ -728,14 +726,14 @@ function performanceBlocks(data: ReportData, options: PerformanceDocOptions = {}
 
   // ---------- Calificación ----------
   if (data.gradeAverage !== null) {
-    blocks.push({ kind: 'section', index: num(), title: 'Calificación diaria' });
+    blocks.push({ kind: 'section', index: num(), title: tr('Calificación diaria') });
     const graded = Math.max(
       1,
       data.gradeCounts.AD + data.gradeCounts.A + data.gradeCounts.B + data.gradeCounts.C
     );
     blocks.push({
       kind: 'stacked',
-      caption: 'Reparto de las calificaciones del periodo',
+      caption: tr('Reparto de las calificaciones del periodo'),
       items: [
         { label: 'AD', percent: share(data.gradeCounts.AD, graded), value: `${data.gradeCounts.AD} d.`, tone: 'ok' },
         { label: 'A', percent: share(data.gradeCounts.A, graded), value: `${data.gradeCounts.A} d.`, tone: 'accent' },
@@ -745,7 +743,7 @@ function performanceBlocks(data: ReportData, options: PerformanceDocOptions = {}
     });
     blocks.push({
       kind: 'paragraph',
-      text: `La calificación diaria se calcula sobre 20 a partir de la valoración de enfoque de cada sesión y del tiempo frente a la meta del día. La media del periodo es ${data.gradeAverage.toFixed(1)} sobre ${graded} ${graded === 1 ? 'día calificado' : 'días calificados'}.`,
+      text: tr('La calificación diaria se calcula sobre 20 a partir de la valoración de enfoque de cada sesión y del tiempo frente a la meta del día. La media del periodo es {p} sobre {graded} {p2}.', { p: data.gradeAverage.toFixed(1), graded, p2: graded === 1 ? tr('día calificado') : tr('días calificados') }),
       tone: 'muted',
     });
   }
@@ -755,12 +753,12 @@ function performanceBlocks(data: ReportData, options: PerformanceDocOptions = {}
     blocks.push({
       kind: 'section',
       index: num(),
-      title: 'Detalle de las sesiones',
-      note: `${data.sessions.length} registros`,
+      title: tr('Detalle de las sesiones'),
+      note: tr('{length} registros', { length: data.sessions.length }),
     });
     blocks.push({
       kind: 'table',
-      head: ['Fecha', 'Horario', 'Duración', 'Asignaturas', 'Enfoque'],
+      head: [tr('Fecha'), tr('Horario'), tr('Duración'), tr('Asignaturas'), tr('Enfoque')],
       aligns: ['left', 'left', 'right', 'left', 'right'],
       weights: [14, 16, 13, 45, 12],
       rows: data.sessions.map((row) => [
@@ -774,7 +772,7 @@ function performanceBlocks(data: ReportData, options: PerformanceDocOptions = {}
   } else if (data.sessionsOmitted && !brief) {
     blocks.push({
       kind: 'paragraph',
-      text: 'El detalle sesión a sesión se omite en el informe anual: son cientos de registros y su sitio es el informe mensual.',
+      text: tr('El detalle sesión a sesión se omite en el informe anual: son cientos de registros y su sitio es el informe mensual.'),
       tone: 'muted',
     });
   }
@@ -791,23 +789,23 @@ export function buildPerformanceDoc(data: ReportData, options: PerformanceDocOpt
     blocks.push({
       kind: 'cover',
       eyebrow: SCOPE_LABEL[data.scope],
-      title: 'Informe de rendimiento académico',
+      title: tr('Informe de rendimiento académico'),
       subtitle: capitalize(data.periodLabel),
       meta: [
-        { label: 'Estudiante', value: data.studentName },
-        { label: 'Periodo', value: capitalize(data.periodLabel) },
-        { label: 'Generado', value: data.generatedAt },
-        { label: 'Documento', value: 'Registro de estudio' },
+        { label: tr('Estudiante'), value: data.studentName },
+        { label: tr('Periodo'), value: capitalize(data.periodLabel) },
+        { label: tr('Generado'), value: data.generatedAt },
+        { label: tr('Documento'), value: tr('Registro de estudio') },
       ],
       footnote:
-        'Documento generado por Frame a partir del registro personal del estudiante. Las calificaciones y métricas que contiene son de autoseguimiento y no proceden de institución educativa alguna.',
+        tr('Documento generado por Frame a partir del registro personal del estudiante. Las calificaciones y métricas que contiene son de autoseguimiento y no proceden de institución educativa alguna.'),
     });
   }
 
   blocks.push(...performanceBlocks(data, options));
   blocks.push({
     kind: 'footer',
-    text: `Frame · VT Asvent — ${title}. Generado el ${data.generatedAt}.`,
+    text: tr('Frame · VT Asvent — {title}. Generado el {generatedAt}.', { title, generatedAt: data.generatedAt }),
   });
 
   return { title, blocks };

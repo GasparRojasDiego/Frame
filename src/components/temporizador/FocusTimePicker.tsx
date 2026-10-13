@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import EchoWord from '@/components/shared/EchoWord';
 import { cn } from '@/lib/utils';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Duración exacta del temporizador.
@@ -74,7 +75,7 @@ function Column({
         className={round}
         onClick={() => onChange(Math.min(max, value + 1))}
         disabled={value >= max}
-        aria-label={`${label}: uno más`}
+        aria-label={tr('{label}: uno más', { label })}
       >
         <Plus className="h-5 w-5" />
       </button>
@@ -86,7 +87,7 @@ function Column({
         className={round}
         onClick={() => onChange(Math.max(0, value - 1))}
         disabled={value <= 0}
-        aria-label={`${label}: uno menos`}
+        aria-label={tr('{label}: uno menos', { label })}
       >
         <Minus className="h-5 w-5" />
       </button>
@@ -98,7 +99,7 @@ function Column({
 function describeMinutes(total: number): string {
   const hours = Math.floor(total / 60);
   const minutes = total % 60;
-  const h = hours === 1 ? '1 hora' : `${hours} horas`;
+  const h = hours === 1 ? tr('1 hora') : tr('{hours} horas', { hours });
   if (hours === 0) return `${minutes} min`;
   return minutes === 0 ? h : `${h} ${minutes} min`;
 }
@@ -145,26 +146,26 @@ export default function FocusTimePicker({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="overflow-hidden sm:max-w-sm">
         <div className="relative -mx-6 -mt-6 overflow-hidden px-6 pb-4 pt-6 after:absolute after:inset-x-6 after:bottom-0 after:h-px after:bg-border">
-          <EchoWord word="Tiempo" />
+          <EchoWord word={tr('Tiempo')} />
           <DialogHeader className="relative">
-            <DialogTitle className="text-center text-lg font-bold text-primary">Duración de la sesión</DialogTitle>
+            <DialogTitle className="text-center text-lg font-bold text-primary">{tr('Duración de la sesión')}</DialogTitle>
             <DialogDescription className="text-center text-xs">
-              Ajusta horas y minutos. También puedes girar la rueda del ratón sobre cada número.
+              {tr('Ajusta horas y minutos. También puedes girar la rueda del ratón sobre cada número.')}
             </DialogDescription>
           </DialogHeader>
         </div>
 
         <div className="flex items-stretch gap-3">
-          <Column label="Horas" value={hours} max={maxHours} onChange={setHoursClamped} />
-          <Column label="Minutos" value={Math.min(minutes, maxMinutesNow)} max={maxMinutesNow} onChange={setMinutes} />
+          <Column label={tr('Horas')} value={hours} max={maxHours} onChange={setHoursClamped} />
+          <Column label={tr('Minutos')} value={Math.min(minutes, maxMinutesNow)} max={maxMinutesNow} onChange={setMinutes} />
         </div>
 
         <p className="text-center text-sm text-muted-foreground">
           {total === 0 ? (
-            'Elige una duración'
+            tr('Elige una duración')
           ) : (
             <>
-              Sesión de <span className="font-semibold text-foreground">{describeMinutes(total)}</span>
+              {tr('Sesión de')}{' '}<span className="font-semibold text-foreground">{describeMinutes(total)}</span>
             </>
           )}
         </p>
@@ -189,7 +190,7 @@ export default function FocusTimePicker({
 
         <DialogFooter className="gap-2 sm:justify-between">
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancelar
+            {tr('Cancelar')}
           </Button>
           <Button
             type="button"
@@ -199,7 +200,7 @@ export default function FocusTimePicker({
               onOpenChange(false);
             }}
           >
-            Confirmar
+            {tr('Confirmar')}
           </Button>
         </DialogFooter>
       </DialogContent>

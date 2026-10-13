@@ -13,6 +13,7 @@ import {
 import { listGmailMessages, cacheGet, type GmailMessage } from '@/lib/google/api';
 import { isTauri } from '@tauri-apps/api/core';
 import GoogleEmbed from './GoogleEmbed';
+import { errorText, tr } from '@/lib/i18n';
 
 // Logotipo oficial de Gmail (la "M" multicolor) — lo usa el sidebar.
 function GmailLogo({ className }: { className?: string }) {
@@ -103,9 +104,9 @@ export default function GmailPanel({
       const identity = await connectIntegration('gmail', { selectAccount: true });
       setConnected(true);
       setAccount(identity);
-      toast({ title: 'Gmail vinculado', description: identity.email });
+      toast({ title: tr('Gmail vinculado'), description: identity.email });
     } catch (e: any) {
-      toast({ variant: 'destructive', title: 'Gmail', description: String(e.message ?? e) });
+      toast({ variant: 'destructive', title: tr('Gmail'), description: errorText(e) });
     } finally {
       setIsConnecting(false);
     }
@@ -117,7 +118,7 @@ export default function GmailPanel({
       <Card className="flex items-center gap-3 p-4">
         <GmailLogo className="h-6 w-8 shrink-0" />
         <p className="text-xs text-muted-foreground">
-          El recuadro de Gmail integrado está disponible en la app de escritorio Frame.
+          {tr('El recuadro de Gmail integrado está disponible en la app de escritorio Frame.')}
         </p>
       </Card>
     );
@@ -132,8 +133,8 @@ export default function GmailPanel({
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 px-4 py-2">
         <p className="text-[11px] text-muted-foreground">
           {connected && account
-            ? `Cuenta vinculada: ${account.email}`
-            : 'Vincula una cuenta para el contador de no leídos y las notificaciones.'}
+            ? tr('Cuenta vinculada: {email}', { email: account.email })
+            : tr('Vincula una cuenta para el contador de no leídos y las notificaciones.')}
         </p>
         <Button
           size="sm"
@@ -147,7 +148,7 @@ export default function GmailPanel({
           ) : (
             <Link2 className="mr-1.5 h-3.5 w-3.5" />
           )}
-          {connected ? 'Cambiar de cuenta' : 'Vincular cuenta'}
+          {connected ? tr('Cambiar de cuenta') : tr('Vincular cuenta')}
         </Button>
       </div>
     </Card>

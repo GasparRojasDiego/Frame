@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { format, isValid, parseISO } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { ArrowLeft, Layers, NotebookPen, Trash2 } from 'lucide-react';
 import {
   Dialog,
@@ -18,6 +17,7 @@ import { deleteLooseNote, useLooseNotes, type LooseNote } from '@/lib/loose-note
 import RichNoteView from '@/components/temporizador/RichNoteView';
 import { richNoteToPlain } from '@/lib/rich-note';
 import { cn } from '@/lib/utils';
+import { dateLocale, tr } from '@/lib/i18n';
 
 // ============================================================
 // Anotaciones sin asignatura (Inicio, junto a las grabaciones sueltas).
@@ -33,7 +33,7 @@ import { cn } from '@/lib/utils';
 function whenLabel(iso: string): string {
   try {
     const date = parseISO(iso);
-    return isValid(date) ? format(date, "d 'de' MMMM · HH:mm", { locale: es }) : '';
+    return isValid(date) ? format(date, tr('d \'de\' MMMM · HH:mm'), { locale: dateLocale() }) : '';
   } catch {
     return '';
   }
@@ -63,7 +63,7 @@ function LooseNoteDialog({ note, onClose }: { note: LooseNote | null; onClose: (
       return;
     }
     deleteLooseNote(userProfile.id, note.id);
-    toast({ title: 'Anotación borrada' });
+    toast({ title: tr('Anotación borrada') });
     onClose();
   };
 
@@ -73,8 +73,8 @@ function LooseNoteDialog({ note, onClose }: { note: LooseNote | null; onClose: (
     addNote(course.id, note.content, { kind: 'text' });
     deleteLooseNote(userProfile.id, note.id);
     toast({
-      title: 'Anotación colocada',
-      description: `Queda en los recursos de ${course.name}.`,
+      title: tr('Anotación colocada'),
+      description: tr('Queda en los recursos de {name}.', { name: course.name }),
     });
     onClose();
   };
@@ -89,7 +89,7 @@ function LooseNoteDialog({ note, onClose }: { note: LooseNote | null; onClose: (
       >
         {/* `pt-[15px]`: título, flecha de atrás y X de cierre en la misma línea. */}
         <DialogHeader className="relative shrink-0 overflow-hidden px-6 pb-4 pt-[15px]">
-          <EchoWord word="Anotación" />
+          <EchoWord word={tr('Anotación')} />
           <div className="relative flex items-center justify-center">
             {/* Atrás: flecha en la esquina superior izquierda, a la altura del título. */}
             {placing && (
@@ -101,8 +101,8 @@ function LooseNoteDialog({ note, onClose }: { note: LooseNote | null; onClose: (
                   setPlacing(false);
                   setCourseId(null);
                 }}
-                title="Volver a la anotación"
-                aria-label="Volver a la anotación"
+                title={tr('Volver a la anotación')}
+                aria-label={tr('Volver a la anotación')}
                 // `-left-4`: el icono queda a 16 px del borde, simétrico a la X.
                 className="absolute -left-4 top-1/2 h-8 w-8 -translate-y-1/2 rounded-md text-muted-foreground hover:bg-primary/10 hover:text-primary"
               >
@@ -110,7 +110,7 @@ function LooseNoteDialog({ note, onClose }: { note: LooseNote | null; onClose: (
               </Button>
             )}
             <DialogTitle className="text-center text-lg font-bold text-primary">
-              {placing ? 'Colocar en una asignatura' : 'Anotación'}
+              {placing ? tr('Colocar en una asignatura') : tr('Anotación')}
             </DialogTitle>
           </div>
           <DialogDescription className="relative text-center text-xs">
@@ -140,18 +140,18 @@ function LooseNoteDialog({ note, onClose }: { note: LooseNote | null; onClose: (
                 className={cn(!course && 'border border-primary bg-primary/20 text-primary')}
               >
                 <Layers className="mr-2 h-4 w-4" />
-                Colocar
+                {tr('Colocar')}
               </Button>
             </>
           ) : (
             <>
               <Button size="sm" variant={confirmDelete ? 'destructive' : 'gris'} onClick={remove}>
                 <Trash2 className="mr-2 h-4 w-4" />
-                {confirmDelete ? 'Pulsa otra vez para borrar' : 'Borrar'}
+                {confirmDelete ? tr('Pulsa otra vez para borrar') : tr('Borrar')}
               </Button>
               <Button size="sm" variant="fantasma" onClick={() => setPlacing(true)}>
                 <Layers className="mr-2 h-4 w-4" />
-                Colocar en una asignatura
+                {tr('Colocar en una asignatura')}
               </Button>
             </>
           )}
@@ -180,7 +180,7 @@ export default function LooseNotesSection() {
   return (
     <div className="pt-4">
       {/* Mismo título que «Grabaciones», su vecina en Inicio. */}
-      <h1 className="pb-4 pt-8 text-center font-headline text-2xl font-bold text-primary">Anotaciones</h1>
+      <h1 className="pb-4 pt-8 text-center font-headline text-2xl font-bold text-primary">{tr('Anotaciones')}</h1>
 
       <div className="grid grid-cols-2 gap-4">
         {notes.map((note) => (
@@ -188,7 +188,7 @@ export default function LooseNotesSection() {
             key={note.id}
             type="button"
             onClick={() => setOpenId(note.id)}
-            title="Ver la anotación completa"
+            title={tr('Ver la anotación completa')}
             className="flex min-w-0 flex-col gap-2 rounded-lg border bg-card p-4 text-left shadow-sm transition-colors hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <span className="flex items-center gap-2 text-[10px] font-medium text-muted-foreground">

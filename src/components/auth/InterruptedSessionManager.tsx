@@ -31,6 +31,7 @@ import { formatHMS } from '@/lib/duration';
 import { isRichNoteEmpty } from '@/lib/rich-note';
 import { useRouter } from '@/lib/navigation';
 import type { InterruptedSession } from '@/types';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Rescate de una sesión de estudio que se quedó a medias.
@@ -63,11 +64,11 @@ interface InterruptedSessionManagerProps {
 
 /** Qué se le cuenta al usuario según cómo se perdió la sesión. */
 const EXPLANATION: Record<NonNullable<InterruptedSession['origin']> | 'default', string> = {
-  suspend: 'Aparcaste esta sesión al cerrar Frame. Sigue tal cual la dejaste.',
-  live: 'Frame se cerró con la sesión en marcha. Este es el tiempo guardado hasta el último segundo.',
-  unload: 'La última vez cerraste Frame sin registrar tu sesión de estudio.',
-  notes: 'Quedaron anotaciones de una sesión sin registrar. El tiempo sale de la última: duró al menos eso.',
-  default: 'La última vez culminaste tu sesión de estudio sin registrarla.',
+  get suspend() { return tr('Aparcaste esta sesión al cerrar Frame. Sigue tal cual la dejaste.'); },
+  get live() { return tr('Frame se cerró con la sesión en marcha. Este es el tiempo guardado hasta el último segundo.'); },
+  get unload() { return tr('La última vez cerraste Frame sin registrar tu sesión de estudio.'); },
+  get notes() { return tr('Quedaron anotaciones de una sesión sin registrar. El tiempo sale de la última: duró al menos eso.'); },
+  get default() { return tr('La última vez culminaste tu sesión de estudio sin registrarla.'); },
 };
 
 export default function InterruptedSessionManager({ session, onDone }: InterruptedSessionManagerProps) {
@@ -174,8 +175,8 @@ export default function InterruptedSessionManager({ session, onDone }: Interrupt
               variant="ghost"
               size="icon"
               onClick={() => setView('initial')}
-              title="Atrás"
-              aria-label="Atrás: volver a las opciones"
+              title={tr('Atrás')}
+              aria-label={tr('Atrás: volver a las opciones')}
               className="absolute left-4 top-4 z-10 h-7 w-7 text-muted-foreground hover:bg-primary/10 hover:text-primary"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -186,9 +187,9 @@ export default function InterruptedSessionManager({ session, onDone }: Interrupt
           <DialogHeader className="shrink-0 space-y-0 text-left sm:text-left">
             {/* Título y datos de la sesión, con «SESIÓN» a la deriva detrás. */}
             <div className="relative overflow-hidden px-6 pb-3 pt-5">
-              <EchoWord word="Sesión" />
+              <EchoWord word={tr('Sesión')} />
               <DialogTitle className="relative text-center text-lg font-bold tracking-wider text-primary">
-                {canResume ? 'Tu sesión sigue en pie' : 'Una sesión sin registrar'}
+                {canResume ? tr('Tu sesión sigue en pie') : tr('Una sesión sin registrar')}
               </DialogTitle>
               <DialogDescription className="relative pt-1 text-center text-xs leading-relaxed">
                 {EXPLANATION[origin]}
@@ -202,7 +203,7 @@ export default function InterruptedSessionManager({ session, onDone }: Interrupt
               >
                 <div className="space-y-0.5 text-center">
                   <p className="text-[10px] text-muted-foreground">
-                    {origin === 'notes' ? 'Al menos' : 'Tiempo estudiado'}
+                    {origin === 'notes' ? tr('Al menos') : tr('Tiempo estudiado')}
                   </p>
                   <p className="font-headline text-2xl font-bold tabular-nums text-primary">
                     {formatHMS(studiedSeconds)}
@@ -216,7 +217,7 @@ export default function InterruptedSessionManager({ session, onDone }: Interrupt
                         htmlFor="recovered-perception"
                         className="text-[10px] text-muted-foreground"
                       >
-                        Nivel de enfoque
+                        {tr('Nivel de enfoque')}
                       </Label>
                       <span
                         className={cn(
@@ -244,7 +245,7 @@ export default function InterruptedSessionManager({ session, onDone }: Interrupt
                         needsFocus ? 'text-amber-600 dark:text-amber-400' : 'text-transparent'
                       )}
                     >
-                      Mueve la barra: sin enfoque no se puede registrar.
+                      {tr('Mueve la barra: sin enfoque no se puede registrar.')}
                     </p>
                   </div>
                 )}
@@ -273,8 +274,8 @@ export default function InterruptedSessionManager({ session, onDone }: Interrupt
                       className="flex items-center gap-1.5 text-[10px] text-muted-foreground"
                     >
                       <NotebookPen className="h-3.5 w-3.5 text-primary" />
-                      ¿Qué hiciste?
-                      <span className="text-muted-foreground/70">(opcional)</span>
+                      {tr('¿Qué hiciste?')}
+                      <span className="text-muted-foreground/70">{tr('(opcional)')}</span>
                     </Label>
                     {/* Texto con formato y listas, como un Word en pequeño. */}
                     <NoteEditor
@@ -282,7 +283,7 @@ export default function InterruptedSessionManager({ session, onDone }: Interrupt
                       ariaLabelledBy="recovered-notes-label"
                       value={notes}
                       onChange={setNotes}
-                      placeholder="Resolví los ejercicios 12 al 20; me atasqué en la derivada de la cadena…"
+                      placeholder={tr('Resolví los ejercicios 12 al 20; me atasqué en la derivada de la cadena…')}
                       rows={3}
                       dense
                     />
@@ -301,16 +302,16 @@ export default function InterruptedSessionManager({ session, onDone }: Interrupt
               {canResume && (
                 <Button onClick={handleResume}>
                   <Play className="h-4 w-4 fill-current" />
-                  Retomar donde la dejaste
+                  {tr('Retomar donde la dejaste')}
                 </Button>
               )}
               {/* Con «Retomar» delante, registrar pasa a ser la secundaria. */}
               <Button variant={canResume ? 'fantasma' : 'default'} onClick={() => setView('registering')}>
-                {canResume ? 'Finalizarla y registrarla' : 'Registrar esta sesión'}
+                {canResume ? tr('Finalizarla y registrarla') : tr('Registrar esta sesión')}
               </Button>
               <Button variant="gris" onClick={() => setShowConfirmDiscard(true)}>
                 <Trash2 className="h-4 w-4" />
-                Descartarla
+                {tr('Descartarla')}
               </Button>
             </div>
           ) : (
@@ -338,17 +339,17 @@ export default function InterruptedSessionManager({ session, onDone }: Interrupt
                   onClick={() => setShowConfirmDiscard(true)}
                 >
                   <Trash2 className="h-4 w-4" />
-                  Descartar
+                  {tr('Descartar')}
                 </Button>
 
                 <div className="flex items-center gap-3">
                   {(needsFocus || needsSubject) && (
                     <span className="text-right text-[10px] leading-tight text-amber-600 dark:text-amber-400">
                       {needsFocus && needsSubject
-                        ? 'Falta el enfoque y la asignatura'
+                        ? tr('Falta el enfoque y la asignatura')
                         : needsFocus
-                          ? 'Falta marcar tu enfoque'
-                          : 'Falta marcar la asignatura'}
+                          ? tr('Falta marcar tu enfoque')
+                          : tr('Falta marcar la asignatura')}
                     </span>
                   )}
                   <Button
@@ -358,7 +359,7 @@ export default function InterruptedSessionManager({ session, onDone }: Interrupt
                     disabled={needsSubject || needsFocus}
                     className="min-w-[9rem]"
                   >
-                    Registrar sesión
+                    {tr('Registrar sesión')}
                   </Button>
                 </div>
               </div>
@@ -370,26 +371,22 @@ export default function InterruptedSessionManager({ session, onDone }: Interrupt
       <AlertDialog open={showConfirmDiscard} onOpenChange={setShowConfirmDiscard}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Descartar esta sesión?</AlertDialogTitle>
+            <AlertDialogTitle>{tr('¿Descartar esta sesión?')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Se tirarán los {formatHMS(studiedSeconds)}
-              {sessionNotes.length > 0 &&
-                ` y ${
-                  sessionNotes.length === 1
-                    ? 'la anotación que dejaste'
-                    : `las ${sessionNotes.length} anotaciones que dejaste`
-                }`}
-              . No contarán en tu tiempo de estudio ni en la calificación del día. Esta acción no se
-              puede deshacer.
+              {sessionNotes.length === 0
+                ? tr('Se tirarán los {time}. No contarán en tu tiempo de estudio ni en la calificación del día. Esta acción no se puede deshacer.', { time: formatHMS(studiedSeconds) })
+                : sessionNotes.length === 1
+                  ? tr('Se tirarán los {time} y la anotación que dejaste. No contarán en tu tiempo de estudio ni en la calificación del día. Esta acción no se puede deshacer.', { time: formatHMS(studiedSeconds) })
+                  : tr('Se tirarán los {time} y las {length} anotaciones que dejaste. No contarán en tu tiempo de estudio ni en la calificación del día. Esta acción no se puede deshacer.', { time: formatHMS(studiedSeconds), length: sessionNotes.length })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Volver</AlertDialogCancel>
+            <AlertDialogCancel>{tr('Volver')}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={handleConfirmDiscard}
             >
-              Descartar
+              {tr('Descartar')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

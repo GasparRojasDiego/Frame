@@ -11,6 +11,7 @@ import { SubjectMultiPicker } from '@/components/courses/SubjectPicker';
 import EchoWord from '@/components/shared/EchoWord';
 import { cn } from '@/lib/utils';
 import { MAX_COMPETENCY_COURSES, MIN_COMPETENCY_COURSES } from '@/lib/competency';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Elegir las asignaturas del radar.
@@ -81,12 +82,12 @@ export default function CompetencyCoursesDialog({
       <DialogContent className="flex max-h-[88vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
         <DialogHeader className="relative shrink-0 overflow-hidden px-6 pb-4 pt-6">
           {/* «ELEGIR», repetido y a la deriva detrás del título. */}
-          <EchoWord word="Elegir" />
+          <EchoWord word={tr('Elegir')} />
           <DialogTitle className="relative text-center text-lg font-bold text-primary">
-            Elegir asignaturas
+            {tr('Elegir asignaturas')}
           </DialogTitle>
           <DialogDescription className="relative text-center text-xs">
-            Entre {MIN_COMPETENCY_COURSES} y {MAX_COMPETENCY_COURSES} para el radar
+            {tr('Entre {min} y {max} para el radar', { min: MIN_COMPETENCY_COURSES, max: MAX_COMPETENCY_COURSES })}
           </DialogDescription>
         </DialogHeader>
 
@@ -97,7 +98,7 @@ export default function CompetencyCoursesDialog({
           <SubjectMultiPicker
             values={draft}
             onChange={handleChange}
-            title="Asignaturas"
+            title={tr('Asignaturas')}
             max={MAX_COMPETENCY_COURSES}
             searchClassName="sm:w-56"
             grouped
@@ -121,20 +122,20 @@ export default function CompetencyCoursesDialog({
             {draft.length}/{MAX_COMPETENCY_COURSES}
             <span className="font-normal">
               {overMax
-                ? ` · máximo ${MAX_COMPETENCY_COURSES}`
+                ? tr(' · máximo {MAX_COMPETENCY_COURSES}', { MAX_COMPETENCY_COURSES })
                 : missing > 0
-                  ? ` · ${missing === 1 ? 'falta 1' : `faltan ${missing}`}`
+                  ? ` · ${missing === 1 ? tr('falta 1') : tr('faltan {missing}', { missing })}`
                   : draft.length === 0
-                    ? ' · sin radar'
+                    ? tr(' · sin radar')
                     : ''}
             </span>
           </p>
           <div className="flex gap-2">
             <Button variant="gris" onClick={() => onOpenChange(false)}>
-              Cancelar
+              {tr('Cancelar')}
             </Button>
             <Button disabled={!canSave} onClick={() => onSave(draft)}>
-              Guardar
+              {tr('Guardar')}
             </Button>
           </div>
         </div>

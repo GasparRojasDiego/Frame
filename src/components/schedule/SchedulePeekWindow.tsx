@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { getImage } from '@/lib/music-db';
 import { activeProfileId, scheduleImageKey } from '@/lib/profile-scope';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Vistazo al horario (ventana propia, sin marco).
@@ -126,7 +127,7 @@ export default function SchedulePeekWindow() {
           key={nonce}
           ref={imageRef}
           src={image}
-          alt="Mi horario"
+          alt={tr('Mi horario')}
           onLoad={fitWindow}
           style={{
             display: 'block',

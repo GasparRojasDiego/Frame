@@ -8,6 +8,7 @@ import {
   type RichLineKind,
   type RichRun,
 } from '@/lib/rich-note';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Editor de anotaciones: un Word en miniatura.
@@ -660,7 +661,7 @@ export default function NoteEditor({
       <div className={cn(toolbarSide ? 'flex shrink-0' : 'flex items-center justify-between gap-2')}>
         <div
           role="toolbar"
-          aria-label="Formato del texto"
+          aria-label={tr('Formato del texto')}
           aria-orientation={toolbarSide ? 'vertical' : 'horizontal'}
           className={cn(
             'inline-flex items-center gap-0.5 rounded-md border border-border bg-secondary/50 p-0.5',
@@ -671,11 +672,11 @@ export default function NoteEditor({
         >
           {/* 1.6.6: sin subrayado, deshacer ni rehacer (Diego). Ctrl+Z y Ctrl+Y
               siguen funcionando con teclado. */}
-          {tool('bold', 'Negrita (Ctrl+B)', Bold, active.bold)}
-          {tool('italic', 'Cursiva (Ctrl+I)', Italic, active.italic)}
+          {tool('bold', tr('Negrita (Ctrl+B)'), Bold, active.bold)}
+          {tool('italic', tr('Cursiva (Ctrl+I)'), Italic, active.italic)}
           {divider}
-          {tool('insertUnorderedList', 'Lista con viñetas', List, active.insertUnorderedList)}
-          {tool('insertOrderedList', 'Lista numerada', ListOrdered, active.insertOrderedList)}
+          {tool('insertUnorderedList', tr('Lista con viñetas'), List, active.insertUnorderedList)}
+          {tool('insertOrderedList', tr('Lista numerada'), ListOrdered, active.insertOrderedList)}
         </div>
         {!toolbarSide &&
           (toolbarEnd ??

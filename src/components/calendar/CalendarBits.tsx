@@ -5,6 +5,7 @@ import EchoWord from '@/components/shared/EchoWord';
 import { cn } from '@/lib/utils';
 import { eventTextClass } from '@/lib/calendar-events';
 import { capitalize } from './calendar-model';
+import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Piezas visuales que comparten la cuadrícula, la barra de selección y el
@@ -53,7 +54,7 @@ export function Swatch({
     <button
       type="button"
       onClick={onClick}
-      aria-label={`Color ${name}`}
+      aria-label={tr('Color {name}', { name })}
       aria-pressed={active}
       title={capitalize(name)}
       className={cn(
@@ -73,7 +74,7 @@ export function NoColorSwatch({
   active,
   onClick,
   size = 'md',
-  label = 'Quitar el color',
+  label = tr('Quitar el color'),
 }: {
   active?: boolean;
   onClick: () => void;
@@ -122,8 +123,8 @@ export function PanelHeader({
         <button
           type="button"
           onClick={onBack}
-          aria-label="Atrás"
-          title="Atrás"
+          aria-label={tr('Atrás')}
+          title={tr('Atrás')}
           className="absolute left-4 top-4 z-10 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
         >
           <ArrowLeft className="h-4 w-4" />
