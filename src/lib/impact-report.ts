@@ -1,6 +1,6 @@
 import { format, parseISO } from 'date-fns';
 import type { DocBlock, DocCell, DocModel } from '@/lib/report-doc';
-import { dateLocale, tr } from '@/lib/i18n';
+import { dateLocale, decimalText, tr } from '@/lib/i18n';
 
 // ============================================================
 // Informe de impacto (panel del responsable).
@@ -83,7 +83,7 @@ export interface UsageSummary {
 
 const hours = (minutes: number): string => {
   const value = minutes / 60;
-  return value >= 100 ? `${Math.round(value)} h` : `${value.toFixed(1).replace('.', ',')} h`;
+  return value >= 100 ? `${Math.round(value)} h` : `${decimalText(value)} h`;
 };
 const cells = (values: string[]): DocCell[] => values.map((text, index) => ({ text, bold: index === 0 }));
 const pct = (part: number, whole: number): number | null => (whole > 0 ? Math.round((part / whole) * 100) : null);
@@ -123,7 +123,7 @@ function impactStatements(data: ImpactData): string[] {
   );
   lines.push(
     tr('Registraron {hours} de estudio en {sessions} sesiones, repartidas en {study_days} jornadas de estudio', { hours: hours(h.minutes), sessions: h.sessions, study_days: h.study_days }) +
-      (h.focus_avg !== null ? tr(', con un enfoque autoevaluado medio de {p} sobre 20.', { p: String(h.focus_avg).replace('.', ',') }) : '.')
+      (h.focus_avg !== null ? tr(', con un enfoque autoevaluado medio de {p} sobre 20.', { p: decimalText(h.focus_avg) }) : '.')
   );
   const second = pairSentence(data.w1_w2, tr('dos semanas'));
   if (second) lines.push(second);
@@ -192,7 +192,7 @@ export function buildImpactDoc(data: ImpactData, usage: UsageSummary | null): Do
     items: [
       { label: tr('Estudiantes'), value: String(h.students), note: tr('{students_2w} con 2 o más semanas de uso', { students_2w: h.students_2w }) },
       { label: tr('Horas de estudio'), value: hours(h.minutes), note: tr('{sessions} sesiones · {study_days} jornadas', { sessions: h.sessions, study_days: h.study_days }) },
-      { label: tr('Enfoque medio'), value: h.focus_avg !== null ? `${String(h.focus_avg).replace('.', ',')} / 20` : '—' },
+      { label: tr('Enfoque medio'), value: h.focus_avg !== null ? `${decimalText(h.focus_avg)} / 20` : '—' },
       {
         label: tr('Tareas a tiempo'),
         value: onTime !== null ? `${onTime} %` : '—',
@@ -225,8 +225,8 @@ export function buildImpactDoc(data: ImpactData, usage: UsageSummary | null): Do
             String(row.users_active),
             hours(row.avg_minutes),
             hours(row.median_minutes),
-            String(row.avg_active_days).replace('.', ','),
-            row.avg_focus !== null ? String(row.avg_focus).replace('.', ',') : '—',
+            decimalText(row.avg_active_days),
+            row.avg_focus !== null ? decimalText(row.avg_focus) : '—',
           ])
         ),
       }

@@ -2,6 +2,9 @@
 //
 //   · claves que el código pide con tr()/trc() y el diccionario no tiene
 //     (en inglés se verían en español: es el fallo que no puede ocurrir);
+//   · mensajes del núcleo nativo (Rust y, en Android, Kotlin) que pueden
+//     llegar a la interfaz y el diccionario no tiene: errorText() los traduce
+//     si están, exactos o con la forma «Prefijo: {e}»;
 //   · entradas que ya nadie usa (sobran: pesan y confunden);
 //   · traducciones cuyas variables {así} no coinciden con las del español.
 //
@@ -66,6 +69,44 @@ for (const file of files) {
   visit(source);
 }
 
+// ---- Mensajes del núcleo nativo ----
+const nativeFiles = [];
+for (const dir of ['src-tauri/src', 'src-tauri/gen/android/app/src/main/java']) {
+  const full = path.join(root, dir);
+  if (!fs.existsSync(full)) continue;
+  (function walk(d) {
+    for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
+      const f = path.join(d, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name !== 'generated') walk(f);
+      } else if (/\.(rs|kt)$/.test(entry.name)) nativeFiles.push(f);
+    }
+  })(full);
+}
+const SPANISH_TEXT = /[áéíóúñ¿¡]|\b(no|se|de|la|el|los|las|del|que|para|por|con|sin|ya|un|una|es|ilegible|archivo|carpeta|informe|adjunto)\b/i;
+const NATIVE_CALL = /Err\(|reject\(|settle\(|format!\(|\.into\(\)|super\(|Error::|map_err\(|\.to_string\(\)|ifBlank|^\s*"/;
+const nativeWanted = new Map();
+for (const file of nativeFiles) {
+  const rel = path.relative(root, file).replace(/\\/g, '/');
+  fs.readFileSync(file, 'utf8')
+    // ui("es", "en") ya sale traducido del propio núcleo (aunque ocupe varias líneas).
+    .replace(/\bui\(\s*"(?:[^"\\]|\\.)*"\s*,\s*"(?:[^"\\]|\\.)*"\s*,?\s*\)/g, 'ui()')
+    .split(/\r?\n/)
+    .forEach((line, index) => {
+      const code = line.replace(/^\s*\/\/.*$/, '');
+      // Lo que pasa por ui(es, en) ya sale traducido del propio núcleo.
+      if (!NATIVE_CALL.test(code) || /println!|eprintln!|log::|Log\.[dwie]\(|\bui\(/.test(code)) return;
+      for (const match of code.matchAll(/"((?:[^"\\]|\\.)*)"/g)) {
+        let text = match[1].replace(/\\"/g, '"');
+        if (!text.includes(' ') || !SPANISH_TEXT.test(text) || text.includes('$')) continue;
+        text = text.replace(/\{[a-z_]*\}/g, '{e}');
+        // errorText() solo entiende el detalle al final: «Prefijo: {e}».
+        if (text.includes('{e}') && !/^[^{]+: \{e\}$/.test(text)) continue;
+        if (!nativeWanted.has(text)) nativeWanted.set(text, `${rel}:${index + 1}`);
+      }
+    });
+}
+
 const dictionarySource = ts.createSourceFile(DICTIONARY, fs.readFileSync(DICTIONARY, 'utf8'), ts.ScriptTarget.Latest, true);
 const english = new Map();
 dictionarySource.forEachChild(function find(node) {
@@ -80,9 +121,10 @@ dictionarySource.forEachChild(function find(node) {
 
 const variables = (text) => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join(',');
 const missing = [...wanted].filter(([key]) => !english.has(key) && !english.has(key.split('|').pop()));
+const missingNative = [...nativeWanted].filter(([key]) => !english.has(key));
 const mismatched = [...english].filter(([key, value]) => variables(key.split('|').pop()) !== variables(value));
 const unused = [...english.keys()].filter((key) => {
-  if (wanted.has(key)) return false;
+  if (wanted.has(key) || nativeWanted.has(key)) return false;
   const [context, text] = key.includes('|') ? key.split('|') : [null, key];
   if ([...wanted.keys()].some((w) => w.endsWith(`|${key}`))) return false;
   return !(strings.has(text) && (context === null || strings.has(context)));
@@ -94,7 +136,11 @@ const report = (title, lines) => {
   for (const line of lines) console.log(`  ${line}`);
 };
 report('Sin traducir', missing.map(([key, where]) => `${JSON.stringify(key)}  ← ${where}`));
+report('Sin traducir (núcleo nativo)', missingNative.map(([key, where]) => `${JSON.stringify(key)}  ← ${where}`));
 report('Variables que no coinciden', mismatched.map(([key, value]) => `${JSON.stringify(key)} → ${JSON.stringify(value)}`));
 report('Entradas sin uso', unused.map((key) => JSON.stringify(key)));
-console.log(`\n${wanted.size} claves en el código · ${english.size} en el diccionario · ${missing.length} sin traducir · ${unused.length} sin uso`);
-process.exit(missing.length || mismatched.length ? 1 : 0);
+console.log(
+  `\n${wanted.size} claves en el código · ${nativeWanted.size} mensajes nativos · ${english.size} en el diccionario · ` +
+    `${missing.length + missingNative.length} sin traducir · ${unused.length} sin uso`
+);
+process.exit(missing.length || missingNative.length || mismatched.length ? 1 : 0);

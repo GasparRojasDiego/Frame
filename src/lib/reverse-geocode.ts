@@ -12,7 +12,7 @@
 // 404): su API de geocoding es sólo búsqueda por nombre.
 // ============================================================
 import { invoke, isTauri } from '@tauri-apps/api/core';
-import { getLang } from '@/lib/i18n';
+import { decimalText, getLang } from '@/lib/i18n';
 
 export type GeoSource = 'bigdatacloud' | 'photon' | 'nominatim' | 'ip' | 'manual' | 'coords';
 
@@ -231,6 +231,6 @@ export async function reverseGeocode(
 /** Fallback legible: (-12.0464, -77.0428) → "12,046° S · 77,043° O". */
 export function formatCoords(latitude: number, longitude: number): string {
   const part = (v: number, pos: string, neg: string) =>
-    `${Math.abs(v).toFixed(3).replace('.', ',')}° ${v >= 0 ? pos : neg}`;
+    `${decimalText(Math.abs(v), 3)}° ${v >= 0 ? pos : neg}`;
   return `${part(latitude, 'N', 'S')} · ${part(longitude, 'E', 'O')}`;
 }

@@ -180,7 +180,7 @@ export default function NotionImportDialog({
       }
       toast({
         title: tr('{length} {p} al calendario', { length: chosen.length, p: chosen.length === 1 ? tr('fecha importada') : tr('fechas importadas') }),
-        description: tr('Las verás en Calendario → «Local».'),
+        description: tr('Las verás en Calendario.'),
       });
     }
     setOpen(false);

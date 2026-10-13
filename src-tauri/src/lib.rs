@@ -237,10 +237,16 @@ async fn oauth_wait_callback(port: u16, timeout_secs: Option<u64>) -> Result<Oau
                         continue;
                     }
 
-                    let html = r#"<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Frame</title></head>
+                    // En el idioma de Frame (1.6.7).
+                    let html = format!(
+                        r#"<!doctype html><html lang="{}"><head><meta charset="utf-8"><title>Frame</title></head>
 <body style="background:#1c1c1e;color:#fafafa;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
-<div style="text-align:center"><h2 style="color:#7c8cff">Conexión completada</h2><p>Ya puedes cerrar esta ventana y volver a Frame.</p></div>
-</body></html>"#;
+<div style="text-align:center"><h2 style="color:#7c8cff">{}</h2><p>{}</p></div>
+</body></html>"#,
+                        ui("es", "en"),
+                        ui("Conexión completada", "Connection completed"),
+                        ui("Ya puedes cerrar esta ventana y volver a Frame.", "You can close this window and go back to Frame.")
+                    );
                     let response = format!(
                         "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
                         html.len(),

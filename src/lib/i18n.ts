@@ -182,3 +182,10 @@ export const dateLocale = () => (current === 'en' ? enUS : es);
 
 /** Etiqueta BCP 47 para `toLocaleString` e `Intl`. */
 export const intlLocale = () => (current === 'en' ? 'en-US' : 'es-PE');
+
+/** Número con decimales fijos: coma en español (como siempre en Frame),
+ *  punto en inglés. */
+export const decimalText = (value: number, digits = 1): string => {
+  const text = value.toFixed(digits);
+  return current === 'en' ? text : text.replace('.', ',');
+};

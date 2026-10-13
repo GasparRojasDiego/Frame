@@ -30,7 +30,7 @@ import {
 import { formatClock, playbackClock, usePlaybackPosition } from '@/lib/playback-clock';
 import { songTitle } from '@/lib/music-search';
 import { cn } from '@/lib/utils';
-import { tr } from '@/lib/i18n';
+import { decimalText, tr } from '@/lib/i18n';
 import { artistLabel } from '@/lib/enum-labels';
 
 // ============================================================
@@ -188,7 +188,7 @@ function LyricsFooter({
           <Minus className="h-3.5 w-3.5" />
         </Button>
         <span className="min-w-[3.25rem] text-center tabular-nums text-white/80">
-          {offset === 0 ? tr('A tiempo') : `${offset > 0 ? '+' : '−'}${Math.abs(offset).toFixed(1).replace('.', ',')} s`}
+          {offset === 0 ? tr('A tiempo') : `${offset > 0 ? '+' : '−'}${decimalText(Math.abs(offset))} s`}
         </span>
         <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-white/75 hover:bg-white/15 hover:text-white" onClick={() => onOffset(0.5)} title={tr('Letra 0,5 s después')}>
           <Plus className="h-3.5 w-3.5" />

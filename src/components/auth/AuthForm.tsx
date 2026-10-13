@@ -261,7 +261,8 @@ export default function AuthForm({ linkGuest }: AuthFormProps) {
       } catch (e: any) {
         const message = String(e?.message ?? e);
         // Cerrar la ventana de Google es una decisión, no un error.
-        if (!/cancelado/i.test(message)) {
+        // (En los dos idiomas: «Inicio de sesión cancelado» / «Sign-in canceled».)
+        if (!/cancelado|cancell?ed/i.test(message)) {
           toast({ variant: 'destructive', title: tr('No se pudo entrar con Google'), description: describeAuthError(message) });
         }
         setIsLoading(false);

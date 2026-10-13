@@ -70,10 +70,23 @@ function hasSelection(field: Field): boolean {
   return !(window.getSelection()?.isCollapsed ?? true);
 }
 
+/** El texto del portapapeles: lo lee el núcleo nativo en Windows (sin el
+ *  aviso de permiso del motor web); si no está, el propio navegador. */
+async function readClipboard(): Promise<string> {
+  if (isTauri()) {
+    try {
+      return await invoke<string>('read_clipboard_text');
+    } catch {
+      /* sin el comando nativo (Android): el del navegador */
+    }
+  }
+  return navigator.clipboard.readText();
+}
+
 async function paste(field: Field) {
   let text = '';
   try {
-    text = isTauri() ? await invoke<string>('read_clipboard_text') : await navigator.clipboard.readText();
+    text = await readClipboard();
   } catch {
     return;
   }

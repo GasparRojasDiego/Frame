@@ -1,4 +1,4 @@
-import { tr } from '@/lib/i18n';
+import { intlLocale, tr } from '@/lib/i18n';
 
 // ============================================================
 // Documento de informe: UN modelo, dos formatos.
@@ -1004,7 +1004,7 @@ const STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:docDefaults><w:rPrDefault><w:rPr>
 <w:rFonts w:ascii="${SANS_DOCX}" w:hAnsi="${SANS_DOCX}" w:cs="${SANS_DOCX}"/>
 <w:color w:val="${COLOR.ink}"/><w:sz w:val="20"/><w:szCs w:val="20"/>
-<w:lang w:val="es-PE"/>
+<w:lang w:val="__LANG__"/>
 </w:rPr></w:rPrDefault>
 <w:pPrDefault><w:pPr><w:spacing w:after="60" w:line="252" w:lineRule="auto"/></w:pPr></w:pPrDefault>
 </w:docDefaults>
@@ -1036,7 +1036,7 @@ export function renderDocxBlob(doc: DocModel, generatedAt: Date = new Date()): B
       { name: '_rels/.rels', text: ROOT_RELS },
       { name: 'docProps/core.xml', text: coreProps(doc.title, generatedAt.toISOString().replace(/\.\d+Z$/, 'Z')) },
       { name: 'word/_rels/document.xml.rels', text: DOCUMENT_RELS },
-      { name: 'word/styles.xml', text: STYLES },
+      { name: 'word/styles.xml', text: STYLES.replace('__LANG__', intlLocale()) },
       { name: 'word/document.xml', text: document },
     ].map((part) => ({ name: part.name, data: utf8(part.text) })),
     generatedAt

@@ -13,7 +13,7 @@ import {
 import { addSongFileToDB } from '@/lib/music-db';
 import { foldName, resolveSongName } from '@/lib/song-names';
 import type { Song } from '@/types';
-import { tr } from '@/lib/i18n';
+import { decimalText, tr } from '@/lib/i18n';
 import { UNKNOWN_ARTIST } from '@/lib/enum-labels';
 
 // ============================================================
@@ -537,7 +537,7 @@ export async function storeImportedSongs(
 }
 
 export function formatBytes(value: number): string {
-  if (value >= 1024 ** 3) return `${(value / 1024 ** 3).toFixed(1).replace('.', ',')} GB`;
+  if (value >= 1024 ** 3) return `${decimalText(value / 1024 ** 3)} GB`;
   if (value >= 1024 ** 2) return `${Math.round(value / 1024 ** 2)} MB`;
   return `${Math.max(1, Math.round(value / 1024))} KB`;
 }
