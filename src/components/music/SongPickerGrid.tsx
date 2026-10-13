@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useCourse } from '@/context/CourseContext';
+import { songTitle } from '@/lib/music-search';
 import { cn } from '@/lib/utils';
 import type { Song } from '@/types';
 
@@ -30,7 +31,7 @@ interface SongPickerGridProps {
   heightClass?: string;
 }
 
-const songLabel = (song: Song) => song.title?.trim() || song.fileName.replace(/\.(mp3|m4a|aac|ogg|opus|flac|wav|webm|weba)$/i, '');
+const songLabel = (song: Song) => songTitle(song);
 
 export default function SongPickerGrid({
   selectedIds,

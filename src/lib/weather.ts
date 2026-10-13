@@ -6,6 +6,7 @@
 // El NOMBRE del lugar detectado automáticamente lo resuelve
 // `@/lib/reverse-geocode` (Open-Meteo sólo hace geocoding directo).
 import { reverseGeocode, formatCoords, type GeoSource } from '@/lib/reverse-geocode';
+import { activeProfileId, weatherCacheKey, weatherImagesKey, weatherPlaceKey } from '@/lib/profile-scope';
 
 export { formatCoords };
 export type { GeoSource };
@@ -67,12 +68,15 @@ export interface WeatherPlace {
   resolvedAt?: number;
 }
 
-const PLACE_KEY = 'weatherPlace';
-const CACHE_KEY = 'weatherCache';
+// El lugar, el pronóstico guardado y las fotos del lugar son del perfil
+// (1.6.7): otra cuenta de este equipo nunca ve la ciudad de esta.
+const profileOrNone = () => activeProfileId() ?? 'sin-perfil';
+const placeKey = () => weatherPlaceKey(profileOrNone());
+const cacheKey = () => weatherCacheKey(profileOrNone());
 
 export function loadWeatherPlace(): WeatherPlace | null {
   try {
-    const raw = localStorage.getItem(PLACE_KEY);
+    const raw = localStorage.getItem(placeKey());
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -80,12 +84,12 @@ export function loadWeatherPlace(): WeatherPlace | null {
 }
 
 export function saveWeatherPlace(place: WeatherPlace) {
-  localStorage.setItem(PLACE_KEY, JSON.stringify(place));
+  localStorage.setItem(placeKey(), JSON.stringify(place));
 }
 
 export function loadWeatherCache(): WeatherData | null {
   try {
-    const raw = localStorage.getItem(CACHE_KEY);
+    const raw = localStorage.getItem(cacheKey());
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -276,13 +280,13 @@ export async function fetchWeather(place: WeatherPlace): Promise<WeatherData> {
       .filter((_, i) => i > 0 && i % HOURLY_STEP === 0),
     fetchedAt: Date.now(),
   };
-  localStorage.setItem(CACHE_KEY, JSON.stringify(weather));
+  localStorage.setItem(cacheKey(), JSON.stringify(weather));
   return weather;
 }
 
 // ---------------- Foto del lugar ----------------
 
-const PLACE_IMAGE_CACHE_KEY = 'weatherPlaceImages';
+const placeImagesKey = () => weatherImagesKey(profileOrNone());
 
 function placeImageCacheKey(place: WeatherPlace): string {
   return `${place.name}|${place.country ?? ''}`.toLowerCase();
@@ -290,7 +294,7 @@ function placeImageCacheKey(place: WeatherPlace): string {
 
 function loadPlaceImageCache(): Record<string, string> {
   try {
-    const raw = localStorage.getItem(PLACE_IMAGE_CACHE_KEY);
+    const raw = localStorage.getItem(placeImagesKey());
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};
@@ -301,7 +305,7 @@ function savePlaceImage(place: WeatherPlace, url: string) {
   try {
     const cache = loadPlaceImageCache();
     cache[placeImageCacheKey(place)] = url;
-    localStorage.setItem(PLACE_IMAGE_CACHE_KEY, JSON.stringify(cache));
+    localStorage.setItem(placeImagesKey(), JSON.stringify(cache));
   } catch {
     /* almacenamiento lleno: se ignora, se buscará de nuevo la próxima vez */
   }

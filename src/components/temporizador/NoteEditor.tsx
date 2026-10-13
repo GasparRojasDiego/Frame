@@ -674,7 +674,9 @@ export default function NoteEditor({
           aria-orientation={toolbarSide ? 'vertical' : 'horizontal'}
           className={cn(
             'inline-flex items-center gap-0.5 rounded-md border border-border bg-secondary/50 p-0.5',
-            toolbarSide && 'flex-col self-start'
+            // 1.6.7 (Diego): apilados, miden lo mismo que el recuadro de escribir
+            // (crecen con él) y reparten los botones a lo alto.
+            toolbarSide && 'flex-col justify-evenly self-stretch'
           )}
         >
           {/* 1.6.6: sin subrayado, deshacer ni rehacer (Diego). Ctrl+Z y Ctrl+Y

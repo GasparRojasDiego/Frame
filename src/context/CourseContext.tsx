@@ -43,6 +43,11 @@ import { useLocalEventReminders } from '@/components/calendar/useEventReminders'
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { deleteAttachment } from '@/lib/file-handles';
 import { forgetLyrics } from '@/lib/lyrics';
+import { UNKNOWN_ARTIST } from '@/lib/music-import';
+import { reviewStoredSong } from '@/lib/music-review';
+import { foldName, isJunkTag } from '@/lib/song-names';
+import { activeProfileId, ownerForUnownedSongs } from '@/lib/profile-scope';
+import { songTitle } from '@/lib/music-search';
 import { emit as tauriEmit, listen as tauriListen } from '@tauri-apps/api/event';
 import { format, parseISO } from 'date-fns';
 import { isSessionEditable } from '@/lib/session-edit';
@@ -680,17 +685,87 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     flush();
   }, []);
 
+  /**
+   * Repaso único de las canciones anteriores a la 1.6.7 (ver
+   * src/lib/music-review.ts): su duración y, si faltan, portada, artista y
+   * letra de sus propias etiquetas. Mismas reglas que la reducción de
+   * portadas: a ratos, leyendo la versión más reciente y por tandas.
+   */
+  const reviewRunRef = React.useRef(0);
+  const reviewOldSongs = useCallback(async (library: Song[]) => {
+    const run = ++reviewRunRef.current;
+    const pending = library.filter(s => typeof s.duration !== 'number');
+    if (pending.length === 0) return;
+    const knownArtists = new Set(
+      library.map(s => s.artist).filter(a => a && a !== UNKNOWN_ARTIST).map(foldName)
+    );
+
+    let batch = new Map<string, Partial<Song>>();
+    const flush = () => {
+      if (batch.size === 0) return;
+      const done = batch;
+      batch = new Map();
+      const apply = (s: Song) => (done.has(s.id) ? { ...s, ...done.get(s.id)! } : s);
+      setSongs(prev => prev.map(apply));
+      setPlaybackQueue(prev => prev.map(apply));
+      setCurrentSong(prev => (prev ? apply(prev) : prev));
+    };
+
+    for (const song of pending) {
+      await idle();
+      if (reviewRunRef.current !== run) return; // otra carga tomó el relevo
+      if (!songsRef.current.some(s => s.id === song.id)) continue; // borrada
+      try {
+        const updates = await reviewStoredSong(song, knownArtists);
+        const live = songsRef.current.find(s => s.id === song.id);
+        if (!live) continue;
+        // Lo que el usuario cambió mientras tanto manda.
+        if (live.picture) delete updates.picture;
+        if (live.artist && live.artist !== UNKNOWN_ARTIST) delete updates.artist;
+        if (!isJunkTag(live.title)) delete updates.title;
+        const updated = { ...live, ...updates };
+        await saveSongMetadata(updated);
+        songsRef.current = songsRef.current.map(s => (s.id === live.id ? updated : s));
+        if (updates.artist) knownArtists.add(foldName(updates.artist));
+        batch.set(live.id, updates);
+        if (batch.size >= 25) flush();
+      } catch (e) {
+        console.error('No se pudo repasar', song.fileName, e);
+      }
+    }
+    flush();
+  }, []);
+
   // Load all data on mount
   useEffect(() => {
     // Load songs async from IndexedDB
     const loadSongs = async () => {
       setAreSongsLoading(true);
       try {
-        const songsFromDB = await getAllSongMetadata();
+        const uid = userProfile!.id;
+        const allSongs = await getAllSongMetadata();
+
+        // De quién es cada canción (1.6.7). Hasta la 1.6.6 la música era del
+        // EQUIPO y otra cuenta la veía entera: las que no tienen dueño se
+        // asignan una sola vez, y cada perfil ve solo la suya.
+        const unowned = allSongs.filter(s => !s.owner);
+        if (unowned.length > 0) {
+          const ownerOf = ownerForUnownedSongs(uid);
+          for (const song of unowned) {
+            song.owner = ownerOf(song);
+            try {
+              await saveSongMetadata(song);
+            } catch (e) {
+              console.error('No se pudo asignar el dueño de', song.fileName, e);
+            }
+          }
+        }
+        const songsFromDB = allSongs.filter(s => s.owner === uid);
 
         // Saneo de duplicados históricos (mismo archivo con IDs distintos,
         // producto del viejo bug de borrado): se conserva la primera copia
-        // y las demás se eliminan definitivamente de IndexedDB.
+        // y las demás se eliminan definitivamente de IndexedDB. Solo dentro
+        // de este perfil: el mismo archivo en otra cuenta es de otra persona.
         const seen = new Map<string, Song>();
         const duplicates: Song[] = [];
         for (const song of songsFromDB) {
@@ -735,7 +810,9 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
 
         // Portadas pesadas de versiones anteriores: se reducen en segundo plano,
         // a ratos y una sola vez (las ya reducidas no vuelven a entrar aquí).
-        void shrinkHeavyCovers(cleanSongs);
+        // Después, el repaso de las canciones sin duración (1.6.7). En serie:
+        // así nunca guardan los dos la misma canción a la vez.
+        void shrinkHeavyCovers(cleanSongs).then(() => reviewOldSongs(cleanSongs));
       } catch (e) {
         console.error("Failed to load songs from IndexedDB", e);
         setSongs([]);
@@ -2381,7 +2458,9 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
       nextSeqRef.current,
       current.reduce((max, s) => Math.max(max, s.seq ?? -1), -1) + 1
     );
-    const numbered = unique.map(song => ({ ...song, seq: song.seq ?? next++ }));
+    // Cada canción nueva es del perfil que la trae (1.6.7).
+    const owner = activeProfileId() ?? undefined;
+    const numbered = unique.map(song => ({ ...song, seq: song.seq ?? next++, owner: song.owner ?? owner }));
     nextSeqRef.current = next;
 
     // El ref se adelanta al render: si la siguiente canción del lote llega
@@ -2504,7 +2583,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
         return { ...p, songIds: restoreIds(p.songIds, before.songIds, [id]) };
       }));
       setPlaybackQueue(prev => (prev.some(s => s.id === id) ? prev : [...prev, songToDelete]));
-      toast({ title: "Acción deshecha", description: `Canción "${songToDelete.fileName.replace('.mp3', '')}" restaurada.` });
+      toast({ title: "Acción deshecha", description: `Canción "${songTitle(songToDelete)}" restaurada.` });
     };
 
     const commit = async () => {
@@ -2525,7 +2604,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     };
     
     pushUndoableAction({ undo, commit });
-    toast({ title: `Canción "${songToDelete.fileName.replace('.mp3', '')}" eliminada`, description: "Presiona Ctrl+Z para deshacer." });
+    toast({ title: `Canción "${songTitle(songToDelete)}" eliminada`, description: "Presiona Ctrl+Z para deshacer." });
 
   }, [currentSong, storageKeys, songs, playlists]);
   

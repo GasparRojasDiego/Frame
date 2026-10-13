@@ -36,7 +36,6 @@ import { validateUsername } from '@/components/auth/AuthShell';
 import StudyVideoHost from '@/components/temporizador/StudyVideoHost';
 import ConstellationBackdrop from '@/components/layout/ConstellationBackdrop';
 import InterfaceErrorBoundary from '@/components/layout/InterfaceErrorBoundary';
-import NotionImportDialog from '@/components/extensions/NotionImportDialog';
 import UpdateDialog from '@/components/layout/UpdateDialog';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 import { getActiveSession, onAuthChange, tidyName, updatePersonNames, updateUsername } from '@/lib/supabase/auth';
@@ -51,6 +50,7 @@ import { isRecorderBusy } from '@/lib/recordings';
 import { onStorageQuotaError } from '@/lib/safe-storage';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { getImage } from '@/lib/music-db';
+import { activeProfileId, prepareProfile, scheduleImageKey } from '@/lib/profile-scope';
 import { useToast } from '@/hooks/use-toast';
 import type { Session } from '@supabase/supabase-js';
 
@@ -163,7 +163,8 @@ function AppLayout({ children, userProfile }: { children: ReactNode; userProfile
         if (!isTauri()) return;
         let alive = true;
         const sync = async () => {
-            const image = await getImage('scheduleImage').catch(() => null);
+            const uid = activeProfileId();
+            const image = uid ? await getImage(scheduleImageKey(uid)).catch(() => null) : null;
             if (!alive) return;
             void invoke('schedule_peek_enable', { enabled: Boolean(image) }).catch(() => undefined);
         };
@@ -174,7 +175,8 @@ function AppLayout({ children, userProfile }: { children: ReactNode; userProfile
             window.removeEventListener('scheduleImageUpdated', sync);
             void invoke('schedule_peek_enable', { enabled: false }).catch(() => undefined);
         };
-    }, []);
+        // Otro perfil, otro horario (1.6.7): se vuelve a mirar al cambiar de cuenta.
+    }, [userProfile?.id]);
 
 
     return (
@@ -226,9 +228,8 @@ function AppLayout({ children, userProfile }: { children: ReactNode; userProfile
                     Cuenta: «Sin conexión» sube a la campana (ConnectionNotice). */}
                 {userProfile && !userProfile.isGuest && <ConnectionNotice uid={userProfile.id} />}
                 <div className="flex-1 flex flex-col min-h-0">
-                    {/* `relative` envuelve SOLO el área con scroll: el botón de
-                        la ayuda queda en su esquina, siempre por encima del
-                        reproductor de música. */}
+                    {/* `relative` envuelve SOLO el área con scroll, siempre
+                        por encima del reproductor de música. */}
                     <div className="relative flex min-h-0 flex-1 flex-col">
                     <div className="flex-1 overflow-y-auto">
                         {/* h-full: las interfaces incrustadas (Calendario,
@@ -365,8 +366,6 @@ function MainApp({ children, userProfile }: { children: ReactNode; userProfile: 
       <Toaster />
       {/* Alerta diaria de tareas vencidas (reprogramar/culminar/eliminar) */}
       <OverdueTasksAlert />
-      {/* Importador de Notion: lo abre su botón en Ajustes (y el atajo /notion de la Ayuda). */}
-      <NotionImportDialog />
       {/* Recuadro de actualización: lo abren el testigo junto al perfil y la campana. */}
       <UpdateDialog />
       {interruptedSession && (
@@ -386,6 +385,20 @@ function AppController({ children }: { children: React.ReactNode }) {
   // Actualizaciones: solo se MIRA si hay versión nueva (testigo del sidebar y
   // campana). Instalar lo decide el usuario en el recuadro de actualización.
   useEffect(() => startUpdaterLoop(), []);
+
+  // Gmail, YouTube y Classroom: las páginas son de cada perfil (1.6.7). Al
+  // cambiar de cuenta se cierran las del anterior, y la sesión de Google que
+  // hasta la 1.6.6 compartían todos los perfiles se borra una sola vez.
+  useEffect(() => {
+    if (!isTauri()) return;
+    void invoke('google_embed_close_all').catch(() => undefined);
+  }, [userProfile?.id]);
+  useEffect(() => {
+    if (!isTauri() || localStorage.getItem('googleSessionIsolated') === '1') return;
+    void invoke<number>('clear_shared_google_session')
+      .then(() => localStorage.setItem('googleSessionIsolated', '1'))
+      .catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     /** Usuario ya hidratado en este arranque: evita repetir el trabajo. */
@@ -441,6 +454,7 @@ function AppController({ children }: { children: React.ReactNode }) {
             // Camino sin red de una cuenta: sin esto, el SIGNED_IN que supabase-js
             // repite al recuperar el foco disparaba una rehidratación completa.
             if (!profile.isGuest) hydratedUid = profile.id;
+            prepareProfile(profile.id);
             setUserProfile(profile);
             setAuthStatus('authenticated');
           } else {
@@ -607,6 +621,7 @@ function AppController({ children }: { children: React.ReactNode }) {
           auto_profile: Boolean(finalUsername),
         });
       }
+      prepareProfile(finalProfile.id);
       setUserProfile(finalProfile);
       setAuthStatus(finalUsername ? 'authenticated' : 'needs-completion');
     };
@@ -674,6 +689,7 @@ function AppController({ children }: { children: React.ReactNode }) {
   const handleProfileComplete = useCallback((completedProfile: UserProfile) => {
     // The form has already saved the full profile to localStorage.
     // Now we update the state to render the main app.
+    prepareProfile(completedProfile.id);
     setUserProfile(completedProfile);
     setAuthStatus('authenticated');
   }, []);

@@ -1,6 +1,7 @@
 import { getAllImages, getImage, getRecordingAudio, saveImage } from '@/lib/music-db';
 import { exportKnowledge, importKnowledge } from '@/lib/knowledge-db';
 import { applyLocalData, collectLocalData, type LocalSnapshot } from '@/lib/storage-snapshot';
+import { scheduleImageKey } from '@/lib/profile-scope';
 import { APP_VERSION } from '@/lib/version';
 import type { Recording, UserProfile } from '@/types';
 
@@ -17,8 +18,9 @@ import type { Recording, UserProfile } from '@/types';
 //
 // El archivo lleva el estado (asignaturas, tareas, sesiones, hábitos, playlists,
 // horario…), las portadas e imágenes, los adjuntos de los recursos, el banco de
-// Conocimiento y las fichas de las grabaciones. La música NO viaja: las
-// canciones viven en el equipo, fuera de los perfiles, y por eso «ya estaban».
+// Conocimiento y las fichas de las grabaciones. La música NO va en el archivo
+// (pesa demasiado): es de cada perfil (1.6.7) y, al vincular un invitado, pasa
+// a la cuenta (guest-link.ts).
 // ============================================================
 
 export const TRANSFER_FORMAT = 1;
@@ -70,7 +72,8 @@ export async function buildTransferFile(profile: UserProfile): Promise<TransferF
 
   const images: Record<string, string> = {};
   for (const key of imageKeysFor(data)) {
-    const value = await getImage(key).catch(() => null);
+    // En el equipo, el horario lleva el id del perfil; en el archivo, su nombre lógico.
+    const value = await getImage(key === 'scheduleImage' ? scheduleImageKey(uid) : key).catch(() => null);
     if (value) images[key] = value;
   }
   const avatar = await getImage(`profileAvatar_${uid}`).catch(() => null);
@@ -156,7 +159,7 @@ export async function importTransferFile(file: TransferFile, uid: string, mode: 
   let images = 0;
   const present = mode === 'merge' ? new Set((await getAllImages().catch(() => [])).map((entry) => entry.key)) : new Set<string>();
   for (const [key, dataUrl] of Object.entries(file.images)) {
-    const target = key === AVATAR_SLOT ? `profileAvatar_${uid}` : key;
+    const target = key === AVATAR_SLOT ? `profileAvatar_${uid}` : key === 'scheduleImage' ? scheduleImageKey(uid) : key;
     if (present.has(target)) continue;
     try {
       await saveImage(target, dataUrl);

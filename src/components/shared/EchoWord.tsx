@@ -1,3 +1,4 @@
+import { createContext, useContext } from 'react';
 import type React from 'react';
 import { cn } from '@/lib/utils';
 
@@ -5,21 +6,33 @@ import { cn } from '@/lib/utils';
 // Eco de una palabra detrás de un título.
 //
 // La palabra (con mayúscula inicial: sin mayúsculas sostenidas desde la
-// 1.6.6), repetida muchas veces y casi transparente, deriva sin pausa de un lado a otro en dos filas a distinto ritmo. Da vida
-// a las cabeceras de los recuadros que, con un título corto, quedaban
-// vacías («Nueva playlist», «Crear»…). Es el mismo recurso que el nombre de
-// cada asignatura a la espalda de su cabecera, a escala de recuadro.
+// 1.6.6), repetida muchas veces y casi transparente, en dos filas
+// escalonadas. Da vida a las cabeceras de los recuadros que, con un título
+// corto, quedaban vacías («Nueva playlist», «Crear»…).
+//
+// 1.6.7 (Diego): el eco es solo de los recuadros emergentes —los que
+// aparecen tras uno o más clics— y va quieto. En los recuadros que forman
+// parte de la interfaz no se pinta. Lo único que se mueve es el nombre a la
+// espalda de cada asignatura (`NameDriftBackdrop`).
 //
 // Se coloca dentro de un contenedor con `relative` y `overflow-hidden`; el
 // título de verdad va encima con `relative`.
 // ============================================================
 
-/** Copias por mitad de pista: de sobra para el ancho de un recuadro. */
-const COPIES = 8;
+/**
+ * Verdadero dentro de un recuadro emergente. Lo dan `DialogContent`,
+ * `AlertDialogContent` y `PopoverContent`; fuera de ellos el eco no se pinta.
+ */
+export const PopupSurface = createContext(false);
 
-const ROWS: { seconds: number; reverse: boolean; size: string; small: string; opacity: string }[] = [
-  { seconds: 38, reverse: false, size: 'text-3xl', small: 'text-xl', opacity: 'opacity-[0.045]' },
-  { seconds: 52, reverse: true, size: 'text-4xl', small: 'text-2xl', opacity: 'opacity-[0.03]' },
+/** Copias por fila: de sobra para el ancho de un recuadro. */
+const COPIES = 12;
+
+// La primera fila arranca media palabra antes que la segunda: escalonadas
+// como ladrillos, sin depender del largo de la palabra.
+const ROWS: { size: string; small: string; opacity: string; shift: string }[] = [
+  { size: 'text-3xl', small: 'text-xl', opacity: 'opacity-[0.045]', shift: '-translate-x-[4%]' },
+  { size: 'text-4xl', small: 'text-2xl', opacity: 'opacity-[0.03]', shift: '' },
 ];
 
 export default function EchoWord({
@@ -32,6 +45,9 @@ export default function EchoWord({
   /** Letra más pequeña, para las cabeceras bajas de los recuadros propios. */
   small?: boolean;
 }) {
+  const inPopup = useContext(PopupSurface);
+  if (!inPopup) return null;
+
   const trimmed = word.trim();
   const label = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
   const copies = Array.from({ length: COPIES }, (_, index) => index);
@@ -48,23 +64,15 @@ export default function EchoWord({
         <div
           key={rowIndex}
           className={cn(
-            'frame-name-drift flex w-max whitespace-nowrap font-headline font-black leading-none tracking-tight text-primary',
+            'flex w-max whitespace-nowrap font-headline font-black leading-none tracking-tight text-primary',
             small ? row.small : row.size,
             row.opacity,
+            row.shift,
           )}
-          style={{
-            animation: `frame-name-drift ${row.seconds}s linear infinite`,
-            animationDirection: row.reverse ? 'reverse' : 'normal',
-          }}
         >
-          {/* Dos mitades idénticas: el bucle no tiene costura. */}
-          {[0, 1].map((half) => (
-            <span key={half} className="flex shrink-0">
-              {copies.map((copy) => (
-                <span key={copy} className="px-4">
-                  {label}
-                </span>
-              ))}
+          {copies.map((copy) => (
+            <span key={copy} className="px-4">
+              {label}
             </span>
           ))}
         </div>
@@ -110,9 +118,10 @@ const TILE_PAD = {
 
 /**
  * Cabecera de un recuadro propio (sin `CardHeader`; 1.6.6, Diego: «todo
- * recuadro que tenga encabezado»): el eco queda confinado a la cabecera y la
- * cierra una divisoria fina con aire a los lados. Va como primer hijo del
- * recuadro; `pad` es el relleno de ese recuadro.
+ * recuadro que tenga encabezado»): la cierra una divisoria fina con aire a
+ * los lados; el eco, confinado a la cabecera, solo aparece si el recuadro va
+ * dentro de un emergente. Va como primer hijo del recuadro; `pad` es el
+ * relleno de ese recuadro.
  */
 export function EchoTileHeader({
   word,

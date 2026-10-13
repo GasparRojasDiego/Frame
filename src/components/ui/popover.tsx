@@ -2,6 +2,7 @@ import * as React from "react";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 
 import { cn } from "@/lib/utils";
+import { PopupSurface } from "@/components/shared/EchoWord";
 
 const Popover = PopoverPrimitive.Root
 
@@ -22,7 +23,7 @@ const PopoverContent = React.forwardRef<
       )}
       {...props}
     >
-        {children}
+        <PopupSurface.Provider value>{children}</PopupSurface.Provider>
         {withArrow && <PopoverPrimitive.Arrow className="fill-popover" />}
     </PopoverPrimitive.Content>
   </PopoverPrimitive.Portal>

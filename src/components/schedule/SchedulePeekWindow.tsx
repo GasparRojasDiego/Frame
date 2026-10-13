@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { getImage } from '@/lib/music-db';
+import { activeProfileId, scheduleImageKey } from '@/lib/profile-scope';
 
 // ============================================================
 // Vistazo al horario (ventana propia, sin marco).
@@ -40,8 +41,14 @@ export default function SchedulePeekWindow() {
     document.body.style.margin = '0';
   }, []);
 
+  // El horario del perfil activo (la ventana comparte su almacenamiento).
   const load = useCallback(() => {
-    void getImage('scheduleImage').then((stored) => setImage(stored));
+    const uid = activeProfileId();
+    if (!uid) {
+      setImage(null);
+      return;
+    }
+    void getImage(scheduleImageKey(uid)).then((stored) => setImage(stored));
   }, []);
 
   useEffect(() => {

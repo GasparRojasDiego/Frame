@@ -12,7 +12,7 @@
 
 import { TERMS_VERSION } from './terms';
 
-export const INFO_VERSION = '4.8';
+export const INFO_VERSION = '4.9';
 
 export function infoDocument({
   appVersion,
@@ -41,7 +41,7 @@ Frame reúne en una sola aplicación lo que normalmente exige cinco: gestión de
 
 **Recursos.** 4 GB de memoria y 300 MB de espacio libre, más el espacio que ocupen tu biblioteca de música y tus grabaciones, que crece sin límite fijado por la aplicación.
 
-**Conexión a internet.** No es necesaria para el núcleo académico —asignaturas, tareas, sesiones de estudio, hábitos, calendario local, tu música, grabaciones y la ayuda—. Sí lo es para crear tu cuenta e iniciar sesión —una vez dentro, lo anterior sigue funcionando sin ella—, para la sincronización en la nube, las interfaces de YouTube, Gmail y Classroom, los vídeos de estudio, la tarjeta de clima y la comprobación de actualizaciones.
+**Conexión a internet.** No es necesaria para el núcleo académico —asignaturas, tareas, sesiones de estudio, hábitos, calendario local, tu música y tus grabaciones—. Sí lo es para crear tu cuenta e iniciar sesión —una vez dentro, lo anterior sigue funcionando sin ella—, para la sincronización en la nube, las interfaces de YouTube, Gmail y Classroom, los vídeos de estudio, la tarjeta de clima y la comprobación de actualizaciones.
 
 **Permisos del sistema.** Frame solicita acceso al micrófono para la grabación de voz, al sistema de archivos para adjuntos, portadas, informes y la biblioteca musical, y permiso para mostrar notificaciones nativas y una ventana siempre visible sobre las demás aplicaciones (la vista flotante del reloj). Estos permisos se emplean únicamente para las funciones descritas.
 
@@ -75,37 +75,31 @@ Frame distingue tres lugares de almacenamiento. Conocer la diferencia es lo que 
 
 ## 4 · Qué incluye esta versión
 
-### 4.1 Ayuda
-
-El botón de las **dos estrellas**, a la izquierda de la barra superior, abre el **Centro de ayuda**, que ocupa todo el espacio entre el menú y la barra superior. Eliges un tema en sus tarjetas y luego la pregunta que te interesa. No es una inteligencia artificial: responde desde una guía escrita función por función, al instante y sin internet.
-
-Las respuestas están escritas para quien abre Frame por primera vez: explican en lenguaje sencillo qué hacer y dónde está cada botón. No guarda lo que consultas.
-
-**Importar de Notion** (Ajustes → rueda de la cuenta) trae tus tareas y fechas desde la exportación de una base de datos de Notion (el .zip o el .csv), sin conectarse a tu cuenta.
-
-### 4.2 Núcleo académico
+### 4.1 Núcleo académico
 
 Asignaturas con imagen de portada, agrupables en colecciones, con profesor y estadísticas propias; recursos (anotaciones, enlaces, archivos y grabaciones) ordenados en su propia pestaña, y un registro permanente de lo culminado.
 
 El botón **«+»** de la barra superior crea una tarea o una anotación sin ir hasta la asignatura; una anotación sin asignatura queda como tarjeta al final de Inicio. Tareas con descripción, asignatura, fecha de entrega, importancia, tipo, dificultad, tiempo estimado y porcentaje de avance, que puedes ajustar a mano o que sube solo con tus sesiones de estudio en proporción al tiempo estimado. Recordatorios tarea por tarea, con días, hora y repetición. Adjuntos enlazados al archivo original de tu disco —se eligen con un clic o se arrastran, uno o varios, al recuadro «Adjuntar archivo»—: si sigues editándolo, Frame ve siempre la versión actual.
 
-Archivo de tareas culminadas e incompletas, con tiempo dedicado y puntualidad; aviso diario de tareas vencidas para reprogramarlas, culminarlas o descartarlas.
+Archivo de tareas culminadas e incompletas, con tiempo dedicado y puntualidad; aviso diario de tareas vencidas para reprogramarlas, culminarlas o descartarlas. Junto a «Filtros», cuántas tareas ves y cuánto suma su tiempo estimado.
 
-### 4.3 Estudio y medición del estudio
+**Importar de Notion** (Ajustes → rueda de la cuenta) trae tus tareas y fechas desde la exportación de una base de datos de Notion (el .zip o el .csv), sin conectarse a tu cuenta.
+
+### 4.2 Estudio y medición del estudio
 
 Temporizador o cronómetro, con **vista flotante** siempre visible en dos tamaños. En **modo rendimiento** valoras tu concentración de 1 a 20 y Frame calcula la nota del día (AD, A, B, C); en **modo tiempo** solo cuentan los minutos frente a tu meta.
 
-Al terminar, el formulario recoge el tiempo exacto, tu enfoque, las asignaturas y tareas trabajadas y **lo que hiciste, con un editor de texto con negrita, cursiva, subrayado y listas**; las asignaturas y sus tareas se eligen con tarjetas. Durante la sesión puedes anotar avances con su minuto. Si Frame se cierra con una sesión en marcha, al volver el mismo día puedes retomarla.
+Al terminar, el formulario recoge el tiempo exacto, tu enfoque, las asignaturas y tareas trabajadas y **lo que hiciste, con un editor de texto con negrita, cursiva y listas**; las asignaturas y sus tareas se eligen con tarjetas. Durante la sesión puedes anotar avances con su minuto. Si Frame se cierra con una sesión en marcha, al volver el mismo día puedes retomarla.
 
 Cada sesión es una tarjeta con su asignatura, su tiempo y su rendimiento, y se abre con todo su detalle. Calendario de calificaciones con el detalle de cada jornada (tiempo frente a la meta, sesiones, enfoque medio, nota y cuándo estudiaste: mañana, tarde o noche), progreso académico semanal o mensual y vídeos de estudio de YouTube, que se ven con su reproductor.
 
-### 4.4 Análisis e informes
+### 4.3 Análisis e informes
 
 La barra superior muestra frases con tus datos recientes que cambian solas. Inicio resume tu día: clima, horario, nota de ayer, racha, promedio semanal, próxima tarea, «Tu semana en datos» y la matriz de competencias (carga pendiente por asignatura, no una medida de conocimiento). Hábitos con fases del día, anillos, semana tipo y mapa de constancia. **Informes** de rendimiento y de pendientes en PDF y Word —semanales, mensuales o anuales—, en Ajustes, con un resumen y la vista previa real del documento.
 
-### 4.5 Calendario, Google y música
+### 4.4 Calendario, Google y música
 
-Calendario local sin conexión: eventos de uno o varios días, recordatorios con aviso, colores en las casillas y selección de varios días a la vez arrastrando; **YouTube, Gmail y Classroom** integrados en la barra lateral. Biblioteca con **tu propia música**: «Importar» trae canciones sueltas o carpetas enteras de tu equipo, con su portada y su letra (etiquetas del archivo o un .lrc con el mismo nombre), y se reproduce con letras sincronizadas, playlists y favoritas; al pulsar el nombre de la playlist en el reproductor se ubica la canción que suena. Grabación de voz desde cualquier pantalla (\`Ctrl+Shift+F\`), con el límite que elijas, hasta 4 horas. Las actualizaciones muestran su peso, el tiempo estimado y el avance real antes y durante la instalación.
+Calendario local sin conexión: eventos de uno o varios días, recordatorios con aviso, colores en las casillas y selección de varios días a la vez arrastrando; **YouTube, Gmail y Classroom** integrados en la barra lateral. Biblioteca con **tu propia música**: «Importar» trae canciones sueltas o carpetas enteras de tu equipo —MP3, M4A, AAC, OGG, Opus, FLAC, WAV y WebM— con su portada (la que trae el archivo, una imagen con su mismo nombre o la de su carpeta) y su letra (la de sus etiquetas, o un .lrc o .txt con su mismo nombre); separa el título del artista aunque el archivo no traiga etiquetas y avisa de lo que no puede reproducir. Se reproduce con letras sincronizadas —que también puedes añadir después, desde un archivo tuyo, en «Reproduciendo»—, playlists con su duración total y favoritas; al pulsar el nombre de la playlist en el reproductor se ubica la canción que suena. Grabación de voz desde cualquier pantalla (\`Ctrl+Shift+F\`), con el límite que elijas, hasta 4 horas. Las actualizaciones muestran su peso, el tiempo estimado y el avance real antes y durante la instalación.
 
 ---
 
@@ -123,7 +117,7 @@ El radar de competencias y las calificaciones diarias se calculan exclusivamente
 
 La música, las grabaciones y los adjuntos no se respaldan en la nube.
 
-Si una canción no trae su letra, Frame la busca en internet al abrir «Reproduciendo»; si no la encuentra, vuelve a intentarlo pasadas dos semanas. Frame no descarga música ni vídeos.
+Frame no busca ni descarga música, vídeos, portadas ni letras: muestra la letra y la portada que traen tus archivos o las que tú añades; lo que versiones anteriores ya guardaron en tu equipo se conserva. Los formatos que el motor de audio de Windows no reproduce (WMA, AIFF, ALAC, APE y otros) no se importan, y Frame dice cuáles quedaron fuera.
 
 Las interfaces de Google requieren conexión y sesión iniciada en Google, y su funcionamiento depende íntegramente de Google.
 
@@ -135,7 +129,7 @@ Frame está construida sobre software de terceros distribuido bajo licencias abi
 
 Los servicios de Google —Gmail, YouTube y Classroom— son operados por Google LLC; su disponibilidad, contenido y condiciones dependen de Google. La copia en la nube y la autenticación se ejecutan sobre la infraestructura de **Supabase**.
 
-Las letras sincronizadas que una canción no trae se reconocen en **LRCLIB** (lrclib.net) y, cuando allí no están, en **YouTube Music**, **NetEase Cloud Music** y **Kugou**: Frame les envía el título, el artista y la duración de la canción —nada que te identifique— y guarda la letra en tu equipo. El pronóstico del clima procede de **Open-Meteo**.
+El pronóstico del clima procede de **Open-Meteo**.
 
 Notion es una marca de Notion Labs, Inc.; la extensión solo lee los archivos que exportas tú y no se conecta a su servicio.
 
@@ -154,6 +148,8 @@ Se ofrece soporte para la versión estable vigente y para la inmediatamente ante
 ## 8 · Historial de versiones
 
 **${appVersion} — ${releaseDate}**
+
+*1.6.7:* **tu música, a fondo**: Frame lee las etiquetas de MP3, M4A, FLAC, OGG, Opus, WAV y WebM —título, artista, álbum, portada, letra (también la sincronizada) y duración—, separa el título del artista aunque el archivo no traiga etiquetas, usa la portada de la carpeta si la canción no trae una y avisa al importar de lo que no puede reproducir y por qué · **las letras son solo tuyas**: Frame deja de buscarlas en internet; muestra la que trae la canción o la que añades desde un archivo .lrc o .txt en «Reproduciendo» · las **playlists** muestran su duración total y su cabecera funde la imagen con el fondo sin cortes · **Tareas**: junto a «Filtros», cuántas tareas ves y cuánto suma su tiempo estimado · se retira el **Centro de ayuda** · la palabra de fondo queda solo en los recuadros que se abren con un clic, y quieta; solo se mueve en cada asignatura · los botones de formato apilados miden lo mismo que el recuadro de escribir · en Música, sin flechas al pie de la lista · Términos y Política de privacidad 4.9: sin servicios de letras ni conversaciones con la ayuda.
 
 *1.6.6:* **Centro de ayuda** por temas y preguntas, sin barra ni historial, con un **dodecaedro** que gira de lado y frases que cambian a las 6, a las 12 y a las 18 · **cada asignatura**: «Clases» pasa a ser **«Recursos»** (anotaciones, enlaces, archivos y grabaciones, en orden) y se retira el horario del mes · **encuadre** con la imagen completa a la vista y lo que no se usa, oscurecido · las tarjetas guardan la **proporción** de imagen que elijas · **Inicio**: «Ayer», «Promedio semanal», «Días de racha» y «Próxima tarea» rediseñados · **Ajustes**: «Tu racha» bajo Rendimiento y Tiempo, con **Informes** a su derecha · cabeceras con línea divisoria y palabra de fondo en todos los recuadros · textos sin mayúsculas sostenidas · formato de anotaciones sin subrayado, deshacer ni rehacer · Términos y Política de privacidad 4.8: se retira la cláusula de la importación de horarios.
 

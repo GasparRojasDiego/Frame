@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { LoaderCircle, WifiOff } from 'lucide-react';
 import { invoke, isTauri } from '@tauri-apps/api/core';
+import { activeProfileId } from '@/lib/profile-scope';
 
 // ============================================================
 // Recuadro anfitrión de un servicio de Google REAL (Gmail, YouTube, Classroom)
@@ -95,6 +96,8 @@ export default function GoogleEmbed({
 
       const payload = {
         kind,
+        // Cada perfil, su propia sesión de Google (1.6.7).
+        profile: activeProfileId() ?? 'sin-perfil',
         x: Math.round(r.left * 2) / 2,
         y: Math.round(top * 2) / 2,
         width: Math.round(r.width * 2) / 2,
@@ -138,6 +141,7 @@ export default function GoogleEmbed({
       // Al salir de la sección el webview se aparta (sin destruirse).
       void invoke('google_embed_update', {
         kind,
+        profile: activeProfileId() ?? 'sin-perfil',
         x: 0,
         y: 0,
         width: 1,

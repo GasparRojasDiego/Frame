@@ -50,13 +50,29 @@ import { aspectOf } from '@/components/shared/ImageCropper';
 import { saveImage } from '@/lib/music-db';
 import { useStoredImage } from '@/hooks/use-stored-image';
 import { cn } from '@/lib/utils';
+import { formatHoursMinutes } from '@/lib/duration';
 import type { Playlist, Song } from '@/types';
 import { useCourse } from '@/context/CourseContext';
 import SongPickerGrid from '@/components/music/SongPickerGrid';
 import { songCardId, useSongHighlight } from '@/hooks/use-song-highlight';
-import { songMatches } from '@/lib/music-search';
+import { songMatches, songTitle } from '@/lib/music-search';
 import { EchoHeader } from '@/components/shared/EchoWord';
 
+/**
+ * Curva suave (entrada y salida lentas) para los degradados de la cabecera:
+ * con dos o tres paradas lineales se ve el escalón donde empieza la imagen.
+ * [posición %, opacidad].
+ */
+const EASED_STOPS: [number, number][] = [
+  [0, 0], [8.1, 0.013], [15.5, 0.049], [22.5, 0.104], [29, 0.175], [35.3, 0.259], [41.2, 0.352], [47.1, 0.45],
+  [52.9, 0.55], [58.8, 0.648], [64.7, 0.741], [71, 0.825], [77.5, 0.896], [84.5, 0.951], [91.9, 0.987], [100, 1],
+];
+/** La imagen: transparente (= fondo de la app) a la izquierda, entera a la derecha. */
+const HEADER_IMAGE_MASK = `linear-gradient(to right, ${EASED_STOPS.map(([at, alpha]) => `rgba(0,0,0,${alpha}) ${at}%`).join(', ')})`;
+/** El velo: color del fondo a la izquierda, transparente a la derecha. */
+const HEADER_BACKGROUND_VEIL = `linear-gradient(to right, ${EASED_STOPS.map(
+  ([at, alpha]) => `hsl(var(--background) / ${Math.round((1 - alpha) * 1000) / 1000}) ${at}%`
+).join(', ')})`;
 
 const SortablePlaylistSongCard = ({ song, onPlay, onRemove, highlighted }: { song: Song; onPlay: () => void; onRemove: () => void; highlighted?: boolean }) => {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: song.id });
@@ -89,7 +105,7 @@ const SortablePlaylistSongCard = ({ song, onPlay, onRemove, highlighted }: { son
                                 {song.picture ? (
                                     <Image
                                         src={song.picture}
-                                        alt={song.fileName.replace(/\.(mp3|m4a|aac|ogg|opus|flac|wav|webm|weba)$/i, '')}
+                                        alt={songTitle(song)}
                                         fill
                                         style={{objectFit: 'cover'}}
                                         className="rounded-md"
@@ -99,7 +115,7 @@ const SortablePlaylistSongCard = ({ song, onPlay, onRemove, highlighted }: { son
                                 )}
                             </div>
                             <div className="flex flex-col truncate min-w-0">
-                                <p className="font-semibold text-foreground truncate">{song.fileName.replace(/\.(mp3|m4a|aac|ogg|opus|flac|wav|webm|weba)$/i, '')}</p>
+                                <p className="font-semibold text-foreground truncate">{songTitle(song)}</p>
                                 <p className="text-xs text-muted-foreground truncate">{song.artist}</p>
                             </div>
                         </CardContent>
@@ -129,7 +145,7 @@ const PlaylistSongCard = ({ song, onPlay, onRemove, highlighted }: { song: Song;
                     {song.picture ? (
                         <Image
                             src={song.picture}
-                            alt={song.fileName.replace(/\.(mp3|m4a|aac|ogg|opus|flac|wav|webm|weba)$/i, '')}
+                            alt={songTitle(song)}
                             fill
                             style={{objectFit: 'cover'}}
                             className="rounded-md"
@@ -139,7 +155,7 @@ const PlaylistSongCard = ({ song, onPlay, onRemove, highlighted }: { song: Song;
                     )}
                 </div>
                 <div className="flex flex-col truncate min-w-0">
-                    <p className="font-semibold text-foreground truncate">{song.fileName.replace(/\.(mp3|m4a|aac|ogg|opus|flac|wav|webm|weba)$/i, '')}</p>
+                    <p className="font-semibold text-foreground truncate">{songTitle(song)}</p>
                     <p className="text-xs text-muted-foreground truncate">{song.artist}</p>
                 </div>
             </CardContent>
@@ -337,24 +353,39 @@ export default function PlaylistDetailsClient({ id }: { id: string }) {
   
   const songsToShow = isSearching ? filteredSongs : playlistSongs;
 
+  // Duración total de lo que se ve (toda la playlist, o lo que encuentra la
+  // búsqueda, igual que el contador). Las canciones anteriores a la 1.6.7 se
+  // miden en segundo plano: mientras falte alguna, «calculando…».
+  let totalSeconds = 0;
+  let measuring = false;
+  for (const song of songsToShow) {
+    if (typeof song.duration === 'number') totalSeconds += song.duration;
+    else measuring = true;
+  }
+  const totalLabel = songsToShow.length === 0
+    ? null
+    : measuring
+      ? 'calculando…'
+      : totalSeconds > 0
+        ? formatHoursMinutes(totalSeconds / 60)
+        : null;
+
   return (
     <div className="space-y-6 px-6 pb-6 md:px-8 md:pb-8">
-      {/* CABECERA a sangre. Mitad izquierda: nombre, buscador (con el contador
-          dentro) y acciones, apilados. Mitad derecha: la imagen de la playlist,
-          exactamente tan alta como esa pila, que nace del color del fondo en el
-          centro y se va aclarando hacia la derecha. */}
+      {/* CABECERA a sangre, en cuartos (1.6.7, Diego). Mitad izquierda: nombre,
+          buscador (con el contador dentro) y acciones, apilados. La imagen
+          ocupa los 3/4 de la derecha y, hacia la izquierda, se vuelve del color
+          del fondo; un velo ocupa los 3/4 de la izquierda: empieza con el color
+          del fondo y se vuelve transparente hacia la derecha. Así la imagen
+          nace sin borde. */}
       <div className="relative -mx-6 overflow-hidden border-b border-border/60 md:-mx-8">
         {/* La imagen se funde con una MÁSCARA de transparencia, no con un
-            degradado pintado: así se ve el fondo real de la app (con su
-            constelación), en modo claro y oscuro. El degradado de color plano
-            dejaba una franja clara, casi blanca, donde empezaba la imagen. */}
+            degradado pintado: así se ve el fondo real de la app, en modo claro
+            y oscuro. */}
         <div
           ref={headerImageRef}
-          className="absolute inset-y-0 right-0 w-[52%]"
-          style={{
-            WebkitMaskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.55) 35%, #000 75%)',
-            maskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.55) 35%, #000 75%)',
-          }}
+          className="absolute inset-y-0 right-0 w-3/4"
+          style={{ WebkitMaskImage: HEADER_IMAGE_MASK, maskImage: HEADER_IMAGE_MASK }}
           aria-hidden
         >
           {headerImage ? (
@@ -363,6 +394,11 @@ export default function PlaylistDetailsClient({ id }: { id: string }) {
             <WaveBackdrop />
           )}
         </div>
+        <div
+          className="pointer-events-none absolute inset-y-0 left-0 w-3/4"
+          style={{ backgroundImage: HEADER_BACKGROUND_VEIL }}
+          aria-hidden
+        />
 
         {/* Cambiar la imagen: esquina superior derecha de la interfaz. */}
         <Button
@@ -407,13 +443,19 @@ export default function PlaylistDetailsClient({ id }: { id: string }) {
               id="playlist-search"
               aria-label="Buscar en la playlist"
               placeholder="canciones o artistas…"
-              className="w-full border-primary bg-card pl-9 pr-32"
+              className={cn('w-full border-primary bg-card pl-9', totalLabel ? 'pr-52' : 'pr-32')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
             <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 whitespace-nowrap text-xs text-muted-foreground">
               / <span className="font-bold text-foreground/80">{songsToShow.length}</span>{' '}
               {songsToShow.length === 1 ? 'canción' : 'canciones'}
+              {totalLabel && (
+                <>
+                  {' · '}
+                  <span className={cn(!measuring && 'font-bold text-foreground/80')}>{totalLabel}</span>
+                </>
+              )}
             </span>
           </div>
 
@@ -546,7 +588,7 @@ export default function PlaylistDetailsClient({ id }: { id: string }) {
             <AlertDialogHeader>
                 <AlertDialogTitle>¿Eliminar canción de la playlist?</AlertDialogTitle>
                 <AlertDialogDescription>
-                    Esto eliminará "{songToRemove?.fileName.replace(/\.(mp3|m4a|aac|ogg|opus|flac|wav|webm|weba)$/i, '')}" de la playlist "{playlist.name}". La canción permanecerá en tu biblioteca.
+                    Esto eliminará "{(songToRemove ? songTitle(songToRemove) : '')}" de la playlist "{playlist.name}". La canción permanecerá en tu biblioteca.
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

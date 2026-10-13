@@ -34,6 +34,7 @@ import AcademicPulse from '@/components/dashboard/AcademicPulse';
 import LooseNotesSection from '@/components/dashboard/LooseNotesSection';
 import { DIFFICULTY_META, DifficultyBars } from '@/components/tasks/task-badges';
 import { EchoHeader, EchoTileHeader } from '@/components/shared/EchoWord';
+import { scheduleImageKey } from '@/lib/profile-scope';
 
 // El radar usa la biblioteca de gráficos (la más pesada de la app) y está al
 // final de Inicio: se carga aparte para que Inicio aparezca antes.
@@ -326,8 +327,10 @@ export default function HomePage() {
   const [yesterdayStudyTime, setYesterdayStudyTime] = useState(0);
   const [weeklyStudyTime, setWeeklyStudyTime] = useState(0);
   const [weeklyAverageScore, setWeeklyAverageScore] = useState<number | null>(null);
-  // Se relee sola: también cuando el horario llega de otro dispositivo.
-  const [scheduleImage, setScheduleImage] = useStoredImage('scheduleImage');
+  // Se relee sola: también cuando el horario llega de otro dispositivo. Es del
+  // perfil (1.6.7): otra cuenta de este equipo nunca ve la foto de esta.
+  const scheduleKey = scheduleImageKey(userProfile?.id ?? 'sin-perfil');
+  const [scheduleImage, setScheduleImage] = useStoredImage(scheduleKey);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [streak, setStreak] = useState(0);
@@ -459,7 +462,7 @@ export default function HomePage() {
         const result = reader.result as string;
         try {
           setScheduleImage(result);
-          await saveImage('scheduleImage', result);
+          await saveImage(scheduleKey, result);
           // Enciende el vistazo del borde izquierdo: hasta ahora no había
           // ninguna imagen que enseñar y el vigilante estaba apagado.
           window.dispatchEvent(new Event('scheduleImageUpdated'));

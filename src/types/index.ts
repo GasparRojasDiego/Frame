@@ -165,6 +165,16 @@ export interface Song {
    * anteriores a la Fase 26; se rellena al cargar.
    */
   seq?: number;
+  /**
+   * Duración en segundos (1.6.7). Se mide al importar; a las canciones
+   * anteriores se les mide en segundo plano. 0 = no se pudo medir.
+   */
+  duration?: number;
+  /**
+   * Perfil dueño de la canción (1.6.7): en un equipo compartido, cada cuenta
+   * ve solo su música. Las anteriores se asignan una vez (profile-scope.ts).
+   */
+  owner?: string;
 }
 
 /**

@@ -2,6 +2,7 @@ import { closeMusicDB, MUSIC_DB_NAME } from '@/lib/music-db';
 import { db as knowledgeDb } from '@/lib/knowledge-db';
 import { disconnectGoogle } from '@/lib/google/auth';
 import { FILE_HANDLES_DB_NAME } from '@/lib/file-handles';
+import { wipeProfileMedia } from '@/lib/profile-scope';
 
 /** Nombre heredado de la base Dexie del módulo Asignaturas
  *  (ver el constructor de `KnowledgeDatabase` en `@/lib/knowledge-db`). */
@@ -85,6 +86,9 @@ export async function wipeLocalAccountData(uid?: string): Promise<void> {
     } catch {
       /* revocar tokens es un extra */
     }
+    // Su música e imágenes también (1.6.7: son de cada perfil). Antes que sus
+    // claves, porque de ellas salen los ids.
+    await wipeProfileMedia(uid).catch(() => undefined);
     try {
       const suffix = `_${uid}`;
       const doomed: string[] = [];

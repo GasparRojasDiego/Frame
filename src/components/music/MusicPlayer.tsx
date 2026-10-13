@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import NowPlayingView from '@/components/music/NowPlayingView';
 import { playbackClock } from '@/lib/playback-clock';
+import { songTitle } from '@/lib/music-search';
 import { cn } from '@/lib/utils';
 import { withSong } from '@/hooks/use-song-highlight';
 
@@ -56,7 +57,7 @@ export default function MusicPlayer() {
     const [isMuted, setIsMuted] = useState(false);
 
     // Marquee state
-    const songName = currentSong ? currentSong.fileName.replace(/\.(mp3|m4a|aac|ogg|opus|flac|wav|webm|weba)$/i, '') : '';
+    const songName = currentSong ? songTitle(currentSong) : '';
     const artistName = currentSong?.artist?.trim() || 'Artista desconocido';
     const titleContainerRef = useRef<HTMLDivElement>(null);
     const [isOverflowing, setIsOverflowing] = useState(false);

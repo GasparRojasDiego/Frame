@@ -18,7 +18,7 @@
 // que solo el titular puede rellenar.
 // ============================================================
 
-export const TERMS_VERSION = '4.8';
+export const TERMS_VERSION = '4.9';
 
 export function termsDocument({ appVersion, effectiveDate }: { appVersion: string; effectiveDate: string }): string {
   return `# Términos y Condiciones de Uso de Frame
@@ -166,7 +166,7 @@ A efectos de estos Términos, los siguientes términos tienen el significado que
 
 ### Cláusula 10. Servicios de Terceros
 
-**10.1.** La Aplicación integra Servicios de Terceros, en particular los servicios de Google LLC —Gmail, YouTube, Classroom y Drive—, la infraestructura de **Supabase** y los servicios de letras **LRCLIB**, **YouTube Music**, **NetEase Cloud Music** y **Kugou**.
+**10.1.** La Aplicación integra Servicios de Terceros, en particular los servicios de Google LLC —Gmail, YouTube, Classroom y Drive— y la infraestructura de **Supabase**.
 
 **10.2.** El uso de dichos servicios se rige por los términos y políticas de sus respectivos titulares, que el Usuario acepta directamente con ellos. El Proveedor no es parte de esa relación.
 
@@ -335,7 +335,7 @@ Frame está diseñada para que **la mayor parte de tu información nunca salga d
 
 ### 3.1 Datos que permanecen exclusivamente en tu dispositivo
 
-Asignaturas, colecciones, profesores, tareas y su contenido, notas de recursos, adjuntos, sesiones de estudio, valoraciones de enfoque, calificaciones, hábitos, eventos del calendario local, horarios, metas, grabaciones de voz, imágenes, biblioteca de música y las conversaciones con la Ayuda (lo que preguntas y lo que te responde, que se guarda solo en ese equipo y en tu perfil).
+Asignaturas, colecciones, profesores, tareas y su contenido, notas de recursos, adjuntos, sesiones de estudio, valoraciones de enfoque, calificaciones, hábitos, eventos del calendario local, horarios, metas, grabaciones de voz, imágenes y biblioteca de música, con las portadas y letras que traen tus canciones o que tú les añades.
 
 **Sobre estos datos no realizamos tratamiento alguno**: no se transmiten al Proveedor ni a terceros, salvo el subconjunto descrito en 3.2 cuando inicias sesión.
 
@@ -349,7 +349,7 @@ Correo electrónico, nombres y apellidos, nombre de usuario, imagen de perfil si
 
 ### 3.4 Datos de diagnóstico
 
-Identificador seudónimo de instalación, versión de la Aplicación, plataforma, país aproximado (el de la ubicación que tú fijaste para el clima), marca temporal, registros técnicos de error (nombre y mensaje del fallo, la pantalla donde ocurrió y su posición dentro del código de la Aplicación) e **indicadores agregados de uso**: que la Aplicación se abrió ese día, qué pantallas se abrieron, qué respuestas de la Ayuda se mostraron (nunca lo que escribiste en ella), cuántas sesiones de estudio y minutos se registraron, cuántas tareas se terminaron, cuántos informes se generaron y los totales acumulados de asignaturas, hábitos, playlists y canciones. También la **serie diaria y semanal** de esos mismos recuentos —minutos y sesiones de estudio, el enfoque medio que tú marcaste, cuántas tareas culminaste, cuántas eran de prioridad alta y cuántas a tiempo, y tu constancia de hábitos como porcentaje—, y la forma de cada tarea creada o culminada (tipo, prioridad, si tenía fecha). Estos indicadores se envían también en modo invitado. **No incluyen el contenido de tus tareas, notas, grabaciones ni documentos, ni los nombres de tus asignaturas.**
+Identificador seudónimo de instalación, versión de la Aplicación, plataforma, país aproximado (el de la ubicación que tú fijaste para el clima), marca temporal, registros técnicos de error (nombre y mensaje del fallo, la pantalla donde ocurrió y su posición dentro del código de la Aplicación) e **indicadores agregados de uso**: que la Aplicación se abrió ese día, qué pantallas se abrieron, cuántas sesiones de estudio y minutos se registraron, cuántas tareas se terminaron, cuántos informes se generaron y los totales acumulados de asignaturas, hábitos, playlists y canciones. También la **serie diaria y semanal** de esos mismos recuentos —minutos y sesiones de estudio, el enfoque medio que tú marcaste, cuántas tareas culminaste, cuántas eran de prioridad alta y cuántas a tiempo, y tu constancia de hábitos como porcentaje—, y la forma de cada tarea creada o culminada (tipo, prioridad, si tenía fecha). Estos indicadores se envían también en modo invitado. **No incluyen el contenido de tus tareas, notas, grabaciones ni documentos, ni los nombres de tus asignaturas.**
 
 ### 3.5 Datos que tratamos cuando nos escribes
 
@@ -391,7 +391,7 @@ Si tenemos conocimiento de que se han recogido datos de un menor de catorce año
 
 **6.4. Compromiso de uso limitado.** El uso que la Aplicación hace de la información recibida de las API de Google se ajusta a la *Google API Services User Data Policy*, incluidos sus requisitos de uso limitado. En particular, esos datos **se emplean únicamente para proveer o mejorar las funciones visibles al usuario, no se transfieren a terceros salvo para prestar esas funciones o por exigencia legal, no se usan con fines publicitarios y no se someten a lectura humana** salvo consentimiento expreso, requerimiento legal o razones de seguridad.
 
-**6.4 bis. Letras de canciones.** Cuando una canción de tu biblioteca no trae letra, al abrir «Reproduciendo» la Aplicación consulta **LRCLIB**, **YouTube Music**, **NetEase Cloud Music** y **Kugou** enviando únicamente el título, el artista, el álbum y la duración de esa canción —nada que te identifique—, y guarda la letra en tu dispositivo para no volver a pedirla.
+**6.4 bis. Música, portadas y letras.** La Aplicación no descarga canciones, portadas ni letras, ni consulta ningún servicio para buscarlas: reproduce los archivos que tú importas y muestra la portada y la letra que traen esos archivos, las que tú añades desde tu dispositivo y las que versiones anteriores ya guardaron en él, que se conservan. Nada de ello sale de tu equipo.
 
 **6.5.** No cedemos datos personales a terceros distintos de los indicados, salvo requerimiento de autoridad competente en el ejercicio de sus funciones.
 

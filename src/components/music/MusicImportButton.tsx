@@ -61,12 +61,15 @@ export default function MusicImportButton({ variant = 'button' }: { variant?: 'b
       if (next.entries.length === 0) {
         void releasePickedMusic();
         setStage('idle');
+        const formats = [...new Set(next.unsupported.map((file) => file.format))].join(', ');
         toast({
-          title: next.existing.size > 0 ? 'Ya tienes esas canciones' : 'No hay canciones ahí',
+          title: next.existing.size > 0 ? 'Ya tienes esas canciones' : 'No hay canciones que Frame pueda reproducir',
           description:
             next.existing.size > 0
               ? 'Todo lo elegido ya estaba en tu biblioteca.'
-              : 'Frame importa MP3, M4A, AAC, OGG, Opus, FLAC, WAV y WEBM.',
+              : next.unsupported.length > 0
+                ? `Lo elegido está en ${formats}, que Frame no reproduce. Frame importa MP3, M4A, AAC, OGG, Opus, FLAC, WAV y WebM.`
+                : 'Frame importa MP3, M4A, AAC, OGG, Opus, FLAC, WAV y WebM.',
         });
         return;
       }
@@ -86,6 +89,7 @@ export default function MusicImportButton({ variant = 'button' }: { variant?: 'b
     setProgress({ done: 0, total: plan.entries.length, title: '' });
     const result = await storeImportedSongs(
       plan,
+      songs,
       (done, total, title) => setProgress({ done, total, title }),
       (batch) => addSongs(batch),
       () => stopRef.current
@@ -119,7 +123,7 @@ export default function MusicImportButton({ variant = 'button' }: { variant?: 'b
             <FileAudio className="mr-2 h-4 w-4 text-primary" />
             <span className="flex flex-col">
               Canciones…
-              <span className="text-[11px] text-muted-foreground">MP3 sueltos (u otros), con sus .lrc</span>
+              <span className="text-[11px] text-muted-foreground">Con sus letras y portadas, si las tienes</span>
             </span>
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => void choose(true)} data-tour="importar-carpeta">
@@ -163,9 +167,20 @@ export default function MusicImportButton({ variant = 'button' }: { variant?: 'b
                   {plan.existing.size} ya {plan.existing.size === 1 ? 'estaba' : 'estaban'} en tu biblioteca: no se duplican.
                 </p>
               )}
+              {plan.lyricFiles > 0 && (
+                <p className="text-muted-foreground">
+                  {plan.lyricFiles === 1 ? '1 trae' : `${plan.lyricFiles} traen`} su letra en un archivo aparte.
+                </p>
+              )}
               {plan.playlists.length > 0 && (
                 <p className="text-muted-foreground">
                   También {plan.playlists.length === 1 ? 'su playlist' : `sus ${plan.playlists.length} playlists`}.
+                </p>
+              )}
+              {plan.unsupported.length > 0 && (
+                <p className="text-muted-foreground">
+                  {plan.unsupported.length} {plan.unsupported.length === 1 ? 'archivo queda' : 'archivos quedan'} fuera: están en{' '}
+                  {[...new Set(plan.unsupported.map((file) => file.format))].join(', ')}, que Frame no reproduce.
                 </p>
               )}
               <p className="text-xs text-muted-foreground">
@@ -191,14 +206,30 @@ export default function MusicImportButton({ variant = 'button' }: { variant?: 'b
               <p>
                 <span className="font-bold text-foreground">{outcome.imported}</span>{' '}
                 {outcome.imported === 1 ? 'canción importada' : 'canciones importadas'}
-                {outcome.lyrics > 0 && ` · ${outcome.lyrics} con letra`}
                 {outcome.cancelled && ' (cancelaste el resto)'}
               </p>
-              {outcome.failed.length > 0 && (
-                <p className="text-xs text-destructive">
-                  No se pudieron leer: {outcome.failed.slice(0, 4).join(', ')}
-                  {outcome.failed.length > 4 && ` y ${outcome.failed.length - 4} más`}.
+              {outcome.imported > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {outcome.covers} con portada · {outcome.lyrics} con letra
                 </p>
+              )}
+              {outcome.stoppedFor && (
+                <p className="text-xs text-destructive">Se detuvo porque {outcome.stoppedFor}.</p>
+              )}
+              {outcome.skipped.length > 0 && (
+                <div className="space-y-0.5 pt-1 text-xs text-muted-foreground">
+                  <p className="font-semibold text-foreground">
+                    {outcome.skipped.length === 1 ? 'Una no entró:' : `${outcome.skipped.length} no entraron:`}
+                  </p>
+                  <ul className="max-h-32 space-y-0.5 overflow-y-auto">
+                    {outcome.skipped.slice(0, 50).map((item, index) => (
+                      <li key={`${item.name}-${index}`} className="truncate" title={`${item.name}: ${item.reason}`}>
+                        «{item.name}»: {item.reason}
+                      </li>
+                    ))}
+                  </ul>
+                  {outcome.skipped.length > 50 && <p>y {outcome.skipped.length - 50} más.</p>}
+                </div>
               )}
             </div>
           )}

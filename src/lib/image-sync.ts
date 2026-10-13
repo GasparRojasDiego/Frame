@@ -8,6 +8,7 @@ import {
   saveImage,
   type ImageUpdatedDetail,
 } from '@/lib/music-db';
+import { fingerprint, imageOwnership, isLeakedScheduleImage, scheduleImageKey } from '@/lib/profile-scope';
 
 // ============================================================
 // Imágenes que viajan entre dispositivos (1.5.5 escritorio / 1.0.8 Android).
@@ -17,10 +18,15 @@ import {
 // la cuenta:
 //
 //   · foto de perfil          profileAvatar_<uid>
-//   · horario de Inicio       scheduleImage
+//   · horario de Inicio       scheduleImage (en el equipo, scheduleImage_<uid>)
 //   · portada de playlist     playlistImage_<id>
 //   · imagen de asignatura    courseImage_<id>
 //   · imagen de colección     spaceImage_<id>
+//
+// SOLO lo del perfil activo (1.6.7, ver profile-scope.ts): en un equipo
+// compartido, las imágenes de otro perfil nunca se suben a esta nube, y las
+// que se subieron por error hasta la 1.6.6 se retiran de ella sin tocar la
+// copia local, que es de su dueño.
 //
 // Se quedan en cada dispositivo, a propósito, la música, las portadas de las
 // canciones, los adjuntos de notas y las letras: pesan demasiado para el plan
@@ -55,7 +61,7 @@ const MANIFEST_KEY = 'syncedImages';
 const MAX_UPLOAD_BYTES = 3.5 * 1024 * 1024;
 const RETRY_MS = 2 * 60 * 1000;
 
-/** ¿Esta imagen es de las que viajan? */
+/** ¿Esta imagen es de las que viajan? (clave lógica, la del índice y la nube) */
 export function isSyncedImageKey(key: string): boolean {
   return (
     key === 'scheduleImage' ||
@@ -64,6 +70,16 @@ export function isSyncedImageKey(key: string): boolean {
     key.startsWith('courseImage_') ||
     key.startsWith('spaceImage_')
   );
+}
+
+/** Clave en el almacén local: la foto del horario lleva el id del perfil; en la nube no hace falta (su carpeta ya es del perfil). */
+const localKeyOf = (uid: string, key: string) => (key === 'scheduleImage' ? scheduleImageKey(uid) : key);
+
+/** Clave lógica de una clave local, o null si no es una imagen de este perfil que viaje. */
+function logicalKeyOf(uid: string, localKey: string): string | null {
+  if (localKey === scheduleImageKey(uid)) return 'scheduleImage';
+  if (localKey.startsWith('scheduleImage')) return null; // horario de otro perfil, o sin dueño
+  return isSyncedImageKey(localKey) ? localKey : null;
 }
 
 /** Ficha del índice compartido (colección `syncedImages`, fusionada por `id`). */
@@ -117,12 +133,6 @@ function writeJson(key: string, value: unknown): void {
   } catch {
     /* sin espacio: se reintenta en la próxima vuelta */
   }
-}
-
-async function fingerprint(dataUrl: string): Promise<string> {
-  const bytes = new TextEncoder().encode(dataUrl);
-  const digest = await crypto.subtle.digest('SHA-256', bytes);
-  return Array.from(new Uint8Array(digest).slice(0, 16), (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 // Separador «.»: Storage rechaza la «~» con «Invalid key» (400), y por eso
@@ -181,11 +191,18 @@ function announceLegacy(key: string): void {
 // ------------------------------------------------------------
 // Reconciliación: compara índice, estado local y base, y sube o baja.
 // ------------------------------------------------------------
-async function reconcile(uid: string, onlyKeys?: Set<string>): Promise<boolean> {
+interface ReconcileResult {
+  ok: boolean;
+  /** Imágenes cuyo dueño aún no se conoce (la asignatura o la playlist se guarda un instante después). */
+  postponed: string[];
+}
+
+async function reconcile(uid: string, onlyKeys?: Set<string>): Promise<ReconcileResult> {
+  const postponed: string[] = [];
   const supabase = getSupabase();
-  if (!supabase) return true;
+  if (!supabase) return { ok: true, postponed };
   const { data: sessionData } = await supabase.auth.getSession();
-  if (sessionData.session?.user?.id !== uid) return true; // sin sesión de esta cuenta no se toca la nube
+  if (sessionData.session?.user?.id !== uid) return { ok: true, postponed }; // sin sesión de esta cuenta no se toca la nube
 
   const manifestList = readJson<ManifestEntry[]>(manifestStorageKey(uid), []);
   const manifest = new Map(
@@ -194,7 +211,9 @@ async function reconcile(uid: string, onlyKeys?: Set<string>): Promise<boolean> 
       .map((entry) => [entry.id, entry] as const)
   );
   const base = readJson<BaseState>(baseStorageKey(uid), {});
-  const localKeys = (await listImageKeys().catch(() => [] as string[])).filter(isSyncedImageKey);
+  const localKeys = (await listImageKeys().catch(() => [] as string[]))
+    .map((key) => logicalKeyOf(uid, key))
+    .filter((key): key is string => key !== null);
 
   const keys = new Set<string>(onlyKeys ?? [...manifest.keys(), ...localKeys, ...Object.keys(base)]);
   let manifestChanged = false;
@@ -202,14 +221,34 @@ async function reconcile(uid: string, onlyKeys?: Set<string>): Promise<boolean> 
 
   const deleted = readJson<Record<string, number>>(deletedStorageKey(uid), {});
 
+  /** Imagen de otro perfil que llegó a esta nube por error: fuera de ella. La copia local no se toca: es de su dueño. */
+  const retract = (key: string, entry: ManifestEntry) => {
+    if (entry.h) void dropObject(uid, key, entry.h);
+    manifest.set(key, { id: key, t: new Date().toISOString(), m: Date.now(), src: DEVICE_KIND, gone: true });
+    base[key] = { l: null, r: null };
+    delete deleted[key];
+    manifestChanged = true;
+  };
+
   for (const key of keys) {
     if (!isSyncedImageKey(key)) continue;
-    // La foto de perfil de OTRA cuenta que usó este equipo no es de esta.
-    if (key.startsWith('profileAvatar_') && key !== `profileAvatar_${uid}`) continue;
+    const entry = manifest.get(key);
+    // Solo lo de este perfil (1.6.7). Lo de otro perfil del equipo, nunca a
+    // esta nube; lo que aún no se sabe de quién es, se deja para luego.
+    const ownership = imageOwnership(uid, key);
+    if (ownership !== 'mine') {
+      if (ownership === 'other' && entry && !entry.gone) retract(key, entry);
+      else if (ownership === 'unknown' && onlyKeys) postponed.push(key);
+      continue;
+    }
+    if (key === 'scheduleImage' && entry && !entry.gone && isLeakedScheduleImage(uid, entry.h)) {
+      retract(key, entry);
+      continue;
+    }
+    const localKey = localKeyOf(uid, key);
     try {
-      const entry = manifest.get(key);
       const known = base[key];
-      const record = await getImageRecord(key).catch(() => null);
+      const record = await getImageRecord(localKey).catch(() => null);
       const localData = record?.dataUrl ?? null;
       const localHash = localData ? await fingerprint(localData) : null;
       const deletedAt = deleted[key];
@@ -234,13 +273,13 @@ async function reconcile(uid: string, onlyKeys?: Set<string>): Promise<boolean> 
 
       const pullRemote = async () => {
         if (!remoteHash) {
-          if (localData) await deleteImage(key, { fromSync: true });
+          if (localData) await deleteImage(localKey, { fromSync: true });
           base[key] = { l: null, r: null };
         } else {
           const { data: blob, error } = await supabase.storage.from(BUCKET).download(objectPath(uid, key, remoteHash));
           if (error || !blob) throw new Error(error?.message ?? 'descarga vacía');
           const dataUrl = await blobToDataUrl(blob);
-          await saveImage(key, dataUrl, { fromSync: true, at: entry?.m ?? 0 });
+          await saveImage(localKey, dataUrl, { fromSync: true, at: entry?.m ?? 0 });
           base[key] = { l: await fingerprint(dataUrl), r: remoteHash };
           announceLegacy(key);
         }
@@ -290,7 +329,7 @@ async function reconcile(uid: string, onlyKeys?: Set<string>): Promise<boolean> 
     // en segundos, los demás dispositivos saben qué bajar.
     writeJson(manifestStorageKey(uid), [...manifest.values()]);
   }
-  return allOk;
+  return { ok: allOk, postponed };
 }
 
 /** Sube la imagen y devuelve la huella de lo que quedó en la nube. */
@@ -328,6 +367,8 @@ export function startImageSync(uid: string): () => void {
   let running = false;
   let pendingAll = false;
   const pendingKeys = new Set<string>();
+  /** Reintentos de las imágenes con dueño aún desconocido (máx. 5, cada 4 s). */
+  const postponedTries = new Map<string, number>();
   let timer: number | null = null;
   let retryTimer: number | null = null;
 
@@ -340,7 +381,15 @@ export function startImageSync(uid: string): () => void {
     pendingAll = false;
     pendingKeys.clear();
     try {
-      const ok = await reconcile(uid, all ? undefined : keys);
+      const { ok, postponed } = await reconcile(uid, all ? undefined : keys);
+      for (const key of postponed) {
+        const tries = (postponedTries.get(key) ?? 0) + 1;
+        postponedTries.set(key, tries);
+        if (tries <= 5) {
+          pendingKeys.add(key);
+          schedule(4000);
+        }
+      }
       if (!ok && !stopped) {
         if (retryTimer !== null) window.clearTimeout(retryTimer);
         retryTimer = window.setTimeout(() => {
@@ -366,13 +415,15 @@ export function startImageSync(uid: string): () => void {
   // Una imagen cambió en este dispositivo (no la trajo la sincronización).
   const onImage = (event: Event) => {
     const detail = (event as CustomEvent<ImageUpdatedDetail>).detail;
-    if (!detail || detail.fromSync || !isSyncedImageKey(detail.key)) return;
+    if (!detail || detail.fromSync) return;
+    const key = logicalKeyOf(uid, detail.key);
+    if (!key) return;
     // Un borrado solo viaja si lo hizo el usuario: se apunta aquí.
     const deleted = readJson<Record<string, number>>(deletedStorageKey(uid), {});
-    if (detail.deleted) deleted[detail.key] = Date.now();
-    else delete deleted[detail.key];
+    if (detail.deleted) deleted[key] = Date.now();
+    else delete deleted[key];
     writeJson(deletedStorageKey(uid), deleted);
-    pendingKeys.add(detail.key);
+    pendingKeys.add(key);
     schedule(800);
   };
   // Llegaron datos de otro dispositivo: quizá el índice trae imágenes nuevas.

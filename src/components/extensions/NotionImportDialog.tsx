@@ -19,13 +19,14 @@ import {
   type NotionMapping,
   type NotionTable,
 } from '@/lib/extensions/notion-import';
-import { setNotionOpen, useExtensions } from '@/lib/extensions/registry';
+// Solo por su limpieza de lo guardado hasta la 1.6.1.
+import '@/lib/extensions/registry';
 import { DEFAULT_EVENT_COLOR } from '@/lib/calendar-events';
 import { cn } from '@/lib/utils';
 
 // ============================================================
 // Importador de Notion: tareas y fechas. Se abre desde Ajustes (menú de la
-// rueda de la cuenta, «Importar de Notion») y con el atajo /notion de la Ayuda.
+// rueda de la cuenta, «Importar de Notion»).
 // Ver lib/extensions/notion-import.ts para cómo se leen los archivos.
 // ============================================================
 
@@ -56,24 +57,15 @@ const plain = (s: string) =>
     .replace(/[̀-ͯ]/g, '')
     .trim();
 
-/**
- * Sin props, lo abre el estado global de las extensiones (el que monta el
- * layout para el atajo /notion, que vive en la Ayuda). Con `open`/`onOpenChange`,
- * es un recuadro propio de quien lo monta: así lo abre «Importar de Notion»
- * del menú de la cuenta en Ajustes. Nunca coinciden los dos: la Ayuda y
- * Ajustes son interfaces distintas y ambos recuadros son modales.
- */
+/** Recuadro de quien lo monta: lo abre «Importar de Notion» del menú de la cuenta en Ajustes. */
 export default function NotionImportDialog({
-  open: openProp,
+  open,
   onOpenChange,
 }: {
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
-} = {}) {
-  const { notionOpen } = useExtensions();
-  const controlled = openProp !== undefined;
-  const open = controlled ? openProp : notionOpen;
-  const setOpen = (next: boolean) => (controlled ? onOpenChange?.(next) : setNotionOpen(next));
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const setOpen = onOpenChange;
   const { courses, tasks, addTask, addLocalEvent, userProfile } = useCourse();
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);

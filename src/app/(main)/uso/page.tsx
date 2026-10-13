@@ -148,7 +148,7 @@ const EVENT_LABELS: Record<string, string> = {
   account_signed_in: 'Inicios de sesión',
   guest_started: 'Entradas como invitado',
   guest_linked: 'Invitados que vincularon Google',
-  help_asked: 'Preguntas a la ayuda',
+  help_asked: 'Preguntas a la ayuda (hasta la 1.6.6)',
   help_tour: 'Recorridos «Descubrir» (hasta la 1.6.4)',
 };
 
@@ -167,7 +167,7 @@ const SCREEN_LABELS: Record<string, string> = {
   '/music': 'Música',
   '/playlists': 'Playlists',
   '/settings': 'Ajustes',
-  '/ayuda': 'Ayuda',
+  '/ayuda': 'Ayuda (hasta la 1.6.6)',
   '/presentacion': 'Presentación',
   '/uso': 'Uso',
 };

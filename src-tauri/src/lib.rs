@@ -45,11 +45,14 @@ async fn open_auth_window(app: tauri::AppHandle, url: String) -> Result<(), Stri
         let _ = previous.close();
     }
 
+    // Privada (1.6.7): en un equipo compartido, la siguiente persona no ve la
+    // cuenta de Google de la anterior ya elegida ni su sesión abierta.
     let window = tauri::WebviewWindowBuilder::new(
         &app,
         AUTH_WINDOW,
         tauri::WebviewUrl::External(parsed),
     )
+    .incognito(true)
     .title("Acceder con Google — Frame")
     .inner_size(520.0, 700.0)
     .min_inner_size(420.0, 560.0)
@@ -268,56 +271,6 @@ async fn http_get_text(url: String) -> Result<String, String> {
     resp.text().await.map_err(|e| e.to_string())
 }
 
-/// Servicios de letras a los que Frame pregunta (ver `src/lib/lyrics-sources.ts`).
-/// Lista cerrada: el webview no puede hablarles directamente (CORS) y un
-/// comando que aceptara cualquier dirección sería una puerta abierta.
-const LYRICS_HOSTS: [&str; 4] = ["lrclib.net", "music.youtube.com", "music.163.com", "lyrics.kugou.com"];
-
-/// Petición GET o POST a un servicio de letras; devuelve el cuerpo como texto.
-#[tauri::command]
-async fn lyrics_request(
-    method: String,
-    url: String,
-    headers: Option<HashMap<String, String>>,
-    body: Option<String>,
-) -> Result<String, String> {
-    let parsed: tauri::Url = url.trim().parse().map_err(|_| "Dirección no válida.".to_string())?;
-    let allowed = parsed.scheme() == "https"
-        && parsed.host_str().map_or(false, |host| LYRICS_HOSTS.contains(&host));
-    if !allowed {
-        return Err("Servicio de letras no permitido.".into());
-    }
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(12))
-        .build()
-        .map_err(|e| e.to_string())?;
-    let mut request = if method.eq_ignore_ascii_case("POST") {
-        client.post(parsed.as_str())
-    } else {
-        client.get(parsed.as_str())
-    };
-    let headers = headers.unwrap_or_default();
-    if !headers.keys().any(|key| key.eq_ignore_ascii_case("user-agent")) {
-        request = request.header(
-            "User-Agent",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
-        );
-    }
-    for (key, value) in headers {
-        request = request.header(key, value);
-    }
-    if let Some(body) = body {
-        request = request.body(body);
-    }
-    let response = request.send().await.map_err(|e| e.to_string())?;
-    let status = response.status();
-    let text = response.text().await.map_err(|e| e.to_string())?;
-    if !status.is_success() {
-        return Err(format!("HTTP {}", status.as_u16()));
-    }
-    Ok(text)
-}
-
 /// GET binario → data URL: las miniaturas de los vídeos de estudio.
 #[tauri::command]
 async fn http_get_data_url(url: String) -> Result<String, String> {
@@ -422,6 +375,65 @@ const FULLSCREEN_GUARD_JS: &str = r#"
 })();
 "#;
 
+/// Páginas de Google incrustadas. Cada perfil de Frame tiene su propia carpeta
+/// de datos (cookies y sesión de Google): en un equipo compartido nadie hereda
+/// el correo ni las clases de quien usó Frame antes (1.6.7).
+const EMBED_LABELS: [&str; 3] = ["gmail-embed", "youtube-embed", "classroom-embed"];
+static EMBED_PROFILE: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+
+/// Carpeta de datos de las páginas incrustadas de un perfil.
+fn embed_data_dir(app: &tauri::AppHandle, profile: &str) -> Result<std::path::PathBuf, String> {
+    let safe: String = profile
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_')
+        .take(64)
+        .collect();
+    if safe.is_empty() {
+        return Err("Perfil no válido.".into());
+    }
+    let base = app.path().app_local_data_dir().map_err(|e| e.to_string())?;
+    Ok(base.join("embeds").join(safe))
+}
+
+fn close_embeds(app: &tauri::AppHandle) {
+    for label in EMBED_LABELS {
+        if let Some(webview) = app.get_webview(label) {
+            let _ = webview.close();
+        }
+    }
+}
+
+/// Al cerrar sesión o cambiar de perfil: fuera las páginas del perfil anterior.
+#[tauri::command]
+fn google_embed_close_all(app: tauri::AppHandle) -> Result<(), String> {
+    close_embeds(&app);
+    *EMBED_PROFILE.lock().map_err(|e| e.to_string())? = None;
+    Ok(())
+}
+
+/// google.com, google.com.pe, accounts.google.com… y los dominios de YouTube y Google.
+fn is_google_domain(domain: &str) -> bool {
+    let domain = domain.trim_start_matches('.').to_ascii_lowercase();
+    const OTHERS: [&str; 6] = ["youtube.com", "gstatic.com", "googleusercontent.com", "googleapis.com", "ggpht.com", "ytimg.com"];
+    domain.split('.').any(|part| part == "google")
+        || OTHERS.iter().any(|d| domain == *d || domain.ends_with(&format!(".{d}")))
+}
+
+/// Hasta la 1.6.6 las páginas incrustadas compartían las cookies de la app:
+/// la sesión de Google de un perfil la veían todos. Se borran una vez del
+/// almacén común (lo propio de Frame —datos, ajustes— no se toca).
+#[tauri::command]
+async fn clear_shared_google_session(app: tauri::AppHandle) -> Result<u32, String> {
+    let main = app.get_webview_window("main").ok_or("Ventana principal no disponible.")?;
+    let mut removed = 0;
+    for cookie in main.cookies().map_err(|e| e.to_string())? {
+        if cookie.domain().map_or(false, is_google_domain) && main.delete_cookie(cookie).is_ok() {
+            removed += 1;
+        }
+    }
+    Ok(removed)
+}
+
 #[tauri::command]
 async fn google_embed_update(
     app: tauri::AppHandle,
@@ -431,6 +443,7 @@ async fn google_embed_update(
     width: f64,
     height: f64,
     visible: bool,
+    profile: String,
 ) -> Result<(), String> {
     use tauri::{LogicalPosition, LogicalSize};
 
@@ -440,6 +453,15 @@ async fn google_embed_update(
         "classroom" => ("classroom-embed", "https://classroom.google.com/"),
         _ => return Err("Servicio no permitido.".into()),
     };
+
+    // Otro perfil: las páginas del anterior se cierran antes de nada.
+    {
+        let mut current = EMBED_PROFILE.lock().map_err(|e| e.to_string())?;
+        if current.as_deref() != Some(profile.as_str()) {
+            close_embeds(&app);
+            *current = Some(profile.clone());
+        }
+    }
 
     const OFFSCREEN: LogicalPosition<f64> = LogicalPosition { x: -30000.0, y: 0.0 };
     let w = width.max(1.0);
@@ -468,6 +490,8 @@ async fn google_embed_update(
         .ok_or("Ventana principal no disponible.")?;
     let builder =
         tauri::webview::WebviewBuilder::new(label, tauri::WebviewUrl::External(url.parse().unwrap()))
+            // Cookies y sesión de Google de ESTE perfil, aparte de las de los demás.
+            .data_directory(embed_data_dir(&app, &profile)?)
             // El reproductor vive a veces en un iframe: hay que parchear todos.
             .initialization_script_for_all_frames(FULLSCREEN_GUARD_JS);
     window
@@ -1014,10 +1038,21 @@ struct PickedSource {
 
 static PICKED: std::sync::Mutex<Option<std::collections::HashSet<std::path::PathBuf>>> = std::sync::Mutex::new(None);
 
-const AUDIO_EXTENSIONS: [&str; 9] = ["mp3", "m4a", "aac", "ogg", "opus", "flac", "wav", "webm", "weba"];
-/// En una carpeta, además del audio: letras, portadas y el índice de una
-/// exportación de Frame (frame-musica.json).
-const COMPANION_EXTENSIONS: [&str; 6] = ["lrc", "jpg", "jpeg", "png", "webp", "json"];
+const AUDIO_EXTENSIONS: [&str; 10] = ["mp3", "m4a", "aac", "ogg", "oga", "opus", "flac", "wav", "webm", "weba"];
+/// Audio que el motor de Frame (WebView2) no reproduce. Se recoge igual, sin
+/// leerlo nunca, para decirle al usuario cuántos quedaron fuera y por qué en
+/// vez de ignorarlos en silencio.
+const UNSUPPORTED_AUDIO_EXTENSIONS: [&str; 15] = [
+    "wma", "aif", "aiff", "aifc", "ape", "wv", "tta", "dsf", "dff", "amr", "ac3", "dts", "mka", "mid", "midi",
+];
+/// En una carpeta, además del audio: letras (.lrc, o .txt con el mismo nombre
+/// que la canción), portadas y el índice de una exportación de Frame
+/// (frame-musica.json).
+const COMPANION_EXTENSIONS: [&str; 8] = ["lrc", "txt", "jpg", "jpeg", "png", "webp", "bmp", "json"];
+
+fn is_music_extension(ext: &str) -> bool {
+    AUDIO_EXTENSIONS.contains(&ext) || UNSUPPORTED_AUDIO_EXTENSIONS.contains(&ext) || COMPANION_EXTENSIONS.contains(&ext)
+}
 const MAX_PICKED: usize = 20_000;
 
 fn extension_of(path: &std::path::Path) -> String {
@@ -1038,8 +1073,7 @@ fn walk_music(root: &std::path::Path, dir: &std::path::Path, out: &mut Vec<Picke
         if meta.is_dir() {
             walk_music(root, &path, out, depth + 1);
         } else if meta.is_file() {
-            let ext = extension_of(&path);
-            if AUDIO_EXTENSIONS.contains(&ext.as_str()) || COMPANION_EXTENSIONS.contains(&ext.as_str()) {
+            if is_music_extension(&extension_of(&path)) {
                 let rel = path.strip_prefix(root).unwrap_or(&path).to_string_lossy().replace('\\', "/");
                 out.push(PickedFile {
                     name: entry.file_name().to_string_lossy().to_string(),
@@ -1083,11 +1117,16 @@ async fn music_pick(window: tauri::Window, folder: bool) -> Result<Option<Picked
         let name = root.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "Carpeta".into());
         ("folder", name, files)
     } else {
-        let mut exts: Vec<&str> = AUDIO_EXTENSIONS.to_vec();
-        exts.push("lrc");
+        // Sin el índice .json: suelto no significa nada.
+        let exts: Vec<&str> = AUDIO_EXTENSIONS
+            .iter()
+            .chain(UNSUPPORTED_AUDIO_EXTENSIONS.iter())
+            .chain(COMPANION_EXTENSIONS.iter().filter(|ext| **ext != "json"))
+            .copied()
+            .collect();
         let Some(handles) = dialog
-            .set_title("Elige tus canciones (y sus letras .lrc, si las tienes)")
-            .add_filter("Canciones y letras", &exts)
+            .set_title("Elige tus canciones (y, si las tienes, sus letras y portadas)")
+            .add_filter("Canciones, letras y portadas", &exts)
             .pick_files()
             .await
         else {
@@ -1343,8 +1382,9 @@ pub fn run() {
             google_token_request,
             http_get_text,
             http_get_data_url,
-            lyrics_request,
             google_embed_update,
+            google_embed_close_all,
+            clear_shared_google_session,
             youtube_embed_current_url,
             open_local_file,
             music_pick,

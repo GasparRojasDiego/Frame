@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useTodayKey } from '@/hooks/use-today';
 import { useSearchParams, useRouter, usePathname } from '@/lib/navigation';
-import { LayoutList, LoaderCircle, Archive } from 'lucide-react';
+import { LayoutList, LoaderCircle, Archive, Clock } from 'lucide-react';
+import { formatHoursMinutes } from '@/lib/duration';
 import type { Task } from '@/types';
 import { TaskCard } from '@/components/tasks/TaskCard';
 import CompletedTasksView from '@/components/tasks/CompletedTasksView';
@@ -163,7 +164,12 @@ export default function TasksPage() {
     const [showArchived, setShowArchived] = useState(false);
     const [filters, setFilters] = useState<TaskFilterState>(EMPTY_FILTERS);
     const activeFilters = countActiveFilters(filters);
-    const shownCount = activeFilters > 0 ? applyTaskFilters(tasks ?? [], filters).length : (tasks?.length ?? 0);
+    // Lo que se ve en la galería (con los filtros puestos, solo lo que pasa):
+    // cuántas tareas son y cuánto suma su tiempo estimado (1.6.7, Diego).
+    const shownTasks = activeFilters > 0 ? applyTaskFilters(tasks ?? [], filters) : (tasks ?? []);
+    const shownCount = shownTasks.length;
+    const estimatedMinutes = shownTasks.reduce((sum, task) => sum + (task.estimatedMinutes ?? 0), 0);
+    const withoutEstimate = shownTasks.filter((task) => !task.estimatedMinutes).length;
     const [isLoading, setIsLoading] = useState(true);
 
     // Add router and pathname for URL manipulation
@@ -202,11 +208,24 @@ export default function TasksPage() {
               {!showArchived && (
                 <>
                   <TaskFilters value={filters} onChange={setFilters} />
-                  {activeFilters > 0 && (
-                    <span className="min-w-0 truncate text-sm font-semibold text-muted-foreground">
-                      {filters.byProximity ? 'Por proximidad' : 'Filtradas'}
-                      <span className="ml-2 font-normal text-primary">
-                        · {shownCount} de {tasks?.length ?? 0}
+                  {tasks && (
+                    <span className="flex min-w-0 items-center gap-1.5 truncate text-sm text-muted-foreground">
+                      <span className="truncate">
+                        <span className="font-semibold text-foreground">{shownCount}</span>{' '}
+                        {shownCount === 1 ? 'tarea' : 'tareas'}
+                        {activeFilters > 0 && ` de ${tasks.length}`}
+                      </span>
+                      <span aria-hidden className="text-border">·</span>
+                      <span
+                        className="flex shrink-0 items-center gap-1"
+                        title={
+                          withoutEstimate > 0
+                            ? `Tiempo estimado en total. ${withoutEstimate} ${withoutEstimate === 1 ? 'tarea no tiene' : 'tareas no tienen'} tiempo estimado.`
+                            : 'Tiempo estimado en total'
+                        }
+                      >
+                        <Clock className="h-3.5 w-3.5" />
+                        <span className="font-semibold text-foreground">{formatHoursMinutes(estimatedMinutes)}</span>
                       </span>
                     </span>
                   )}

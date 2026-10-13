@@ -34,7 +34,8 @@ function echoWordFrom(children: React.ReactNode): string | null {
 /**
  * Encabezado de un recuadro (1.6.6, Diego): el título con su eco detrás —la
  * primera palabra del título, o `echo`— y una línea fina debajo, con aire a
- * ambos lados, que lo separa del contenido. El eco no sale del encabezado.
+ * ambos lados, que lo separa del contenido. El eco no sale del encabezado y
+ * solo se pinta si el recuadro va dentro de un emergente (1.6.7).
  * `echo={false}` lo quita (y `divider={false}`, la línea).
  */
 const CardHeader = React.forwardRef<

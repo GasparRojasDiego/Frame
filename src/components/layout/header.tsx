@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import NotificationCenter from '@/components/layout/NotificationCenter';
 import RecordingDialog from '@/components/recordings/RecordingDialog';
 import QuickCreateButton from '@/components/layout/QuickCreateButton';
-import HelpButton from '@/components/help/HelpButton';
 import { useCourse } from '@/context/CourseContext';
 import { useTodayKey } from '@/hooks/use-today';
 import { buildHeaderPhrases, type HeaderPhrase } from '@/lib/header-phrases';
@@ -237,9 +236,6 @@ export default function Header({ userProfile }: HeaderProps) {
       <div className="flex w-36 shrink-0 items-center justify-start gap-2">
         {/* Crear una tarea o una anotación sin salir de donde estés. */}
         <QuickCreateButton />
-
-        {/* Centro de ayuda (antes, un botón redondo abajo a la derecha). */}
-        <HelpButton className={barButton} />
       </div>
 
       <HeaderPhrases name={greetName} />

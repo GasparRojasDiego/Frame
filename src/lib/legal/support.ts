@@ -7,7 +7,7 @@
 // vulnerabilidad de buena fe.
 // ============================================================
 
-export const SUPPORT_VERSION = '3.1';
+export const SUPPORT_VERSION = '3.2';
 
 export function supportDocument({
   appVersion,
@@ -26,7 +26,7 @@ export function supportDocument({
 
 Este canal atiende **fallos de funcionamiento**, **dudas sobre el uso** de la Aplicación y **solicitudes relacionadas con tu cuenta y tus datos**.
 
-**Atajos dentro de Frame:** las dudas de uso las responde al instante la barra de ayuda de Inicio; las **propuestas de mejora** se envían por correo, igual que los reportes; y los fallos que rompen una pantalla **se reportan solos**, sin datos tuyos, para corregirlos en la siguiente versión.
+**Atajos dentro de Frame:** «Información y novedades» (en Ajustes) explica qué hace cada parte de Frame; las **dudas de uso** y las **propuestas de mejora** se envían por correo, igual que los reportes; y los fallos que rompen una pantalla **se reportan solos**, sin datos tuyos, para corregirlos en la siguiente versión.
 
 Frame la mantiene VT Asvent, un equipo reducido. Todos los mensajes se registran y se revisan. **No garantizamos una respuesta individual a cada mensaje**, y sí garantizamos que todo reporte que describa un fallo reproducible entra en la cola de trabajo.
 

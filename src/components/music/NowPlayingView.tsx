@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronDown,
+  FileText,
   Heart,
   LoaderCircle,
   MicVocal,
@@ -17,8 +18,17 @@ import {
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { useCourse } from '@/context/CourseContext';
-import { activeLineIndex, findLyrics, setLyricsOffset, type SongLyrics } from '@/lib/lyrics';
+import {
+  activeLineIndex,
+  decodeTextFile,
+  importLyrics,
+  lyricsFromText,
+  setLyricsOffset,
+  storedLyrics,
+  type SongLyrics,
+} from '@/lib/lyrics';
 import { formatClock, playbackClock, usePlaybackPosition } from '@/lib/playback-clock';
+import { songTitle } from '@/lib/music-search';
 import { cn } from '@/lib/utils';
 
 // ============================================================
@@ -29,15 +39,26 @@ import { cn } from '@/lib/utils';
 // sincronizada: la línea que suena va resaltada y centrada, y tocar cualquier
 // línea salta a ese punto. El fondo es la propia portada, desenfocada.
 //
-// La letra es la que trajo la canción al importarla (sus etiquetas o un .lrc
-// con el mismo nombre) o, si no trajo ninguna, la que se reconoce en internet
-// (ver lyrics.ts).
+// La letra es la que trajo la canción al importarla (sus etiquetas, o un .lrc
+// o .txt con el mismo nombre) o la que el usuario le añade aquí desde un
+// archivo suyo. Frame no la busca en internet (1.6.7, ver lyrics.ts).
 //
 // No tiene <audio> propio: el sonido sigue viviendo en la barra inferior; aquí
 // solo se lee su avance (playback-clock) y se le dan órdenes.
 // ============================================================
 
-function LyricsPanel({ lyrics, loading }: { lyrics: SongLyrics | null; loading: boolean }) {
+function LyricsPanel({
+  lyrics,
+  loading,
+  note,
+  onAttach,
+}: {
+  lyrics: SongLyrics | null;
+  loading: boolean;
+  /** Aviso tras elegir un archivo que no servía. */
+  note: string | null;
+  onAttach: () => void;
+}) {
   const { progress } = usePlaybackPosition();
   const containerRef = useRef<HTMLDivElement>(null);
   const lineRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -73,11 +94,21 @@ function LyricsPanel({ lyrics, loading }: { lyrics: SongLyrics | null; loading: 
           {lyrics?.instrumental ? 'Canción instrumental' : 'Sin letra para esta canción'}
         </p>
         {!lyrics?.instrumental && (
-          <p className="max-w-xs text-xs leading-relaxed">
-            {lyrics?.missing
-              ? 'No la encontramos en internet. Frame volverá a buscarla más adelante.'
-              : 'Conéctate a internet y Frame la buscará por ti.'}
-          </p>
+          <>
+            <p className="max-w-xs text-xs leading-relaxed">
+              Frame muestra la letra que trae la canción en sus etiquetas o en un archivo .lrc con su mismo nombre. Si
+              tienes ese archivo, añádelo aquí.
+            </p>
+            <Button
+              variant="ghost"
+              onClick={onAttach}
+              className="mt-1 h-9 rounded-full border border-white/25 px-4 text-xs font-semibold text-white/90 hover:bg-white/15 hover:text-white"
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              Añadir letra…
+            </Button>
+            {note && <p className="text-xs text-white/60">{note}</p>}
+          </>
         )}
       </div>
     );
@@ -124,10 +155,33 @@ function LyricsPanel({ lyrics, loading }: { lyrics: SongLyrics | null; loading: 
   );
 }
 
-/** Pie de la letra sincronizada: ajuste fino de sus tiempos. */
-function LyricsFooter({ offset, onOffset }: { offset: number; onOffset: (delta: number) => void }) {
+/**
+ * Pie de la letra: cambiarla por la de otro archivo y, si va sincronizada, el
+ * ajuste fino de sus tiempos.
+ */
+function LyricsFooter({
+  synced,
+  offset,
+  onOffset,
+  onAttach,
+}: {
+  synced: boolean;
+  offset: number;
+  onOffset: (delta: number) => void;
+  onAttach: () => void;
+}) {
   return (
-    <div className="mt-3 flex items-center justify-end text-[11px] text-white/55">
+    <div className="mt-3 flex items-center justify-between text-[11px] text-white/55">
+      <Button
+        variant="ghost"
+        onClick={onAttach}
+        title="Usar la letra de un archivo .lrc o .txt"
+        className="h-7 rounded-full px-3 text-[11px] text-white/70 hover:bg-white/15 hover:text-white"
+      >
+        <FileText className="mr-1.5 h-3.5 w-3.5" />
+        Cambiar letra…
+      </Button>
+      {synced && (
       <div className="flex items-center rounded-full border border-white/15" title="Ajusta si la letra va adelantada o atrasada">
         <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-white/75 hover:bg-white/15 hover:text-white" onClick={() => onOffset(-0.5)} title="Letra 0,5 s antes">
           <Minus className="h-3.5 w-3.5" />
@@ -139,6 +193,7 @@ function LyricsFooter({ offset, onOffset }: { offset: number; onOffset: (delta: 
           <Plus className="h-3.5 w-3.5" />
         </Button>
       </div>
+      )}
     </div>
   );
 }
@@ -159,22 +214,19 @@ export default function NowPlayingView({ open, onClose }: { open: boolean; onClo
   const { progress, duration } = usePlaybackPosition();
   const [lyrics, setLyrics] = useState<SongLyrics | null>(null);
   const [loading, setLoading] = useState(false);
+  const [lyricsNote, setLyricsNote] = useState<string | null>(null);
+  const lyricsInputRef = useRef<HTMLInputElement>(null);
 
   const songId = currentSong?.id ?? null;
 
-  // La letra se lee al abrir y al cambiar de canción; si no la hay guardada,
-  // se reconoce en internet (findLyrics) y queda guardada.
-  const songRef = useRef(currentSong);
-  songRef.current = currentSong;
-  const durationRef = useRef(duration);
-  durationRef.current = duration;
+  // La letra guardada se lee al abrir y al cambiar de canción.
   useEffect(() => {
-    const song = songRef.current;
-    if (!open || !songId || !song) return;
+    if (!open || !songId) return;
     let alive = true;
     setLyrics(null);
+    setLyricsNote(null);
     setLoading(true);
-    void findLyrics(song, durationRef.current)
+    void storedLyrics(songId)
       .then((result) => alive && setLyrics(result))
       .catch(() => alive && setLyrics(null))
       .finally(() => alive && setLoading(false));
@@ -182,6 +234,28 @@ export default function NowPlayingView({ open, onClose }: { open: boolean; onClo
       alive = false;
     };
   }, [open, songId]);
+
+  const songRef = useRef(currentSong);
+  songRef.current = currentSong;
+
+  /** Letra desde un archivo del usuario (.lrc o .txt): se guarda con la canción. */
+  const attachLyrics = async (file: File | undefined) => {
+    const song = currentSong;
+    if (!file || !song) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setLyricsNote('Ese archivo es demasiado grande para ser una letra.');
+      return;
+    }
+    const parsed = lyricsFromText(decodeTextFile(new Uint8Array(await file.arrayBuffer())));
+    if (!parsed) {
+      setLyricsNote('Ese archivo no trae ninguna letra.');
+      return;
+    }
+    await importLyrics(song.id, parsed);
+    if (songRef.current?.id !== song.id) return; // cambió la canción mientras tanto
+    setLyrics(parsed);
+    setLyricsNote(null);
+  };
 
   const changeOffset = (delta: number) => {
     if (!currentSong || !lyrics) return;
@@ -201,7 +275,7 @@ export default function NowPlayingView({ open, onClose }: { open: boolean; onClo
 
   if (!open || !currentSong) return null;
 
-  const title = currentSong.title?.trim() || currentSong.fileName.replace(/\.(mp3|m4a|aac|ogg|opus|flac|wav|webm|weba)$/i, '');
+  const title = songTitle(currentSong);
   const artist = currentSong.artist?.trim() || 'Artista desconocido';
   const control = 'h-10 w-10 rounded-full text-white/80 hover:bg-white/15 hover:text-white';
 
@@ -303,11 +377,32 @@ export default function NowPlayingView({ open, onClose }: { open: boolean; onClo
         {/* ---- La letra: ~68 % del alto, centrada ---- */}
         <div className="hidden min-h-0 flex-col justify-center lg:flex">
           <div className="h-[68%] w-full">
-            <LyricsPanel lyrics={lyrics} loading={loading} />
+            <LyricsPanel
+              lyrics={lyrics}
+              loading={loading}
+              note={lyricsNote}
+              onAttach={() => lyricsInputRef.current?.click()}
+            />
           </div>
-          {!loading && lyrics && lyrics.synced.length > 0 && (
-            <LyricsFooter offset={lyrics.offset ?? 0} onOffset={changeOffset} />
+          {!loading && lyrics && !lyrics.missing && (
+            <LyricsFooter
+              synced={lyrics.synced.length > 0}
+              offset={lyrics.offset ?? 0}
+              onOffset={changeOffset}
+              onAttach={() => lyricsInputRef.current?.click()}
+            />
           )}
+          {!loading && lyrics && lyricsNote && <p className="mt-2 text-right text-xs text-white/60">{lyricsNote}</p>}
+          <input
+            ref={lyricsInputRef}
+            type="file"
+            accept=".lrc,.txt,text/plain"
+            className="hidden"
+            onChange={(event) => {
+              void attachLyrics(event.target.files?.[0]);
+              event.target.value = '';
+            }}
+          />
         </div>
       </div>
     </div>

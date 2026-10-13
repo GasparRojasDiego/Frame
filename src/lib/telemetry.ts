@@ -27,6 +27,7 @@ import type { ArchivedTask, Habit, StudySession } from '@/types';
 // La versión sale de package.json en tiempo de compilación: escrita a mano
 // se quedó reportando 1.0.0 durante toda la vida de la app.
 import { APP_VERSION } from '@/lib/version';
+import { loadWeatherPlace } from '@/lib/weather';
 
 const SYNC_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 horas entre envíos
 
@@ -44,16 +45,10 @@ export interface TelemetrySnapshot {
   isGuest?: boolean;
 }
 
-/** País del usuario, tomado de la caché de ubicación del clima (Inicio). */
+/** País del usuario, tomado de la ubicación del clima de su perfil (Inicio). */
 function countryFromWeatherCache(): string | null {
-  try {
-    const raw = localStorage.getItem('weatherPlace');
-    if (!raw) return null;
-    const place = JSON.parse(raw);
-    return typeof place?.country === 'string' && place.country ? place.country : null;
-  } catch {
-    return null;
-  }
+  const place = loadWeatherPlace();
+  return typeof place?.country === 'string' && place.country ? place.country : null;
 }
 
 /** Fecha LOCAL (YYYY-MM-DD) de un timestamp ISO: evita que lo hecho en la
@@ -407,7 +402,8 @@ export type TelemetryEventName =
   // Invitados: entrar sin cuenta y, después, vincular Google.
   | 'guest_started'
   | 'guest_linked'
-  // Barra de ayuda de Inicio: qué respuesta se dio (o ninguna), nunca el texto.
+  // Preguntas a la ayuda: qué respuesta se dio (o ninguna), nunca el texto.
+  // Hasta la 1.6.6; la ayuda se quitó en la 1.6.7 y ya no se envía.
   | 'help_asked'
   // Recorrido «Descubrir» de una respuesta (hasta la 1.6.4; ya no se envía).
   | 'help_tour'

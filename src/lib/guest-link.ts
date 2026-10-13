@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { buildTransferFile, importTransferFile, type ImportResult } from '@/lib/data-transfer';
 import { getImage, saveImage } from '@/lib/music-db';
+import { reassignSongs } from '@/lib/profile-scope';
 import { SCOPED_KEYS } from '@/lib/storage-snapshot';
 import type { UserProfile } from '@/types';
 
@@ -206,6 +207,8 @@ export async function mergeGuestIntoAccount(
   const file = await buildTransferFile(profile);
   const result = await importTransferFile(file, accountUid, 'merge');
   mergeRemainingKeys(guest.id, accountUid);
+  // La música no va en el archivo: es del perfil (1.6.7) y pasa a la cuenta.
+  await reassignSongs(guest.id, accountUid);
   await applyGooglePicture(accountUid, picture);
 
   try {

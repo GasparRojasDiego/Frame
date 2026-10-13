@@ -22,7 +22,6 @@ const pages = {
   knowledge: () => import('@/app/(main)/knowledge/page'),
   knowledgeLayout: () => import('@/app/(main)/knowledge/layout'),
   settings: () => import('@/app/(main)/settings/page'),
-  ayuda: () => import('@/app/(main)/ayuda/page'),
   uso: () => import('@/app/(main)/uso/page'),
 };
 
@@ -39,7 +38,6 @@ const CursosPage = lazy(pages.cursos);
 const KnowledgePage = lazy(pages.knowledge);
 const KnowledgeLayout = lazy(pages.knowledgeLayout);
 const SettingsPage = lazy(pages.settings);
-const AyudaPage = lazy(pages.ayuda);
 const UsagePage = lazy(pages.uso);
 
 function usePrefetchPages() {
@@ -80,7 +78,6 @@ export default function App() {
             }
           />
           <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/ayuda" element={<AyudaPage />} />
           {/* Panel de uso: solo existe para el responsable de Frame; para el
               resto la propia página redirige a Inicio. */}
           <Route path="/uso" element={<UsagePage />} />

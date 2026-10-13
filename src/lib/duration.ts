@@ -45,6 +45,18 @@ export function formatTotalMinutes(totalMinutes: number): string | null {
   return m === 0 ? `${h}h` : `${h}h ${m}m`;
 }
 
+/**
+ * Horas y minutos, sin segundos: «45 min», «2 h», «1 h 5 min». Redondea al
+ * minuto más cercano (10 canciones de 3 min justos = «30 min»).
+ */
+export function formatHoursMinutes(totalMinutes: number): string {
+  const minutes = Math.max(0, Math.round(Number.isFinite(totalMinutes) ? totalMinutes : 0));
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m} min`;
+  return m === 0 ? `${h} h` : `${h} h ${m} min`;
+}
+
 /** Igual que `formatTotalMinutes` pero nunca devuelve null: "0m" si no hay tiempo. */
 export function formatMinutes(totalMinutes: number): string {
   return formatTotalMinutes(totalMinutes) ?? '0m';

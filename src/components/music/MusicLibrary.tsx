@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import type { Song } from '@/types';
 
-import { songMatches } from '@/lib/music-search';
+import { songMatches, songTitle } from '@/lib/music-search';
 import { songCardId, useSongHighlight } from '@/hooks/use-song-highlight';
 
 /**
@@ -308,7 +308,7 @@ export default function MusicLibrary() {
                   {song.picture ? (
                     <Image
                       src={song.picture}
-                      alt={song.fileName.replace(/\.(mp3|m4a|aac|ogg|opus|flac|wav|webm|weba)$/i, '')}
+                      alt={songTitle(song)}
                       fill
                       style={{ objectFit: 'cover' }}
                       className="rounded-md"
@@ -319,7 +319,7 @@ export default function MusicLibrary() {
                 </div>
                 <div className="flex flex-col truncate min-w-0">
                   <p className="font-semibold text-foreground truncate">
-                    {song.fileName.replace(/\.(mp3|m4a|aac|ogg|opus|flac|wav|webm|weba)$/i, '')}
+                    {songTitle(song)}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">{song.artist}</p>
                 </div>
@@ -329,34 +329,8 @@ export default function MusicLibrary() {
         </div>
       )}
 
-      {pageCount > 1 && !showInitialEmptyState && !showNoResultsState && (
-        // Abajo, solo las flechas: la página exacta ya se lee arriba, junto
-        // al buscador.
-        <div className="mt-6 flex items-center justify-center gap-3">
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-9 w-9"
-            onClick={() => goToPage(safePage - 1)}
-            disabled={safePage === 0}
-            aria-label="Página anterior"
-            title="Página anterior"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-9 w-9"
-            onClick={() => goToPage(safePage + 1)}
-            disabled={safePage >= pageCount - 1}
-            aria-label="Página siguiente"
-            title="Página siguiente"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
+      {/* 1.6.7 (Diego): sin flechas al pie de la lista; se cambia de carpeta
+          con las de arriba, junto al buscador. */}
 
       <AlertDialog open={!!songToDelete} onOpenChange={(isOpen) => !isOpen && setSongToDelete(null)}>
         <AlertDialogContent>
@@ -364,7 +338,7 @@ export default function MusicLibrary() {
             <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
             <AlertDialogDescription>
               Esta acción no se puede deshacer. Esto eliminará permanentemente la canción
-              "{songToDelete?.fileName.replace(/\.(mp3|m4a|aac|ogg|opus|flac|wav|webm|weba)$/i, '')}" de tu biblioteca.
+              "{(songToDelete ? songTitle(songToDelete) : '')}" de tu biblioteca.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

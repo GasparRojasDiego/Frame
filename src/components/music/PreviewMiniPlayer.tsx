@@ -2,6 +2,7 @@ import { Music, Pause, Play } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { useCourse } from '@/context/CourseContext';
 import { formatClock, playbackClock, usePlaybackPosition } from '@/lib/playback-clock';
+import { songTitle } from '@/lib/music-search';
 import { cn } from '@/lib/utils';
 
 // Escucha previa al armar una playlist: la portada de lo que suena, una barra
@@ -11,7 +12,7 @@ export default function PreviewMiniPlayer({ className }: { className?: string })
   const { progress, duration } = usePlaybackPosition();
   if (!currentSong) return null;
 
-  const title = currentSong.title?.trim() || currentSong.fileName.replace(/\.(mp3|m4a|aac|ogg|opus|flac|wav|webm|weba)$/i, '');
+  const title = songTitle(currentSong);
 
   return (
     <div className={cn('flex min-w-0 items-center gap-2.5 rounded-lg border border-border/70 bg-secondary/40 p-1.5 pr-3', className)}>
