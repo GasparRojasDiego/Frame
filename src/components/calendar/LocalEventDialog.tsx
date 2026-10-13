@@ -1,5 +1,5 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { CalendarIcon, Check, ChevronDown, FileText, Link2, Paperclip, Pencil, Trash2, X } from 'lucide-react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { Bell, CalendarIcon, Check, ChevronDown, Clock, FileText, Link2, Paperclip, Pencil, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -19,16 +19,16 @@ import {
   kindLabelOf,
   normalizeKind,
 } from '@/lib/calendar-events';
-import { EVENT_TINT, PAINT_TINT, PanelHeader, SectionLabel, eventInk, tintVar } from './CalendarBits';
-import {
-  REMIND_OPTIONS,
-  eventEnd,
-  fromKey,
-  orderRange,
-  shortDayLabel,
-  toKey,
-  type DayRange,
-} from './calendar-model';
+import { PanelHeader, SectionLabel } from './CalendarBits';
+import ReminderEditor, {
+  DEFAULT_REMINDER,
+  briefReminder,
+  describeReminder,
+  reminderFromTask,
+  reminderToTask,
+  type ReminderConfig,
+} from '@/components/tasks/ReminderEditor';
+import { eventEnd, fromKey, orderRange, shortDayLabel, toKey, type DayRange } from './calendar-model';
 import { tr } from '@/lib/i18n';
 
 // ============================================================
@@ -40,11 +40,14 @@ import { tr } from '@/lib/i18n';
 //   · Qué: el título y, debajo, dos desplegables: el tipo (Entrega, Evento,
 //     Evaluación, Personal u «Otro…», que escribe el usuario) y los recursos
 //     (enlaces y documentos, como los de una tarea).
-//   · Cuándo: «Desde» sobre «Hasta» (la mitad del ancho) y, a su derecha,
-//     «Todo el día» y «Color» (un cuarto cada uno, a la misma altura). El
-//     color abre el selector de color en un recuadro centrado.
-//   · Aspecto: cómo se verá. Ya no se pregunta si pinta las casillas: un
-//     evento de todo el día las pinta; uno con hora va como etiqueta.
+//   · Cuándo (1.6.8, Diego): «Desde» y «Hasta», cada uno con su campo a la
+//     derecha (la mitad del ancho) y, a su lado, «Todo el día» y «Color» (un
+//     cuarto cada uno, tan altos como las dos filas). El color abre el
+//     selector en un recuadro centrado. Sin «Todo el día», debajo: «Hora» con
+//     la hora elegida (mitad izquierda) y el recordatorio, el mismo botón y el
+//     mismo editor que en la tarjeta de crear tareas (mitad derecha).
+//   · Un evento de todo el día pinta sus casillas; uno con hora va como
+//     etiqueta (la sección «Aspecto» se quitó en la 1.6.8).
 //   · Nota: con formato, como las anotaciones.
 // Sin emojis. El título puede quedar vacío: entonces se usa el tipo.
 // ============================================================
@@ -64,17 +67,19 @@ function initialTime(day: string, todayKey: string): string {
   return '08:00';
 }
 
-const pill = (active: boolean) =>
-  cn(
-    'inline-flex h-7 items-center gap-1 rounded-full border px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-    active
-      ? 'border-primary bg-primary text-primary-foreground shadow-sm'
-      : 'border-border/80 bg-card text-foreground/80 hover:border-primary/60 hover:text-foreground'
-  );
-
 /** Botón desplegable con la forma de un campo. */
 const dropdownButton =
   'h-10 w-full justify-between gap-2 border-border bg-card px-3 text-sm font-medium text-foreground hover:border-primary/60 hover:bg-card';
+
+/** Una fila de «Cuándo»: el nombre a la izquierda y su campo a la derecha. */
+function FieldRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="w-[4.5rem] shrink-0 text-[11px] font-medium text-muted-foreground">{label}</span>
+      <div className="flex min-w-0 flex-1 items-center gap-1">{children}</div>
+    </div>
+  );
+}
 
 /** Campo de fecha con su calendario desplegable (se cierra al elegir). */
 function DateField({
@@ -93,10 +98,8 @@ function DateField({
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="space-y-1">
-      <span className="text-[11px] font-medium text-muted-foreground">{label}</span>
-      <div className="flex items-center gap-1">
-        <Popover open={open} onOpenChange={setOpen}>
+    <FieldRow label={label}>
+      <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button
               type="button"
@@ -130,8 +133,58 @@ function DateField({
             <X className="h-3.5 w-3.5" />
           </Button>
         )}
-      </div>
-    </div>
+    </FieldRow>
+  );
+}
+
+/** La hora del evento: se ve escrita y se cambia con las ruedas en un desplegable. */
+function TimeField({ hour, minute, onChange }: { hour: number; minute: number; onChange: (time: string) => void }) {
+  return (
+    <FieldRow label={tr('Hora')}>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button type="button" variant="outline" className="h-9 w-full justify-start px-3 text-xs font-semibold tabular-nums">
+            <Clock className="h-3.5 w-3.5 text-primary" />
+            {two(hour)}:{two(minute)}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-3" align="start">
+          <div className="flex items-center justify-center gap-2">
+            <WheelColumn label={tr('Hora')} values={HOURS} value={hour} format={two} onChange={(h) => onChange(`${two(h)}:${two(minute)}`)} />
+            <span className="font-mono text-lg font-bold text-muted-foreground">:</span>
+            <WheelColumn label={tr('Minutos')} values={MINUTES} value={minute} format={two} onChange={(m) => onChange(`${two(hour)}:${two(m)}`)} />
+          </div>
+        </PopoverContent>
+      </Popover>
+    </FieldRow>
+  );
+}
+
+/** El recordatorio del evento: el mismo botón y el mismo editor que al crear una tarea. */
+function ReminderField({ value, onChange }: { value: ReminderConfig; onChange: (next: ReminderConfig) => void }) {
+  return (
+    <FieldRow label={tr('Recordatorio')}>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            title={describeReminder(value)}
+            aria-label={describeReminder(value)}
+            className={cn('h-9 w-10 shrink-0 transition-colors', value.enabled && 'border-primary bg-primary/20 text-primary')}
+          >
+            <Bell className="h-4 w-4" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-3" align="end">
+          <ReminderEditor value={value} onChange={onChange} subject="event" />
+        </PopoverContent>
+      </Popover>
+      <span className={cn('min-w-0 truncate text-[11px]', value.enabled ? 'text-foreground/80' : 'text-muted-foreground')}>
+        {briefReminder(value)}
+      </span>
+    </FieldRow>
   );
 }
 
@@ -342,9 +395,18 @@ export default function LocalEventForm({
   const [dates, setDates] = useState<DayRange>(() => (event ? { start: event.date, end: eventEnd(event) } : range));
   const [timed, setTimed] = useState(event ? !!event.time : preset === 'recordatorio');
   const [time, setTime] = useState(event?.time ?? initialTime(range.start, todayKey));
-  const [remind, setRemind] = useState<number | undefined>(
-    event ? event.remindBefore : preset === 'recordatorio' ? 0 : undefined
-  );
+  // El recordatorio de la 1.6.8. Un evento con el aviso antiguo («10 min
+  // antes») lo muestra encendido a la hora en que avisaba.
+  const [reminder, setReminder] = useState<ReminderConfig>(() => {
+    if (event?.reminderEnabled && event.reminderTime) return reminderFromTask(event);
+    const at = event?.time ?? initialTime(range.start, todayKey);
+    if (event ? typeof event.remindBefore === 'number' : preset === 'recordatorio') {
+      const [h, m] = at.split(':').map(Number);
+      const total = Math.max(0, h * 60 + m - (event?.remindBefore ?? 0));
+      return { ...DEFAULT_REMINDER, enabled: true, time: `${two(Math.floor(total / 60))}:${two(total % 60)}` };
+    }
+    return { ...DEFAULT_REMINDER, time: at };
+  });
   const [color, setColor] = useState(event?.color || DEFAULT_EVENT_COLOR);
   const [pickingColor, setPickingColor] = useState(false);
   const [description, setDescription] = useState(event?.description ?? '');
@@ -357,12 +419,7 @@ export default function LocalEventForm({
     return () => clearTimeout(timer);
   }, [confirmDelete]);
 
-  const toggleAllDay = () => {
-    const nextTimed = !timed;
-    setTimed(nextTimed);
-    if (!nextTimed) setRemind(undefined);
-    else if (isReminder && remind === undefined) setRemind(0);
-  };
+  const toggleAllDay = () => setTimed(!timed);
 
   const [hour, minute] = time.split(':').map(Number);
   const safeHour = Number.isFinite(hour) ? hour : 8;
@@ -386,14 +443,17 @@ export default function LocalEventForm({
       color,
       description: isRichNoteEmpty(description) ? undefined : description,
       time: timed ? `${two(safeHour)}:${two(safeMinute)}` : undefined,
-      remindBefore: timed ? remind : undefined,
+      // El aviso antiguo queda atrás al guardar: manda el recordatorio nuevo.
+      remindBefore: undefined,
+      ...reminderToTask(timed ? reminder : DEFAULT_REMINDER),
       attachments: attachments.length > 0 ? attachments : undefined,
     });
   };
 
   const single = dates.start === dates.end;
+  // Tan altos como las dos filas de fecha (1.6.8: antes medían 7rem).
   const box =
-    'flex h-full min-h-[7rem] flex-col items-center justify-center gap-2 rounded-lg border px-2 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+    'flex h-full flex-col items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
   return (
     <form onSubmit={handleSubmit} noValidate className="contents">
@@ -439,7 +499,7 @@ export default function LocalEventForm({
         <div className="space-y-3">
           <SectionLabel>{tr('Cuándo')}</SectionLabel>
           <div className="grid grid-cols-4 items-stretch gap-2">
-            <div className="col-span-2 space-y-2">
+            <div className="col-span-2 space-y-1.5">
               <DateField
                 label={tr('Desde')}
                 value={dates.start}
@@ -485,11 +545,11 @@ export default function LocalEventForm({
               {/* La paleta: el círculo cromático con el color elegido al centro. */}
               <span
                 aria-hidden
-                className="relative h-9 w-9 rounded-full"
+                className="relative h-7 w-7 rounded-full"
                 style={{ background: 'conic-gradient(#f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)' }}
               >
                 <span
-                  className="absolute inset-[7px] rounded-full border-2 border-background"
+                  className="absolute inset-[5px] rounded-full border-2 border-background"
                   style={{ background: color }}
                 />
               </span>
@@ -498,71 +558,11 @@ export default function LocalEventForm({
           </div>
 
           {timed && (
-            <div className="space-y-3 duration-200 animate-in fade-in-0 slide-in-from-top-1 motion-reduce:animate-none">
-              <div className="flex items-center justify-center gap-2">
-                <WheelColumn
-                  label={tr('Hora')}
-                  values={HOURS}
-                  value={safeHour}
-                  format={two}
-                  onChange={(h) => setTime(`${two(h)}:${two(safeMinute)}`)}
-                />
-                <span className="font-mono text-lg font-bold text-muted-foreground">:</span>
-                <WheelColumn
-                  label={tr('Minutos')}
-                  values={MINUTES}
-                  value={safeMinute}
-                  format={two}
-                  onChange={(m) => setTime(`${two(safeHour)}:${two(m)}`)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <span className="text-[11px] font-medium text-muted-foreground">{tr('Aviso')}</span>
-                <div className="flex flex-wrap gap-1.5" role="group" aria-label={tr('Aviso')}>
-                  <button type="button" aria-pressed={remind === undefined} onClick={() => setRemind(undefined)} className={pill(remind === undefined)}>
-                    {tr('Sin aviso')}
-                  </button>
-                  {REMIND_OPTIONS.map((option) => (
-                    <button
-                      key={option.minutes}
-                      type="button"
-                      aria-pressed={remind === option.minutes}
-                      onClick={() => setRemind(option.minutes)}
-                      className={pill(remind === option.minutes)}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+            <div className="grid grid-cols-2 items-center gap-2 duration-200 animate-in fade-in-0 slide-in-from-top-1 motion-reduce:animate-none">
+              <TimeField hour={safeHour} minute={safeMinute} onChange={setTime} />
+              <ReminderField value={reminder} onChange={setReminder} />
             </div>
           )}
-        </div>
-
-        {/* ---------- Aspecto: cómo se verá en el calendario ---------- */}
-        <div className="space-y-3">
-          <SectionLabel>{tr('Aspecto')}</SectionLabel>
-          <div className="flex items-center justify-center gap-3" aria-hidden>
-            <span
-              className={cn('relative h-14 w-16 shrink-0 border border-border bg-background', !timed && PAINT_TINT)}
-              style={!timed ? tintVar(color) : undefined}
-            >
-              <span className="absolute right-1 top-1 text-[10px] font-semibold text-foreground/85">
-                {fromKey(dates.start).getDate()}
-              </span>
-              {timed && (
-                <span
-                  className={cn('absolute inset-x-1 bottom-1.5 truncate rounded-sm px-1 text-[9px] font-semibold leading-4', EVENT_TINT, eventInk(color))}
-                  style={tintVar(color)}
-                >
-                  {two(safeHour)}:{two(safeMinute)} {shownTitle}
-                </span>
-              )}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              {timed ? tr('Etiqueta con su hora en el día') : single ? tr('La casilla se pinta') : tr('Las casillas se pintan')}
-            </span>
-          </div>
         </div>
 
         {/* ---------- Nota ---------- */}

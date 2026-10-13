@@ -533,6 +533,48 @@ async fn clear_shared_google_session(app: tauri::AppHandle) -> Result<u32, Strin
     Ok(removed)
 }
 
+/// Servicio de cada página incrustada: su casa y la dirección con que se abre.
+fn embed_service(kind: &str) -> Option<(&'static str, &'static str, &'static [&'static str])> {
+    match kind {
+        "gmail" => Some(("gmail-embed", "https://mail.google.com/", &["mail.google.com"])),
+        "youtube" => Some(("youtube-embed", "https://www.youtube.com/", &["www.youtube.com", "youtube.com", "m.youtube.com"])),
+        "classroom" => Some(("classroom-embed", "https://classroom.google.com/", &["classroom.google.com"])),
+        _ => None,
+    }
+}
+
+/// `google.com/url?q=…` (los enlaces de un correo pasan por ahí): el destino real.
+fn unwrap_google_redirect(url: tauri::Url) -> tauri::Url {
+    let host = url.host_str().unwrap_or_default().to_ascii_lowercase();
+    if (host == "www.google.com" || host == "google.com") && url.path() == "/url" {
+        if let Some((_, target)) = url.query_pairs().find(|(k, _)| k == "q" || k == "url") {
+            if let Ok(parsed) = target.parse::<tauri::Url>() {
+                return parsed;
+            }
+        }
+    }
+    url
+}
+
+/// ¿Esta ventana nueva se queda dentro del recuadro? Sí el inicio de sesión de
+/// Google (cuentas y consentimiento) y la casa del propio servicio; lo demás
+/// (un enlace de un correo, la página de un vídeo en otro sitio…) va al
+/// navegador del sistema.
+fn stays_in_embed(url: &tauri::Url, home: &[&str]) -> bool {
+    if url.scheme() != "https" {
+        return false;
+    }
+    let host = url.host_str().unwrap_or_default().to_ascii_lowercase();
+    const SIGN_IN: [&str; 5] = [
+        "accounts.google.com",
+        "accounts.youtube.com",
+        "consent.google.com",
+        "consent.youtube.com",
+        "myaccount.google.com",
+    ];
+    SIGN_IN.contains(&host.as_str()) || home.contains(&host.as_str())
+}
+
 #[tauri::command]
 async fn google_embed_update(
     app: tauri::AppHandle,
@@ -546,12 +588,7 @@ async fn google_embed_update(
 ) -> Result<(), String> {
     use tauri::{LogicalPosition, LogicalSize};
 
-    let (label, base) = match kind.as_str() {
-        "gmail" => ("gmail-embed", "https://mail.google.com/"),
-        "youtube" => ("youtube-embed", "https://www.youtube.com/"),
-        "classroom" => ("classroom-embed", "https://classroom.google.com/"),
-        _ => return Err("Servicio no permitido.".into()),
-    };
+    let (label, base, home) = embed_service(&kind).ok_or("Servicio no permitido.")?;
     // En el idioma de Frame: sin `hl`, Google saldría en el de Windows.
     let url = format!("{base}?hl={}", ui("es", "en"));
 
@@ -589,12 +626,29 @@ async fn google_embed_update(
     let window = app
         .get_window("main")
         .ok_or("Ventana principal no disponible.")?;
+    // Ventanas nuevas (1.6.8). Sin este manejador WebView2 las descarta en
+    // silencio, y «Iniciar sesión» de Gmail, Classroom o YouTube abre una:
+    // desde la 1.6.7 cada perfil tiene su propia sesión de Google en estas
+    // páginas y el botón no hacía nada. El inicio de sesión se abre aquí
+    // mismo; un enlace a otro sitio, en el navegador del sistema.
+    let app_ = app.clone();
     let builder =
         tauri::webview::WebviewBuilder::new(label, tauri::WebviewUrl::External(url.parse().unwrap()))
             // Cookies y sesión de Google de ESTE perfil, aparte de las de los demás.
             .data_directory(embed_data_dir(&app, &profile)?)
             // El reproductor vive a veces en un iframe: hay que parchear todos.
-            .initialization_script_for_all_frames(FULLSCREEN_GUARD_JS);
+            .initialization_script_for_all_frames(FULLSCREEN_GUARD_JS)
+            .on_new_window(move |requested, _features| {
+                let target = unwrap_google_redirect(requested);
+                if stays_in_embed(&target, home) {
+                    if let Some(webview) = app_.get_webview(label) {
+                        let _ = webview.navigate(target);
+                    }
+                } else if matches!(target.scheme(), "https" | "http") {
+                    let _ = tauri_plugin_opener::open_url(target.as_str(), None::<&str>);
+                }
+                tauri::webview::NewWindowResponse::Deny
+            });
     window
         .add_child(builder, LogicalPosition::new(x, y), LogicalSize::new(w, h))
         .map_err(|e| e.to_string())?;

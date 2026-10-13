@@ -48,6 +48,7 @@ import { reviewStoredSong } from '@/lib/music-review';
 import { foldName, isJunkTag } from '@/lib/song-names';
 import { activeProfileId, ownerForUnownedSongs } from '@/lib/profile-scope';
 import { songTitle } from '@/lib/music-search';
+import { localizePlaylists, rememberSongKeys, setLibraryIds, songKey } from '@/lib/song-keys';
 import { emit as tauriEmit, listen as tauriListen } from '@tauri-apps/api/event';
 import { format, parseISO } from 'date-fns';
 import { isSessionEditable } from '@/lib/session-edit';
@@ -143,6 +144,18 @@ function purgeTaskFiles(gone: Array<{ attachments?: { id: string; kind: string }
     }
   }
 }
+
+/** Las playlists en el orden que eligió el usuario (1.6.8: el orden es un
+ *  campo que viaja); las que no lo tienen, detrás y en su orden de siempre. */
+function byOrder(list: Playlist[]): Playlist[] {
+  return list
+    .map((playlist, index) => ({ playlist, index }))
+    .sort((a, b) => (a.playlist.order ?? Infinity) - (b.playlist.order ?? Infinity) || a.index - b.index)
+    .map(({ playlist }) => playlist);
+}
+
+/** El sitio de una playlist nueva: al final. */
+const nextOrder = (list: Playlist[]): number => list.reduce((max, p) => Math.max(max, (p.order ?? -1) + 1), list.length);
 
 function restoreIds(current: string[], original: string[], removed: string[]): string[] {
   const removedSet = new Set(removed);
@@ -431,6 +444,19 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
    */
   const nextSeqRef = React.useRef(0);
   const [areSongsLoading, setAreSongsLoading] = useState(true);
+
+  // Índice id → clave de cada canción (song-keys.ts): las playlists viajan por
+  // la clave, igual en todos los dispositivos, y cada uno la traduce a su id.
+  useEffect(() => {
+    if (!userProfile || areSongsLoading) return;
+    rememberSongKeys(userProfile.id, songs);
+    setLibraryIds(songs.map(song => song.id));
+    // Claves que llegaron antes de conocer esta música: pasan a su id y se ven.
+    if (localizePlaylists(userProfile.id)) {
+      setPlaylists(byOrder(getArrayFromLocalStorage<Playlist>(`playlists_${userProfile.id}`)));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfile?.id, songs, areSongsLoading]);
   const [studyGoals, setStudyGoals] = useState<StudyGoals>(defaultStudyGoals);
   const [streakGoal, setStreakGoal] = useState<StreakGoal>(defaultStreakGoal);
   const [selectionMode, setSelectionModeState] = useState<SelectionMode>('rendimiento');
@@ -622,7 +648,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     }
 
     setDailyPerformances(getArrayFromLocalStorage(storageKeys.dailyPerformances));
-    setPlaylists(getArrayFromLocalStorage(storageKeys.playlists));
+    setPlaylists(byOrder(getArrayFromLocalStorage<Playlist>(storageKeys.playlists)));
     setSpaces(getArrayFromLocalStorage(storageKeys.spaces));
     setStudyGoals(getFromLocalStorage(storageKeys.studyGoals, defaultStudyGoals));
     const storedStreakGoal = getFromLocalStorage(storageKeys.streakGoal, defaultStreakGoal);
@@ -2225,7 +2251,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
       const idx = prev.findIndex(p => p.name.trim().toLowerCase() === key);
       let updated: Playlist[];
       if (idx === -1) {
-        updated = [...prev, { id: crypto.randomUUID(), name: name.trim(), songIds }];
+        updated = [...prev, { id: crypto.randomUUID(), name: name.trim(), songIds, order: nextOrder(prev) }];
       } else {
         const existing = prev[idx];
         const merged = [...existing.songIds, ...songIds.filter(id => !existing.songIds.includes(id))];
@@ -2248,7 +2274,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
       });
       return;
     }
-    const newPlaylist: Playlist = { id: crypto.randomUUID(), name: trimmedName, songIds };
+    const newPlaylist: Playlist = { id: crypto.randomUUID(), name: trimmedName, songIds, order: nextOrder(playlists) };
     setPlaylists(prev => {
         const updated = [...prev, newPlaylist];
         setInLocalStorage(storageKeys.playlists, updated);
@@ -2328,10 +2354,11 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
       for (const rest of byId.values()) next.push(rest);
       const unchanged = next.length === prev.length && next.every((p, i) => p === prev[i]);
       if (unchanged) return prev;
-      // El orden se guarda en el disco: sin esto vivía solo en memoria y al
-      // reabrir Frame las playlists volvían a su orden de siempre.
-      if (storageKeys) setInLocalStorage(storageKeys.playlists, next);
-      return next;
+      // El orden va en cada playlist (1.6.8): solo así viaja a los demás
+      // dispositivos (la fusión conserva el orden de la lista de cada uno).
+      const numbered = next.map((playlist, order) => (playlist.order === order ? playlist : { ...playlist, order }));
+      if (storageKeys) setInLocalStorage(storageKeys.playlists, numbered);
+      return numbered;
     });
   }, [storageKeys]);
 
@@ -2568,12 +2595,13 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     const songToDelete = originalSongs.find(s => s.id === id);
     if (!songToDelete) return;
 
-    // Optimistic UI update
+    // Optimistic UI update. En las playlists la canción deja su CLAVE (1.6.8):
+    // aquí ya no se ve, pero los demás dispositivos la conservan en su sitio
+    // (la música no viaja: borrarla aquí no la borra allí).
+    const keyOfDeleted = songKey(songToDelete);
+    const keepKey = (ids: string[]) => [...new Set(ids.map(songId => (songId === id ? keyOfDeleted : songId)))];
     setSongs(prev => prev.filter(s => s.id !== id));
-    setPlaylists(prev => prev.map(p => ({
-      ...p,
-      songIds: p.songIds.filter(songId => songId !== id)
-    })));
+    setPlaylists(prev => prev.map(p => (p.songIds.includes(id) ? { ...p, songIds: keepKey(p.songIds) } : p)));
     // La cola y el historial también la sueltan: si no, «siguiente» o «anterior»
     // acababan intentando reproducir un archivo que ya no existe.
     setPlaybackQueue(prev => prev.filter(s => s.id !== id));
@@ -2584,7 +2612,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
       setPlaylists(prev => prev.map(p => {
         const before = originalPlaylists.find(o => o.id === p.id);
         if (!before || !before.songIds.includes(id) || p.songIds.includes(id)) return p;
-        return { ...p, songIds: restoreIds(p.songIds, before.songIds, [id]) };
+        return { ...p, songIds: restoreIds(p.songIds.filter(songId => songId !== keyOfDeleted), before.songIds, [id]) };
       }));
       setPlaybackQueue(prev => (prev.some(s => s.id === id) ? prev : [...prev, songToDelete]));
       toast({ title: tr('Acción deshecha'), description: tr('Canción "{songTitle}" restaurada.', { songTitle: songTitle(songToDelete) }) });
@@ -2597,10 +2625,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
         void forgetLyrics(id);
         // Desde lo persistido (ver deletePlaylist): no pisa playlists nuevas.
         const latest = getArrayFromLocalStorage<Playlist>(storageKeys.playlists);
-        setInLocalStorage(storageKeys.playlists, latest.map(p => ({
-            ...p,
-            songIds: p.songIds.filter(songId => songId !== id)
-        })));
+        setInLocalStorage(storageKeys.playlists, latest.map(p => (p.songIds.includes(id) ? { ...p, songIds: keepKey(p.songIds) } : p)));
       } catch (e) {
         console.error("Failed to commit song deletion:", e);
         undo(); // Revert if commit fails

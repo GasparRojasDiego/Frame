@@ -72,7 +72,8 @@ const FORMATS: { format: ReportFormat; label: string; icon: typeof FileText; tit
   { format: 'docx', label: 'Word', icon: FileText, get title() { return tr('Documento de Word, editable'); } },
 ];
 
-/** Botón rectangular «fantasma» que despliega sus opciones. */
+/** Botón rectangular que despliega sus opciones. Neutro desde la 1.6.8
+ *  (Diego): el azul se reserva para la acción principal del recuadro. */
 function Selector<T extends string | number>({
   value,
   options,
@@ -88,7 +89,7 @@ function Selector<T extends string | number>({
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <Button variant="fantasma" className={cn('h-9 justify-between gap-2 px-3 text-xs', className)}>
+        <Button variant="outline" className={cn('h-9 justify-between gap-2 px-3 text-xs font-medium text-foreground', className)}>
           <span className="truncate first-letter:uppercase">{current?.label}</span>
           <ChevronDown className="h-3.5 w-3.5 shrink-0" />
         </Button>
@@ -250,7 +251,8 @@ export default function ReportCenter({ userProfile }: { userProfile: UserProfile
         {FORMATS.map(({ format: fmt, label: name, icon: Icon, title }) => (
           <Button
             key={fmt}
-            variant={fmt === 'docx' ? 'default' : 'fantasma'}
+            // PDF en gris y Word en fantasma (1.6.8, Diego).
+            variant={fmt === 'docx' ? 'fantasma' : 'gris'}
             disabled={busy !== null || !doc}
             onClick={() => doc && void run(() => doc, fileBase, fmt, reportId)}
             title={title}

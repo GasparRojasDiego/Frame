@@ -89,8 +89,12 @@ export function loadWeatherPlace(): WeatherPlace | null {
   }
 }
 
+/** Aviso de que cambió el lugar del clima (aquí o desde otro dispositivo). */
+export const WEATHER_PLACE_EVENT = 'frame:weather-place';
+
 export function saveWeatherPlace(place: WeatherPlace) {
   localStorage.setItem(placeKey(), JSON.stringify(place));
+  window.dispatchEvent(new Event(WEATHER_PLACE_EVENT));
 }
 
 export function loadWeatherCache(): WeatherData | null {

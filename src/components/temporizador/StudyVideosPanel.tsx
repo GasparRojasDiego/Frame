@@ -23,6 +23,7 @@ import {
   writeStudyVideos,
 } from '@/lib/study-videos';
 import type { StudyVideo } from '@/types';
+import { CLOUD_APPLIED_EVENT } from '@/lib/supabase/sync';
 import { tr } from '@/lib/i18n';
 
 // ============================================================
@@ -159,10 +160,15 @@ export default function StudyVideosPanel({
 
   useEffect(() => {
     setVideos(readStudyVideos(uid));
-    // La lista también cambia desde otras pantallas: hay que enterarse.
+    // La lista también cambia desde otras pantallas y, desde la 1.6.8, desde
+    // otros dispositivos de la cuenta: hay que enterarse.
     const refresh = () => setVideos(readStudyVideos(uid));
     window.addEventListener(STUDY_VIDEOS_EVENT, refresh);
-    return () => window.removeEventListener(STUDY_VIDEOS_EVENT, refresh);
+    window.addEventListener(CLOUD_APPLIED_EVENT, refresh);
+    return () => {
+      window.removeEventListener(STUDY_VIDEOS_EVENT, refresh);
+      window.removeEventListener(CLOUD_APPLIED_EVENT, refresh);
+    };
   }, [uid]);
 
   const persist = useCallback(

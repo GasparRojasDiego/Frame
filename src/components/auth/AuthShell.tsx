@@ -2,7 +2,6 @@ import { useState, type ReactNode } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import ConstellationBackdrop from '@/components/layout/ConstellationBackdrop';
 import FrameLogo from '@/components/layout/FrameLogo';
 import { APP_VERSION } from '@/lib/version';
 import { cn } from '@/lib/utils';
@@ -10,9 +9,9 @@ import { tr } from '@/lib/i18n';
 
 // ============================================================
 // Marco común de las pantallas de acceso (entrar, registrarse y completar
-// el perfil): constelación de fondo y la franja de marca del recuadro. La
-// marca va como en el menú lateral: el logo y «FRAME» a su derecha. Sin
-// efectos que sigan al cursor (1.6.7, Diego).
+// el perfil): la franja de marca del recuadro, sobre el fondo liso de la app
+// (sin constelación desde la 1.6.8). La marca va como en el menú lateral: el
+// logo y «FRAME» a su derecha. Sin efectos que sigan al cursor (1.6.7, Diego).
 // ============================================================
 
 interface AuthShellProps {
@@ -58,10 +57,7 @@ export default function AuthShell({ title, description, children, inDialog = fal
   if (inDialog) return card;
 
   return (
-    // `isolate`: crea un contexto de apilamiento propio, de modo que el lienzo
-    // (a -z-10) queda por encima del fondo de esta capa y por debajo del recuadro.
-    <div className="relative isolate flex min-h-screen w-full items-center justify-center overflow-x-hidden overflow-y-auto bg-background px-4 py-8">
-      <ConstellationBackdrop />
+    <div className="relative flex min-h-screen w-full items-center justify-center overflow-x-hidden overflow-y-auto bg-background px-4 py-8">
       {card}
     </div>
   );

@@ -7,7 +7,9 @@ import FullCalendarView from '@/components/calendar/FullCalendarView';
 // ============================================================
 export default function CalendarioPage() {
   return (
-    <div className="flex h-full min-h-0 flex-col py-4">
+    // 1.6.8 (Diego): la fila del mes baja un poco (24 px desde la cabecera) y
+    // deja el mismo aire hasta la cuadrícula (gap-6 en FullCalendarView).
+    <div className="flex h-full min-h-0 flex-col pb-4 pt-6">
       <FullCalendarView className="min-h-0 flex-1 px-4 md:px-8" />
     </div>
   );

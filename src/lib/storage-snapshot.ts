@@ -1,3 +1,5 @@
+import { toCloudSongIds, toLocalSongIds } from '@/lib/song-keys';
+
 // Claves de estado de negocio sincronizables (sufijo `_<uid>`).
 // Excluye música (archivos en IndexedDB) e imágenes; solo se respalda el estado de negocio.
 //
@@ -5,8 +7,11 @@
 // IndexedDB igual que la música. Restaurar solo la ficha dejaría tarjetas
 // mudas, así que queda fuera a propósito.
 //
-// 'school': clave heredada de Aether OS que el Perfil de Frame ya no escribe.
-// Se mantiene solo de arrastre, para no perder el dato de quien migró.
+// Retiradas en la 1.6.8 (ver RETIRED_KEYS en sync-merge.ts): 'classSessions'
+// y 'schedules' (invisibles desde la 1.6.6), 'playHistory' (sin escribirse
+// desde la 1.5.4) y 'school' (de Aether OS). Eran la mitad del respaldo de
+// una cuenta con uso y viajaban en cada sincronización. La copia de cada
+// equipo no se toca.
 export const SCOPED_KEYS = [
   'courses',
   'tasks',
@@ -33,33 +38,27 @@ export const SCOPED_KEYS = [
   'taskSortMode',
   'isPlayerVisible',
   'competencyCourseIds',
-  // Bitácora de reproducciones: desde la 1.5.4 ya no se escribe (se quitaron
-  // «Tu banda sonora» y «Lo que más escuchas»). Sigue en la lista solo para
-  // no descartar la de quien aún use una versión anterior en otro equipo.
-  'playHistory',
-  'school',
-  // Horario del colegio y las clases del mes, con los temas que el estudiante
-  // anota en cada una. Faltaban: quien reinstalaba o cambiaba de equipo perdía
-  // el horario entero aunque "todo estuviera en la nube".
-  'schedules',
-  'classSessions',
   // Acumulado real de reproducciones: sin respaldo, al reinstalar se resembraba
   // con la longitud del registro rodante y la cifra del expediente bajaba.
   'playCount',
-  // Índice de las imágenes que viajan entre dispositivos (foto de perfil,
-  // horario, portadas de playlists, asignaturas y colecciones). Los archivos
-  // van a Supabase Storage; aquí solo qué versión tiene cada una (image-sync.ts).
+  // Índice de las imágenes que viajan entre dispositivos por la nube (foto de
+  // perfil y horario). Los archivos van a Supabase Storage; aquí solo qué
+  // versión tiene cada una (image-sync.ts).
   'syncedImages',
   // Anotaciones sin asignatura del «+» de la barra (src/lib/loose-notes.ts).
   'looseNotes',
-  // 'studyVideos' queda FUERA a propósito: cada ficha puede llevar la ruta
-  // del archivo descargado en ESTE equipo, que en otro no existe.
+  // Vídeos de estudio (1.6.8): solo fichas de YouTube, sin archivos del equipo.
+  'studyVideos',
+  // Imágenes de asignaturas, colecciones y playlists por referencia (1.6.8,
+  // image-refs.ts): las de la galería viajan como su código.
+  'imageRefs',
+  // Ajustes de la cuenta que siguen al usuario (1.6.8, account-settings.ts):
+  // idioma, proporción de las imágenes de las tarjetas, ciudad del clima.
+  'appSettings',
+  // Clave que cifra los cambios que viajan por el canal en vivo (1.6.8,
+  // sync-delta.ts). Solo la leen los dispositivos de la cuenta.
+  'syncKey',
 ] as const;
-
-// No hay claves globales (sin uid): la única, 'headerQuote' (la frase propia
-// de la barra superior), se retiró en la 1.6.2. Un respaldo antiguo que aún la
-// traiga no rompe nada: `applyLocalData` solo escribe las de SCOPED_KEYS, así
-// que la ignora.
 
 export type LocalSnapshot = Record<string, unknown>;
 
@@ -85,10 +84,40 @@ const write = (key: string, value: unknown): boolean => {
   }
 };
 
+/**
+ * Forma «de nube» de una clave: lo que viaja. Solo cambia en las playlists,
+ * cuyas canciones viajan por su clave (song-keys.ts) y no por el id de este
+ * dispositivo.
+ */
+export function toCloudForm(uid: string, key: string, value: unknown): unknown {
+  if (key !== 'playlists' || !Array.isArray(value)) return value;
+  return value.map((playlist) =>
+    playlist && typeof playlist === 'object' && Array.isArray((playlist as { songIds?: unknown }).songIds)
+      ? { ...playlist, songIds: toCloudSongIds(uid, (playlist as { songIds: string[] }).songIds) }
+      : playlist
+  );
+}
+
+/** Forma de este dispositivo de lo que llega de la nube (la inversa de la anterior). */
+export function toLocalForm(uid: string, key: string, value: unknown): unknown {
+  if (key !== 'playlists' || !Array.isArray(value)) return value;
+  return value.map((playlist) =>
+    playlist && typeof playlist === 'object' && Array.isArray((playlist as { songIds?: unknown }).songIds)
+      ? { ...playlist, songIds: toLocalSongIds(uid, (playlist as { songIds: string[] }).songIds) }
+      : playlist
+  );
+}
+
+/** Una clave del perfil, en forma de nube (undefined si no existe). */
+export function readCloudForm(uid: string, key: string): unknown {
+  const value = read(`${key}_${uid}`);
+  return value === undefined ? undefined : toCloudForm(uid, key, value);
+}
+
 export function collectLocalData(uid: string): LocalSnapshot {
   const snapshot: LocalSnapshot = {};
   for (const key of SCOPED_KEYS) {
-    const value = read(`${key}_${uid}`);
+    const value = readCloudForm(uid, key);
     if (value !== undefined) snapshot[key] = value;
   }
   return snapshot;
@@ -133,10 +162,10 @@ function applyLocalDataInner(uid: string, snapshot: LocalSnapshot | null | undef
     if (!write(storageKey, value)) ok = false;
   };
 
-  // Lo que no esté en SCOPED_KEYS (p. ej. 'headerQuote' de un respaldo
-  // anterior a la 1.6.2) no se escribe: se ignora.
+  // Lo que no esté en SCOPED_KEYS (una clave retirada, o la de una versión
+  // más nueva) no se escribe: se ignora.
   for (const key of SCOPED_KEYS) {
-    if (key in snapshot) put(`${key}_${uid}`, snapshot[key]);
+    if (key in snapshot) put(`${key}_${uid}`, toLocalForm(uid, key, snapshot[key]));
   }
   return { ok, changed };
 }

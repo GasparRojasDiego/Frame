@@ -48,7 +48,7 @@ import { Pencil, Trash2, Check, X, LoaderCircle, Shuffle, PlusCircle, Music, Men
 import WaveBackdrop from '@/components/courses/WaveBackdrop';
 import ImagePickerDialog from '@/components/shared/ImagePickerDialog';
 import { aspectOf } from '@/components/shared/ImageCropper';
-import { saveImage } from '@/lib/music-db';
+import { setEntityImage, type ImageSource } from '@/lib/image-refs';
 import { useStoredImage } from '@/hooks/use-stored-image';
 import { cn } from '@/lib/utils';
 import { formatHoursMinutes } from '@/lib/duration';
@@ -176,6 +176,7 @@ export default function PlaylistDetailsClient({ id }: { id: string }) {
     updatePlaylist,
     deletePlaylist,
     playSong,
+    userProfile,
   } = useCourse();
 
   const [playlist, setPlaylist] = useState<Playlist | undefined>(undefined);
@@ -204,9 +205,9 @@ export default function PlaylistDetailsClient({ id }: { id: string }) {
   // Imagen propia de la cabecera (clave `playlistImage_<id>`, junto a las
   // portadas). Se relee sola: también cuando llega de otro dispositivo.
   const [customImage, setCustomImage] = useStoredImage(playlistId ? `playlistImage_${playlistId}` : null);
-  const handleSelectImage = async (dataUrl: string) => {
+  const handleSelectImage = async (dataUrl: string, source?: ImageSource) => {
     if (!playlistId) return;
-    await saveImage(`playlistImage_${playlistId}`, dataUrl);
+    await setEntityImage(userProfile?.id, `playlistImage_${playlistId}`, dataUrl, source);
     setCustomImage(dataUrl);
     setImagePickerOpen(false);
   };
@@ -251,9 +252,11 @@ export default function PlaylistDetailsClient({ id }: { id: string }) {
   const persistOrder = (ordered: Song[]) => {
       if (!playlist) return;
       const visible = new Set(ordered.map(s => s.id));
-      // Las canciones que no están en ESTE equipo conservan su sitio al final.
-      const absent = playlist.songIds.filter(songId => !visible.has(songId));
-      const newSongIds = [...ordered.map(s => s.id), ...absent];
+      // Las canciones que no están en ESTE equipo conservan su sitio exacto:
+      // solo se reordenan los huecos de las visibles. Antes se iban al final y
+      // en el otro dispositivo, donde sí están, la playlist se desordenaba.
+      let next = 0;
+      const newSongIds = playlist.songIds.map(songId => (visible.has(songId) ? ordered[next++]?.id ?? songId : songId));
       if (JSON.stringify(newSongIds) !== JSON.stringify(playlist.songIds)) {
           updatePlaylist(playlist.id, { songIds: newSongIds });
       }

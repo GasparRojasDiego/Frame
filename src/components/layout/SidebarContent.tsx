@@ -156,11 +156,14 @@ export function SidebarContent({
         {/* Marca: siempre fija arriba, nunca se desplaza.
             `pt-2` al contraerse: el carril pasa de p-4 a p-2 y el logo se
             quedaba pegado al borde superior mientras abajo respiraba el doble.
-            Con esto vuelve a haber el mismo aire arriba que hasta la línea. */}
+            Con esto vuelve a haber el mismo aire arriba que hasta la línea.
+            1.6.8 (Diego): el margen de seguridad entre cada línea y el carril
+            desplazable se reduce a la mitad (16 → 8 px arriba, 24 → 12 px
+            abajo): tapaba media fila de la última playlist visible. */}
         <div className="flex-shrink-0">
           <div
             className={cn(
-              'relative flex items-center justify-center pb-4 mb-4 border-b',
+              'relative flex items-center justify-center pb-4 mb-2 border-b',
               collapsed && 'pt-2'
             )}
           >
@@ -267,8 +270,8 @@ export function SidebarContent({
           <PlaylistList collapsed={collapsed} />
         </div>
 
-        {/* Footer */}
-        <div className="flex-shrink-0 pt-4">
+        {/* Pie: 4 + 8 px de aire sobre la línea (antes 16 + 8). */}
+        <div className="flex-shrink-0 pt-1">
           <Separator className="my-2" />
           {/* El testigo va FUERA del <Link>, no dentro: un botón anidado en un
               enlace obliga a cancelar el evento para no navegar, y esa

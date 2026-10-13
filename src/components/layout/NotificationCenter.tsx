@@ -9,6 +9,7 @@ import {
   Clock,
   Download,
   Info,
+  RefreshCw,
   Settings,
   Timer,
   Trash2,
@@ -47,10 +48,11 @@ import { cn } from '@/lib/utils';
 import { signInAgain, useConnectionState } from '@/lib/connection-status';
 import { BELL_PING_EVENT } from '@/components/layout/ConnectionNotice';
 import { dateLocale, inBothLangs, tr, useLang } from '@/lib/i18n';
+import { openSyncIssues, useSyncIssues } from '@/lib/sync-check';
 
 interface AppNotification {
   id: string;
-  kind: 'vencida' | 'hoy' | 'proxima' | 'actualizacion' | 'conexion';
+  kind: 'vencida' | 'hoy' | 'proxima' | 'actualizacion' | 'conexion' | 'sincronizacion';
   /** Ausentes en las notificaciones que no son de una tarea. */
   taskId?: string;
   courseId?: string;
@@ -68,10 +70,11 @@ const KIND_META: Record<LogKind, { icon: React.ElementType; className: string; l
   recordatorio: { icon: BellRing, className: 'text-primary bg-primary/10 border-primary/30', get label() { return tr('Recordatorio'); } },
   sesion: { icon: Timer, className: 'text-primary bg-primary/10 border-primary/30', get label() { return tr('Estudio'); } },
   aviso: { icon: Info, className: 'text-muted-foreground bg-muted border-border', get label() { return tr('Aviso'); } },
+  sincronizacion: { icon: RefreshCw, className: 'text-amber-500 bg-amber-500/10 border-amber-500/30', get label() { return tr('Sincronización'); } },
 };
 
 /** Las que la campana calcula (y dejan de estar vigentes); el resto llegan una vez. */
-const CALCULATED = new Set<LogKind>(['vencida', 'hoy', 'proxima', 'actualizacion', 'conexion']);
+const CALCULATED = new Set<LogKind>(['vencida', 'hoy', 'proxima', 'actualizacion', 'conexion', 'sincronizacion']);
 
 /**
  * Centro de notificaciones de la campana: recuadro emergente bajo el botón
@@ -102,6 +105,8 @@ export default function NotificationCenter() {
   useEffect(() => subscribeUpdate(() => forceRender((n) => n + 1)), []);
   const update = getUpdateState();
   const [seenMap, setSeenMap] = useState<Record<string, string>>({});
+  // Verificador de sincronización (1.6.8): lo que no está igual en los dispositivos.
+  const syncIssues = useSyncIssues();
 
   const seenKey = userProfile ? `notificationsSeen_${userProfile.id}` : null;
 
@@ -143,6 +148,17 @@ export default function NotificationCenter() {
         }
       }
 
+      // Lo que no está sincronizado: cuántas cosas; al pulsar, cuáles y por qué.
+      if (userProfile && !userProfile.isGuest && syncIssues.length > 0) {
+        const n = syncIssues.length;
+        items.push({
+          id: `sincronizacion-${n}`,
+          kind: 'sincronizacion',
+          title: n === 1 ? tr('1 elemento sin sincronizar') : tr('{n} elementos sin sincronizar', { n }),
+          detail: tr('Pulsa para ver cuáles, dónde están y por qué'),
+        });
+      }
+
       // Versión nueva publicada: va la PRIMERA, por delante de las tareas.
       // Pulsarla no instala: abre el recuadro de actualización, que es donde se
       // ve el peso, el tiempo estimado y se confirma.
@@ -182,7 +198,8 @@ export default function NotificationCenter() {
 
       // La actualización encabeza: es la única accionable en un clic.
       const order: Record<AppNotification['kind'], number> = {
-        conexion: -2,
+        conexion: -3,
+        sincronizacion: -2,
         actualizacion: -1,
         vencida: 0,
         hoy: 1,
@@ -198,7 +215,7 @@ export default function NotificationCenter() {
         Object.entries(both).map(([code, list]) => [code, { title: list![index].title, detail: list![index].detail }])
       ),
     }));
-  }, [tasks, courses, update.version, connection, userProfile, lang]);
+  }, [tasks, courses, update.version, connection, userProfile, lang, syncIssues]);
 
   // Lo vigente se anota en el registro (con la hora en que apareció); lo que
   // ya pasó sigue en el registro como historial.
@@ -223,6 +240,10 @@ export default function NotificationCenter() {
       }
       if (entry.kind === 'actualizacion') {
         openUpdateDialog();
+        return;
+      }
+      if (entry.kind === 'sincronizacion') {
+        openSyncIssues();
         return;
       }
       if (entry.taskId) {

@@ -61,6 +61,10 @@ const subscribe = (listener: () => void) => {
   return () => listeners.delete(listener);
 };
 
+/** La proporción actual y su aviso de cambio, fuera de React (ajustes de la cuenta, 1.6.8). */
+export const getCardImageRatio = () => ratio;
+export const subscribeCardImageRatio = subscribe;
+
 /** Proporción alto / ancho de la imagen de toda tarjeta. */
 export function useCardImageRatio(): number {
   return useSyncExternalStore(subscribe, () => ratio, () => ratio);

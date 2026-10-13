@@ -17,6 +17,12 @@
 //   · La fusión decide registro a registro por marca más reciente.
 //
 // Resultado: dos dispositivos pueden trabajar a la vez y ninguno pisa al otro.
+//
+// 1.6.8: claves retiradas que ya no viajan (las clases y su horario, la
+// bitácora de reproducciones y la frase de la barra: la mitad del respaldo de
+// una cuenta con uso), vídeos de estudio e imágenes por referencia como
+// colecciones, y una huella CANÓNICA del estado (sin depender del orden de
+// claves ni de filas) para no escribir en la nube lo que ya está allí.
 // ============================================================
 
 import { type LocalSnapshot } from '@/lib/storage-snapshot';
@@ -37,19 +43,39 @@ const COLLECTION_KEYS = [
   'dailyPerformances',
   'playlists',
   'spaces',
-  // Horario mensual (su identificador es el mes) y las clases que genera.
-  'schedules',
-  'classSessions',
   // Índice de imágenes sincronizadas (id = clave de la imagen): cada imagen
   // se fusiona por separado, así cambiar dos en dos equipos no choca.
   'syncedImages',
   // Anotaciones sin asignatura (id propio, como las notas).
   'looseNotes',
+  // Vídeos de estudio (id = el de YouTube). Viajan desde la 1.6.8: desde que
+  // Frame no descarga (1.6.1) ya no llevan rutas de este equipo.
+  'studyVideos',
+  // Imágenes de asignaturas, colecciones y playlists POR REFERENCIA (1.6.8):
+  // la de la galería viaja como su código y su encuadre; la propia, no.
+  'imageRefs',
 ] as const;
 
-/** Bitácora que solo crece: se fusiona por unión, no por marca de tiempo. */
-const LOG_KEY = 'playHistory';
-const LOG_LIMIT = 800;
+/**
+ * Claves retiradas (1.6.8). Un dispositivo con una versión anterior aún las
+ * envía; la fusión las descarta y nunca vuelven a la nube desde aquí. La copia
+ * de cada equipo se queda donde está (nada se borra del dispositivo):
+ *   · classSessions y schedules: las clases y el horario, invisibles desde la 1.6.6;
+ *   · playHistory: la bitácora de reproducciones, sin escribirse desde la 1.5.4;
+ *   · headerQuote: la frase propia de la barra, retirada en la 1.6.2;
+ *   · school: el colegio del perfil de Aether OS.
+ */
+export const RETIRED_KEYS: ReadonlySet<string> = new Set(['classSessions', 'schedules', 'playHistory', 'headerQuote', 'school']);
+
+/**
+ * Colecciones que la 1.6.7 (móvil 1.1.3) no conoce como tales: al escribir,
+ * conserva sus registros pero pierde sus marcas (y les pone una suelta). La
+ * huella del estado no cuenta esas marcas; sus registros, sí. Si las contara,
+ * la 1.6.8 las restituiría tras cada escritura de la 1.6.7 y la 1.6.7 las
+ * volvería a quitar: un reenvío sin fin entre las dos (lo encontró la prueba
+ * de dos dispositivos, scripts/probar-sincronizacion.mjs).
+ */
+const MARKS_LOST_BY_OLD = new Set(['studyVideos', 'imageRefs']);
 
 /** Las lápidas se conservan dos meses: tiempo de sobra para que un
  *  dispositivo apagado se entere del borrado sin engordar el respaldo. */
@@ -87,6 +113,19 @@ const recordId = (record: Record<string, unknown>): string | null => {
 
 const stable = (value: unknown): string => JSON.stringify(value ?? null);
 
+/** JSON con las claves de cada objeto en orden: dos estados iguales dan el mismo texto. */
+function canonical(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
+  if (value && typeof value === 'object') {
+    const entries = Object.keys(value as Record<string, unknown>)
+      .sort()
+      .filter((key) => (value as Record<string, unknown>)[key] !== undefined)
+      .map((key) => `${JSON.stringify(key)}:${canonical((value as Record<string, unknown>)[key])}`);
+    return `{${entries.join(',')}}`;
+  }
+  return JSON.stringify(value ?? null);
+}
+
 /**
  * Huella de 53 bits (cyrb53) de un texto. Se usa para saber si un registro
  * cambió desde la última sincronización SIN guardar una copia entera de él:
@@ -113,6 +152,18 @@ const newer = (a: Iso | undefined, b: Iso | undefined): boolean => {
   if (!b) return true;
   return a > b; // ISO 8601 en UTC: el orden lexicográfico ES el cronológico
 };
+
+/** Un milisegundo después de `iso`. */
+const justAfter = (iso: Iso): Iso => new Date(Date.parse(iso) + 1).toISOString();
+
+/**
+ * La marca de un cambio de este dispositivo: el instante de la edición, pero
+ * nunca anterior a la marca que el registro ya tenía. Quien edita algo que
+ * llegó de otro dispositivo lo editó DESPUÉS de verlo, aunque el reloj de este
+ * equipo vaya atrasado: sin esto, una tablet con el reloj dos minutos atrás
+ * perdía cada edición hecha sobre lo último de la laptop.
+ */
+const causalStamp = (at: Iso, previous: Iso | undefined): Iso => (previous && previous >= at ? justAfter(previous) : at);
 
 // ---------------------------------------------------------------------------
 // Contabilidad local
@@ -145,7 +196,7 @@ interface SyncBase {
 function compactBase(data: LocalSnapshot): SyncBase {
   const base: SyncBase = { v: 3, collections: {}, scalars: {} };
   for (const key of Object.keys(data)) {
-    if (key === LOG_KEY) continue;
+    if (RETIRED_KEYS.has(key)) continue;
     if (isCollection(key)) {
       if (!Array.isArray(data[key])) continue;
       const prints: Record<string, string> = {};
@@ -171,6 +222,65 @@ function readBase(uid: string): SyncBase | null {
   return compactBase(raw as LocalSnapshot);
 }
 
+// ---------------------------------------------------------------------------
+// Cuándo se hizo cada cambio (1.6.8)
+//
+// Hasta la 1.6.7 un cambio recibía como marca el instante de la sincronización
+// que lo subía, no el de la edición: ganaba quien sincronizaba último aunque
+// hubiera editado antes. Ahora la sincronización en vivo anota cuándo vio cada
+// cambio (con la huella del registro en ese momento) y esa es su marca si,
+// al sincronizar, el registro sigue igual. Es la misma marca que viaja con el
+// cambio por el canal, así que los dos dispositivos quedan con la misma.
+// ---------------------------------------------------------------------------
+
+interface LocalEdits {
+  /** clave de colección → id → [instante, huella del registro; null si se borró] */
+  c: Record<string, Record<string, [Iso, string | null]>>;
+  /** clave suelta → [instante, huella del valor] */
+  s: Record<string, [Iso, string]>;
+}
+
+const editsKey = (uid: string) => `syncEdits_${uid}`;
+
+/** Lo mínimo de un cambio para anotarlo (sync-delta.ts lo cumple). */
+interface EditedChange {
+  key: string;
+  id?: string;
+  record?: unknown;
+  value?: unknown;
+  deleted?: boolean;
+  at: Iso;
+}
+
+/**
+ * Anota los cambios de este dispositivo y les pone su marca definitiva
+ * (`at`, nunca anterior a la que el registro ya tenía). Devuelve los mismos
+ * cambios, listos para viajar.
+ */
+export function noteLocalEdits<T extends EditedChange>(uid: string, changes: T[]): T[] {
+  if (changes.length === 0) return changes;
+  const meta = readJson<SyncMeta>(metaKey(uid), emptyMeta());
+  const edits = readJson<LocalEdits>(editsKey(uid), { c: {}, s: {} });
+  edits.c = edits.c ?? {};
+  edits.s = edits.s ?? {};
+  for (const change of changes) {
+    if (change.id === undefined) {
+      change.at = causalStamp(change.at, meta.scalars?.[change.key]);
+      edits.s[change.key] = [change.at, printOf(change.value)];
+    } else {
+      const previous = meta.collections?.[change.key]?.[change.id];
+      change.at = causalStamp(change.at, previous?.d ?? previous?.u);
+      (edits.c[change.key] = edits.c[change.key] ?? {})[change.id] = [change.at, change.deleted ? null : printOf(change.record)];
+    }
+  }
+  try {
+    localStorage.setItem(editsKey(uid), JSON.stringify(edits));
+  } catch {
+    /* sin espacio: la marca será la de la sincronización, como antes */
+  }
+  return changes;
+}
+
 /**
  * Compara el estado actual con la foto de la última sincronización y actualiza
  * las marcas. Devuelve el estado listo para fusionar.
@@ -187,8 +297,13 @@ export function buildLocalState(uid: string, data: LocalSnapshot, now: Iso): Syn
   // Primera vez: no hay con qué comparar, así que todo lo presente se marca
   // como recién modificado. Es deliberado — ver la nota de migración del README.
   const first = base === null;
+  const edits = first ? null : readJson<Partial<LocalEdits> | null>(editsKey(uid), null);
+  /** Marca de un cambio: cuándo se editó (si sigue como se editó) o ahora. */
+  const stamp = (edit: [Iso, string | null] | undefined, print: string | null, previous: Iso | undefined): Iso =>
+    causalStamp(edit && edit[1] === print && edit[0] <= now ? edit[0] : now, previous);
 
   for (const key of Object.keys(data)) {
+    if (RETIRED_KEYS.has(key)) continue;
     if (isCollection(key)) {
       // Una colección que no es una lista está CORRUPTA (escritura truncada,
       // JSON ilegible leído como texto). Tratarla como "lista vacía" lapidaría
@@ -202,6 +317,7 @@ export function buildLocalState(uid: string, data: LocalSnapshot, now: Iso): Syn
       const marks = (meta.collections[key] = meta.collections[key] ?? {});
       const current = asArray(data[key]);
       const previous = base?.collections[key] ?? {};
+      const edited = edits?.c?.[key];
 
       const seen = new Set<string>();
       for (const record of current) {
@@ -209,8 +325,9 @@ export function buildLocalState(uid: string, data: LocalSnapshot, now: Iso): Syn
         if (!id) continue;
         seen.add(id);
         const before = previous[id];
-        if (first || before === undefined || before !== printOf(record)) {
-          marks[id] = { u: now };
+        const print = printOf(record);
+        if (first || before === undefined || before !== print) {
+          marks[id] = { u: stamp(edited?.[id], print, marks[id]?.d ?? marks[id]?.u) };
         } else if (!marks[id]) {
           marks[id] = { u: now };
         }
@@ -218,12 +335,10 @@ export function buildLocalState(uid: string, data: LocalSnapshot, now: Iso): Syn
 
       // Lo que estaba y ya no está: lápida.
       for (const id of Object.keys(previous)) {
-        if (!seen.has(id)) marks[id] = { d: now };
+        if (!seen.has(id)) marks[id] = { d: stamp(edited?.[id], null, marks[id]?.d ?? marks[id]?.u) };
       }
-    } else if (key !== LOG_KEY) {
-      if (first || base?.scalars[key] !== printOf(data[key]) || !meta.scalars[key]) {
-        meta.scalars[key] = now;
-      }
+    } else if (first || base?.scalars[key] !== printOf(data[key]) || !meta.scalars[key]) {
+      meta.scalars[key] = stamp(edits?.s?.[key], printOf(data[key]), meta.scalars[key]);
     }
   }
 
@@ -263,24 +378,11 @@ export function normalizeRemote(raw: unknown, rowUpdatedAt: Iso | null): SyncSta
         if (id) marks[id] = { u: stamp };
       }
       meta.collections[key] = marks;
-    } else if (key !== LOG_KEY) {
+    } else {
       meta.scalars[key] = stamp;
     }
   }
   return { data, meta, v: 2 };
-}
-
-/** Une dos bitácoras de reproducción sin duplicar y respetando el tope. */
-function mergeLog(a: unknown, b: unknown): unknown[] {
-  const seen = new Set<string>();
-  const all = [...asArray(a), ...asArray(b)].filter((entry) => {
-    const key = `${entry.s}|${entry.t}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-  all.sort((x, y) => String(x.t).localeCompare(String(y.t)));
-  return all.slice(-LOG_LIMIT);
 }
 
 /**
@@ -296,10 +398,7 @@ export function mergeStates(local: SyncState, remote: SyncState, now: Iso): Sync
   const keys = new Set([...Object.keys(local.data), ...Object.keys(remote.data)]);
 
   for (const key of keys) {
-    if (key === LOG_KEY) {
-      merged[key] = mergeLog(local.data[key], remote.data[key]);
-      continue;
-    }
+    if (RETIRED_KEYS.has(key)) continue;
 
     if (!isCollection(key)) {
       const localAt = local.meta.scalars[key];
@@ -387,11 +486,131 @@ export function mergeStates(local: SyncState, remote: SyncState, now: Iso): Sync
   return { data: merged, meta, v: 2 };
 }
 
+/**
+ * Huella de un estado que no depende del orden de las claves ni del de las
+ * filas de cada colección (se ordenan por id). Sirve para saber si lo
+ * fusionado ya es lo que hay en la nube: si lo es, no se escribe. Sin esto, dos
+ * dispositivos se reenviaban sin fin el mismo estado (cada escritura avisaba
+ * al otro, que volvía a escribir).
+ */
+export function statePrint(state: SyncState): string {
+  const data: LocalSnapshot = {};
+  for (const [key, value] of Object.entries(state.data)) {
+    if (RETIRED_KEYS.has(key)) continue;
+    data[key] =
+      isCollection(key) && Array.isArray(value)
+        ? [...asArray(value)].sort((a, b) => String(recordId(a)).localeCompare(String(recordId(b))))
+        : value;
+  }
+  const collections: SyncMeta['collections'] = {};
+  for (const [key, marks] of Object.entries(state.meta.collections ?? {})) {
+    if (!RETIRED_KEYS.has(key) && !MARKS_LOST_BY_OLD.has(key)) collections[key] = marks;
+  }
+  // Una marca suelta de una colección solo la pone la 1.6.7 (ver MARKS_LOST_BY_OLD).
+  const scalars: SyncMeta['scalars'] = {};
+  for (const [key, at] of Object.entries(state.meta.scalars ?? {})) {
+    if (!RETIRED_KEYS.has(key) && !isCollection(key)) scalars[key] = at;
+  }
+  return fingerprint(canonical({ data, meta: { collections, scalars } }));
+}
+
+/** Huella del estado de ESTE dispositivo (sus datos en forma de nube y su contabilidad). */
+export function localStatePrint(uid: string, data: LocalSnapshot): string {
+  return statePrint({ data, meta: readJson<SyncMeta>(metaKey(uid), emptyMeta()), v: 2 });
+}
+
+/** Un cambio de este dispositivo que aún no está en la nube (para el verificador). */
+export interface PendingChange {
+  key: string;
+  /** Registro cambiado o nuevo; ausente si se borró o si es un valor suelto. */
+  record?: Record<string, unknown>;
+  id?: string;
+  deleted?: boolean;
+}
+
+/**
+ * Lo que cambió aquí desde la última sincronización, sin tocar la contabilidad
+ * (mismo criterio que buildLocalState). Sin foto de referencia no se sabe
+ * nada: devuelve una lista vacía.
+ */
+export function pendingChanges(uid: string, data: LocalSnapshot): PendingChange[] {
+  const base = readBase(uid);
+  if (!base) return [];
+  const out: PendingChange[] = [];
+  for (const key of Object.keys(data)) {
+    if (RETIRED_KEYS.has(key)) continue;
+    if (isCollection(key)) {
+      if (!Array.isArray(data[key])) continue;
+      const previous = base.collections[key] ?? {};
+      const seen = new Set<string>();
+      for (const record of asArray(data[key])) {
+        const id = recordId(record);
+        if (!id) continue;
+        seen.add(id);
+        if (previous[id] !== printOf(record)) out.push({ key, id, record });
+      }
+      for (const id of Object.keys(previous)) if (!seen.has(id)) out.push({ key, id, deleted: true });
+    } else if (base.scalars[key] !== printOf(data[key])) {
+      out.push({ key });
+    }
+  }
+  return out;
+}
+
+/** Huellas de la última sincronización (para calcular qué cambió desde entonces). */
+export function syncedPrints(uid: string): SyncBase | null {
+  return readBase(uid);
+}
+
+/** Huella de un registro o valor, la misma que usa la foto de referencia. */
+export const recordPrint = printOf;
+export { recordId, isCollection };
+
+/**
+ * Anota en la contabilidad lo que llegó por el canal en vivo (sync-delta.ts):
+ * su marca y su huella, como si hubiera llegado en una sincronización. Así el
+ * ciclo siguiente no lo toma por un cambio de este dispositivo.
+ */
+export function noteRemoteChanges(
+  uid: string,
+  changes: { key: string; id?: string; record?: unknown; value?: unknown; deleted?: boolean; at: Iso }[]
+): void {
+  if (changes.length === 0) return;
+  const meta = readJson<SyncMeta>(metaKey(uid), emptyMeta());
+  meta.collections = meta.collections ?? {};
+  meta.scalars = meta.scalars ?? {};
+  const base = readBase(uid) ?? { v: 3 as const, collections: {}, scalars: {} };
+  for (const change of changes) {
+    if (change.id !== undefined) {
+      const marks = (meta.collections[change.key] = meta.collections[change.key] ?? {});
+      const prints = (base.collections[change.key] = base.collections[change.key] ?? {});
+      if (change.deleted) {
+        marks[change.id] = { d: change.at };
+        delete prints[change.id];
+      } else {
+        marks[change.id] = { u: change.at };
+        prints[change.id] = printOf(change.record);
+      }
+    } else {
+      meta.scalars[change.key] = change.at;
+      base.scalars[change.key] = printOf(change.value);
+    }
+  }
+  try {
+    localStorage.setItem(metaKey(uid), JSON.stringify(meta));
+    localStorage.setItem(baseKey(uid), JSON.stringify(base));
+  } catch {
+    /* sin espacio: el ciclo completo siguiente lo reconcilia igual */
+  }
+}
+
 /** Guarda el resultado como nueva foto de referencia y contabilidad. */
 export function commitState(uid: string, state: SyncState): void {
   // La contabilidad primero: es lo pequeño y lo que guarda las lápidas.
   try {
     localStorage.setItem(metaKey(uid), JSON.stringify(state.meta));
+    // Lo anotado ya tiene su marca en la contabilidad.
+    localStorage.removeItem(editsKey(uid));
   } catch {
     /* sin espacio: se reintentará en el próximo ciclo */
   }

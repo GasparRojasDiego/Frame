@@ -12,6 +12,8 @@ import { tr } from '@/lib/i18n';
 // calendario de Estudio; fuera «Hoy» y el texto de ayuda de arrastrar. Tres
 // columnas (vacía · mes · acciones) para que el mes quede en el centro exacto
 // aunque a la derecha haya botones.
+// 1.6.8 (Diego): flechas un poco más pequeñas (20 → 18 px) y más cerca del
+// mes: el hueco del nombre mide lo justo para el mes más largo del año.
 // ============================================================
 
 export default function MonthBar({
@@ -27,16 +29,17 @@ export default function MonthBar({
   children?: React.ReactNode;
 }) {
   const name = monthName(cursor.month);
-  const arrow = 'h-8 w-8 text-muted-foreground hover:bg-transparent hover:text-primary [&_svg]:size-5';
+  const arrow = 'h-7 w-7 text-muted-foreground hover:bg-transparent hover:text-primary [&_svg]:size-[18px]';
   return (
     <div className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3">
       <span aria-hidden />
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5">
         <Button variant="ghost" size="icon" className={arrow} onClick={onPrev} aria-label={tr('Mes anterior')} title={tr('Mes anterior (Re Pág)')}>
           <ChevronLeft />
         </Button>
-        {/* Ancho fijo: las flechas no bailan al pasar de «Mayo» a «Septiembre». */}
-        <h2 className="w-[12rem] text-center font-headline text-lg font-semibold leading-none text-primary" aria-live="polite">
+        {/* Ancho fijo, el del mes más largo («Septiembre 2026»): las flechas
+            no bailan al pasar de «Mayo» a «Septiembre». */}
+        <h2 className="w-[10rem] text-center font-headline text-lg font-semibold leading-none text-primary" aria-live="polite">
           {name} {cursor.year}
         </h2>
         <Button variant="ghost" size="icon" className={arrow} onClick={onNext} aria-label={tr('Mes siguiente')} title={tr('Mes siguiente (Av Pág)')}>

@@ -106,6 +106,9 @@ const subscribe = (listener: () => void) => {
   };
 };
 
+/** Aviso de cambio de idioma fuera de React (ajustes de la cuenta, 1.6.8). */
+export const subscribeLang = subscribe;
+
 /** El idioma actual, con repintado al cambiar. */
 export const useLang = (): Lang => useSyncExternalStore(subscribe, getLang, getLang);
 

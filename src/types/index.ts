@@ -195,7 +195,11 @@ export interface StudyVideo {
 export interface Playlist {
   id: string;
   name: string;
+  /** Canciones de ESTE dispositivo por su id; las que no están aquí, por su
+   *  clave «k:Título␟Artista» (song-keys.ts, 1.6.8). */
   songIds: string[];
+  /** Posición en el menú (1.6.8): un campo para que el orden viaje. */
+  order?: number;
 }
 
 export interface Space {
@@ -294,9 +298,17 @@ export interface LocalCalendarEvent {
   description?: string;
   /** "HH:mm". Ausente = todo el día (así eran todos antes de la 1.6.2). */
   time?: string;
-  /** Aviso nativo: minutos de antelación respecto a `time` (0 = a la hora).
-   *  Ausente = sin aviso. En un rango de días avisa cada uno de ellos. */
+  /** Aviso nativo de antes de la 1.6.8: minutos de antelación respecto a
+   *  `time` (0 = a la hora). Se sigue respetando en los eventos que lo traen;
+   *  al guardar el evento con el formulario nuevo pasa a `reminder*`. */
   remindBefore?: number;
+  /** Recordatorio como el de una tarea (1.6.8, Diego): días de la semana, hora
+   *  y repetición. Avisa hasta que pasa el evento (un «Recordatorio», solo
+   *  dentro de sus días). Mismos campos que `Task` para compartir el editor. */
+  reminderEnabled?: boolean;
+  reminderTime?: string;
+  reminderDays?: number[];
+  reminderRepeatMinutes?: number;
   /** Nombre del tipo cuando el usuario lo escribe (`kind === 'otro'`, 1.6.7). */
   kindLabel?: string;
   /** Recursos del evento: enlaces y documentos, como los de una tarea (1.6.7). */

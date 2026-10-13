@@ -67,6 +67,8 @@ function imageKeysFor(data: LocalSnapshot): string[] {
 export async function buildTransferFile(profile: UserProfile): Promise<TransferFile> {
   const uid = profile.id;
   const data = collectLocalData(uid);
+  // La clave del canal en vivo es de la cuenta, no de sus datos: no va al archivo.
+  delete data.syncKey;
 
   const images: Record<string, string> = {};
   for (const key of imageKeysFor(data)) {
@@ -117,6 +119,7 @@ export async function importTransferFile(file: TransferFile, uid: string, mode: 
   let records = 0;
 
   for (const [key, incomingRaw] of Object.entries(file.data)) {
+    if (key === 'syncKey') continue;
     const incoming = restamp(incomingRaw, uid);
     const existing = current[key];
 

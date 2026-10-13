@@ -32,7 +32,7 @@ import {
   longDayLabel,
   rangeLabel,
   relativeDayLabel,
-  remindLabel,
+  eventReminderLabel,
   weekdayName,
   type DayRange,
 } from './calendar-model';
@@ -119,12 +119,12 @@ function DayView({
                 const end = eventEnd(event);
                 const multi = end !== event.date;
                 const past = end < todayKey;
-                const remind = event.time ? remindLabel(event.remindBefore) : null;
+                const remind = eventReminderLabel(event);
                 const details = [
                   kindLabelOf(event),
                   event.time ?? tr('Todo el día'),
                   multi ? rangeLabel({ start: event.date, end }) : '',
-                  remind ? tr('Aviso {p}', { p: remind.toLowerCase() }) : '',
+                  remind ?? '',
                   past ? tr('Pasado') : '',
                 ]
                   .filter(Boolean)

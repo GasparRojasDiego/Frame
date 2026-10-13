@@ -26,13 +26,13 @@ Funciona **sin conexión** desde el primer momento: los datos viven en el equipo
 | Escritorio | [Tauri 2](https://tauri.app) — núcleo nativo en Rust, WebView2 |
 | Interfaz | React 19, TypeScript, Vite, Tailwind, Radix UI |
 | Datos locales | IndexedDB y localStorage (local-first) |
-| Nube opcional | Supabase (Auth, Postgres con RLS, Storage) |
+| Nube opcional | Supabase (Auth, Postgres con RLS, Realtime, Storage) |
 | Actualizaciones | Actualizador de Tauri con firma Ed25519 y publicación en GitHub Releases |
 
 Algunos detalles de ingeniería:
 
 - **Instalador de 7 MB** (antes 66 MB): sin binarios de terceros, rutas cargadas en trozos y precarga en segundo plano.
-- **Animaciones con bajo consumo:** el fondo animado agrupa sus trazos (4,5× menos coste por fotograma), se limita a 60 fps, baja a 30 sin foco y se detiene al minimizar.
+- **Sincronización entre dispositivos:** cada cambio viaja cifrado (AES-GCM) por el canal en vivo de la cuenta y llega al otro dispositivo en unos 250 ms; la nube, con escritura condicionada, lo confirma y resuelve los choques por la hora de la edición, sin reenviar lo que ya tiene. Verificada con dos y tres dispositivos simulados, relojes desfasados y uno con la versión anterior: `node scripts/probar-sincronizacion.mjs`.
 - **Música local sin dependencias:** lector propio de etiquetas (ID3v2.2–2.4, APEv2, ID3v1, FLAC, comentarios Vorbis y Opus, átomos MP4, RIFF INFO y EBML) que reconoce el formato por su contenido, separa título y artista desde el nombre del archivo y avisa de lo que no puede sonar; verificado con `node scripts/probar-musica.ts <carpeta>`.
 - **Seguridad:** las peticiones HTTP nativas solo van a una lista cerrada de servicios; la lectura de archivos solo alcanza los que el usuario eligió; las políticas RLS de Supabase protegen los datos de cada cuenta.
 - **Registro de errores:** cada fallo se agrupa por huella en Supabase y se traduce a archivo y línea con los mapas de fuente de cada versión (`docs/registro-de-errores.md`).
@@ -47,7 +47,7 @@ src/                 Interfaz (React + TypeScript)
   lib/               Datos, sincronización, integraciones de Google, música, informes, textos legales
 src-tauri/           Núcleo nativo en Rust (ventanas, OAuth, archivos, actualizador)
 supabase/migrations/ Esquema de la base de datos y sus políticas
-scripts/             Pruebas de la música, utilidades y publicación
+scripts/             Pruebas de la música y de la sincronización, utilidades y publicación
 native_pictures/     Fondos incluidos en la app
 ```
 

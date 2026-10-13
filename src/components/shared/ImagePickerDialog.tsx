@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
-import ImageCropper from '@/components/shared/ImageCropper';
+import ImageCropper, { type CropBox } from '@/components/shared/ImageCropper';
+import type { ImageSource } from '@/lib/image-refs';
 import {
   NATIVE_PICTURE_CATEGORIES,
   nativePictureToDataUrl,
@@ -20,7 +21,9 @@ import { tr } from '@/lib/i18n';
 //   1. La galería nativa (categorías arriba, miniaturas abajo).
 //   2. "Subir imagen": el usuario escoge su propio archivo.
 // En ambos casos devuelve un data-URL, así que quien lo usa lo
-// guarda exactamente igual que una imagen subida a mano.
+// guarda exactamente igual que una imagen subida a mano. Desde la 1.6.8, si
+// es de la galería, devuelve además su origen y su encuadre: con eso viaja a
+// los demás dispositivos como un código (image-refs.ts).
 //
 // Con `aspect` (ancho/alto del hueco donde se verá), antes de guardar se
 // abre el encuadre: zoom y desplazamiento dentro de un marco de esa misma
@@ -36,29 +39,33 @@ export default function ImagePickerDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSelect: (dataUrl: string) => void | Promise<void>;
+  /** `source`: de la galería de Frame (con su encuadre); ausente si es propia. */
+  onSelect: (dataUrl: string, source?: ImageSource) => void | Promise<void>;
   title?: string;
   /** Proporción del hueco de destino: si llega, se encuadra antes de guardar. */
   aspect?: number;
 }) {
   const [cropSrc, setCropSrc] = useState<string | null>(null);
+  /** Ruta de la imagen de la galería que se está encuadrando (null: propia). */
+  const [cropNative, setCropNative] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const cropping = Boolean(aspect && aspect > 0 && Number.isFinite(aspect));
 
   /** Imagen elegida: al encuadre, o directa si no hay proporción. */
-  const accept = async (dataUrl: string) => {
+  const accept = async (dataUrl: string, native: string | null) => {
     if (cropping) {
       setCropSrc(dataUrl);
+      setCropNative(native);
       return;
     }
-    await onSelect(dataUrl);
+    await onSelect(dataUrl, native ? { native } : undefined);
     onOpenChange(false);
   };
 
-  const saveCrop = async (dataUrl: string) => {
+  const saveCrop = async (dataUrl: string, crop: CropBox) => {
     setSaving(true);
     try {
-      await onSelect(dataUrl);
+      await onSelect(dataUrl, cropNative ? { native: cropNative, crop: crop.box, out: crop.out } : undefined);
       setCropSrc(null);
       onOpenChange(false);
     } finally {
@@ -76,7 +83,7 @@ export default function ImagePickerDialog({
     setBusySrc(src);
     try {
       const dataUrl = await nativePictureToDataUrl(src);
-      await accept(dataUrl);
+      await accept(dataUrl, src);
     } finally {
       setBusySrc(null);
     }
@@ -87,7 +94,7 @@ export default function ImagePickerDialog({
     if (!file) return;
     const reader = new FileReader();
     reader.onload = async () => {
-      await accept(reader.result as string);
+      await accept(reader.result as string, null);
     };
     reader.readAsDataURL(file);
     e.target.value = '';

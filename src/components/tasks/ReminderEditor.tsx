@@ -7,10 +7,12 @@ import { tr } from '@/lib/i18n';
 import { dayInitial } from '@/lib/day-names';
 
 // ============================================================
-// El recordatorio de UNA tarea. Nace apagado: recordar todo es no recordar
-// nada. Al encenderlo se eligen los días de la semana, la hora (con ruedas que
-// se giran con la rueda del ratón) y, para lo muy importante, cada cuánto
-// vuelve a aparecer ese día hasta que la tarea se complete.
+// El recordatorio de UNA tarea (y, desde la 1.6.8, de un evento del
+// calendario: mismo botón y mismas funciones, pedido de Diego). Nace apagado:
+// recordar todo es no recordar nada. Al encenderlo se eligen los días de la
+// semana, la hora (con ruedas que se giran con la rueda del ratón) y, para lo
+// muy importante, cada cuánto vuelve a aparecer ese día hasta que la tarea se
+// complete o el evento pase.
 // ============================================================
 
 export interface ReminderConfig {
@@ -25,7 +27,9 @@ export interface ReminderConfig {
 
 export const DEFAULT_REMINDER: ReminderConfig = { enabled: false, time: '18:00', days: [], repeatMinutes: 0 };
 
-export function reminderFromTask(task: Pick<Task, 'reminderEnabled' | 'reminderTime' | 'reminderDays' | 'reminderRepeatMinutes'>): ReminderConfig {
+type ReminderFields = Pick<Task, 'reminderEnabled' | 'reminderTime' | 'reminderDays' | 'reminderRepeatMinutes'>;
+
+export function reminderFromTask(task: ReminderFields): ReminderConfig {
   return {
     // Solo cuenta un recordatorio configurado de verdad (con hora).
     enabled: task.reminderEnabled === true && !!task.reminderTime,
@@ -84,15 +88,41 @@ export function describeReminder(config: ReminderConfig): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
+/** Lo mismo en poco espacio: «08:00 · a diario», «18:30 · L, X, V» (el detalle va en la descripción emergente). */
+export function briefReminder(config: ReminderConfig): string {
+  if (!config.enabled) return tr('Sin recordatorio');
+  const chosen = WEEK.filter((d) => config.days.includes(d.day));
+  const days = chosen.length === 0 || chosen.length === 7 ? tr('a diario') : chosen.map((d) => d.letter).join(', ');
+  return `${config.time} · ${days}`;
+}
+
+/** Textos que cambian según de qué es el recordatorio. */
+const SUBJECT_TEXT = {
+  task: {
+    get toggle() { return tr('Activar el recordatorio de esta tarea'); },
+    get off() { return tr('Apagado. Actívalo solo en las tareas que de verdad no puedes olvidar.'); },
+    get until() { return tr('. Deja de avisar cuando culmines la tarea.'); },
+  },
+  event: {
+    get toggle() { return tr('Activar el recordatorio de este evento'); },
+    get off() { return tr('Apagado. Actívalo para que Frame te avise antes del evento.'); },
+    get until() { return tr('. Deja de avisar cuando pase el evento.'); },
+  },
+};
+
 export default function ReminderEditor({
   value,
   onChange,
+  subject = 'task',
   className,
 }: {
   value: ReminderConfig;
   onChange: (next: ReminderConfig) => void;
+  /** De qué es el recordatorio: cambia solo los textos. */
+  subject?: keyof typeof SUBJECT_TEXT;
   className?: string;
 }) {
+  const text = SUBJECT_TEXT[subject];
   const [hour, minute] = value.time.split(':').map(Number);
   const safeHour = Number.isFinite(hour) ? hour : 18;
   // La rueda va de 5 en 5: una hora heredada como 18:32 se muestra como 18:30.
@@ -113,13 +143,13 @@ export default function ReminderEditor({
         <Switch
           checked={value.enabled}
           onCheckedChange={(enabled) => onChange({ ...value, enabled })}
-          aria-label={tr('Activar el recordatorio de esta tarea')}
+          aria-label={text.toggle}
         />
       </div>
 
       {!value.enabled ? (
         <p className="text-[11px] leading-snug text-muted-foreground">
-          {tr('Apagado. Actívalo solo en las tareas que de verdad no puedes olvidar.')}
+          {text.off}
         </p>
       ) : (
         <>
@@ -196,7 +226,7 @@ export default function ReminderEditor({
           </div>
 
           <p className="rounded-md bg-secondary/60 px-2 py-1.5 text-[11px] leading-snug text-muted-foreground">
-            {describeReminder(value)}{tr('. Deja de avisar cuando culmines la tarea.')}
+            {describeReminder(value)}{text.until}
           </p>
         </>
       )}

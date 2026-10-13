@@ -32,6 +32,7 @@ import {
   type CompetencyVertex,
 } from '@/lib/competency';
 import CompetencyCoursesDialog from './CompetencyCoursesDialog';
+import { CLOUD_APPLIED_EVENT } from '@/lib/supabase/sync';
 import { tr } from '@/lib/i18n';
 
 /** Rampa monocroma sobre el color primario, cortada por los umbrales del
@@ -101,8 +102,14 @@ export default function CompetencyMatrix() {
       return;
     }
     legacyCompetencyKeys(userProfile.id).forEach((key) => localStorage.removeItem(key));
-    setSelectedIds(readCompetencySelection(userProfile.id) ?? []);
+    const uid = userProfile.id;
+    setSelectedIds(readCompetencySelection(uid) ?? []);
     setHydrated(true);
+    // La selección viaja con la cuenta: lo que llega de otro dispositivo se ve
+    // al instante (1.6.8; antes solo al volver a abrir Inicio).
+    const reload = () => setSelectedIds(readCompetencySelection(uid) ?? []);
+    window.addEventListener(CLOUD_APPLIED_EVENT, reload);
+    return () => window.removeEventListener(CLOUD_APPLIED_EVENT, reload);
   }, [userProfile]);
 
   const persist = useCallback(

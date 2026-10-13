@@ -14,6 +14,7 @@
 import type { CalendarDayColor, LocalCalendarEvent, Task } from '@/types';
 import { EVENT_COLOR_ROWS, eventDisplay } from '@/lib/calendar-events';
 import { getLang, tr } from '@/lib/i18n';
+import { describeReminder, reminderFromTask } from '@/components/tasks/ReminderEditor';
 
 // ---------------------------------------------------------------------------
 // Claves de día
@@ -183,6 +184,14 @@ export const REMIND_OPTIONS: { minutes: number; label: string }[] = [
   { minutes: 60, get label() { return tr('1 h antes'); } },
   { minutes: 1440, get label() { return tr('El día antes'); } },
 ];
+
+/** Lo que avisa un evento, para la cuadrícula y la lista del día (null = nada).
+ *  El recordatorio de la 1.6.8 manda; si no, el aviso antiguo («10 min antes»). */
+export function eventReminderLabel(event: LocalCalendarEvent): string | null {
+  if (event.reminderEnabled && event.reminderTime) return describeReminder(reminderFromTask(event));
+  const legacy = event.time ? remindLabel(event.remindBefore) : null;
+  return legacy ? tr('Aviso {p}', { p: legacy.toLowerCase() }) : null;
+}
 
 export const remindLabel = (minutes: number | undefined): string | null => {
   if (minutes === undefined || minutes === null) return null;

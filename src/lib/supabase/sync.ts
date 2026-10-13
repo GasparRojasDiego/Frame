@@ -6,8 +6,13 @@ import {
   normalizeRemote,
   commitState,
   fingerprint,
+  localStatePrint,
+  statePrint,
   type SyncState,
 } from '@/lib/sync-merge';
+import { isAccountDeletionInProgress } from '@/lib/account-deletion';
+import { markSyncResult, markSyncStarted } from '@/lib/sync-status';
+import { tr } from '@/lib/i18n';
 
 const TABLE = 'backups';
 
@@ -26,14 +31,23 @@ const TABLE = 'backups';
 // fusiones simultáneas escribirían la última y perderían la otra. El resultado
 // fusionado se aplica también en local, así que ambos equipos convergen.
 //
-// EL CICLO OCIOSO NO CUESTA NADA. Antes cada vuelta bajaba la fila entera y la
-// volvía a subir entera aunque nadie hubiera tocado nada: con un estado de
-// 200 KB y un ciclo por minuto eran ~24 MB por hora y estudiante, y con cien
-// estudiantes los 5 GB mensuales del plan gratuito de Supabase duraban un día.
-// Ahora se guarda un CURSOR (la fecha de la fila que dejamos en la nube y la
-// huella de lo local en ese momento): si la fila sigue con esa fecha y lo local
-// sigue con esa huella, no hay nada que fusionar y el ciclo termina tras una
-// sonda de unos pocos bytes.
+// EL CICLO OCIOSO NO CUESTA NADA: un CURSOR guarda la fecha de la fila que
+// dejamos en la nube y la huella de lo local en ese momento; si ninguna de
+// las dos cambió, el ciclo termina tras una sonda de unos pocos bytes.
+//
+// 1.6.8, tres reglas nuevas que evitan bajar y subir el respaldo entero sin
+// necesidad (en una cuenta con uso eran ~390 KB de ida y otros tantos de
+// vuelta por cada cambio):
+//   · SOLO SUBIR: si la nube sigue como la dejamos y solo cambió lo local, lo
+//     local YA es la fusión: se sube sin bajar nada antes.
+//   · NO REESCRIBIR LO QUE YA ESTÁ: si lo fusionado es igual a lo que hay en
+//     la nube (huella canónica), no se escribe. Hasta la 1.6.7 cada
+//     dispositivo volvía a subir lo que acababa de bajar, y como cada subida
+//     avisa a los demás, dos dispositivos abiertos se reenviaban el respaldo
+//     sin parar.
+//   · El estado de cada intento se publica (sync-status.ts): el verificador
+//     de sincronización lo enseña y un fallo repetido llega al registro de
+//     errores, en vez de fallar en silencio.
 // ============================================================
 
 const MAX_ATTEMPTS = 4;
@@ -44,28 +58,43 @@ interface RemoteRow {
 }
 
 interface SyncCursor {
-  /** `updated_at` de la fila tal como quedó tras nuestra última escritura. */
+  /** `updated_at` de la fila tal como quedó tras nuestra última sincronización. */
   remoteAt: string | null;
   /** Huella de los datos locales en ese mismo instante. */
   localPrint: string;
+  /** Huella canónica (statePrint) de lo que la fila tiene en `remoteAt`, si se conoce. */
+  cloudPrint?: string;
+}
+
+export interface SyncResult {
+  ok: boolean;
+  /** Llegó algo de otro dispositivo y cambió lo de aquí. */
+  applied: boolean;
+  error: string | null;
+  /** Se escribió en la nube (hay algo nuevo que los otros dispositivos deben traer). */
+  wrote?: boolean;
+  /** Si se escribió: la fecha que quedó en la fila y la huella de lo escrito. */
+  remoteAt?: string;
+  print?: string;
 }
 
 const cursorKey = (uid: string) => `syncCursor_${uid}`;
 
-function readCursor(uid: string): SyncCursor | null {
+export function readCursor(uid: string): SyncCursor | null {
   try {
     const raw = localStorage.getItem(cursorKey(uid));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<SyncCursor>;
-    return typeof parsed?.localPrint === 'string'
-      ? { remoteAt: parsed.remoteAt ?? null, localPrint: parsed.localPrint }
-      : null;
+    if (typeof parsed?.localPrint !== 'string') return null;
+    const cursor: SyncCursor = { remoteAt: parsed.remoteAt ?? null, localPrint: parsed.localPrint };
+    if (typeof parsed.cloudPrint === 'string') cursor.cloudPrint = parsed.cloudPrint;
+    return cursor;
   } catch {
     return null;
   }
 }
 
-function writeCursor(uid: string, cursor: SyncCursor): void {
+export function writeCursor(uid: string, cursor: SyncCursor): void {
   try {
     localStorage.setItem(cursorKey(uid), JSON.stringify(cursor));
   } catch {
@@ -80,16 +109,10 @@ const sameInstant = (a: string | null, b: string | null): boolean => {
   return !Number.isNaN(ta) && ta === tb;
 };
 
-const printOfLocal = (uid: string): string => fingerprint(JSON.stringify(collectLocalData(uid)));
+export const printOfLocal = (uid: string): string => fingerprint(JSON.stringify(collectLocalData(uid)));
 
 /** Un ciclo completo de sincronización: leer, fusionar y escribir. */
-async function syncOnce(uid: string): Promise<{
-  ok: boolean;
-  applied: boolean;
-  error: string | null;
-  /** Se escribió en la nube (hay algo nuevo que los otros dispositivos deben traer). */
-  wrote?: boolean;
-}> {
+async function syncOnce(uid: string): Promise<SyncResult> {
   const supabase = getSupabase();
   if (!supabase) return { ok: false, applied: false, error: tr('Supabase no está configurado.') };
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
@@ -106,11 +129,14 @@ async function syncOnce(uid: string): Promise<{
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     const now = new Date().toISOString();
-    const localPrint = printOfLocal(uid);
+    const localData = collectLocalData(uid);
+    const localPrint = fingerprint(JSON.stringify(localData));
 
     // --- Sonda: ¿ha cambiado algo, aquí o allí, desde la última vez? ---
     const cursor = readCursor(uid);
-    if (cursor && cursor.localPrint === localPrint) {
+    let remoteUnchanged = false;
+    let probedAt: string | null = null;
+    if (cursor) {
       const { data: probe, error: probeError } = await supabase
         .from(TABLE)
         .select('updated_at')
@@ -120,8 +146,37 @@ async function syncOnce(uid: string): Promise<{
       // Se comparan INSTANTES, no cadenas: Postgres devuelve la fecha como
       // «…+00:00» y aquí se guardó como «…Z»; son el mismo momento.
       if (probe && sameInstant(probe.updated_at, cursor.remoteAt)) {
+        remoteUnchanged = true;
+        probedAt = probe.updated_at;
+        if (cursor.localPrint === localPrint) return { ok: true, applied: false, error: null, wrote: false };
+      }
+    }
+
+    // --- Solo subir: la nube sigue como la dejamos, así que lo local con sus
+    //     marcas nuevas ES la fusión. No hace falta bajar nada. ---
+    if (remoteUnchanged && cursor) {
+      const local = buildLocalState(uid, localData, now);
+      const print = statePrint(local);
+      // Lo de aquí solo cambió de forma (el orden de una lista, al reescribirla
+      // la interfaz): la nube ya tiene exactamente esto.
+      if (cursor.cloudPrint === print) {
+        writeCursor(uid, { ...cursor, localPrint });
         return { ok: true, applied: false, error: null, wrote: false };
       }
+      const guarded =
+        probedAt === null
+          ? supabase.from(TABLE).update({ data: local, updated_at: now }).eq('user_id', uid).is('updated_at', null)
+          : supabase.from(TABLE).update({ data: local, updated_at: now }).eq('user_id', uid).eq('updated_at', probedAt);
+      const { data: written, error } = await guarded.select('user_id');
+      if (error) return { ok: false, applied: false, error: error.message };
+      if (written && written.length > 0) {
+        commitState(uid, local);
+        // La huella de lo que se SUBIÓ, no la de ahora: si el usuario cambió algo
+        // mientras tanto, el ciclo siguiente lo verá distinto y lo subirá.
+        writeCursor(uid, { remoteAt: now, localPrint, cloudPrint: print });
+        return { ok: true, applied: false, error: null, wrote: true, remoteAt: now, print };
+      }
+      // Otro dispositivo escribió justo entre la sonda y la escritura: fusión completa.
     }
 
     const { data: row, error: readError } = await supabase
@@ -131,18 +186,22 @@ async function syncOnce(uid: string): Promise<{
       .maybeSingle<RemoteRow>();
     if (readError) return { ok: false, applied: false, error: readError.message };
 
-    const local = buildLocalState(uid, collectLocalData(uid), now);
+    const local = buildLocalState(uid, localData, now);
     const remote = row ? normalizeRemote(row.data, row.updated_at) : null;
     const merged: SyncState = remote ? mergeStates(local, remote, now) : local;
-
-    const payload = { user_id: uid, data: merged as unknown, updated_at: now };
+    // Lo fusionado ya es lo que hay en la nube: nada que escribir.
+    const mergedPrint = statePrint(merged);
+    const alreadyThere = remote !== null && mergedPrint === statePrint(remote);
 
     if (!row) {
       // Primera vez para este usuario: no hay fila que proteger.
-      const { error } = await supabase.from(TABLE).upsert(payload, { onConflict: 'user_id' });
+      const { error } = await supabase
+        .from(TABLE)
+        .upsert({ user_id: uid, data: merged as unknown, updated_at: now }, { onConflict: 'user_id' });
       if (error) return { ok: false, applied: false, error: error.message };
-    } else {
+    } else if (!alreadyThere) {
       // Escritura condicionada: solo si nadie tocó la fila mientras fusionábamos.
+      const payload = { data: merged as unknown, updated_at: now };
       const guarded =
         row.updated_at === null
           ? supabase.from(TABLE).update(payload).eq('user_id', uid).is('updated_at', null)
@@ -154,11 +213,7 @@ async function syncOnce(uid: string): Promise<{
       if (!written || written.length === 0) {
         // Otro dispositivo se adelantó: se vuelve a leer y a fusionar.
         if (attempt === MAX_ATTEMPTS) {
-          return {
-            ok: false,
-            applied: false,
-            error: tr('La nube cambió mientras se sincronizaba; se reintentará luego.'),
-          };
+          return { ok: false, applied: false, error: tr('La nube cambió mientras se sincronizaba; se reintentará luego.') };
         }
         await new Promise((resolve) => setTimeout(resolve, 150 * attempt));
         continue;
@@ -171,11 +226,7 @@ async function syncOnce(uid: string): Promise<{
     // vuelta siguiente se daría por borrado). Se repite el ciclo con lo nuevo.
     if (printOfLocal(uid) !== localPrint) {
       if (attempt === MAX_ATTEMPTS) {
-        return {
-          ok: false,
-          applied: false,
-          error: tr('Los datos cambiaron mientras se sincronizaba; se reintentará luego.'),
-        };
+        return { ok: false, applied: false, error: tr('Los datos cambiaron mientras se sincronizaba; se reintentará luego.') };
       }
       continue;
     }
@@ -187,18 +238,35 @@ async function syncOnce(uid: string): Promise<{
       // Sin espacio en disco NO se da por sincronizado: fijar la foto de
       // referencia sobre un volcado a medias convertiría lo que faltó en
       // "borrado por el usuario" en el ciclo siguiente.
-      return {
-        ok: false,
-        applied: false,
-        error: tr('No hay espacio en el equipo para guardar lo que llegó de la nube.'),
-      };
+      return { ok: false, applied: false, error: tr('No hay espacio en el equipo para guardar lo que llegó de la nube.') };
     }
     commitState(uid, merged);
-    writeCursor(uid, { remoteAt: now, localPrint: printOfLocal(uid) });
-    return { ok: true, applied: outcome.changed, error: null, wrote: true };
+    const wrote = !row || !alreadyThere;
+    writeCursor(uid, { remoteAt: wrote ? now : row.updated_at, localPrint: printOfLocal(uid), cloudPrint: mergedPrint });
+    return wrote
+      ? { ok: true, applied: outcome.changed, error: null, wrote, remoteAt: now, print: mergedPrint }
+      : { ok: true, applied: outcome.changed, error: null, wrote };
   }
 
   return { ok: false, applied: false, error: tr('No se pudo sincronizar.') };
+}
+
+/**
+ * Otro dispositivo acaba de escribir en la nube (su aviso trae la fecha que
+ * dejó en la fila y la huella de lo que escribió). Si lo de aquí ya es
+ * EXACTAMENTE eso, porque sus cambios llegaron uno a uno por el canal, se da
+ * por sincronizado sin bajar el respaldo entero. Si algo no encaja (un cambio
+ * propio sin subir, un mensaje perdido, un tercer dispositivo), devuelve false
+ * y toca la sincronización completa de siempre.
+ */
+export function adoptRemoteWrite(uid: string, remoteAt: string, print: string): boolean {
+  const cursor = readCursor(uid);
+  if (!cursor) return false;
+  const data = collectLocalData(uid);
+  const localPrint = fingerprint(JSON.stringify(data));
+  if (cursor.localPrint !== localPrint || localStatePrint(uid, data) !== print) return false;
+  writeCursor(uid, { remoteAt, localPrint, cloudPrint: print });
+  return true;
 }
 
 // ------------------------------------------------------------
@@ -206,9 +274,9 @@ async function syncOnce(uid: string): Promise<{
 //
 // Sincronizar en silencio tiene un problema: si lleva días fallando, el
 // usuario cree que está a salvo cuando no lo está. Se deja constancia de
-// cada intento para poder decírselo.
+// cada intento para poder decírselo (y desde la 1.6.8 se publica en vivo).
 // ------------------------------------------------------------
-interface SyncStatus {
+interface StoredSyncStatus {
   lastOkAt: string | null;
   lastTryAt: string | null;
   lastError: string | null;
@@ -216,36 +284,35 @@ interface SyncStatus {
 
 const syncStatusKey = (uid: string) => `syncStatus_${uid}`;
 
-function readSyncStatus(uid: string): SyncStatus {
-  try {
-    const raw = localStorage.getItem(syncStatusKey(uid));
-    if (!raw) return { lastOkAt: null, lastTryAt: null, lastError: null };
-    const parsed = JSON.parse(raw);
-    return {
-      lastOkAt: typeof parsed?.lastOkAt === 'string' ? parsed.lastOkAt : null,
-      lastTryAt: typeof parsed?.lastTryAt === 'string' ? parsed.lastTryAt : null,
-      lastError: typeof parsed?.lastError === 'string' ? parsed.lastError : null,
-    };
-  } catch {
-    return { lastOkAt: null, lastTryAt: null, lastError: null };
-  }
-}
-
 function recordSyncAttempt(uid: string, ok: boolean, error: string | null): void {
+  markSyncResult(ok, error);
   try {
     const now = new Date().toISOString();
-    const previous = readSyncStatus(uid);
-    localStorage.setItem(
-      syncStatusKey(uid),
-      JSON.stringify({
-        lastOkAt: ok ? now : previous.lastOkAt,
-        lastTryAt: now,
-        lastError: ok ? null : error,
-      })
-    );
+    const raw = localStorage.getItem(syncStatusKey(uid));
+    const previous = (raw ? JSON.parse(raw) : {}) as Partial<StoredSyncStatus>;
+    const next: StoredSyncStatus = {
+      lastOkAt: ok ? now : previous.lastOkAt ?? null,
+      lastTryAt: now,
+      lastError: ok ? null : error,
+    };
+    localStorage.setItem(syncStatusKey(uid), JSON.stringify(next));
   } catch {
     /* si ni esto cabe, el aviso de cuota ya habrá saltado */
   }
+}
+
+async function run(uid: string): Promise<SyncResult> {
+  markSyncStarted();
+  let result: SyncResult;
+  try {
+    result = await syncOnce(uid);
+  } catch (error) {
+    // Un fallo inesperado (red cortada a media respuesta, JSON ilegible…)
+    // también se cuenta: antes se tragaba sin dejar rastro.
+    result = { ok: false, applied: false, error: error instanceof Error ? error.message : String(error) };
+  }
+  recordSyncAttempt(uid, result.ok, result.error);
+  return result;
 }
 
 /**
@@ -253,17 +320,10 @@ function recordSyncAttempt(uid: string, ok: boolean, error: string | null): void
  * Conserva el nombre de siempre: lo llaman el ciclo automático, el cierre de
  * sesión y la creación de perfil.
  */
-import { isAccountDeletionInProgress } from '@/lib/account-deletion';
-import { tr } from '@/lib/i18n';
-
-export async function pushToCloud(
-  uid: string
-): Promise<{ ok: boolean; applied: boolean; error: string | null; wrote?: boolean }> {
+export async function pushToCloud(uid: string): Promise<SyncResult> {
   // Cuenta en proceso de borrado: nada vuelve a escribir en la nube.
   if (isAccountDeletionInProgress()) return { ok: false, applied: false, error: null };
-  const result = await syncOnce(uid);
-  recordSyncAttempt(uid, result.ok, result.error);
-  return result;
+  return run(uid);
 }
 
 /**
@@ -278,10 +338,6 @@ export const CLOUD_APPLIED_EVENT = 'frame:cloud-applied';
  * Trae lo que haya en la nube fusionándolo con lo local. Es el MISMO ciclo:
  * bajar sin fusionar destruiría el trabajo hecho sin conexión.
  */
-export async function pullFromCloud(
-  uid: string
-): Promise<{ ok: boolean; applied: boolean; error: string | null }> {
-  const result = await syncOnce(uid);
-  recordSyncAttempt(uid, result.ok, result.error);
-  return result;
+export async function pullFromCloud(uid: string): Promise<SyncResult> {
+  return run(uid);
 }

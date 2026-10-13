@@ -18,7 +18,7 @@
 // que solo el titular puede rellenar.
 // ============================================================
 
-export const TERMS_VERSION = '4.9';
+export const TERMS_VERSION = '5.0';
 
 export function termsDocument({ appVersion, effectiveDate }: { appVersion: string; effectiveDate: string }): string {
   return `# Términos y Condiciones de Uso de Frame
@@ -156,7 +156,7 @@ A efectos de estos Términos, los siguientes términos tienen el significado que
 
 **9.3. Alcance de la Copia de Seguridad en la Nube.** Con Cuenta activa y conexión disponible, la Aplicación replica el **Estado Académico**, comprensivo de asignaturas, colecciones, tareas y su avance, sesiones de estudio con sus anotaciones, calificaciones, hábitos, eventos y recordatorios del calendario local con los colores de sus casillas, anotaciones guardadas sin asignatura, horarios importados, metas y configuración.
 
-**9.4. Exclusiones expresas de la Copia de Seguridad en la Nube.** **No se replican, en ningún caso y por razón de su tamaño: los archivos de música con sus portadas y letras, las grabaciones de voz ni los adjuntos.** Para conservarlos, el Usuario debe guardar copia de esos archivos por sus propios medios. Las imágenes que forman parte de la Cuenta —foto de perfil, imagen del horario e imágenes de playlists, asignaturas y colecciones— se guardan en una carpeta privada de la Cuenta para que aparezcan en los demás dispositivos del Usuario, conforme a la Política de Privacidad.
+**9.4. Exclusiones expresas de la Copia de Seguridad en la Nube.** **No se replican, en ningún caso y por razón de su tamaño: los archivos de música con sus portadas y letras, las grabaciones de voz ni los adjuntos.** Tampoco se replican las imágenes que el Usuario sube por su cuenta a playlists, asignaturas y colecciones, que permanecen en el dispositivo donde se añadieron. Para conservarlos, el Usuario debe guardar copia de esos archivos por sus propios medios. La foto de perfil y la imagen del horario se guardan en una carpeta privada de la Cuenta para que aparezcan en los demás dispositivos del Usuario; de las imágenes que el Usuario elige en la galería de Frame solo se replica una referencia (cuál es y su encuadre). Las imágenes de playlists, asignaturas y colecciones que versiones anteriores de la Aplicación ya guardaron en esa carpeta se conservan allí únicamente para restaurarlas en los dispositivos del Usuario y se suprimen al eliminar la Cuenta, conforme a la Política de Privacidad.
 
 **9.5. Frecuencia.** En condiciones normales de operación, la réplica se ejecuta de forma periódica —aproximadamente cada minuto—, al cerrar la Aplicación y al detectarse un cambio de dispositivo. La Aplicación mantiene además una copia local de la última versión íntegra de los datos como contingencia frente a una escritura corrupta.
 
@@ -226,7 +226,7 @@ El Usuario se obliga a utilizar la Aplicación conforme a la ley, la buena fe y 
 
 **16.2.** El Usuario reconoce que, tratándose de un contrato de adhesión no aprobado administrativamente, el artículo 1398 del Código Civil priva de validez a las estipulaciones que establezcan exoneraciones o limitaciones de responsabilidad en favor de quien las ha redactado. En consecuencia, **este contrato no incorpora cláusula alguna de limitación cuantitativa de responsabilidad**, y las previsiones que siguen tienen naturaleza de **delimitación del objeto y del alcance de la prestación**, no de exoneración.
 
-**16.3. Delimitación del alcance de la prestación.** La prestación comprometida por el Proveedor consiste en poner a disposición del Usuario la Aplicación con las funciones descritas en la documentación vigente y en ejecutar las copias de seguridad en los términos de la cláusula 9. **No comprende** la conservación de la información en el dispositivo del Usuario, la recuperación de datos en los supuestos de la cláusula 9.2, la replicación de la música, las grabaciones y los adjuntos excluidos en la cláusula 9.4, ni el funcionamiento de los Servicios de Terceros.
+**16.3. Delimitación del alcance de la prestación.** La prestación comprometida por el Proveedor consiste en poner a disposición del Usuario la Aplicación con las funciones descritas en la documentación vigente y en ejecutar las copias de seguridad en los términos de la cláusula 9. **No comprende** la conservación de la información en el dispositivo del Usuario, la recuperación de datos en los supuestos de la cláusula 9.2, la replicación de la música, las grabaciones, los adjuntos y las imágenes propias excluidos en la cláusula 9.4, ni el funcionamiento de los Servicios de Terceros.
 
 **16.4.** El Proveedor no responde por hechos ajenos a su esfera de control, incluidos caso fortuito y fuerza mayor, fallos del dispositivo o de la red del Usuario, actuaciones de terceros no autorizados, ni el incumplimiento por el Usuario de sus deberes de custodia y de las recomendaciones de la cláusula 9.7.
 
@@ -341,7 +341,7 @@ Asignaturas, colecciones, profesores, tareas y su contenido, notas de recursos, 
 
 ### 3.2 Datos replicados en tu cuenta
 
-Si inicias sesión, se replica tu **Estado Académico**: asignaturas, tareas y su avance, sesiones y sus anotaciones, calificaciones, hábitos, eventos y recordatorios del calendario con los colores de sus casillas, anotaciones sin asignatura, horarios, metas y configuración. También se guardan en una carpeta privada de tu Cuenta, para que aparezcan en tus otros dispositivos, tu **foto de perfil, la imagen de tu horario y las imágenes de tus playlists, asignaturas y colecciones**. **Nunca se replican la música, las grabaciones de voz ni los adjuntos.**
+Si inicias sesión, se replica tu **Estado Académico**: asignaturas, tareas y su avance, sesiones y sus anotaciones, calificaciones, hábitos, eventos y recordatorios del calendario con los colores de sus casillas, anotaciones sin asignatura, playlists y su orden, vídeos de estudio, metas y configuración (incluidos el idioma, la proporción de las imágenes y la ciudad del clima que eliges a mano). Los cambios viajan además por un canal en vivo de tu Cuenta, cifrados con una clave que solo conocen tus dispositivos, para llegar a tus otros dispositivos en menos de un segundo. También se guardan en una carpeta privada de tu Cuenta, para que aparezcan en tus otros dispositivos, tu **foto de perfil y la imagen de tu horario**; de las imágenes de la galería de Frame que pones a tus playlists, asignaturas y colecciones solo viaja una referencia (cuál es y su encuadre). **Nunca se replican la música, las grabaciones de voz, los adjuntos ni las imágenes que subes tú a playlists, asignaturas y colecciones.**
 
 ### 3.3 Datos de cuenta
 
@@ -403,7 +403,7 @@ Vencido el plazo, los datos se suprimen o se anonimizan de forma irreversible.
 
 ## 8. Seguridad e incidentes
 
-**8.1.** Aplicamos medidas técnicas y organizativas razonables y proporcionadas: cifrado de las comunicaciones en tránsito, almacenamiento de contraseñas mediante funciones de derivación de clave, control de acceso a la infraestructura, principio de mínimo privilegio y copia local de contingencia frente a escrituras corruptas.
+**8.1.** Aplicamos medidas técnicas y organizativas razonables y proporcionadas: cifrado de las comunicaciones en tránsito, cifrado adicional, con una clave exclusiva de tus dispositivos, de los cambios que viajan por el canal en vivo, almacenamiento de contraseñas mediante funciones de derivación de clave, control de acceso a la infraestructura, principio de mínimo privilegio y copia local de contingencia frente a escrituras corruptas.
 
 **8.2.** Ningún sistema es invulnerable y no podemos garantizar una seguridad absoluta.
 
@@ -458,8 +458,9 @@ Este anexo detalla, categoría por categoría, qué se trata y para qué. Cumple
 | Nombre de usuario e imagen de perfil | Personalizar la interfaz | Replicados con la Cuenta |
 | Credenciales | Autenticación | Cifradas; nunca legibles por el Proveedor |
 | Estado Académico | Copia de seguridad y sincronización | Replicado solo con Cuenta activa |
-| Música, grabaciones y adjuntos | Reproducción, grabación y consulta | **Nunca salen del dispositivo** |
-| Imágenes de la Cuenta (perfil, horario, playlists, asignaturas y colecciones) | Que aparezcan en tus otros dispositivos | Carpeta privada de tu Cuenta; se borran al eliminar la Cuenta |
+| Música, grabaciones, adjuntos e imágenes que subes a playlists, asignaturas y colecciones | Reproducción, grabación y consulta | **Nunca salen del dispositivo** |
+| Imágenes de la Cuenta (perfil y horario) | Que aparezcan en tus otros dispositivos | Carpeta privada de tu Cuenta; se borran al eliminar la Cuenta |
+| Referencias a imágenes de la galería de Frame (cuál es y su encuadre) | Que la misma imagen aparezca en tus otros dispositivos | Replicadas con el Estado Académico |
 | Registros de error, versión e indicadores de uso (incluida su serie diaria) | Diagnóstico, mejora y estadísticas agregadas de impacto | Seudonimizados; puedes oponerte por correo |
 | Registros de acceso | Seguridad de la Cuenta | Conservación de 6 meses |
 | Comunicaciones de soporte | Atención del caso | Conservación de 24 meses |

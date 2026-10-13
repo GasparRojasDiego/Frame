@@ -41,7 +41,16 @@ interface ImageCropperProps {
   /** Texto del botón de volver (por defecto, «Elegir otra»). */
   cancelLabel?: string;
   onCancel: () => void;
-  onConfirm: (dataUrl: string) => void | Promise<void>;
+  /** `crop`: qué parte de la imagen original se usó (fracciones) y el tamaño del resultado. */
+  onConfirm: (dataUrl: string, crop: CropBox) => void | Promise<void>;
+}
+
+/** El encuadre elegido, independiente de la resolución: con él se puede rehacer. */
+export interface CropBox {
+  /** x, y, ancho y alto en fracciones de la imagen original. */
+  box: [number, number, number, number];
+  /** Tamaño del resultado en píxeles. */
+  out: [number, number];
 }
 
 export default function ImageCropper({
@@ -167,7 +176,7 @@ export default function ImageCropper({
       if (!ctx) throw new Error(tr('Sin lienzo'));
       ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(image, sx, sy, cropW, cropH, 0, 0, outW, outH);
-      await onConfirm(canvas.toDataURL('image/jpeg', 0.9));
+      await onConfirm(canvas.toDataURL('image/jpeg', 0.9), { box: [sx / iw, sy / ih, cropW / iw, cropH / ih], out: [outW, outH] });
     } finally {
       setSaving(false);
     }

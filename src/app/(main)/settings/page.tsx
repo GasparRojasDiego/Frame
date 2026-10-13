@@ -371,11 +371,17 @@ export default function SettingsPage() {
             zonas de peso decreciente —identidad, expediente y ajustes— y la
             rueda vive dentro de la zona de ajustes, con su etiqueta, en vez
             de colgar de una esquina.
+
+            1.6.8 (Diego): con Frame en media pantalla, dos filas y no cuatro.
+            Arriba la identidad con «Miembro desde» a su derecha; abajo el
+            idioma, la divisoria y el tema con la cuenta. En una pantalla ancha
+            (xl) los dos grupos se disuelven (`contents`) y todo va en una fila.
             ------------------------------------------------------------------ */}
         <div className="rounded-xl border border-border/70 bg-card/40 p-5">
-          <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:gap-5">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-center">
+           <div className="flex flex-wrap items-center justify-between gap-4 xl:contents">
             {/* --- Identidad --- */}
-            <div className="flex shrink-0 items-center gap-4 2xl:gap-5">
+            <div className="flex min-w-0 items-center gap-4 xl:shrink-0 2xl:gap-5">
               <div
                 className={cn(
                   'flex h-28 w-28 items-center justify-center overflow-hidden rounded-full bg-secondary xl:h-24 xl:w-24 2xl:h-28 2xl:w-28',
@@ -458,7 +464,7 @@ export default function SettingsPage() {
             </div>
 
             {/* --- Antigüedad de la cuenta --- */}
-            <div className="flex flex-1 items-center">
+            <div className="flex shrink-0 items-center xl:flex-1">
               <div className="flex flex-col justify-center gap-1 rounded-lg border border-border/60 bg-gradient-to-b from-primary/[0.07] to-transparent px-4 py-3">
                 <span className="flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground">
                   <CalendarDays className="h-3.5 w-3.5 shrink-0 text-primary" />
@@ -480,6 +486,9 @@ export default function SettingsPage() {
               </div>
             </div>
 
+           </div>
+
+           <div className="flex flex-wrap items-start justify-center gap-5 xl:contents">
             {/* --- Idioma, a la izquierda de la divisoria (1.6.7). --- */}
             <div className="flex shrink-0 items-start">
               <LanguageSelector />
@@ -487,13 +496,14 @@ export default function SettingsPage() {
 
             {/* --- Ajustes: tema y cuenta, juntos y etiquetados. La rueda abre
                 un menú pequeño a su lado (AccountCard), no un recuadro. --- */}
-            <div className="flex shrink-0 items-start gap-5 border-t border-border/60 pt-4 xl:border-l xl:border-t-0 xl:pl-5 xl:pt-0">
+            <div className="flex shrink-0 items-start gap-5 border-l border-border/60 pl-5">
               <ThemeSelector />
               <div className="flex flex-col items-center gap-2">
                 <p className="text-xs font-bold text-muted-foreground">{tr('Cuenta')}</p>
                 <AccountMenu userProfile={userProfile} />
               </div>
             </div>
+           </div>
           </div>
         </div>
         

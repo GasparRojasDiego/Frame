@@ -24,7 +24,9 @@ export type LogKind =
   | 'conexion'
   | 'recordatorio'
   | 'sesion'
-  | 'aviso';
+  | 'aviso'
+  // Verificador de sincronización (1.6.8): cuántas cosas no están sincronizadas.
+  | 'sincronizacion';
 
 export interface LogEntry {
   id: string;

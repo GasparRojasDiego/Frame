@@ -217,6 +217,11 @@ export async function readAttachment(attachmentId: string): Promise<ResolvedFile
   }
 }
 
+/** ¿Está este adjunto en este dispositivo? Sin pedir permisos (verificador de sincronización). */
+export async function hasAttachment(attachmentId: string): Promise<boolean> {
+  return Boolean(await get(attachmentKey(attachmentId)).catch(() => undefined));
+}
+
 /** Olvida el archivo asociado. No borra nada del disco del usuario. */
 export async function deleteAttachment(attachmentId: string): Promise<void> {
   try {

@@ -57,7 +57,7 @@ function compactStack(stack?: string | null, componentStack?: string | null): st
 }
 
 interface ErrorInput {
-  scope: 'root' | 'interface' | 'window' | 'promise';
+  scope: 'root' | 'interface' | 'window' | 'promise' | 'sync';
   name?: string;
   message?: string;
   stack?: string | null;

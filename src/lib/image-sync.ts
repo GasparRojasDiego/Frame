@@ -9,6 +9,7 @@ import {
   type ImageUpdatedDetail,
 } from '@/lib/music-db';
 import { fingerprint, imageOwnership, isLeakedScheduleImage, scheduleImageKey } from '@/lib/profile-scope';
+import { isEntityImageKey, readImageRefs } from '@/lib/image-refs';
 import { tr } from '@/lib/i18n';
 
 // ============================================================
@@ -32,6 +33,12 @@ import { tr } from '@/lib/i18n';
 // Se quedan en cada dispositivo, a propósito, la música, las portadas de las
 // canciones, los adjuntos de notas y las letras: pesan demasiado para el plan
 // gratuito y no son «la cuenta».
+//
+// 1.6.8 (Diego): las imágenes de asignaturas, colecciones y playlists ya no
+// se suben. Las de la galería viajan como su código y su encuadre, y las
+// propias se quedan en su dispositivo (image-refs.ts). Por aquí solo viajan
+// la foto de perfil y la del horario; de las demás solo se RESTAURA la copia
+// que subió una versión anterior, si aquí falta y nadie eligió otra.
 //
 // CÓMO:
 //   · Los archivos van a Supabase Storage, bucket privado `user-images`, en la
@@ -217,6 +224,8 @@ async function reconcile(uid: string, onlyKeys?: Set<string>): Promise<Reconcile
     .filter((key): key is string => key !== null);
 
   const keys = new Set<string>(onlyKeys ?? [...manifest.keys(), ...localKeys, ...Object.keys(base)]);
+  /** Imágenes con referencia (image-refs.ts): esas no pasan por la nube. */
+  const refs = new Set(readImageRefs(uid).map((ref) => ref.id));
   let manifestChanged = false;
   let allOk = true;
 
@@ -247,6 +256,20 @@ async function reconcile(uid: string, onlyKeys?: Set<string>): Promise<Reconcile
       continue;
     }
     const localKey = localKeyOf(uid, key);
+    if (isEntityImageKey(key)) {
+      if (refs.has(key) || !entry || entry.gone || !entry.h) continue;
+      try {
+        if (await getImageRecord(localKey).catch(() => null)) continue;
+        const { data: blob, error } = await supabase.storage.from(BUCKET).download(objectPath(uid, key, entry.h));
+        if (error || !blob) throw new Error(error?.message ?? tr('descarga vacía'));
+        const dataUrl = await blobToDataUrl(blob);
+        await saveImage(localKey, dataUrl, { fromSync: true, at: entry.m ?? 0 });
+        base[key] = { l: await fingerprint(dataUrl), r: entry.h };
+      } catch {
+        allOk = false;
+      }
+      continue;
+    }
     try {
       const known = base[key];
       const record = await getImageRecord(localKey).catch(() => null);
@@ -418,7 +441,8 @@ export function startImageSync(uid: string): () => void {
     const detail = (event as CustomEvent<ImageUpdatedDetail>).detail;
     if (!detail || detail.fromSync) return;
     const key = logicalKeyOf(uid, detail.key);
-    if (!key) return;
+    // Las de asignaturas, colecciones y playlists ya no se suben (1.6.8).
+    if (!key || isEntityImageKey(key)) return;
     // Un borrado solo viaja si lo hizo el usuario: se apunta aquí.
     const deleted = readJson<Record<string, number>>(deletedStorageKey(uid), {});
     if (detail.deleted) deleted[key] = Date.now();

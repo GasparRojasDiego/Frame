@@ -34,13 +34,17 @@ import GuestLinkOverlay from '@/components/auth/GuestLinkOverlay';
 import { validateUsername } from '@/components/auth/AuthShell';
 
 import StudyVideoHost from '@/components/temporizador/StudyVideoHost';
-import ConstellationBackdrop from '@/components/layout/ConstellationBackdrop';
 import InterfaceErrorBoundary from '@/components/layout/InterfaceErrorBoundary';
 import UpdateDialog from '@/components/layout/UpdateDialog';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 import { getActiveSession, onAuthChange, tidyName, updatePersonNames, updateUsername } from '@/lib/supabase/auth';
 import { pushToCloud, pullFromCloud } from '@/lib/supabase/sync';
 import { startLiveSync } from '@/lib/supabase/live-sync';
+import { startAccountSettings } from '@/lib/account-settings';
+import { startImageRefs } from '@/lib/image-refs';
+import { startSyncCheck } from '@/lib/sync-check';
+import { resetSyncStatus } from '@/lib/sync-status';
+import SyncIssuesDialog from '@/components/sync/SyncIssuesDialog';
 import { startImageSync } from '@/lib/image-sync';
 import { clearSessionLost, markSessionLost } from '@/lib/connection-status';
 import ConnectionNotice from '@/components/layout/ConnectionNotice';
@@ -183,10 +187,9 @@ function AppLayout({ children, userProfile }: { children: ReactNode; userProfile
 
 
     return (
-        // Sin `bg-background`: el color de fondo lo pone <body> y así el
-        // lienzo de la constelación (que va a -z-10) queda a la vista.
+        // El color de fondo lo pone <body>. Sin constelación desde la 1.6.8
+        // (Diego): el fondo de la app es liso.
         <div className="relative flex h-screen text-foreground">
-            <ConstellationBackdrop />
             <Sidebar userProfile={userProfile} />
 
             {/* Mobile sidebar and trigger - CORRECCIÓN MAGISTRAL DE CAPAS */}
@@ -273,6 +276,9 @@ function AppLayout({ children, userProfile }: { children: ReactNode; userProfile
             {/* Mini temporizador flotante: visible en cualquier interfaz */}
             <MiniTimerCard />
 
+            {/* Verificador de sincronización: se abre desde la campana (1.6.8). */}
+            {userProfile && !userProfile.isGuest && <SyncIssuesDialog />}
+
             {/* Despedida: sólo interrumpe el cierre si hay sesión en curso */}
             <AppCloseGuard />
             {/* Reproductor de vídeos de estudio: vive aquí para no desmontarse
@@ -341,15 +347,24 @@ function MainApp({ children, userProfile }: { children: ReactNode; userProfile: 
     // En vivo: sube al cambiar algo, avisa a los otros dispositivos por
     // Realtime y baja en cuanto ellos avisan (lib/supabase/live-sync.ts).
     const stopLiveSync = startLiveSync(uid);
-    // Y las imágenes de la cuenta (foto de perfil, horario, portadas):
-    // lib/image-sync.ts.
+    // Y las imágenes de la cuenta (foto de perfil, horario): lib/image-sync.ts.
     const stopImageSync = startImageSync(uid);
+    // 1.6.8: las de asignaturas, colecciones y playlists por referencia; los
+    // ajustes que siguen a la cuenta (idioma, proporción, ciudad del clima); y
+    // el verificador de lo que no está sincronizado (la campana).
+    const stopImageRefs = startImageRefs(uid);
+    const stopSettings = startAccountSettings(uid);
+    const stopSyncCheck = startSyncCheck(uid);
     const handleUnload = () => { void pushToCloud(uid); };
     window.addEventListener('beforeunload', handleUnload);
 
     return () => {
       stopLiveSync();
       stopImageSync();
+      stopImageRefs();
+      stopSettings();
+      stopSyncCheck();
+      resetSyncStatus();
       window.removeEventListener('beforeunload', handleUnload);
       void pushToCloud(uid);
     };

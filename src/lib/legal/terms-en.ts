@@ -144,7 +144,7 @@ For the purposes of these Terms, the following terms have the meaning assigned t
 
 **9.3. Scope of the Cloud Backup.** With an active Account and an available connection, the Application replicates the **Academic State**, comprising subjects, collections, tasks and their progress, study sessions with their notes, grades, habits, local calendar events and reminders with the colors of their cells, notes saved without a subject, imported schedules, goals and settings.
 
-**9.4. Express exclusions from the Cloud Backup.** **The following are not replicated, under any circumstances and because of their size: music files with their covers and lyrics, voice recordings and attachments.** To keep them, the User must save a copy of those files by their own means. The images that are part of the Account —profile picture, schedule image and the images of playlists, subjects and collections— are saved in a private folder of the Account so that they appear on the User’s other devices, in accordance with the Privacy Policy.
+**9.4. Express exclusions from the Cloud Backup.** **The following are not replicated, under any circumstances and because of their size: music files with their covers and lyrics, voice recordings and attachments.** Nor are the images that the User uploads on their own to playlists, subjects and collections, which remain on the device where they were added. To keep them, the User must save a copy of those files by their own means. The profile picture and the schedule image are saved in a private folder of the Account so that they appear on the User’s other devices; of the images the User picks from Frame’s gallery, only a reference (which one it is and its crop) is replicated. The images of playlists, subjects and collections that earlier versions of the Application already saved in that folder are kept there solely to restore them on the User’s devices and are deleted when the Account is deleted, in accordance with the Privacy Policy.
 
 **9.5. Frequency.** Under normal operating conditions, the replication runs periodically —approximately every minute—, when the Application is closed and when a change of device is detected. The Application also keeps a local copy of the last complete version of the data as a contingency against a corrupt write.
 
@@ -214,7 +214,7 @@ The User undertakes to use the Application in accordance with the law, good fait
 
 **16.2.** The User acknowledges that, this being an adhesion contract not administratively approved, article 1398 of the Civil Code deprives of validity the stipulations that establish exemptions from or limitations of liability in favor of whoever drafted them. Consequently, **this contract doesn’t include any clause quantitatively limiting liability**, and the provisions that follow are in the nature of a **delimitation of the purpose and scope of the service**, not of an exemption.
 
-**16.3. Delimitation of the scope of the service.** The service committed to by the Provider consists of making the Application available to the User with the functions described in the current documentation and running the backups under the terms of clause 9. **It doesn’t include** keeping the information on the User’s device, recovering data in the cases of clause 9.2, replicating the music, recordings and attachments excluded in clause 9.4, or the operation of the Third-Party Services.
+**16.3. Delimitation of the scope of the service.** The service committed to by the Provider consists of making the Application available to the User with the functions described in the current documentation and running the backups under the terms of clause 9. **It doesn’t include** keeping the information on the User’s device, recovering data in the cases of clause 9.2, replicating the music, recordings, attachments and own images excluded in clause 9.4, or the operation of the Third-Party Services.
 
 **16.4.** The Provider is not liable for events outside its sphere of control, including acts of God and force majeure, failures of the User’s device or network, actions of unauthorized third parties, or the User’s breach of their safekeeping duties and of the recommendations of clause 9.7.
 
@@ -329,7 +329,7 @@ Subjects, collections, teachers, tasks and their content, resource notes, attach
 
 ### 3.2 Data replicated in your account
 
-If you sign in, your **Academic State** is replicated: subjects, tasks and their progress, sessions and their notes, grades, habits, calendar events and reminders with the colors of their cells, notes without a subject, schedules, goals and settings. Your **profile picture, your schedule image and the images of your playlists, subjects and collections** are also saved in a private folder of your Account, so that they appear on your other devices. **Music, voice recordings and attachments are never replicated.**
+If you sign in, your **Academic State** is replicated: subjects, tasks and their progress, sessions and their notes, grades, habits, calendar events and reminders with the colors of their cells, notes without a subject, playlists and their order, study videos, goals and settings (including the language, the image proportion and the weather city you pick by hand). Changes also travel through a live channel of your Account, encrypted with a key that only your devices know, to reach your other devices in under a second. Your **profile picture and your schedule image** are also saved in a private folder of your Account, so that they appear on your other devices; of the images from Frame’s gallery that you give your playlists, subjects and collections, only a reference (which one it is and its crop) travels. **Music, voice recordings, attachments and the images you upload yourself to playlists, subjects and collections are never replicated.**
 
 ### 3.3 Account data
 
@@ -391,7 +391,7 @@ Once the period expires, the data is deleted or irreversibly anonymized.
 
 ## 8. Security and incidents
 
-**8.1.** We apply reasonable and proportionate technical and organizational measures: encryption of communications in transit, storage of passwords through key-derivation functions, access control to the infrastructure, the principle of least privilege and a local contingency copy against corrupt writes.
+**8.1.** We apply reasonable and proportionate technical and organizational measures: encryption of communications in transit, additional encryption, with a key exclusive to your devices, of the changes that travel through the live channel, storage of passwords through key-derivation functions, access control to the infrastructure, the principle of least privilege and a local contingency copy against corrupt writes.
 
 **8.2.** No system is invulnerable and we can’t guarantee absolute security.
 
@@ -446,8 +446,9 @@ This annex details, category by category, what is processed and what for. It ful
 | Username and profile picture | Personalizing the interface | Replicated with the Account |
 | Credentials | Authentication | Encrypted; never readable by the Provider |
 | Academic State | Backup and synchronization | Replicated only with an active Account |
-| Music, recordings and attachments | Playback, recording and reference | **Never leave the device** |
-| Account images (profile, schedule, playlists, subjects and collections) | Appearing on your other devices | Private folder of your Account; deleted when the Account is deleted |
+| Music, recordings, attachments and images you upload to playlists, subjects and collections | Playback, recording and reference | **Never leave the device** |
+| Account images (profile and schedule) | Appearing on your other devices | Private folder of your Account; deleted when the Account is deleted |
+| References to images from Frame’s gallery (which one it is and its crop) | The same image appearing on your other devices | Replicated with the Academic State |
 | Error logs, version and usage indicators (including their daily series) | Diagnosis, improvement and aggregated impact statistics | Pseudonymized; you can object by email |
 | Access logs | Account security | Kept for 6 months |
 | Support communications | Handling the case | Kept for 24 months |

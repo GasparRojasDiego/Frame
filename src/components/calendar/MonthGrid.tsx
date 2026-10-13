@@ -29,8 +29,11 @@ import { tr } from '@/lib/i18n';
 // varios días es UNA barra que cruza las casillas, cortada solo donde cambia
 // la semana o donde un día lleno muestra «+N más».
 //
-// Cuántos carriles caben se mide con la altura real de la fila: en una
-// ventana grande se ven más elementos antes de recurrir a «+N más».
+// Las semanas se reparten el alto disponible (1.6.8, Diego): como las páginas
+// incrustadas, la cuadrícula llena el hueco que deja la ventana y las casillas
+// crecen o encogen con ella; solo por debajo de MIN_ROW_H aparece el
+// desplazamiento. Cuántos carriles caben se mide con la altura real de la
+// fila: en una ventana grande se ven más elementos antes de «+N más».
 //
 // Interacción (toda en el contenedor, por coordenadas, para que funcione
 // igual sobre una casilla que sobre una barra):
@@ -54,6 +57,8 @@ const WEEKDAYS = [
 const HEAD_H = 30;
 const LANE_H = 20;
 const LANE_GAP = 2;
+/** Alto mínimo de una semana: el número del día y un carril. */
+const MIN_ROW_H = HEAD_H + LANE_H + 6;
 
 export interface GridSelection {
   anchor: string;
@@ -371,7 +376,8 @@ export default function MonthGrid({
               ref={(el) => {
                 weekRefs.current[w] = el;
               }}
-              className="relative flex h-20 shrink-0"
+              className="relative flex flex-1 basis-0"
+              style={{ minHeight: MIN_ROW_H }}
             >
               {week.map((day, c) => {
                 const inMonth = day.startsWith(monthPrefix);

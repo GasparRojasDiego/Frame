@@ -29,6 +29,7 @@ import {
   type GeoSource,
   loadWeatherPlace,
   saveWeatherPlace,
+  WEATHER_PLACE_EVENT,
   loadWeatherCache,
   fetchWeather,
   searchPlaces,
@@ -117,6 +118,33 @@ export default function WeatherCard() {
     [toast]
   );
 
+  // Lo que guarda esta tarjeta ya lo aplica ella misma: el aviso es para lo de fuera.
+  const ownSave = useRef(false);
+  const saveOwnPlace = (next: WeatherPlace) => {
+    ownSave.current = true;
+    try {
+      saveWeatherPlace(next);
+    } finally {
+      ownSave.current = false;
+    }
+  };
+
+  // La ciudad elegida a mano en otro dispositivo llega aquí (1.6.8, ajustes
+  // de la cuenta): se toma y se pide su pronóstico.
+  useEffect(() => {
+    const onPlace = () => {
+      if (ownSave.current) return;
+      const next = loadWeatherPlace();
+      setPlace((prev) => {
+        if (!next || (prev && prev.latitude === next.latitude && prev.longitude === next.longitude && prev.name === next.name)) return prev;
+        void refresh(next);
+        return next;
+      });
+    };
+    window.addEventListener(WEATHER_PLACE_EVENT, onPlace);
+    return () => window.removeEventListener(WEATHER_PLACE_EVENT, onPlace);
+  }, [refresh]);
+
   // Ubicación automática al montar: GPS de alta precisión → IP → manual.
   // Solo se salta si el usuario fijó una ciudad a mano (place sin `auto`).
   useEffect(() => {
@@ -139,7 +167,7 @@ export default function WeatherCard() {
           ((!current.resolved && !!detected.resolved) ||
             (current.accuracy == null && detected.accuracy != null));
         if (moved || enriches) {
-          saveWeatherPlace(detected);
+          saveOwnPlace(detected);
           setPlace(detected);
         }
       } else if (!current) {
@@ -161,7 +189,7 @@ export default function WeatherCard() {
     void resolvePlaceName(place)
       .then((fixed) => {
         if (cancelled || !fixed) return;
-        saveWeatherPlace(fixed);
+        saveOwnPlace(fixed);
         setPlace(fixed);
       })
       .finally(() => {
@@ -220,7 +248,7 @@ export default function WeatherCard() {
   };
 
   const handlePick = (p: WeatherPlace) => {
-    saveWeatherPlace(p);
+    saveOwnPlace(p);
     setPlace(p);
     setPickerOpen(false);
     setQuery('');

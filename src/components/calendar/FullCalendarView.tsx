@@ -44,7 +44,7 @@ import {
   planClear,
   planUnpaint,
   rangeLabel,
-  remindLabel,
+  eventReminderLabel,
   shiftMonth,
   shortDayLabel,
   type ClearPlan,
@@ -84,7 +84,7 @@ function buildItems(
   for (const event of events) {
     const end = eventEnd(event);
     if (end < first || event.date > last) continue;
-    const remind = event.time ? remindLabel(event.remindBefore) : null;
+    const remind = eventReminderLabel(event);
     items.push({
       id: event.id,
       start: event.date,
@@ -101,7 +101,7 @@ function buildItems(
         kindLabelOf(event),
         event.time,
         end !== event.date ? rangeLabel({ start: event.date, end }) : '',
-        remind ? tr('Aviso {p}', { p: remind.toLowerCase() }) : '',
+        remind ?? '',
         event.description ? richNoteToLine(event.description) : '',
       ]
         .filter(Boolean)
@@ -203,17 +203,10 @@ export default function FullCalendarView({
         if (blanks.length) setDayColors(blanks, null);
       }
 
-      if (payload.time && payload.remindBefore !== undefined) {
+      const reminder = payload.reminderEnabled ? eventReminderLabel({ ...payload, id: '' }) : null;
+      if (reminder) {
         void ensureNotificationPermission().catch(() => undefined);
-        if (!existing) {
-          const when = payload.endDate
-            ? tr('Del {rangeLabel}, cada día a las {time}', { rangeLabel: rangeLabel({ start: payload.date, end: payload.endDate }), time: payload.time })
-            : tr('{shortDayLabel} a las {time}', { shortDayLabel: shortDayLabel(payload.date), time: payload.time });
-          toast({
-            title: tr('Aviso programado'),
-            description: `${when} · ${remindLabel(payload.remindBefore)?.toLowerCase()}`,
-          });
-        }
+        if (!existing) toast({ title: tr('Recordatorio programado'), description: reminder });
       }
       if (!existing) setSelection(null);
     },
@@ -310,7 +303,7 @@ export default function FullCalendarView({
   })();
 
   return (
-    <section className={cn('flex min-h-0 flex-col gap-3', className)} aria-label={tr('Calendario local')}>
+    <section className={cn('flex min-h-0 flex-col gap-6', className)} aria-label={tr('Calendario local')}>
       <MonthBar
         cursor={cursor}
         onPrev={() => setCursor((c) => shiftMonth(c, -1))}
@@ -329,7 +322,9 @@ export default function FullCalendarView({
         </Button>
       </MonthBar>
 
-      <div className="relative flex min-h-0 flex-col overflow-hidden rounded-none border-l border-t border-border bg-background">
+      {/* `flex-1`: la cuadrícula ocupa todo el alto que queda; las semanas
+          se lo reparten (MonthGrid). */}
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-none border-l border-t border-border bg-background">
         <MonthGrid
           weeks={weeks}
           cursor={cursor}

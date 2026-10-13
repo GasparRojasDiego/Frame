@@ -210,6 +210,9 @@ interface ImageWriteOptions {
   /** Cuándo se hizo el cambio (ms). Por defecto, ahora; la sincronización
    *  conserva la fecha del dispositivo donde se cambió. */
   at?: number;
+  /** Imagen de la galería de Frame: su receta (ruta y encuadre), con la que
+   *  otro dispositivo la rehace sin que viaje la imagen (image-refs.ts). */
+  recipe?: string;
 }
 
 const announceImage = (detail: ImageUpdatedDetail) => {
@@ -227,7 +230,7 @@ export const saveImage = async (key: string, dataUrl: string, options: ImageWrit
     const store = transaction.objectStore(IMAGES_STORE_NAME);
     // `at`: cuándo cambió la imagen. Las guardadas antes de la 1.5.5 no lo
     // tienen (y así se sabe que su fecha es desconocida).
-    const request = store.put({ key, dataUrl, at: options.at ?? Date.now() });
+    const request = store.put({ key, dataUrl, at: options.at ?? Date.now(), ...(options.recipe ? { recipe: options.recipe } : {}) });
 
     request.onsuccess = () => resolve();
     request.onerror = () => reject(`Error saving image ${key}: ` + request.error);
@@ -235,14 +238,18 @@ export const saveImage = async (key: string, dataUrl: string, options: ImageWrit
   announceImage({ key, deleted: false, fromSync: Boolean(options.fromSync) });
 };
 
-/** La imagen con su fecha de cambio (`at` = 0 si es anterior a la 1.5.5). */
-export const getImageRecord = async (key: string): Promise<{ dataUrl: string; at: number } | null> => {
+/** La imagen con su fecha de cambio (`at` = 0 si es anterior a la 1.5.5) y su receta, si es de la galería. */
+export const getImageRecord = async (key: string): Promise<{ dataUrl: string; at: number; recipe?: string } | null> => {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const request = db.transaction(IMAGES_STORE_NAME, 'readonly').objectStore(IMAGES_STORE_NAME).get(key);
     request.onsuccess = () => {
-      const row = request.result as { dataUrl?: string; at?: number } | undefined;
-      resolve(row?.dataUrl ? { dataUrl: row.dataUrl, at: typeof row.at === 'number' ? row.at : 0 } : null);
+      const row = request.result as { dataUrl?: string; at?: number; recipe?: string } | undefined;
+      resolve(
+        row?.dataUrl
+          ? { dataUrl: row.dataUrl, at: typeof row.at === 'number' ? row.at : 0, ...(typeof row.recipe === 'string' ? { recipe: row.recipe } : {}) }
+          : null
+      );
     };
     request.onerror = () => reject(`Error fetching image ${key}: ` + request.error);
   });

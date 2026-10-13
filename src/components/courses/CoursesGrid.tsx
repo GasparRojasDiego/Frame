@@ -8,7 +8,7 @@ import CourseSpaceDialog from './CourseSpaceDialog';
 import ImagePickerDialog from '@/components/shared/ImagePickerDialog';
 import { aspectOf } from '@/components/shared/ImageCropper';
 import WaveBackdrop from '@/components/courses/WaveBackdrop';
-import { saveImage } from '@/lib/music-db';
+import { setEntityImage, type ImageSource } from '@/lib/image-refs';
 import { useStoredImage } from '@/hooks/use-stored-image';
 import type { Course, Task, TaskPriority } from '@/types';
 import {
@@ -52,6 +52,7 @@ function CourseCard({
 }) {
   // Se relee sola: también cuando la imagen llega de otro dispositivo.
   const [image, setImage] = useStoredImage(`courseImage_${course.id}`);
+  const { userProfile } = useCourse();
   const [isPickerOpen, setPickerOpen] = useState(false);
   // El encuadre usa la proporción real del hueco de la imagen en esta tarjeta.
   const imageBoxRef = useRef<HTMLDivElement>(null);
@@ -61,9 +62,10 @@ function CourseCard({
   const [isCollectionOpen, setCollectionOpen] = useState(false);
 
 
-  // Guarda la imagen elegida (galería nativa o subida) igual que siempre.
-  const handleSelectImage = async (dataUrl: string) => {
-    await saveImage(`courseImage_${course.id}`, dataUrl);
+  // Guarda la imagen elegida y su referencia: la de la galería viaja como su
+  // código a los demás dispositivos; la propia se queda aquí (image-refs.ts).
+  const handleSelectImage = async (dataUrl: string, source?: ImageSource) => {
+    await setEntityImage(userProfile?.id, `courseImage_${course.id}`, dataUrl, source);
     setImage(dataUrl);
     window.dispatchEvent(new StorageEvent('storage', { key: `courseImage_${course.id}` }));
   };
@@ -183,6 +185,7 @@ function SpaceCard({
   onOpen: () => void;
 }) {
   const [image, setImage] = useStoredImage(`spaceImage_${space.id}`);
+  const { userProfile } = useCourse();
   const [isPickerOpen, setPickerOpen] = useState(false);
   // El encuadre usa la proporción real del hueco de la imagen en esta tarjeta.
   const imageBoxRef = useRef<HTMLDivElement>(null);
@@ -191,8 +194,8 @@ function SpaceCard({
   const [pickerAspect, setPickerAspect] = useState<number>();
 
 
-  const handleSelectImage = async (dataUrl: string) => {
-    await saveImage(`spaceImage_${space.id}`, dataUrl);
+  const handleSelectImage = async (dataUrl: string, source?: ImageSource) => {
+    await setEntityImage(userProfile?.id, `spaceImage_${space.id}`, dataUrl, source);
     setImage(dataUrl);
   };
 
