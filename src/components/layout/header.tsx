@@ -184,7 +184,6 @@ function HeaderPhrases({ name }: { name?: string }) {
 
   return (
     <div
-      data-tour="frase"
       title={current?.text}
       className="relative flex h-7 min-w-0 flex-1 flex-col justify-center"
       onMouseEnter={() => {
@@ -231,7 +230,7 @@ export default function Header({ userProfile }: HeaderProps) {
     : undefined;
 
   return (
-    <header data-tour="barra-superior" className="flex h-[60px] flex-shrink-0 items-center justify-between gap-3 border-b bg-background px-4">
+    <header className="flex h-[60px] flex-shrink-0 items-center justify-between gap-3 border-b bg-background px-4">
       {/* Los dos extremos miden lo mismo: así la frase queda centrada de verdad. */}
       <div className="flex w-36 shrink-0 items-center justify-start gap-2">
         {/* Crear una tarea o una anotación sin salir de donde estés. */}
@@ -258,7 +257,6 @@ export default function Header({ userProfile }: HeaderProps) {
           }
           className={cn(barButton, 'transition-colors', recorderState === 'recording' && 'animate-session-glow')}
           onClick={() => setRecordingOpen(true)}
-          data-tour="grabar"
         >
           <Mic className="h-5 w-5" />
         </Button>

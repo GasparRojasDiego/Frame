@@ -62,7 +62,7 @@ const MAX_UPLOAD_BYTES = 3.5 * 1024 * 1024;
 const RETRY_MS = 2 * 60 * 1000;
 
 /** ¿Esta imagen es de las que viajan? (clave lógica, la del índice y la nube) */
-export function isSyncedImageKey(key: string): boolean {
+function isSyncedImageKey(key: string): boolean {
   return (
     key === 'scheduleImage' ||
     key.startsWith('profileAvatar_') ||

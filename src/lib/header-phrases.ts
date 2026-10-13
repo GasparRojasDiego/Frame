@@ -27,7 +27,7 @@ export interface HeaderPhrase {
   text: string;
 }
 
-export interface PhraseData {
+interface PhraseData {
   now: Date;
   /** Nombre para el saludo; vacío en invitados. */
   name?: string;
@@ -56,7 +56,7 @@ const timeOf = (iso: string | null | undefined): number => {
 const dayKey = (date: Date): string => format(date, 'yyyy-MM-dd');
 
 /** «2 h 15 min», «3 h», «45 min». Por debajo del minuto no hay frase. */
-export function spanLabel(minutes: number): string {
+function spanLabel(minutes: number): string {
   const total = Math.round(minutes);
   const h = Math.floor(total / 60);
   const m = total % 60;
@@ -76,7 +76,7 @@ function whenLabel(due: Date, today: Date): string {
 }
 
 /** Saludo según la hora: la frase neutra cuando aún no hay nada que contar. */
-export function greetingPhrase(now: Date, name?: string): HeaderPhrase {
+function greetingPhrase(now: Date, name?: string): HeaderPhrase {
   const hour = now.getHours();
   const salute = hour >= 5 && hour < 12 ? 'Buenos días' : hour >= 12 && hour < 20 ? 'Buenas tardes' : 'Buenas noches';
   const first = name?.trim().split(/\s+/)[0];

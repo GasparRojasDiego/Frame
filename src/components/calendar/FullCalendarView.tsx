@@ -322,7 +322,6 @@ export default function FullCalendarView({
           className="h-8 px-3 text-xs"
           onClick={() => openForm('evento')}
           title={range ? `Crear un evento del ${rangeLabel(range)}` : 'Crear un evento'}
-          data-tour="cal-crear"
         >
           <Plus />
           Evento
@@ -353,7 +352,6 @@ export default function FullCalendarView({
           onClearRequest={requestClear}
           onMonthChange={setCursor}
           ariaLabel={`${MONTH_NAMES[cursor.month]} de ${cursor.year}`}
-          tourId="cal-editar"
         />
       </div>
 

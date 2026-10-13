@@ -204,7 +204,6 @@ export default function AccountMenu({ userProfile }: { userProfile: UserProfile 
             variant={menuOpen ? 'default' : 'ghost'}
             size="icon"
             title="Cerrar sesión, importar de Notion y eliminar cuenta"
-            data-tour="cuenta-rueda"
             aria-label="Opciones de la cuenta"
             className={cn(
               'h-9 w-9 rounded-md border',
@@ -216,7 +215,7 @@ export default function AccountMenu({ userProfile }: { userProfile: UserProfile 
             <Settings className="h-5 w-5" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="end" sideOffset={8} className="w-56 p-2" data-tour="cuenta-menu">
+        <PopoverContent align="end" sideOffset={8} className="w-56 p-2">
           <div className="flex flex-col gap-1.5">
             {canLink && (
               <>
@@ -226,7 +225,6 @@ export default function AccountMenu({ userProfile }: { userProfile: UserProfile 
                   className="w-full justify-start"
                   onClick={pick(() => setLinkOpen(true))}
                   title="Pasa tus datos de invitado a una cuenta y quedan respaldados en la nube"
-                  data-tour="vincular-cuenta"
                 >
                   <Link2 className="h-4 w-4" />
                   Vincular mi cuenta
@@ -241,7 +239,6 @@ export default function AccountMenu({ userProfile }: { userProfile: UserProfile 
               size="sm"
               className="w-full justify-start"
               onClick={pick(() => setLogoutOpen(true))}
-              data-tour="cerrar-sesion"
             >
               <LogOut className="h-4 w-4" />
               Cerrar sesión
@@ -253,7 +250,6 @@ export default function AccountMenu({ userProfile }: { userProfile: UserProfile 
               className="w-full justify-start"
               onClick={pick(() => setNotionOpen(true))}
               title="Tus tareas y fechas de una base de datos de Notion"
-              data-tour="importar-notion"
             >
               <NotionLogo className="h-4 w-4" />
               Importar de Notion
@@ -264,7 +260,6 @@ export default function AccountMenu({ userProfile }: { userProfile: UserProfile 
               size="sm"
               className="w-full justify-start"
               onClick={pick(openDeleteDialog)}
-              data-tour="eliminar-cuenta"
               disabled={!userProfile}
             >
               <Trash2 className="h-4 w-4" />

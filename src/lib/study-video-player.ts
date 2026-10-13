@@ -11,7 +11,7 @@ import type { StudyVideo } from '@/types';
 // reproductor se coloca.
 // ============================================================
 
-export interface StudyVideoPlayerState {
+interface StudyVideoPlayerState {
   video: StudyVideo | null;
   /** Ampliado: ocupa la ventana de Frame (no la pantalla del equipo). */
   theater: boolean;

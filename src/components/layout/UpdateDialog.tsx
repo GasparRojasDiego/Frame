@@ -259,7 +259,7 @@ export default function UpdateDialog() {
               <Button variant="gris" onClick={closeUpdateDialog}>
                 Cancelar
               </Button>
-              <Button onClick={() => void startUpdateInstall()} disabled={blocked} data-tour="actualizar-confirmar">
+              <Button onClick={() => void startUpdateInstall()} disabled={blocked}>
                 <Download />
                 {error ? 'Reintentar' : 'Actualizar ahora'}
               </Button>

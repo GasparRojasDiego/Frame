@@ -21,6 +21,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { isTauri } from '@tauri-apps/api/core';
+import { openUrl } from '@tauri-apps/plugin-opener';
 import type { TaskAttachment } from '@/types';
 import {
   pickAndStoreFiles,
@@ -66,7 +67,6 @@ const attachmentIcon = (attachment: TaskAttachment) => {
 
 async function openExternal(url: string) {
   if (isTauri()) {
-    const { openUrl } = await import('@tauri-apps/plugin-opener');
     await openUrl(url);
   } else {
     window.open(url, '_blank', 'noopener,noreferrer');
@@ -344,7 +344,6 @@ export function AttachFileDialog({
             setBusy(true);
             void pending.then(finish).finally(() => setBusy(false));
           }}
-          data-tour="adjuntar-zona"
           className={cn(
             'flex h-44 w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-6 text-center transition-colors',
             dragging
@@ -443,7 +442,6 @@ export default function TaskAttachments({
           size="icon"
           onClick={() => setFileOpen(true)}
           title={fileTitle}
-          data-tour="tarea-documento"
           className={cn('h-10 w-10 transition-colors', fileCount > 0 && 'border-primary bg-primary/15 text-primary')}
         >
           <FileText className="h-4 w-4" />
@@ -462,7 +460,6 @@ export default function TaskAttachments({
               variant="outline"
               size="icon"
               title={linkTitle}
-              data-tour="tarea-enlace"
               className={cn('h-10 w-10 transition-colors', urlCount > 0 && 'border-primary bg-primary/15 text-primary')}
             >
               <Link2 className="h-4 w-4" />

@@ -31,7 +31,7 @@ const LOOSE = '__loose__';
  * tiene, las olas animadas de siempre. Las colecciones guardan la suya en
  * `spaceImage_<id>` y las asignaturas en `courseImage_<id>`.
  */
-export function SubjectCover({ imageKeys, className }: { imageKeys: string[]; className?: string }) {
+function SubjectCover({ imageKeys, className }: { imageKeys: string[]; className?: string }) {
   const [image, setImage] = useState<string | null>(null);
   const signature = imageKeys.join('|');
 
@@ -128,7 +128,7 @@ export function PickCard({
 }
 
 /** Colección de las tarjetas: id, nombre y asignaturas en su orden. */
-export type SubjectGroup = { id: string; name: string; courses: Course[] };
+type SubjectGroup = { id: string; name: string; courses: Course[] };
 
 /**
  * Grupos en el orden que el usuario eligió en Asignaturas, más un cajón

@@ -11,7 +11,7 @@ import { useSyncExternalStore } from 'react';
 // el contexto de la app (lo repintaría todo).
 // ============================================================
 
-export interface PlaybackPosition {
+interface PlaybackPosition {
   progress: number;
   duration: number;
 }

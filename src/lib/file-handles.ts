@@ -58,10 +58,10 @@ const get = async (key: string): Promise<StoredEntry | undefined> => {
   return entry;
 };
 
-export const attachmentKey = (attachmentId: string) => `taskFile_${attachmentId}`;
+const attachmentKey = (attachmentId: string) => `taskFile_${attachmentId}`;
 
 /** ¿Puede el sistema quedarse con un enlace vivo al archivo del disco? */
-export const supportsLiveFiles = (): boolean =>
+const supportsLiveFiles = (): boolean =>
   typeof window !== 'undefined' && 'showOpenFilePicker' in window;
 
 export interface PickedFile {
@@ -71,80 +71,15 @@ export interface PickedFile {
   live: boolean;
 }
 
-/**
- * Pide un archivo al usuario y lo deja asociado a `attachmentId`.
- * Devuelve null si el usuario cerró el selector.
- */
-export async function pickAndStoreFile(attachmentId: string): Promise<PickedFile | null> {
-  const key = attachmentKey(attachmentId);
-
-  if (supportsLiveFiles()) {
-    try {
-      const [handle] = await (window as any).showOpenFilePicker({ multiple: false });
-      if (!handle) return null;
-      const file: File = await handle.getFile();
-      await put({ key, kind: 'handle', handle });
-      return { fileName: file.name, mime: file.type, live: true };
-    } catch (error: any) {
-      // Cerrar el selector no es un fallo.
-      if (error?.name === 'AbortError') return null;
-      // Cualquier otro tropiezo cae al camino de la copia.
-    }
-  }
-
-  // Reserva: copia congelada mediante un <input type="file"> efímero.
-  return new Promise<PickedFile | null>((resolve) => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.style.display = 'none';
-    document.body.appendChild(input);
-
-    let settled = false;
-    const finish = (value: PickedFile | null) => {
-      if (settled) return;
-      settled = true;
-      input.remove();
-      resolve(value);
-    };
-    input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file) return finish(null);
-      try {
-        await put({
-          key,
-          kind: 'copy',
-          blob: file,
-          fileName: file.name,
-          lastModified: file.lastModified,
-        });
-        finish({ fileName: file.name, mime: file.type, live: false });
-      } catch {
-        finish(null); // sin espacio para la copia: mejor nada que una promesa colgada
-      }
-    };
-    // CANCELAR. Antes solo se retiraba el <input>, pero la promesa no se
-    // resolvía nunca y el botón de adjuntar se quedaba "cargando" para siempre.
-    input.addEventListener('cancel', () => finish(null));
-    // Respaldo para motores sin el evento `cancel`: al volver el foco a la
-    // ventana, si no se eligió nada, se da por cancelado.
-    window.addEventListener(
-      'focus',
-      () => setTimeout(() => { if (!input.files?.length) finish(null); }, 800),
-      { once: true }
-    );
-    input.click();
-  });
-}
-
 /** Guarda un manejador vivo ya obtenido (selector múltiple o arrastre). */
-export async function storeHandle(attachmentId: string, handle: FileSystemFileHandle): Promise<PickedFile> {
+async function storeHandle(attachmentId: string, handle: FileSystemFileHandle): Promise<PickedFile> {
   const file = await handle.getFile();
   await put({ key: attachmentKey(attachmentId), kind: 'handle', handle });
   return { fileName: file.name, mime: file.type, live: true };
 }
 
 /** Guarda una copia congelada del archivo (cuando no hay manejador vivo). */
-export async function storeCopy(attachmentId: string, file: File): Promise<PickedFile> {
+async function storeCopy(attachmentId: string, file: File): Promise<PickedFile> {
   await put({
     key: attachmentKey(attachmentId),
     kind: 'copy',
@@ -244,7 +179,7 @@ export function storeDroppedFiles(transfer: DataTransfer): Promise<StoredPick[]>
   })();
 }
 
-export interface ResolvedFile {
+interface ResolvedFile {
   file: File;
   live: boolean;
 }

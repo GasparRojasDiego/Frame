@@ -39,7 +39,7 @@ export interface LogEntry {
   route?: string;
 }
 
-export interface NotificationPrefs {
+interface NotificationPrefs {
   sound: boolean;
   enabled: boolean;
 }

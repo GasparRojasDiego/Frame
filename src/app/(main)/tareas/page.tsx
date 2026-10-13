@@ -256,7 +256,7 @@ export default function TasksPage() {
                     variant={showArchived ? 'default' : 'outline'}
                     size="icon"
                     onClick={() => setShowArchived((p) => !p)}
-                    title="Archivadas: culminadas e incompletas" data-tour="tareas-archivadas"
+                    title="Archivadas: culminadas e incompletas"
                     className={cn(
                         'h-9 w-9',
                         !showArchived && "border-primary bg-primary/20 text-primary hover:bg-primary/30 hover:text-primary"

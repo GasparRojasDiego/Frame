@@ -13,7 +13,7 @@ import { isJunkTag } from '@/lib/song-names';
 import type { Song } from '@/types';
 
 /** Sin acentos y en minúsculas: escribir "cafe" tiene que encontrar "Café". */
-export const foldText = (value: string): string =>
+const foldText = (value: string): string =>
   value
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
@@ -21,7 +21,7 @@ export const foldText = (value: string): string =>
     .trim();
 
 /** El nombre del archivo sin su extensión. */
-export const songFileLabel = (song: Song): string =>
+const songFileLabel = (song: Song): string =>
   song.fileName.replace(/\.(mp3|m4a|aac|ogg|oga|opus|flac|wav|webm|weba)$/i, '');
 
 /**

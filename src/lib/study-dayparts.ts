@@ -9,14 +9,14 @@ import type { StudySession } from '@/types';
 // donde de verdad pesó.
 // ============================================================
 
-export interface DaypartBucket {
+interface DaypartBucket {
   key: 'manana' | 'tarde' | 'noche';
   label: string;
   hint: string;
   minutes: number;
 }
 
-export interface DaypartSummary {
+interface DaypartSummary {
   buckets: DaypartBucket[];
   total: number;
   sessions: number;

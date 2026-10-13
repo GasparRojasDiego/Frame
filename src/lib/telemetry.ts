@@ -31,7 +31,7 @@ import { loadWeatherPlace } from '@/lib/weather';
 
 const SYNC_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 horas entre envíos
 
-export interface TelemetrySnapshot {
+interface TelemetrySnapshot {
   userId: string;
   studySessions: StudySession[];
   archivedTasks: ArchivedTask[];
@@ -389,7 +389,7 @@ export async function syncTelemetry(
 // Eventos
 // ============================================================
 
-export type TelemetryEventName =
+type TelemetryEventName =
   | 'app_open'
   | 'screen_view'
   | 'study_session_end'

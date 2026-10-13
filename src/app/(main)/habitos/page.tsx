@@ -33,7 +33,7 @@ export default function HabitosPage() {
             size="icon"
             className="h-7 w-7 text-muted-foreground hover:text-primary"
             onClick={() => setWeekOffset((p) => p - 1)}
-            title="Semana anterior" data-tour="habitos-semana-anterior"
+            title="Semana anterior"
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -44,7 +44,7 @@ export default function HabitosPage() {
             className="h-7 w-7 text-muted-foreground hover:text-primary"
             onClick={() => setWeekOffset((p) => p + 1)}
             disabled={weekOffset >= 0}
-            title="Semana siguiente" data-tour="habitos-semana-siguiente"
+            title="Semana siguiente"
           >
             <ChevronRight className="h-4 w-4" />
           </Button>

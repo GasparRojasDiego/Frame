@@ -3,7 +3,7 @@
 // (las imágenes ya viven en memoria o en IndexedDB como data URIs).
 import * as React from 'react';
 
-export interface ImageProps
+interface ImageProps
   extends Omit<React.ImgHTMLAttributes<HTMLImageElement>, 'src' | 'width' | 'height'> {
   src: string;
   alt: string;

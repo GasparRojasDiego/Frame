@@ -95,7 +95,7 @@ function Column({
 }
 
 /** «1 hora 25 min», «2 horas», «45 min». */
-export function describeMinutes(total: number): string {
+function describeMinutes(total: number): string {
   const hours = Math.floor(total / 60);
   const minutes = total % 60;
   const h = hours === 1 ? '1 hora' : `${hours} horas`;

@@ -200,7 +200,6 @@ export default function SessionCard({
         'relative overflow-hidden rounded-lg border border-border/70 bg-card transition-[border-color,box-shadow] duration-200 hover:border-primary/50 hover:shadow-[0_0_0_1px_hsl(var(--primary)/0.2)]',
         className
       )}
-      data-tour="enfoque-sesion"
     >
       <button
         type="button"
@@ -288,7 +287,6 @@ export default function SessionCard({
       {canEdit && (
         <span
           className="absolute right-1.5 top-1.5 rounded-md bg-background/85 backdrop-blur-sm"
-          data-tour="enfoque-sesion-corregir"
         >
           <Button
             type="button"

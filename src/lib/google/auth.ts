@@ -51,7 +51,7 @@ interface StoredTokens {
   idToken?: string;
 }
 
-export interface GoogleIdentity {
+interface GoogleIdentity {
   sub: string;
   email: string;
   name: string;
@@ -144,7 +144,7 @@ function saveBindings(bindings: Partial<Record<IntegrationKey, string>>) {
   localStorage.setItem(scoped(BINDINGS_KEY), JSON.stringify(bindings));
 }
 
-export function loadGoogleIdentity(): GoogleIdentity | null {
+function loadGoogleIdentity(): GoogleIdentity | null {
   return readJSON<GoogleIdentity>(scoped(IDENTITY_KEY));
 }
 
@@ -429,7 +429,7 @@ export async function getAccessToken(key: IntegrationKey = 'identity'): Promise<
   return updated.tokens.accessToken;
 }
 
-export interface ConnectOptions {
+interface ConnectOptions {
   /**
    * Muestra el selector de cuentas de Google (para vincular la integración
    * a otra cuenta, p. ej. Classroom con la cuenta institucional).

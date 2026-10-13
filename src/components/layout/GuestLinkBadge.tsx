@@ -24,7 +24,6 @@ export default function GuestLinkBadge({ userProfile, collapsed = false }: { use
       <button
         type="button"
         aria-label="Vincular tu cuenta (Google o correo)"
-        data-tour="vincular-g"
         title="Vincula tu cuenta para no perder tu progreso"
         onClick={(event) => {
           // Por si algún día queda dentro de un enlace: nunca abrir Ajustes.

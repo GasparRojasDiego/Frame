@@ -167,7 +167,7 @@ export function SidebarContent({
               <button
                 type="button"
                 onClick={toggleSidebarCollapsed}
-                title={collapsed ? 'Expandir menú' : 'Contraer menú'} data-tour="menu-plegar"
+                title={collapsed ? 'Expandir menú' : 'Contraer menú'}
                 className="h-8 w-8 rounded-full flex items-center justify-center overflow-hidden transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <FrameLogo className="h-8 w-8" />
@@ -196,7 +196,7 @@ export function SidebarContent({
             la rueda del ratón desplaza el menú sin que se vea nada.
             ------------------------------------------------------------------ */}
         <div className="hide-scrollbar min-h-0 flex-1 overflow-y-auto">
-          <nav className="flex flex-col gap-1" data-tour="menu">
+          <nav className="flex flex-col gap-1">
             {navItems.map((item, itemIndex) => {
               const newGroup = itemIndex > 0 && navItems[itemIndex - 1].group !== item.group;
               // Normalizamos ambas rutas para ignorar la barra diagonal final (trailing slash)
@@ -225,7 +225,7 @@ export function SidebarContent({
                     className={cn('text-xs', collapsed ? 'justify-center px-0' : 'justify-start gap-3')}
                     asChild
                   >
-                    <Link href={item.href} onClick={onLinkClick} title={collapsed ? item.label : undefined} data-tour={`nav${item.href === '/' ? '-inicio' : item.href.replace(/\//g, '-')}`}>
+                    <Link href={item.href} onClick={onLinkClick} title={collapsed ? item.label : undefined}>
                       <Icon className={cn('h-4 w-4', !isActive && 'text-primary')} />
                       {!collapsed && (
                         <>
@@ -257,7 +257,7 @@ export function SidebarContent({
               collapsed ? 'justify-center px-0' : 'justify-start gap-3'
             )}
             onClick={() => setCreatePlaylistOpen(true)}
-            title={collapsed ? 'Añadir playlist' : undefined} data-tour="playlist-anadir"
+            title={collapsed ? 'Añadir playlist' : undefined}
           >
             <PlusCircle className="h-4 w-4 text-primary" />
             {!collapsed && <span>Añadir playlist</span>}
@@ -278,7 +278,7 @@ export function SidebarContent({
               className={cn('w-full h-auto p-2', collapsed ? 'justify-center' : 'justify-start')}
               asChild
             >
-              <Link href="/settings" onClick={onLinkClick} title={collapsed ? (userProfile?.username ?? 'Perfil') : undefined} data-tour="perfil">
+              <Link href="/settings" onClick={onLinkClick} title={collapsed ? (userProfile?.username ?? 'Perfil') : undefined}>
                 <div className={cn('flex w-full items-center', !collapsed && 'gap-3')}>
                   {profileAvatar ? (
                     <div className="flex h-5 w-5 items-center justify-center rounded-full bg-secondary overflow-hidden">
@@ -332,7 +332,7 @@ export function SidebarContent({
                 id="playlistName"
                 value={newPlName}
                 onChange={(e) => setNewPlName(e.target.value)}
-                placeholder="Ej: Mi mezcla de entrenamiento" data-tour="playlist-nombre"
+                placeholder="Ej: Mi mezcla de entrenamiento"
                 className="border-primary focus-visible:ring-primary"
               />
             </div>
@@ -359,7 +359,7 @@ export function SidebarContent({
                   ? 'Ninguna canción añadida todavía'
                   : `${selectedSongIds.length} ${selectedSongIds.length === 1 ? 'canción añadida' : 'canciones añadidas'}`}
               </p>
-              <Button onClick={() => setCreatePlaylistOpen(false)} disabled={selectedSongIds.length === 0} data-tour="playlist-crear">
+              <Button onClick={() => setCreatePlaylistOpen(false)} disabled={selectedSongIds.length === 0}>
                 Listo
               </Button>
             </div>

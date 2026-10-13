@@ -17,7 +17,7 @@ export const CONNECTION_FLASH_EVENT = 'frame:connection-flash';
 /** Un corte más corto que esto no se anuncia (el wifi del colegio parpadea). */
 const OFFLINE_GRACE_MS = 3000;
 
-export interface ConnectionState {
+interface ConnectionState {
   /** Sin internet desde (ms), o null con conexión. */
   offlineSince: number | null;
   /** Cuenta cuya sesión en la nube se cerró sola (persiste entre arranques). */

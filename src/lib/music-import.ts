@@ -43,7 +43,7 @@ import type { Song } from '@/types';
 // aunque después se borre o se mueva la carpeta original.
 // ============================================================
 
-export interface PickedFile {
+interface PickedFile {
   path: string;
   /** Ruta relativa dentro de lo elegido («Portadas/x.jpg»). */
   rel: string;

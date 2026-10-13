@@ -556,14 +556,13 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6 p-6 md:p-8">
-       <div data-tour="clima"><WeatherCard /></div>
+       <div><WeatherCard /></div>
        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-6">
              <div 
                 className="h-full flex items-center justify-center cursor-pointer transition-colors bg-transparent"
                 onClick={handleCardClick}
                 ref={scheduleCardRef}
-                data-tour="horario"
               >
               <div className="p-0 pt-0 text-center w-full h-full">
                 <input
@@ -592,7 +591,7 @@ export default function HomePage() {
               </div>
             </div>
           </div>
-          <div ref={studyHoursCardRef} className="lg:col-span-6" data-tour="rendimiento">
+          <div ref={studyHoursCardRef} className="lg:col-span-6">
             <Card className="h-full">
                 <CardHeader className="pb-4">
                     <CardTitle className="text-lg font-headline text-center">Rendimiento académico</CardTitle>
@@ -696,7 +695,6 @@ export default function HomePage() {
                                   }
                                 }}
                                 className="flex min-h-0 flex-[3] basis-0 cursor-pointer rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                data-tour="proxima-tarea"
                               >
                                 <StatTile
                                   icon={AlertTriangle}
@@ -811,7 +809,7 @@ export default function HomePage() {
                             </DialogContent>
                           </Dialog>
                         ) : (
-                          <div className="flex min-h-0 flex-[3] basis-0" data-tour="proxima-tarea">
+                          <div className="flex min-h-0 flex-[3] basis-0">
                             <StatTile icon={AlertTriangle} label="Próxima tarea" accent="from-amber-500/[0.09]">
                               <p className="font-headline text-lg font-bold text-foreground">Todo en orden</p>
                               <p className="text-xs text-muted-foreground">No tienes tareas pendientes con fecha.</p>
@@ -876,19 +874,19 @@ export default function HomePage() {
           </div>
        </div>
 
-      <div data-tour="semana-datos"><AcademicPulse /></div>
+      <AcademicPulse />
 
-      <div data-tour="radar"><Suspense fallback={null}><CompetencyMatrix /></Suspense></div>
+      <div><Suspense fallback={null}><CompetencyMatrix /></Suspense></div>
 
       {/* Tareas apuntadas sin asignatura desde el botón «+» de la barra. */}
-      <div data-tour="sin-asignatura"><InboxTasksSection /></div>
+      <InboxTasksSection />
 
       {/* Grabaciones de voz sin asignatura: al final de todo, con título centrado */}
-      <div data-tour="grabaciones-inicio"><RecordingsSection variant="home" /></div>
+      <RecordingsSection variant="home" />
 
       {/* Anotaciones sin asignatura, junto a las grabaciones sueltas: lo
           apuntado en caliente con el «+» que aún no tiene sitio. */}
-      <div data-tour="anotaciones-inicio"><LooseNotesSection /></div>
+      <LooseNotesSection />
     </div>
   );
 }

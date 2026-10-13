@@ -1,12 +1,6 @@
 // Claves de estado de negocio sincronizables (sufijo `_<uid>`).
 // Excluye música (archivos en IndexedDB) e imágenes; solo se respalda el estado de negocio.
 //
-// Módulo "Asignaturas" (Knowledge): su contenido vive en IndexedDB/Dexie
-// (incluye Blobs de recursos) y, igual que la música, queda fuera del snapshot
-// JSONB de localStorage por diseño. Su respaldo/restauración se hace con el
-// export/import propio del módulo (ver src/lib/knowledge-db.ts). Por eso NO se
-// añade ninguna clave aquí: una clave inerte sería código muerto.
-//
 // Grabaciones ('recordings'): la ficha es JSON, pero el audio vive en
 // IndexedDB igual que la música. Restaurar solo la ficha dejaría tarjetas
 // mudas, así que queda fuera a propósito.
@@ -100,7 +94,7 @@ export function collectLocalData(uid: string): LocalSnapshot {
   return snapshot;
 }
 
-export interface ApplyResult {
+interface ApplyResult {
   /** Todas las escrituras entraron. Si es false, NO se debe dar por aplicada. */
   ok: boolean;
   /** Alguna clave cambió de verdad respecto a lo que había en disco. */

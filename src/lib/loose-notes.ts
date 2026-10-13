@@ -28,7 +28,7 @@ export interface LooseNote {
   createdAt: string;
 }
 
-export const looseNotesKey = (uid: string) => `looseNotes_${uid}`;
+const looseNotesKey = (uid: string) => `looseNotes_${uid}`;
 
 /** Aviso interno: alguien escribió en la lista (este u otro componente). */
 const CHANGED_EVENT = 'frame:loose-notes-changed';
@@ -74,7 +74,7 @@ function snapshot(uid: string): LooseNote[] {
   return notes;
 }
 
-export function readLooseNotes(uid: string | null | undefined): LooseNote[] {
+function readLooseNotes(uid: string | null | undefined): LooseNote[] {
   if (typeof window === 'undefined' || !uid) return EMPTY;
   return snapshot(uid);
 }

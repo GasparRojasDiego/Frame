@@ -83,7 +83,6 @@ export default function MonthGrid({
   onMonthChange,
   focusRequest,
   ariaLabel,
-  tourId,
   className,
 }: {
   weeks: string[][];
@@ -104,7 +103,6 @@ export default function MonthGrid({
   /** Pide el foco para un día (p. ej. al pulsar «Hoy»). */
   focusRequest?: { day: string; nonce: number } | null;
   ariaLabel: string;
-  tourId?: string;
   className?: string;
 }) {
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -333,7 +331,6 @@ export default function MonthGrid({
       role="grid"
       aria-label={ariaLabel}
       aria-multiselectable={onSelect ? true : undefined}
-      data-tour={tourId}
       className={cn('flex min-h-0 flex-1 select-none flex-col', className)}
     >
       {/* Días de la semana */}

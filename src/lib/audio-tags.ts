@@ -103,7 +103,7 @@ function decoder(label: string): TextDecoder {
 const utf8 = (bytes: Bytes) => decoder('utf-8').decode(bytes);
 
 /** UTF-8 si lo es; si no, Windows-1252 (lo habitual en etiquetas antiguas en español). */
-export function decodeLoose(bytes: Bytes): string {
+function decodeLoose(bytes: Bytes): string {
   try {
     return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
   } catch {
@@ -160,7 +160,7 @@ function imageType(b: Bytes): string | null {
  * Bytes de una imagen → data URI. El tipo sale del contenido, no de lo que
  * diga la etiqueta (que a veces miente o es un enlace «-->»).
  */
-export function imageDataUrl(bytes: Bytes): string | undefined {
+function imageDataUrl(bytes: Bytes): string | undefined {
   if (bytes.length < 100 || bytes.length > MAX_PICTURE) return undefined;
   const mime = imageType(bytes);
   if (!mime) return undefined;

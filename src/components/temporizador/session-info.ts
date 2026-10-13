@@ -26,7 +26,7 @@ export function sessionRange(session: StudySession): { start: Date; end: Date } 
 
 /** Asignatura de una sesión: la del catálogo si sigue existiendo y, si no,
  *  solo el nombre con el que se guardó (portada de olas). */
-export interface SessionSubject {
+interface SessionSubject {
   key: string;
   name: string;
   course: Course | null;

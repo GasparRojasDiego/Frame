@@ -41,7 +41,7 @@ const read = (key: string): string | null => {
 };
 
 /** Un invitado que se vinculó a una cuenta ya no existe: lo suyo es de la cuenta. */
-export function resolveProfile(uid: string): string {
+function resolveProfile(uid: string): string {
   return read(`guestLinkedTo_${uid}`) || uid;
 }
 
@@ -50,7 +50,7 @@ export function resolveProfile(uid: string): string {
  * el que más datos tiene aquí. Se decide la primera vez y queda fijo, para que
  * una cuenta nueva no pueda quedárselo después.
  */
-export function legacyOwner(fallback: string): string {
+function legacyOwner(fallback: string): string {
   const saved = read(LEGACY_OWNER_KEY);
   if (saved) return resolveProfile(saved);
   const weight = new Map<string, number>();
@@ -102,7 +102,7 @@ export function activeProfileId(): string | null {
 }
 
 /** Ids de una colección del perfil (`courses`, `playlists`, `spaces`…). */
-export function idsOf(collection: string, uid: string): Set<string> {
+function idsOf(collection: string, uid: string): Set<string> {
   try {
     const list = JSON.parse(read(`${collection}_${uid}`) ?? '[]') as { id?: unknown }[];
     return new Set(Array.isArray(list) ? list.map((row) => String(row?.id ?? '')).filter(Boolean) : []);

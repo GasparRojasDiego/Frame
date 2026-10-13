@@ -26,7 +26,7 @@ const localDayKey = (iso: string): string => {
   }
 };
 
-export interface StreakData {
+interface StreakData {
   now: Date;
   streakGoal: StreakGoal;
   studySessions: StudySession[];

@@ -15,7 +15,7 @@ import { isTauri } from '@tauri-apps/api/core';
 import GoogleEmbed from './GoogleEmbed';
 
 // Logotipo oficial de Gmail (la "M" multicolor) — lo usa el sidebar.
-export function GmailLogo({ className }: { className?: string }) {
+function GmailLogo({ className }: { className?: string }) {
   return (
     <svg viewBox="52 42 88 66" className={className} aria-hidden>
       <path fill="#4285f4" d="M58 108h14V74L52 59v43c0 3.32 2.69 6 6 6" />

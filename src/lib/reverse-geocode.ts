@@ -15,7 +15,7 @@ import { invoke, isTauri } from '@tauri-apps/api/core';
 
 export type GeoSource = 'bigdatacloud' | 'photon' | 'nominatim' | 'ip' | 'manual' | 'coords';
 
-export interface ResolvedPlaceName {
+interface ResolvedPlaceName {
   /** Ciudad o localidad principal. Ej: "Lima" */
   name: string;
   /** Detalle fino: distrito/barrio. Ej: "Distrito de Miraflores" */

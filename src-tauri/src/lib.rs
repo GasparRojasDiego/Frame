@@ -1367,8 +1367,18 @@ fn remove_download_leftovers(app: &tauri::AppHandle) {
     }
 }
 
+/// rustls necesita un proveedor criptográfico antes del primer cliente HTTP
+/// (sin él, `reqwest::Client::new()` entra en pánico). Es el mismo `ring`
+/// que instala el actualizador; si ya hay uno, no se toca.
+fn install_tls_provider() {
+    if rustls::crypto::CryptoProvider::get_default().is_none() {
+        let _ = rustls::crypto::ring::default_provider().install_default();
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    install_tls_provider();
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())

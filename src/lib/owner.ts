@@ -10,7 +10,7 @@ import type { UserProfile } from '@/types';
 // ============================================================
 
 // El correo llega desde `.env` (VITE_OWNER_EMAIL), que no se versiona.
-export const OWNER_EMAIL = (import.meta.env.VITE_OWNER_EMAIL ?? '').trim().toLowerCase();
+const OWNER_EMAIL = (import.meta.env.VITE_OWNER_EMAIL ?? '').trim().toLowerCase();
 
 export function isFrameOwner(profile: UserProfile | null | undefined): boolean {
   if (!profile || profile.isGuest) return false;

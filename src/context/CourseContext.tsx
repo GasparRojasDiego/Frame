@@ -57,7 +57,7 @@ import { safeRead, safeReadArray, safeWrite } from '@/lib/safe-storage';
 
 type TimerMode = 'focus' | 'stopwatch';
 type SelectionMode = 'rendimiento' | 'tiempo';
-export type MiniTimerView = 'hidden' | 'full' | 'compact';
+type MiniTimerView = 'hidden' | 'full' | 'compact';
 
 /**
  * Lecturas y escrituras del almacén local, todas a través de `safe-storage`:

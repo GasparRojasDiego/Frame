@@ -12,7 +12,7 @@ import type { Habit, HabitPhase } from '@/types';
 // Un hábito sin fase es «de todo el día»: se evalúa al final, con la noche.
 // ============================================================
 
-export interface PhaseInfo {
+interface PhaseInfo {
   id: HabitPhase;
   label: string;
   /** Hora (0–23) a la que empieza. */

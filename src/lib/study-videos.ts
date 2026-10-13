@@ -81,7 +81,7 @@ export function cachedVideoThumbnail(id: string): Promise<string | null> {
   return task;
 }
 
-export const videoWatchUrl = (id: string): string => `https://www.youtube.com/watch?v=${id}`;
+const videoWatchUrl = (id: string): string => `https://www.youtube.com/watch?v=${id}`;
 
 /** "7:05" a partir de segundos. Cadena vacía si no se conoce la duración. */
 export function formatVideoDuration(seconds: number): string {
@@ -98,11 +98,11 @@ export function formatVideoDuration(seconds: number): string {
 /** Aviso a cualquier pantalla que muestre la lista (el panel de Enfoque). */
 export const STUDY_VIDEOS_EVENT = 'frame-study-videos-changed';
 
-export function notifyStudyVideosChanged(): void {
+function notifyStudyVideosChanged(): void {
   window.dispatchEvent(new Event(STUDY_VIDEOS_EVENT));
 }
 
-export type AddVideoResult = 'added' | 'duplicate' | 'full';
+type AddVideoResult = 'added' | 'duplicate' | 'full';
 
 /**
  * Alta de un vídeo desde cualquier sitio (el panel de Enfoque o la interfaz

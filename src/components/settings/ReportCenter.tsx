@@ -76,20 +76,18 @@ function Selector<T extends string | number>({
   value,
   options,
   onChange,
-  'data-tour': tour,
   className,
 }: {
   value: T;
   options: { key: T; label: string }[];
   onChange: (key: T) => void;
-  'data-tour'?: string;
   className?: string;
 }) {
   const current = options.find((option) => option.key === value);
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <Button variant="fantasma" className={cn('h-9 justify-between gap-2 px-3 text-xs', className)} data-tour={tour}>
+        <Button variant="fantasma" className={cn('h-9 justify-between gap-2 px-3 text-xs', className)}>
           <span className="truncate first-letter:uppercase">{current?.label}</span>
           <ChevronDown className="h-3.5 w-3.5 shrink-0" />
         </Button>
@@ -191,9 +189,9 @@ export default function ReportCenter({ userProfile }: { userProfile: UserProfile
     kind === 'performance' ? `Frame-Rendimiento-${scope}-${stamp}` : pendingReportFileBase(new Date(), `${scope}-${stamp}`);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3" data-tour="informes">
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
       {/* Qué informe · tamaño del periodo · cuál. */}
-      <div className="flex flex-wrap items-center gap-2" data-tour="informes-tipos">
+      <div className="flex flex-wrap items-center gap-2">
         <Selector
           value={kind}
           options={KINDS}
@@ -201,7 +199,6 @@ export default function ReportCenter({ userProfile }: { userProfile: UserProfile
             setKind(next);
             if (next === 'performance' && offset > 0) setOffset(0);
           }}
-          data-tour="informe-tipo"
           className="w-36"
         />
         <Selector
@@ -211,14 +208,13 @@ export default function ReportCenter({ userProfile }: { userProfile: UserProfile
             setScope(next);
             setOffset(0);
           }}
-          data-tour="informe-periodo"
           className="w-32"
         />
-        <Selector value={offset} options={periods} onChange={setOffset} data-tour="informe-cual" className="min-w-[11rem] flex-1" />
+        <Selector value={offset} options={periods} onChange={setOffset} className="min-w-[11rem] flex-1" />
       </div>
 
       {/* Resumen: las cifras que contará el documento. */}
-      <div className="grid grid-cols-2 gap-2 rounded-lg border border-primary bg-primary/10 p-3 text-center sm:grid-cols-4" data-tour="informe-resumen">
+      <div className="grid grid-cols-2 gap-2 rounded-lg border border-primary bg-primary/10 p-3 text-center sm:grid-cols-4">
         {performance ? (
           <>
             <Stat label="Estudio" value={hm(performance.totalMinutes)} strong />
@@ -245,7 +241,6 @@ export default function ReportCenter({ userProfile }: { userProfile: UserProfile
         {FORMATS.map(({ format: fmt, label: name, icon: Icon, title }) => (
           <Button
             key={fmt}
-            data-tour={`informe-${fmt}`}
             variant={fmt === 'docx' ? 'default' : 'fantasma'}
             disabled={busy !== null || !doc}
             onClick={() => doc && void run(() => doc, fileBase, fmt)}

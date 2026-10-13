@@ -27,7 +27,7 @@ import { APP_VERSION } from '@/lib/version';
  * Compilación para Microsoft Store (scripts/empaquetar-msix.ps1): la Store
  * actualiza la app por su cuenta, así que el actualizador propio no se usa.
  */
-export const IS_STORE_BUILD = import.meta.env.VITE_STORE_BUILD === '1';
+const IS_STORE_BUILD = import.meta.env.VITE_STORE_BUILD === '1';
 
 /** `ready`: descargada y verificada, esperando a que acabe la sesión de
  *  estudio, la música o la grabación que empezó mientras se descargaba. */
@@ -126,7 +126,7 @@ const ANNOUNCED_KEY = 'lastAnnouncedUpdate';
  * y avisa una vez. `silent` calla el aviso de "ya estás al día" en los sondeos
  * de fondo, para no molestar cada media hora.
  */
-export function checkForUpdates(options?: { silent?: boolean }): Promise<void> {
+function checkForUpdates(options?: { silent?: boolean }): Promise<void> {
   // Instalando, o con una ya descargada a la espera, consultar soltaría su handle.
   if (!isTauri() || IS_STORE_BUILD || installing || state.phase === 'ready') return Promise.resolve();
   if (checkInFlight) return checkInFlight;
@@ -189,14 +189,6 @@ function releasePending() {
   const old = pending;
   pending = null;
   void old?.close().catch(() => undefined);
-}
-
-/**
- * Antes instalaba directamente; desde la 1.6.2 abre el recuadro, que es donde
- * se confirma. Se conserva el nombre porque lo usa la campana.
- */
-export function installPendingUpdate(): void {
-  openUpdateDialog();
 }
 
 // ============================================================
@@ -322,7 +314,7 @@ function priorSpeed(timings: UpdateTimings): { speed: number; source: SpeedSourc
   return { speed: FALLBACK_SPEED, source: 'supuesta' };
 }
 
-export interface UpdateEstimate {
+interface UpdateEstimate {
   /** Peso con el que se calcula (bytes). */
   size: number;
   /** ¿Peso exacto o supuesto? */

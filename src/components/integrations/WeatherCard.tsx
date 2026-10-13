@@ -284,7 +284,7 @@ export default function WeatherCard() {
                     </p>
                   </div>
                 </div>
-                <Button size="sm" className="text-xs" onClick={() => setPickerOpen(true)} data-tour="clima-ubicacion">
+                <Button size="sm" className="text-xs" onClick={() => setPickerOpen(true)}>
                   <MapPin className="mr-2 h-4 w-4" />
                   Elegir ubicación
                 </Button>
@@ -318,7 +318,6 @@ export default function WeatherCard() {
                         <button
                           className="flex max-w-[24ch] items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-primary sm:max-w-[34ch]"
                           onClick={() => setPickerOpen(true)}
-                          data-tour="clima-ubicacion"
                         >
                           {isResolvingName ? (
                             <LoaderCircle className="h-3 w-3 shrink-0 animate-spin text-primary" />
@@ -460,7 +459,7 @@ export default function WeatherCard() {
           </div>
           <div className="flex gap-2">
             <Input
-              placeholder="Ej: Lima, Madrid, Bogotá…" data-tour="clima-buscar"
+              placeholder="Ej: Lima, Madrid, Bogotá…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && void handleSearch()}

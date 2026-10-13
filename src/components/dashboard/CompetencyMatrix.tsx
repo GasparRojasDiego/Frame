@@ -312,7 +312,6 @@ export default function CompetencyMatrix() {
                 disabled={!canConfigure}
                 aria-label="Elegir asignaturas de la matriz"
                 title="Elegir asignaturas"
-                data-tour="matriz-elegir"
               >
                 <Pencil className="h-4 w-4" />
               </Button>

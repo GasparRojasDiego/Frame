@@ -19,7 +19,7 @@ export const MAX_COMPETENCY_COURSES = 10;
 
 /** Radio mínimo DIBUJADO: impide que un nivel 0 colapse el área al centro.
  *  Solo afecta al trazo; el valor mostrado al usuario es siempre `level`. */
-export const COMPETENCY_PLOT_FLOOR = 0.5;
+const COMPETENCY_PLOT_FLOOR = 0.5;
 
 /** Umbrales oficiales del sistema peruano, reutilizados aquí para que el
  *  número del radar se lea igual que una nota del colegio. */
@@ -57,7 +57,7 @@ export interface CompetencyVertex {
 }
 
 /** Lo que descuenta cada tarea pendiente del dominio de la asignatura. */
-export const COMPETENCY_PENALTY = 1;
+const COMPETENCY_PENALTY = 1;
 
 /**
  * Escala oficial sobre 20: sin pendientes se tiene el dominio máximo y cada
@@ -65,19 +65,19 @@ export const COMPETENCY_PENALTY = 1;
  *   0 → 20 (AD) | 2 → 18 (AD) | 6 → 14 (A) | 9 → 11 (B)
  *   10 → 10 (C) | …           | ≥20 → 0 (C)
  */
-export function competencyLevel(pending: number): number {
+function competencyLevel(pending: number): number {
   const raw = COMPETENCY_MAX - COMPETENCY_PENALTY * Math.max(0, pending);
   return Math.max(0, Math.min(COMPETENCY_MAX, raw));
 }
 
-export function shortenCourseName(name: string, max = 14): string {
+function shortenCourseName(name: string, max = 14): string {
   const clean = name.trim();
   return clean.length <= max ? clean : `${clean.slice(0, max - 1).trimEnd()}…`;
 }
 
 /** Pendientes por asignatura en UNA sola pasada. Una tarea está pendiente
  *  mientras su progreso sea < 100 (misma regla que la cuadrícula de cursos). */
-export function countPendingByCourse(tasks: Task[]): Map<string, number> {
+function countPendingByCourse(tasks: Task[]): Map<string, number> {
   const map = new Map<string, number>();
   for (const task of tasks) {
     if (task.progress >= 100) continue;

@@ -18,13 +18,13 @@ import { trackEvent } from '@/lib/telemetry';
 /** Avisos del navegador que no rompen nada y solo hacen ruido. */
 const BENIGN = [/ResizeObserver loop/i, /^Script error\.?$/i];
 
-export function isBenignError(message: string | null | undefined): boolean {
+function isBenignError(message: string | null | undefined): boolean {
   const text = (message ?? '').trim();
   return BENIGN.some((re) => re.test(text));
 }
 
 /** Ruta actual sin identificadores: `/cursos/9f2c…` → `/cursos/:id`. */
-export function currentRoute(): string {
+function currentRoute(): string {
   try {
     const raw = (window.location.hash.replace(/^#/, '') || window.location.pathname || '/').split('?')[0];
     return raw
@@ -49,7 +49,7 @@ function frames(stack: string | null | undefined, max: number): string[] {
 }
 
 /** Pila compacta (JS + componentes de React), con tope de 1 400 caracteres. */
-export function compactStack(stack?: string | null, componentStack?: string | null): string | undefined {
+function compactStack(stack?: string | null, componentStack?: string | null): string | undefined {
   const js = frames(stack, 8);
   const react = frames(componentStack, 6);
   const text = [...js, ...(react.length ? ['— componentes —', ...react] : [])].join('\n');

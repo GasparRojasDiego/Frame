@@ -270,7 +270,7 @@ export default function NotificationCenter() {
         <Button
           size="icon"
           variant={isOpen ? 'default' : 'fantasma'}
-          title="Notificaciones" data-tour="campana"
+          title="Notificaciones"
           data-notification-bell
           className={cn(
             'relative h-9 w-9 rounded-md border border-primary',
@@ -292,7 +292,7 @@ export default function NotificationCenter() {
           {/* Engranaje: sonido, notificaciones y borrar el registro. */}
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
-              <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground" title="Ajustes de notificaciones" data-tour="campana-ajustes">
+              <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground" title="Ajustes de notificaciones">
                 <Settings className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>

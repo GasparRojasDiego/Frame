@@ -22,7 +22,7 @@ import { renderDocHtml, renderDocxBlob, type DocModel } from '@/lib/report-doc';
 
 export type ReportFormat = 'pdf' | 'docx';
 
-export interface ExportResult {
+interface ExportResult {
   fileName: string;
   /** Ruta en disco si se pudo guardar (solo escritorio y solo DOCX/MD). */
   path: string | null;

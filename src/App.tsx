@@ -20,7 +20,6 @@ const pages = {
   playlists: () => import('@/app/(main)/playlists/page'),
   cursos: () => import('@/app/(main)/cursos/page'),
   knowledge: () => import('@/app/(main)/knowledge/page'),
-  knowledgeLayout: () => import('@/app/(main)/knowledge/layout'),
   settings: () => import('@/app/(main)/settings/page'),
   uso: () => import('@/app/(main)/uso/page'),
 };
@@ -36,7 +35,6 @@ const MusicPage = lazy(pages.music);
 const PlaylistsPage = lazy(pages.playlists);
 const CursosPage = lazy(pages.cursos);
 const KnowledgePage = lazy(pages.knowledge);
-const KnowledgeLayout = lazy(pages.knowledgeLayout);
 const SettingsPage = lazy(pages.settings);
 const UsagePage = lazy(pages.uso);
 
@@ -69,14 +67,7 @@ export default function App() {
           <Route path="/music" element={<MusicPage />} />
           <Route path="/playlists" element={<PlaylistsPage />} />
           <Route path="/cursos" element={<CursosPage />} />
-          <Route
-            path="/knowledge"
-            element={
-              <KnowledgeLayout>
-                <KnowledgePage />
-              </KnowledgeLayout>
-            }
-          />
+          <Route path="/knowledge" element={<KnowledgePage />} />
           <Route path="/settings" element={<SettingsPage />} />
           {/* Panel de uso: solo existe para el responsable de Frame; para el
               resto la propia página redirige a Inicio. */}

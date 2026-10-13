@@ -166,7 +166,7 @@ const MONTHS: Record<string, number> = {
   ene: 1, abr: 4, ago: 8, dic: 12,
 };
 
-export interface ParsedDate {
+interface ParsedDate {
   date: string;
   time: string | null;
 }
@@ -229,7 +229,7 @@ export function parseNotionDate(raw: string, order: 'dmy' | 'mdy'): ParsedDate |
 }
 
 /** Notion escribe los rangos como «A → B». Devuelve [inicio, fin]. */
-export function parseNotionRange(raw: string, order: 'dmy' | 'mdy'): [ParsedDate | null, ParsedDate | null] {
+function parseNotionRange(raw: string, order: 'dmy' | 'mdy'): [ParsedDate | null, ParsedDate | null] {
   const parts = raw.split(/\s*(?:→|->|–|—)\s*/);
   if (parts.length >= 2) {
     const start = parseNotionDate(parts[0], order);

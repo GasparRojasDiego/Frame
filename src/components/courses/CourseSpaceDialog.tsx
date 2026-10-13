@@ -99,7 +99,7 @@ export default function CourseSpaceDialog() {
             <DialogTitle className="text-xl text-primary font-bold text-center">
               {addDialogView === 'course' ? 'Asignatura nueva' : 'Colección nueva'}
             </DialogTitle>
-            <Button size="icon" variant="ghost" className="h-9 w-9 text-primary" onClick={() => setAddDialogView('theme')} disabled={addDialogView === 'theme'} data-tour="asig-vista-coleccion" title="Crear una colección">
+            <Button size="icon" variant="ghost" className="h-9 w-9 text-primary" onClick={() => setAddDialogView('theme')} disabled={addDialogView === 'theme'} title="Crear una colección">
               <ChevronRight className="h-6 w-6" />
             </Button>
           </div>
@@ -117,7 +117,6 @@ export default function CourseSpaceDialog() {
                 onChange={(e) => setNewCourseName(e.target.value)}
                 disabled={batch}
                 placeholder={batch ? `${marked.length} predeterminadas marcadas abajo` : 'Ej: Física Cuántica'}
-                data-tour="asig-nombre"
                 className="bg-card border-primary"
               />
             </div>
@@ -129,7 +128,7 @@ export default function CourseSpaceDialog() {
                 id="teacherName"
                 value={newTeacherName}
                 onChange={(e) => setNewTeacherName(e.target.value)}
-                placeholder="Ej: Sr. Pérez" data-tour="asig-profesor"
+                placeholder="Ej: Sr. Pérez"
                 className="bg-card border-primary"
               />
             </div>
@@ -144,7 +143,7 @@ export default function CourseSpaceDialog() {
               <span className="text-[11px] font-semibold text-muted-foreground">Predeterminadas</span>
               <span aria-hidden className="h-px flex-1 bg-border/70" />
             </div>
-            <div className="grid grid-cols-2 gap-1.5" data-tour="asig-cneb">
+            <div className="grid grid-cols-2 gap-1.5">
               {CATALOG_SUBJECTS.map((subject) => {
                 const owned = existingNames.has(subject.toLowerCase());
                 const chosen = !owned && marked.includes(subject);
@@ -188,7 +187,7 @@ export default function CourseSpaceDialog() {
                 id="spaceName"
                 value={newSpaceName}
                 onChange={(e) => setNewSpaceName(e.target.value)}
-                placeholder="Ej: Primer Semestre" data-tour="coleccion-nombre"
+                placeholder="Ej: Primer Semestre"
                 className="bg-card border-primary"
               />
             </div>
@@ -212,7 +211,6 @@ export default function CourseSpaceDialog() {
           <Button variant="gris" onClick={() => setCreateCourseOpen(false)}>Cancelar</Button>
           <Button
             onClick={addDialogView === 'course' ? handleCreateCourse : handleCreateSpace}
-            data-tour="asig-crear"
             disabled={
               addDialogView === 'course'
                 ? batch

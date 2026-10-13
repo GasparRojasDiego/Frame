@@ -25,7 +25,7 @@ import type { Habit, HabitPhase } from '@/types';
 // ============================================================
 
 /** Un color por anillo. Distinguibles entre sí en tema claro y oscuro. */
-export const RING_COLORS = ['hsl(var(--primary))', '#10b981', '#f59e0b', '#ec4899', '#06b6d4'];
+const RING_COLORS = ['hsl(var(--primary))', '#10b981', '#f59e0b', '#ec4899', '#06b6d4'];
 
 const MAX_RINGS = 5;
 const DAY_INITIALS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];

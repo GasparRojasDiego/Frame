@@ -9,7 +9,7 @@ import {
   useSearchParams as useRouterSearchParams,
 } from 'react-router-dom';
 
-export interface LinkProps extends Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href'> {
+interface LinkProps extends Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href'> {
   href: string;
   children?: React.ReactNode;
 }

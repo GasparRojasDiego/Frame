@@ -153,7 +153,7 @@ export function buildDayIndex(
   return idx;
 }
 
-export interface PeriodMetrics {
+interface PeriodMetrics {
   start: Date;
   end: Date;
   totalDays: number;

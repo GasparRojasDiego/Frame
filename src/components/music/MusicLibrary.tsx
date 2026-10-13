@@ -173,7 +173,6 @@ export default function MusicLibrary() {
       <div className="mt-2 mb-8 flex flex-wrap items-center gap-x-4 gap-y-3">
         <label
           htmlFor="music-search"
-          data-tour="musica-buscar"
           className="flex h-10 w-full min-w-0 cursor-text items-center gap-2 rounded-md border border-primary bg-card px-3 ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 md:w-1/2"
         >
           <Search className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
@@ -233,7 +232,7 @@ export default function MusicLibrary() {
             size="icon"
             onClick={handleRandomPlay}
             disabled={filteredSongs.length === 0}
-            title="Reproducir una canción al azar" data-tour="musica-azar"
+            title="Reproducir una canción al azar"
           >
             <Shuffle className="h-5 w-5" />
           </Button>
@@ -244,7 +243,6 @@ export default function MusicLibrary() {
             variant={showOnlyFavorites ? 'default' : 'fantasma'}
             size="icon"
             onClick={() => setShowOnlyFavorites(prev => !prev)}
-            data-tour="musica-favoritas"
             aria-pressed={showOnlyFavorites}
             title={showOnlyFavorites ? 'Ver toda la biblioteca' : 'Ver sólo favoritas'}
           >
@@ -288,7 +286,6 @@ export default function MusicLibrary() {
                 song.id === highlightId && 'animate-pulse-border'
               )}
               onClick={() => playSong(song, { context: playbackContext, queue: queueSongs })}
-              data-tour="cancion"
             >
               <div className="absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Button

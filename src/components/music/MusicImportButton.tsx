@@ -107,26 +107,26 @@ export default function MusicImportButton({ variant = 'button' }: { variant?: 'b
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           {variant === 'empty' ? (
-            <Button className="mt-2" data-tour="musica-importar">
+            <Button className="mt-2">
               <FolderInput className="mr-2 h-4 w-4" />
               Importar música
             </Button>
           ) : (
-            <Button title="Importar canciones o una carpeta de tu equipo" data-tour="musica-importar">
+            <Button title="Importar canciones o una carpeta de tu equipo">
               <FolderInput className="h-4 w-4" />
               Importar
             </Button>
           )}
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-60" data-tour="importar-menu">
-          <DropdownMenuItem onSelect={() => void choose(false)} data-tour="importar-canciones">
+        <DropdownMenuContent align="end" className="w-60">
+          <DropdownMenuItem onSelect={() => void choose(false)}>
             <FileAudio className="mr-2 h-4 w-4 text-primary" />
             <span className="flex flex-col">
               Canciones…
               <span className="text-[11px] text-muted-foreground">Con sus letras y portadas, si las tienes</span>
             </span>
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => void choose(true)} data-tour="importar-carpeta">
+          <DropdownMenuItem onSelect={() => void choose(true)}>
             <FolderOpen className="mr-2 h-4 w-4 text-primary" />
             <span className="flex flex-col">
               Una carpeta…

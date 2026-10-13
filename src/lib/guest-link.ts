@@ -44,9 +44,9 @@ export interface PendingGuestLink {
 
 // --- Progreso (lo pinta GuestLinkOverlay) ---
 
-export type GuestLinkPhase = 'idle' | 'merging' | 'uploading' | 'done' | 'error';
+type GuestLinkPhase = 'idle' | 'merging' | 'uploading' | 'done' | 'error';
 
-export interface GuestLinkState {
+interface GuestLinkState {
   phase: GuestLinkPhase;
   message?: string;
   result?: ImportResult;
@@ -197,7 +197,7 @@ export async function mergeGuestIntoAccount(
   accountUid: string,
   picture?: string
 ): Promise<ImportResult> {
-  if (guest.id === accountUid) return { records: 0, images: 0, knowledge: false, recordings: 0 };
+  if (guest.id === accountUid) return { records: 0, images: 0, recordings: 0 };
   const profile: UserProfile = {
     id: guest.id,
     username: guest.username,

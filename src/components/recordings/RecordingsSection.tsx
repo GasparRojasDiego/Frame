@@ -447,7 +447,7 @@ function RecordingDetailsDialog({
 
 // Tarjeta de una grabación: nombre, importancia, fecha/hora, duración y
 // asignatura. Al presionarla se abre el diálogo de detalles.
-export function RecordingCard({ recording, showCourse = true }: { recording: Recording; showCourse?: boolean }) {
+function RecordingCard({ recording, showCourse = true }: { recording: Recording; showCourse?: boolean }) {
   const { courses } = useCourse();
   const [isOpen, setOpen] = useState(false);
   const courseName = recording.courseId ? courses.find((c) => c.id === recording.courseId)?.name : null;

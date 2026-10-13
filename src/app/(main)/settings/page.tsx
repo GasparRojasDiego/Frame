@@ -64,7 +64,7 @@ function ThemeSelector() {
     { value: 'system', label: 'Tema del dispositivo', icon: Monitor },
   ];
   return (
-    <div className="flex flex-col items-center gap-2" data-tour="tema">
+    <div className="flex flex-col items-center gap-2">
       <p className="font-bold text-muted-foreground text-xs">Tema</p>
       <div className="flex items-center gap-3">
         {options.map(({ value, label, icon: Icon }) => (
@@ -335,7 +335,6 @@ export default function SettingsPage() {
             {/* --- Identidad --- */}
             <div className="flex shrink-0 items-center gap-5">
               <div
-                data-tour="perfil-avatar"
                 className={cn(
                   'flex h-28 w-28 items-center justify-center overflow-hidden rounded-full bg-secondary',
                   isEditingProfile && 'cursor-pointer animate-pulse-border-infinite border-2 border-primary'
@@ -380,7 +379,7 @@ export default function SettingsPage() {
                         size="icon"
                         variant="ghost"
                         className="h-7 w-7 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
-                        title="Cambiar el nombre" data-tour="perfil-nombre"
+                        title="Cambiar el nombre"
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
@@ -407,7 +406,7 @@ export default function SettingsPage() {
                       );
                     }}
                     className="group/id flex items-center gap-1.5 rounded px-1 -mx-1 font-mono text-[11px] tabular-nums text-muted-foreground/80 transition-colors hover:bg-primary/10 hover:text-primary"
-                    title="Copiar el ID de tu cuenta" data-tour="perfil-id"
+                    title="Copiar el ID de tu cuenta"
                   >
                     ID {accountCode(userProfile?.id)}
                     <Copy className="h-3 w-3 opacity-0 transition-opacity group-hover/id:opacity-100" />
@@ -464,7 +463,7 @@ export default function SettingsPage() {
                             </Button>
                         </>
                     ) : (
-                        <Button variant="ghost" size="icon" onClick={() => setIsEditingGoals(true)} className="h-8 w-8 text-muted-foreground" data-tour="metas-editar" title="Editar las metas">
+                        <Button variant="ghost" size="icon" onClick={() => setIsEditingGoals(true)} className="h-8 w-8 text-muted-foreground" title="Editar las metas">
                             <Pencil className="h-5 w-5" />
                         </Button>
                     )}
@@ -506,7 +505,7 @@ export default function SettingsPage() {
         <div className="space-y-12">
             {/* Expediente completo: sustituye a las tres cifras sueltas
                 (tiempo, tareas y favoritas) que había antes. */}
-            <div className="pt-12" data-tour="expediente">
+            <div className="pt-12">
                 <ProfileStats userProfile={userProfile} />
             </div>
 
@@ -516,7 +515,7 @@ export default function SettingsPage() {
             <div className="grid grid-cols-1 gap-6 items-stretch lg:grid-cols-2">
                 <div className="flex flex-col gap-4 h-full">
                     <Tabs value={selectionMode} onValueChange={(value) => setSelectionMode(value as 'rendimiento' | 'tiempo')} className="w-full">
-                        <TabsList className="grid w-full grid-cols-2" data-tour="modo-medicion">
+                        <TabsList className="grid w-full grid-cols-2">
                             <TabsTrigger value="rendimiento" className="border-r">Rendimiento</TabsTrigger>
                             <TabsTrigger value="tiempo">Tiempo</TabsTrigger>
                         </TabsList>
@@ -531,7 +530,7 @@ export default function SettingsPage() {
                                         <Button onClick={handleCancelEditStreakGoal} size="icon" variant="ghost" className="h-7 w-7 text-red-500 hover:text-red-600"><X className="h-4 w-4" /></Button>
                                     </div>
                                 ) : (
-                                    <Button onClick={handleStartEditStreakGoal} data-tour="racha-editar" title="Cambiar la meta de racha" size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground opacity-0 group-hover/streak:opacity-100 transition-opacity"><Pencil className="h-4 w-4" /></Button>
+                                    <Button onClick={handleStartEditStreakGoal} title="Cambiar la meta de racha" size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground opacity-0 group-hover/streak:opacity-100 transition-opacity"><Pencil className="h-4 w-4" /></Button>
                                 )}
                             </div>
                         </CardHeader>
@@ -569,7 +568,7 @@ export default function SettingsPage() {
                             )}
                         </CardContent>
                     </Card>
-                    <div data-tour="racha" className="flex flex-col"><StreakStatusCard /></div>
+                    <div className="flex flex-col"><StreakStatusCard /></div>
                 </div>
 
                 {/* Informes: rendimiento y pendientes, con vista previa real. En
@@ -606,7 +605,6 @@ export default function SettingsPage() {
                 <DialogTrigger asChild>
                   <Button
                     variant="link"
-                    data-tour={`doc-${key}`}
                     className="h-auto p-0 text-xs font-normal text-muted-foreground hover:text-primary"
                   >
                     [{label}]

@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 // asignatura sin imagen, detrás del título en el panel de cada asignatura y
 // como fondo a pantalla completa de la pantalla de acceso.
 
-export interface WaveBackdropProps {
+interface WaveBackdropProps {
   /** Multiplicador de opacidad de todas las capas (1 = valores originales). */
   intensity?: number;
   /** Alto de cada onda en píxeles (por defecto 40, el `h-10` original). */

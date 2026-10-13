@@ -44,7 +44,7 @@ const hasData = (uid: string): boolean =>
     }
   });
 
-export interface GuestCandidate {
+interface GuestCandidate {
   id: string;
   username: string;
 }

@@ -208,15 +208,15 @@ async function syncOnce(uid: string): Promise<{
 // usuario cree que está a salvo cuando no lo está. Se deja constancia de
 // cada intento para poder decírselo.
 // ------------------------------------------------------------
-export interface SyncStatus {
+interface SyncStatus {
   lastOkAt: string | null;
   lastTryAt: string | null;
   lastError: string | null;
 }
 
-export const syncStatusKey = (uid: string) => `syncStatus_${uid}`;
+const syncStatusKey = (uid: string) => `syncStatus_${uid}`;
 
-export function readSyncStatus(uid: string): SyncStatus {
+function readSyncStatus(uid: string): SyncStatus {
   try {
     const raw = localStorage.getItem(syncStatusKey(uid));
     if (!raw) return { lastOkAt: null, lastTryAt: null, lastError: null };

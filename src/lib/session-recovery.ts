@@ -30,8 +30,8 @@ import type { InterruptedSession, SessionNote } from '@/types';
 // ============================================================
 
 export const activeSessionKey = (uid: string) => `activeSession_${uid}`;
-export const interruptedSessionKey = (uid: string) => `interruptedSession_${uid}`;
-export const sessionNotesKey = (uid: string) => `sessionNotes_${uid}`;
+const interruptedSessionKey = (uid: string) => `interruptedSession_${uid}`;
+const sessionNotesKey = (uid: string) => `sessionNotes_${uid}`;
 
 const readJson = <T,>(key: string): T | null => {
   try {
@@ -43,7 +43,7 @@ const readJson = <T,>(key: string): T | null => {
 };
 
 /** Anotaciones de la sesión en curso, ordenadas como se escribieron. */
-export function readSessionNotes(uid: string): SessionNote[] {
+function readSessionNotes(uid: string): SessionNote[] {
   const notes = readJson<SessionNote[]>(sessionNotesKey(uid));
   return Array.isArray(notes) ? notes : [];
 }

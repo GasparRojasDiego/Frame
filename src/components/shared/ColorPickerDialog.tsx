@@ -50,7 +50,7 @@ function rgbToHsv(r: number, g: number, b: number): Omit<Hsva, 'a'> {
 }
 
 /** «#RGB», «#RRGGBB» o «#RRGGBBAA» → HSVA; null si no es un color. */
-export function parseHexColor(value: string): Hsva | null {
+function parseHexColor(value: string): Hsva | null {
   let hex = value.trim().replace(/^#/, '');
   if (/^[0-9a-f]{3}$/i.test(hex)) hex = hex.split('').map((c) => c + c).join('');
   if (!/^([0-9a-f]{6}|[0-9a-f]{8})$/i.test(hex)) return null;

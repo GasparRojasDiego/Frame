@@ -42,7 +42,6 @@ export default function UpdateBadge({ collapsed = false }: { collapsed?: boolean
       type="button"
       onClick={openUpdateDialog}
       aria-label={`Actualizar Frame a la versión ${version}`}
-      data-tour="actualizar"
       title={
         downloading
           ? `Descargando Frame ${version}: ${percent}%`

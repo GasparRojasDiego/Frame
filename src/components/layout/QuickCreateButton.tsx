@@ -145,7 +145,7 @@ export default function QuickCreateButton() {
         variant={open ? 'default' : 'fantasma'}
         className="h-9 w-9 rounded-md border border-primary"
         onClick={() => setOpen(true)}
-        title="Crear una tarea o una anotación" data-tour="crear-rapido"
+        title="Crear una tarea o una anotación"
       >
         <Plus className="h-5 w-5" />
       </Button>
@@ -173,7 +173,6 @@ export default function QuickCreateButton() {
                   onClick={goBack}
                   title="Volver a Crear"
                   aria-label="Volver a Crear"
-                  data-tour="crear-atras"
                   // `-left-4`: el icono queda a 16 px del borde, simétrico a la X.
                   className="absolute -left-4 top-1/2 h-8 w-8 -translate-y-1/2 rounded-md text-muted-foreground hover:bg-primary/10 hover:text-primary"
                 >
@@ -198,7 +197,7 @@ export default function QuickCreateButton() {
             {mode === 'menu' ? (
               <div className="grid grid-cols-2 gap-4">
                 {/* Tarea: el velo sube desde abajo y el texto va abajo. */}
-                <button type="button" className={choiceCard} onClick={() => setMode('task')} data-tour="crear-tarea">
+                <button type="button" className={choiceCard} onClick={() => setMode('task')}>
                   <span aria-hidden className={choiceMedia}>
                     <img src="/quick-create/tarea.webp" alt="" className={choicePhoto} />
                     <span className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-background via-background/85 to-transparent backdrop-blur-[3px] [mask-image:linear-gradient(to_top,black_45%,transparent)]" />
@@ -219,7 +218,7 @@ export default function QuickCreateButton() {
                 </button>
 
                 {/* Anotación: al revés, el velo baja desde arriba y el texto va arriba. */}
-                <button type="button" className={choiceCard} onClick={() => setMode('note')} data-tour="crear-anotacion">
+                <button type="button" className={choiceCard} onClick={() => setMode('note')}>
                   <span aria-hidden className={choiceMedia}>
                     <img src="/quick-create/anotacion.webp" alt="" className={choicePhoto} />
                     <span className="absolute inset-x-0 top-0 h-3/4 bg-gradient-to-b from-background via-background/85 to-transparent backdrop-blur-[3px] [mask-image:linear-gradient(to_bottom,black_45%,transparent)]" />
@@ -279,7 +278,6 @@ export default function QuickCreateButton() {
                       <Button
                         onClick={saveNote}
                         disabled={isRichNoteEmpty(noteText)}
-                        data-tour="anotacion-guardar"
                         title={course ? `Guardar en ${course.name}` : 'Guardar en Inicio, sin asignatura'}
                         className={cn(isRichNoteEmpty(noteText) && 'border border-primary bg-primary/20 text-primary')}
                       >

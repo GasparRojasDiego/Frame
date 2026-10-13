@@ -102,7 +102,6 @@ export default function TimerPage() {
           className="h-7 w-7 text-muted-foreground hover:text-primary"
           onClick={toggleFace}
           title={cardFace === 'metricas' ? 'Vídeos de estudio' : 'Tiempo de estudio y métricas de hoy'}
-          data-tour={index === 1 ? 'enfoque-videos' : undefined}
           aria-label={cardFace === 'metricas' ? 'Ver los vídeos de estudio' : 'Volver a las métricas de hoy'}
         >
           <Icon className="h-4 w-4" />
@@ -355,7 +354,6 @@ export default function TimerPage() {
           <Card
             className="w-full flex flex-col"
             style={{ height: metricsRowHeight ? metricsRowHeight + 104 : 292 }}
-            data-tour="enfoque-metricas"
           >
             <CardHeader className="pb-3 pt-4">
               <CardTitle className="text-center text-sm font-headline text-muted-foreground">
@@ -393,19 +391,17 @@ export default function TimerPage() {
       {/* Calificación diaria: este calendario es exclusivo de Enfoque
           (el de la interfaz Calendario muestra tareas y eventos).
           Cada casilla abre las sesiones de estudio de ese día. */}
-      <div data-tour="enfoque-calendario">
-        <GradesCalendar
-          performances={allPerformances}
-          studySessions={studySessions}
-          selectionMode={selectionMode}
-          onDeleteSession={deleteStudySession}
-          onEditSession={setEditingSession}
-        />
-      </div>
+      <GradesCalendar
+        performances={allPerformances}
+        studySessions={studySessions}
+        selectionMode={selectionMode}
+        onDeleteSession={deleteStudySession}
+        onEditSession={setEditingSession}
+      />
 
       {/* Analítica académica: vive aquí, bajo el calendario, porque habla de
           estudio y no de hábitos. Es autónoma (tiene su propio periodo). */}
-      <div data-tour="progreso-academico"><AcademicAnalytics /></div>
+      <AcademicAnalytics />
 
       {/* Detalle de una sesión de hoy. Corregir abre su diálogo encima y,
           al guardar, el detalle ya enseña lo corregido. */}

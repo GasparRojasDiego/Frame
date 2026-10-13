@@ -1,5 +1,4 @@
 import { getAllImages, getImage, getRecordingAudio, saveImage } from '@/lib/music-db';
-import { exportKnowledge, importKnowledge } from '@/lib/knowledge-db';
 import { applyLocalData, collectLocalData, type LocalSnapshot } from '@/lib/storage-snapshot';
 import { scheduleImageKey } from '@/lib/profile-scope';
 import { APP_VERSION } from '@/lib/version';
@@ -17,15 +16,15 @@ import type { Recording, UserProfile } from '@/types';
 //   2. «Importar datos» en la cuenta de destino → ese archivo.
 //
 // El archivo lleva el estado (asignaturas, tareas, sesiones, hábitos, playlists,
-// horario…), las portadas e imágenes, los adjuntos de los recursos, el banco de
-// Conocimiento y las fichas de las grabaciones. La música NO va en el archivo
+// horario…), las portadas e imágenes, los adjuntos de los recursos y las fichas
+// de las grabaciones. La música NO va en el archivo
 // (pesa demasiado): es de cada perfil (1.6.7) y, al vincular un invitado, pasa
 // a la cuenta (guest-link.ts).
 // ============================================================
 
-export const TRANSFER_FORMAT = 1;
+const TRANSFER_FORMAT = 1;
 
-export interface TransferFile {
+interface TransferFile {
   app: 'Frame';
   format: number;
   exportedAt: string;
@@ -34,11 +33,9 @@ export interface TransferFile {
   data: LocalSnapshot;
   recordings: Recording[];
   images: Record<string, string>;
-  /** Respaldo del banco de Conocimiento (JSON en texto), si tenía contenido. */
-  knowledge: string | null;
 }
 
-export type ImportMode = 'merge' | 'replace';
+type ImportMode = 'merge' | 'replace';
 
 const AVATAR_SLOT = '__profileAvatar__';
 
@@ -79,15 +76,6 @@ export async function buildTransferFile(profile: UserProfile): Promise<TransferF
   const avatar = await getImage(`profileAvatar_${uid}`).catch(() => null);
   if (avatar) images[AVATAR_SLOT] = avatar;
 
-  let knowledge: string | null = null;
-  try {
-    const raw = await exportKnowledge(uid);
-    const parsed = JSON.parse(raw) as { categories?: unknown[]; studyItems?: unknown[] };
-    if ((parsed.categories?.length ?? 0) > 0 || (parsed.studyItems?.length ?? 0) > 0) knowledge = raw;
-  } catch {
-    knowledge = null;
-  }
-
   return {
     app: 'Frame',
     format: TRANSFER_FORMAT,
@@ -97,7 +85,6 @@ export async function buildTransferFile(profile: UserProfile): Promise<TransferF
     data,
     recordings: readJson<Recording[]>(`recordings_${uid}`, []),
     images,
-    knowledge,
   };
 }
 
@@ -114,7 +101,6 @@ export interface ImportResult {
   /** Registros añadidos o reemplazados, en total. */
   records: number;
   images: number;
-  knowledge: boolean;
   recordings: number;
 }
 
@@ -187,22 +173,6 @@ export async function importTransferFile(file: TransferFile, uid: string, mode: 
     }
   }
 
-  // Conocimiento: su importación REEMPLAZA, así que en «combinar» solo entra si el destino está vacío.
-  let knowledge = false;
-  if (file.knowledge) {
-    let targetEmpty = true;
-    try {
-      const mineRaw = JSON.parse(await exportKnowledge(uid)) as { categories?: unknown[]; studyItems?: unknown[] };
-      targetEmpty = (mineRaw.categories?.length ?? 0) === 0 && (mineRaw.studyItems?.length ?? 0) === 0;
-    } catch {
-      targetEmpty = true;
-    }
-    if (mode === 'replace' || targetEmpty) {
-      await importKnowledge(uid, file.knowledge);
-      knowledge = true;
-    }
-  }
-
   window.dispatchEvent(new StorageEvent('storage', { key: null }));
-  return { records, images, knowledge, recordings };
+  return { records, images, recordings };
 }

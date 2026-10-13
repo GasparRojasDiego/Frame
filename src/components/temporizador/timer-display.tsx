@@ -354,7 +354,6 @@ export default function TimerDisplay({ onSessionComplete, disabled = false }: Ti
         <Button
           variant={mode === 'focus' ? 'outline' : 'secondary'}
           onClick={() => handleModeChange('focus')}
-          data-tour="modo-temporizador"
           className={cn(
             "text-xs disabled:opacity-100", 
             mode === 'focus' 
@@ -383,7 +382,7 @@ export default function TimerDisplay({ onSessionComplete, disabled = false }: Ti
             <Button
               variant="secondary"
               size="icon"
-              title="Vista flotante" data-tour="vista-flotante"
+              title="Vista flotante"
               // Al acercar el ratón ya se comprueba la ventana: cuando el menú
               // se abre, «Ocultar» está o no está, sin parpadeo.
               onPointerEnter={() => void syncFloating()}
@@ -504,7 +503,7 @@ export default function TimerDisplay({ onSessionComplete, disabled = false }: Ti
             <button
               type="button"
               onClick={() => setPickerOpen(true)}
-              title="Elegir la duración exacta" data-tour="enfoque-duracion"
+              title="Elegir la duración exacta"
               className="group/face relative z-10 flex h-[78%] w-[78%] flex-col items-center justify-center rounded-full leading-none outline-none transition-colors hover:bg-primary/5 focus-visible:ring-2 focus-visible:ring-ring"
             >
               {face}
@@ -543,7 +542,7 @@ export default function TimerDisplay({ onSessionComplete, disabled = false }: Ti
       />
 
       <div className="flex gap-4">
-        <Button size="lg" onClick={handleStartPause} data-tour="enfoque-iniciar" className="text-xs w-28" disabled={disabled || (mode === 'focus' && time === 0)}>
+        <Button size="lg" onClick={handleStartPause} className="text-xs w-28" disabled={disabled || (mode === 'focus' && time === 0)}>
           {isActive ? <Pause className="mr-2 h-5 w-5" /> : (getButtonText() === 'Reanudar' ? <RefreshCcw className="mr-2 h-5 w-5" /> : <Play className="mr-2 h-5 w-5" />)}
           {getButtonText()}
         </Button>
@@ -556,7 +555,6 @@ export default function TimerDisplay({ onSessionComplete, disabled = false }: Ti
           )}
           disabled={finishButtonDisabled}
           onClick={handleFinishClick}
-          data-tour="enfoque-finalizar"
         >
           <StopCircle className="mr-2 h-5 w-5" />
           Finalizar

@@ -403,13 +403,12 @@ export default function MusicPlayer() {
                 </div>
 
                 <div className="flex flex-col items-center justify-center w-1/2 gap-4">
-                    <div className="flex items-center gap-4" data-tour="player-controles">
+                    <div className="flex items-center gap-4">
                         <Button 
                             variant="ghost" 
                             size="icon" 
                             className={cn("h-8 w-8", isShuffle && "bg-primary/20 text-primary border border-primary")}
                             onClick={toggleShuffle}
-                            data-tour="player-aleatorio"
                             title="Aleatorio"
                         >
                             <Shuffle className="h-5 w-5" />
@@ -431,7 +430,6 @@ export default function MusicPlayer() {
                                 repeatMode.mode !== 'off' && "bg-primary/20 text-primary border border-primary"
                             )}
                             onMouseDown={handleRepeatMouseDown}
-                            data-tour="player-repetir"
                             onMouseUp={handleRepeatMouseUp}
                         >
                             <Repeat className="h-5 w-5" />
@@ -455,7 +453,7 @@ export default function MusicPlayer() {
                 </div>
                 
                 <div className="flex flex-col items-center justify-center w-1/4 gap-1">
-                    <div className="flex items-center gap-2" data-tour="player-volumen">
+                    <div className="flex items-center gap-2">
                         <Button variant="ghost" size="icon" onClick={toggleMute}>
                             {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
                         </Button>
@@ -469,7 +467,7 @@ export default function MusicPlayer() {
                             }}
                             className="w-24"
                         />
-                        <Button variant="ghost" size="icon" onClick={handleLikeClick} data-tour="player-favorita" title="Favorita">
+                        <Button variant="ghost" size="icon" onClick={handleLikeClick} title="Favorita">
                             <Heart className={cn("h-5 w-5", currentSong.isFavorite && "fill-primary text-primary")} />
                         </Button>
                     </div>
@@ -479,7 +477,7 @@ export default function MusicPlayer() {
                         size="icon"
                         className="absolute bottom-2 right-2 h-7 w-7 text-muted-foreground hover:text-primary"
                         onClick={() => setNowPlayingOpen(true)}
-                        title="Ver la canción a pantalla completa, con su letra" data-tour="player-reproduciendo"
+                        title="Ver la canción a pantalla completa, con su letra"
                         aria-label="Abrir la vista Reproduciendo"
                     >
                         <Maximize2 className="h-4 w-4" />

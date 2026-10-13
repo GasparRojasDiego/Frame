@@ -1,5 +1,6 @@
 import type { Session, User, AuthChangeEvent } from '@supabase/supabase-js';
 import { getRecoveryClient, getSupabase } from './client';
+import { removeCloudImages } from '@/lib/image-sync';
 
 const siteUrl =
   import.meta.env.VITE_SITE_URL ||
@@ -36,13 +37,13 @@ export function describeAuthError(message: string | null | undefined): string {
   return raw;
 }
 
-export interface AuthResult {
+interface AuthResult {
   user: User | null;
   session: Session | null;
   error: string | null;
 }
 
-export interface PersonNames {
+interface PersonNames {
   firstNames: string;
   lastNames: string;
 }
@@ -90,7 +91,7 @@ export async function signInWithEmail(email: string, password: string): Promise<
 }
 
 /** Página de la web donde se elige la contraseña nueva. */
-export const PASSWORD_RECOVERY_URL = 'https://gasparrojasdiego.github.io/frame-app/recuperar/';
+const PASSWORD_RECOVERY_URL = 'https://gasparrojasdiego.github.io/frame-app/recuperar/';
 
 /**
  * Envía el correo para elegir una contraseña nueva. Supabase no dice si el
@@ -230,7 +231,7 @@ export function onAuthChange(
  *  `data-only` = solo se purgaron los datos del usuario; la cuenta sigue existiendo. */
 export type DeleteAccountMode = 'full' | 'data-only';
 
-export interface DeleteAccountResult {
+interface DeleteAccountResult {
   mode: DeleteAccountMode;
   /** Detalle técnico del fallo parcial, o `null` si todo salió bien. */
   error: string | null;
@@ -254,7 +255,7 @@ export async function deleteRemoteAccount(uid: string): Promise<DeleteAccountRes
 
   // Sus imágenes de la nube (foto de perfil, horario, portadas) se van antes:
   // una vez borrado el usuario, ya nadie podría quitarlas.
-  await (await import('@/lib/image-sync')).removeCloudImages(uid);
+  await removeCloudImages(uid);
 
   const { error: rpcError } = await supabase.rpc('delete_current_user');
   if (!rpcError) return { mode: 'full', error: null };

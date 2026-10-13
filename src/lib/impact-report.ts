@@ -88,7 +88,7 @@ const hours = (minutes: number): string => {
 const cells = (values: string[]): DocCell[] => values.map((text, index) => ({ text, bold: index === 0 }));
 const pct = (part: number, whole: number): number | null => (whole > 0 ? Math.round((part / whole) * 100) : null);
 const signed = (value: number): string => `${value > 0 ? '+' : ''}${value} %`;
-export const longDate = (iso: string | null): string => {
+const longDate = (iso: string | null): string => {
   if (!iso) return '';
   try {
     return format(parseISO(iso), "d 'de' MMMM 'de' yyyy", { locale: es });
@@ -111,7 +111,7 @@ function pairSentence(pair: PairStats, label: string): string | null {
 }
 
 /** Las frases citables del informe. */
-export function impactStatements(data: ImpactData): string[] {
+function impactStatements(data: ImpactData): string[] {
   const h = data.headline;
   const lines: string[] = [];
   if (h.students === 0) return lines;

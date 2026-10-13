@@ -97,7 +97,7 @@ export default function ReportPreview({ doc, fill = false }: { doc: DocModel | n
         style={{ width: PAGE_W, height: PAGE_H }} />
       {/* `fill`: ocupa el alto que le deje su recuadro (Informes en Ajustes, 1.6.6). */}
       <ScrollArea className={cn('rounded-lg border border-border/70 bg-muted/40', fill ? 'min-h-0 flex-1' : 'h-[min(30rem,60vh)]')}>
-        <div ref={grid} className="grid grid-cols-2 gap-4 p-4" data-tour="informe-vista">
+        <div ref={grid} className="grid grid-cols-2 gap-4 p-4">
           {sources.length === 0 ? (
             <div className="col-span-2 flex h-60 items-center justify-center">
               <LoaderCircle className="h-5 w-5 animate-spin text-primary" />

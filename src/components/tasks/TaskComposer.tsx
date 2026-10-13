@@ -151,7 +151,6 @@ export default function TaskComposer({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Nombre"
-            data-tour="tarea-nombre"
             className="border-0 rounded-b-none h-auto font-semibold text-sm bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
           />
           <div className="px-4">
@@ -173,7 +172,7 @@ export default function TaskComposer({
                 estimado, recordatorio, documentos y enlaces. */}
             <Popover open={isCalendarOpen} onOpenChange={setCalendarOpen}>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="icon" className="w-10 h-10" title="Fecha de entrega" data-tour="tarea-fecha">
+                <Button variant="outline" size="icon" className="w-10 h-10" title="Fecha de entrega">
                   {dueDate ? (
                     <span className="text-sm font-bold text-primary">{getDate(dueDate)}</span>
                   ) : (
@@ -200,7 +199,7 @@ export default function TaskComposer({
                 <Button
                   variant="outline"
                   size="icon"
-                  title={kind ? `Tipo: ${kind}` : 'Tipo de pendiente'} data-tour="tarea-tipo"
+                  title={kind ? `Tipo: ${kind}` : 'Tipo de pendiente'}
                   className={cn('h-10 w-10 transition-colors', kind && 'border-primary bg-primary/15 text-primary')}
                 >
                   {(() => {
@@ -227,7 +226,7 @@ export default function TaskComposer({
                 <Button
                   variant="outline"
                   size="icon"
-                  title={priority ? `Importancia: ${priority}` : 'Importancia'} data-tour="tarea-importancia"
+                  title={priority ? `Importancia: ${priority}` : 'Importancia'}
                   className={cn('w-10 h-10 transition-colors', priority && priorityStyles[priority].badge)}
                 >
                   <Flag className={cn('h-4 w-4', !priority && 'text-foreground')} />
@@ -261,7 +260,7 @@ export default function TaskComposer({
                 <Button
                   variant="outline"
                   size="icon"
-                  title={difficulty ? `Dificultad: ${difficulty}` : 'Dificultad'} data-tour="tarea-dificultad"
+                  title={difficulty ? `Dificultad: ${difficulty}` : 'Dificultad'}
                   className={cn('h-10 w-10 transition-colors', difficulty && DIFFICULTY_META[difficulty].badge)}
                 >
                   <DifficultyBars level={difficulty} />
@@ -283,7 +282,7 @@ export default function TaskComposer({
                 <Button
                   variant="outline"
                   size="icon"
-                  title={estimate > 0 ? `Tiempo estimado: ${formatEstimate(estimate)}` : 'Tiempo estimado para culminar'} data-tour="tarea-estimado"
+                  title={estimate > 0 ? `Tiempo estimado: ${formatEstimate(estimate)}` : 'Tiempo estimado para culminar'}
                   className={cn(
                     'w-10 h-10 transition-colors',
                     estimate > 0 && 'bg-primary/20 text-primary border-primary'
@@ -311,7 +310,6 @@ export default function TaskComposer({
                   variant="outline"
                   size="icon"
                   title={describeReminder(reminder)}
-                  data-tour="tarea-recordatorio"
                   className={cn(
                     'w-10 h-10 transition-colors',
                     reminder.enabled && 'bg-primary/20 text-primary border-primary'
@@ -332,7 +330,6 @@ export default function TaskComposer({
           <div className="flex-grow" />
           <Button
             onClick={submit}
-            data-tour="tarea-anadir"
             disabled={!name.trim() || disabled}
             title={disabled ? disabledReason : undefined}
             className={cn((!name.trim() || disabled) && 'bg-primary/20 text-primary border border-primary')}

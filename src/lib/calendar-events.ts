@@ -8,7 +8,7 @@
 
 import type { LocalCalendarEvent, LocalEventDisplay, LocalEventKind } from '@/types';
 
-export interface EventKindMeta {
+interface EventKindMeta {
   label: string;
 }
 
@@ -64,7 +64,7 @@ export const EVENT_COLOR_ROWS: string[][] = ALPHA_ROWS.map((alpha) =>
 export const DEFAULT_EVENT_COLOR = EVENT_COLOR_ROWS[0][0];
 
 /** Alfa de un color de la paleta, en 0..1. */
-export function colorAlpha(color: string): number {
+function colorAlpha(color: string): number {
   if (/^#[0-9a-f]{8}$/i.test(color)) return parseInt(color.slice(7), 16) / 255;
   return 1;
 }
@@ -86,14 +86,6 @@ export const eventTextClass = (color: string): string =>
 export const eventDisplay = (event: LocalCalendarEvent): LocalEventDisplay =>
   event.display ?? (event.kind === 'libre' || event.kind === 'vacaciones' ? 'casilla' : 'actividad');
 
-/** ¿El evento ya pasó? Sigue visible, pero atenuado. */
-export function isEventInactive(event: LocalCalendarEvent, today = new Date()): boolean {
-  const y = today.getFullYear();
-  const m = String(today.getMonth() + 1).padStart(2, '0');
-  const d = String(today.getDate()).padStart(2, '0');
-  return (event.endDate ?? event.date) < `${y}-${m}-${d}`;
-}
-
 /** Eventos que cubren un día (soporta rangos date..endDate). */
 export function getEventsForDay(
   events: LocalCalendarEvent[] | undefined,
@@ -101,48 +93,4 @@ export function getEventsForDay(
 ): LocalCalendarEvent[] {
   if (!events || events.length === 0) return [];
   return events.filter((e) => dayStr >= e.date && dayStr <= (e.endDate ?? e.date));
-}
-
-/**
- * Reparto de un día: como mucho UN evento pinta la casilla; el resto son
- * etiquetas. Si por lo que sea hubiera dos "casilla" el mismo día (datos
- * heredados, un rango que se solapa), gana el primero y el otro pasa a
- * etiqueta en lugar de desaparecer.
- */
-export function splitDayEvents(dayEvents: LocalCalendarEvent[]): {
-  cell: LocalCalendarEvent | null;
-  chips: LocalCalendarEvent[];
-} {
-  let cell: LocalCalendarEvent | null = null;
-  const chips: LocalCalendarEvent[] = [];
-  for (const event of dayEvents) {
-    if (eventDisplay(event) === 'casilla' && cell === null) cell = event;
-    else chips.push(event);
-  }
-  return { cell, chips };
-}
-
-/**
- * ¿Choca este evento "casilla" con otro que ya pinta alguno de sus días?
- * Devuelve la fecha del primer choque, o null si está libre. `ignoreId`
- * excluye al propio evento cuando se está editando.
- */
-export function findCellClash(
-  events: LocalCalendarEvent[] | undefined,
-  start: string,
-  end: string | undefined,
-  ignoreId?: string
-): string | null {
-  if (!events) return null;
-  const last = end ?? start;
-  for (const other of events) {
-    if (other.id === ignoreId) continue;
-    if (eventDisplay(other) !== 'casilla') continue;
-    const otherLast = other.endDate ?? other.date;
-    // Dos intervalos se solapan si cada uno empieza antes de que acabe el otro.
-    if (start <= otherLast && other.date <= last) {
-      return start > other.date ? start : other.date;
-    }
-  }
-  return null;
 }

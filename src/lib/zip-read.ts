@@ -8,7 +8,7 @@
 // son los que usan Notion, Windows y casi todo el mundo; no admite ZIP64.
 // ============================================================
 
-export interface ZipEntry {
+interface ZipEntry {
   name: string;
   method: number;
   compressedSize: number;

@@ -7,7 +7,7 @@
 // es la real, la que verá el reproductor.
 // ============================================================
 
-export interface AudioProbe {
+interface AudioProbe {
   playable: boolean;
   /** Segundos; sin valor si el archivo no la declara y no se pudo medir. */
   duration?: number;

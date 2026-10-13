@@ -15,7 +15,7 @@ import { activeProfileId } from '@/lib/profile-scope';
 //   Google no se recarga al volver a la sección.
 // ============================================================
 
-export function useOnline(): boolean {
+function useOnline(): boolean {
   const [online, setOnline] = useState(() => navigator.onLine);
   useEffect(() => {
     const up = () => setOnline(true);

@@ -115,7 +115,7 @@ export default function NewHabitDialog({
               onKeyDown={(e) => {
                 if (e.key === 'Enter') create();
               }}
-              placeholder="Por ejemplo: leer veinte minutos" data-tour="habito-nombre"
+              placeholder="Por ejemplo: leer veinte minutos"
               maxLength={HABIT_NAME_MAX}
               className="border-primary bg-card"
               autoFocus
@@ -123,7 +123,7 @@ export default function NewHabitDialog({
           </div>
 
           {/* Momento del día */}
-          <div className="space-y-2" data-tour="habito-momento">
+          <div className="space-y-2">
             <Label className="text-xs">¿En qué momento del día?</Label>
             <div className="grid grid-cols-3 gap-2">
               {HABIT_PHASES.map((info) => {
@@ -162,7 +162,7 @@ export default function NewHabitDialog({
           </div>
 
           {/* Frecuencia */}
-          <div className="space-y-2" data-tour="habito-frecuencia">
+          <div className="space-y-2">
             <Label className="text-xs">¿Con qué frecuencia?</Label>
             <div className="grid grid-cols-2 gap-2">
               {(
@@ -251,7 +251,7 @@ export default function NewHabitDialog({
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button type="button" onClick={create} disabled={!canCreate} data-tour="habito-crear">
+          <Button type="button" onClick={create} disabled={!canCreate}>
             Crear hábito
           </Button>
         </DialogFooter>

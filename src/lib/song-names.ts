@@ -12,12 +12,12 @@
 // Sin dependencias: se prueba con `node scripts/probar-musica.ts`.
 // ============================================================
 
-export interface SongName {
+interface SongName {
   title: string;
   artist?: string;
 }
 
-export interface SongNameInput {
+interface SongNameInput {
   /** Nombre del archivo, con o sin extensión. */
   fileName: string;
   tagTitle?: string;
@@ -110,7 +110,7 @@ function tidy(value: string): string {
 }
 
 /** Quita el ruido de un título («(Official Video)», comillas, espacios de más). */
-export function cleanTitle(value: string): string {
+function cleanTitle(value: string): string {
   let text = value.replace(NOISE, '');
   // El ruido puede venir encadenado: «Canción (Audio) [HD]».
   for (let i = 0; i < 3 && TRAILING_NOISE.test(text); i++) text = text.replace(TRAILING_NOISE, '');
@@ -118,7 +118,7 @@ export function cleanTitle(value: string): string {
 }
 
 /** Quita lo que añaden los canales de vídeo al artista («… - Topic», «…VEVO»). */
-export function cleanArtist(value: string): string {
+function cleanArtist(value: string): string {
   const text = tidy(
     value
       .replace(/\s*-\s*topic$/i, '')
@@ -176,7 +176,7 @@ function splitPair(text: string, known?: ReadonlySet<string>): SongName | null {
 }
 
 /** Nombre presentable sacado solo del nombre del archivo. */
-export function guessFromFileName(fileName: string, knownArtists?: ReadonlySet<string>): SongName {
+function guessFromFileName(fileName: string, knownArtists?: ReadonlySet<string>): SongName {
   const base = readableBase(fileName);
   const withoutNumber = base.replace(TRACK_PREFIX, '').trim() || base;
   // «Canción | Artista» o «Canción | Letra»: lo de detrás de la barra casi nunca es el título.

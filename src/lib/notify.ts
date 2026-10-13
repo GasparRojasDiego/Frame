@@ -14,7 +14,7 @@ let audioEl: HTMLAudioElement | null = null;
 function playChime() {
   try {
     if (!audioEl) {
-      audioEl = new Audio('/sounds/notification.wav');
+      audioEl = new Audio('/sounds/notification.ogg');
       audioEl.volume = 0.65;
     }
     audioEl.currentTime = 0;
@@ -34,7 +34,7 @@ export async function ensureNotificationPermission(): Promise<boolean> {
   return (await Notification.requestPermission()) === 'granted';
 }
 
-export interface NotifyOptions {
+interface NotifyOptions {
   title: string;
   body: string;
   /** reproduce el chime de Frame (por defecto true) */

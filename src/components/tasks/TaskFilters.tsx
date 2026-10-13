@@ -127,7 +127,7 @@ export default function TaskFilters({
         <Button
           variant="outline"
           size="icon"
-          title="Filtrar tareas" data-tour="tareas-filtros"
+          title="Filtrar tareas"
           className={cn(
             'relative h-9 w-9 border-primary text-primary hover:bg-primary/30 hover:text-primary',
             active > 0 ? 'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground' : 'bg-primary/20'

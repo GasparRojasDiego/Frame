@@ -26,7 +26,7 @@ export default function CardImageSettings() {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button size="icon" variant="fantasma" className="h-9 w-9" title="Ajustes de las tarjetas" data-tour="asig-ajustes">
+        <Button size="icon" variant="fantasma" className="h-9 w-9" title="Ajustes de las tarjetas">
           <Settings className="h-4 w-4" />
         </Button>
       </PopoverTrigger>

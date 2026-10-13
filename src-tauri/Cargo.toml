@@ -15,22 +15,26 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 # "unstable" habilita webviews hijos (multiwebview): necesario para incrustar
 # la interfaz REAL de Gmail como un recuadro dentro de la ventana principal.
-tauri = { version = "2", features = ["tray-icon", "image-ico", "unstable"] }
+tauri = { version = "2", features = ["unstable"] }
 tauri-plugin-opener = "2"
 tauri-plugin-notification = "2"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+# La misma versión que usa el actualizador: una sola copia en el binario.
+reqwest = { version = "0.13", default-features = false, features = ["json", "form", "rustls-no-provider"] }
+# Proveedor criptográfico de rustls: el `ring` que el actualizador ya trae.
+rustls = { version = "0.23", default-features = false, features = ["ring"] }
 base64 = "0.22"
 # Explorador de archivos de Windows para «Importar» en Música.
 rfd = "0.15"
 
 [profile.release]
-# Binario mínimo y rápido: optimización agresiva para distribución.
+# Binario mínimo: casi todo el trabajo nativo es de entrada y salida (archivos,
+# red), así que optimizar por tamaño ("z") no se nota en velocidad.
 panic = "abort"
 codegen-units = 1
 lto = true
-opt-level = "s"
+opt-level = "z"
 strip = true

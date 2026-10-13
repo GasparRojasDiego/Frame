@@ -170,7 +170,6 @@ function RecordingSettingsPopover({
           size="icon"
           aria-label="Límite de grabación"
           title="Límite de grabación"
-          data-tour="grabar-limite"
           className="absolute left-[13px] top-[13px] h-[22px] w-[22px] rounded-sm text-muted-foreground opacity-70 transition-opacity hover:bg-primary/10 hover:text-primary hover:opacity-100"
         >
           <Settings className="h-4 w-4" />
@@ -833,7 +832,7 @@ export default function RecordingDialog({
                 Cancelar
               </Button>
               {/* autoFocus: con Ctrl+Shift+F basta presionar Enter para empezar */}
-              <Button autoFocus onClick={() => void startRecording()} data-tour="grabar-iniciar">
+              <Button autoFocus onClick={() => void startRecording()}>
                 <Mic className="mr-2 h-4 w-4" />
                 Iniciar grabación
               </Button>

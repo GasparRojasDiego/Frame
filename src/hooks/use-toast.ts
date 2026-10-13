@@ -32,7 +32,7 @@ const MAX_MS = 12000
 const textLength = (value: React.ReactNode): number =>
   typeof value === 'string' || typeof value === 'number' ? String(value).length : 0
 
-export function readingDuration(toast: Toast): number {
+function readingDuration(toast: Toast): number {
   const chars = textLength(toast.title) + textLength(toast.description)
   const floor = toast.variant === 'destructive' ? MIN_MS_DESTRUCTIVE : MIN_MS
   return Math.min(MAX_MS, Math.max(floor, BASE_MS + chars * MS_PER_CHAR))
@@ -101,7 +101,7 @@ const addToRemoveQueue = (toastId: string) => {
   toastTimeouts.set(toastId, timeout)
 }
 
-export const reducer = (state: State, action: Action): State => {
+const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case "ADD_TOAST":
       return {

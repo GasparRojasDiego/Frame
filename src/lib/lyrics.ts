@@ -42,7 +42,7 @@ const CREDIT =
 const LRC_TAG_LINE = /^\s*\[(ar|ti|al|au|by|re|ve|tool|offset|length|la|#)\s*:[^\]]*\]\s*$/i;
 
 /** Texto LRC («[01:23.45] verso») → líneas ordenadas por tiempo. */
-export function parseLrc(lrc: string): LyricLine[] {
+function parseLrc(lrc: string): LyricLine[] {
   const offsetTag = lrc.match(/\[offset:\s*([+-]?\d+)\s*\]/i);
   const offset = offsetTag ? Number(offsetTag[1]) / 1000 : 0;
   const lines: LyricLine[] = [];

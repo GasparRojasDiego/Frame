@@ -26,7 +26,7 @@ const UNASSIGNED = 'Sin asignatura';
 /** Cuántos caracteres de la descripción entran en la celda sin romper la tabla. */
 const DESCRIPTION_LIMIT = 240;
 
-export interface PendingReportInput {
+interface PendingReportInput {
   studentName: string;
   tasks: Task[];
   courses: Course[];
@@ -50,7 +50,7 @@ function inRange(due: Date | null, range: NonNullable<PendingReportInput['range'
   return current && startOfDay(due) < today;
 }
 
-export interface PendingSummary {
+interface PendingSummary {
   pending: number;
   overdue: number;
   subjects: number;
@@ -174,7 +174,7 @@ export function pendingReportFileBase(now: Date = new Date(), stamp?: string): s
   return `Frame-Pendientes-${stamp ?? format(now, 'yyyy-MM-dd')}`;
 }
 
-export interface PendingDocOptions {
+interface PendingDocOptions {
   /** En modo síntesis se omiten los dos bloques de detalle tarea a tarea. */
   brief?: boolean;
   /** Numeración de sección de partida (el informe general encadena varias). */

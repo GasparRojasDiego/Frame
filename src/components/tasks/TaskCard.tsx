@@ -363,7 +363,7 @@ export const TaskCard = ({
                 <Button
                   size="icon"
                   variant="ghost"
-                  title="Editar" data-tour="tarea-editar"
+                  title="Editar"
                   className="h-6 w-6 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
                   onClick={() => setIsEditing(true)}
                 >
@@ -374,7 +374,7 @@ export const TaskCard = ({
                     <Button
                       size="icon"
                       variant="ghost"
-                      title="Más opciones" data-tour="tarea-opciones"
+                      title="Más opciones"
                       className="h-6 w-6 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100"
                     >
                       <MoreVertical className="h-3.5 w-3.5" />
@@ -421,7 +421,7 @@ export const TaskCard = ({
                   <Button
                     size="icon"
                     variant="outline"
-                    title="Culminar la tarea" data-tour="tarea-culminar"
+                    title="Culminar la tarea"
                     onClick={() => setConfirm('complete')}
                     className="group/check h-5 w-5 rounded-full border-2 border-primary text-primary hover:bg-primary/10"
                   >
@@ -684,7 +684,7 @@ export const TaskCard = ({
             Un hilo, no una barra: informa de un vistazo sin pesar en la
             composición, y sigue siendo arrastrable. */}
         <div className="flex items-center gap-3 pt-0.5">
-          <Slider data-tour="tarea-progreso"
+          <Slider
             min={0}
             max={100}
             step={1}

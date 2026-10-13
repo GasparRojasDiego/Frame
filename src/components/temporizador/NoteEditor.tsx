@@ -8,7 +8,6 @@ import {
   type RichLineKind,
   type RichRun,
 } from '@/lib/rich-note';
-import RichNoteView from './RichNoteView';
 
 // ============================================================
 // Editor de anotaciones: un Word en miniatura.
@@ -367,12 +366,6 @@ export default function NoteEditor({
   // juntan lo tecleado seguido en un solo paso.
   const present = useRef<Snapshot>({ value: '', caret: null });
   const history = useRef({ past: [] as Snapshot[], future: [] as Snapshot[], group: null as string | null, at: 0 });
-  const [canUndo, setCanUndo] = useState(false);
-  const [canRedo, setCanRedo] = useState(false);
-  const syncHistory = useCallback(() => {
-    setCanUndo(history.current.past.length > 0);
-    setCanRedo(history.current.future.length > 0);
-  }, []);
   /** Mientras se encadenan órdenes al DOM (pegar, convertir en lista…), sus
    *  `input` no se anotan uno a uno: se emite una vez al terminar. */
   const quiet = useRef(false);
@@ -397,8 +390,7 @@ export default function NoteEditor({
     setEmpty(isDomEmpty(element));
     present.current = { value, caret: null };
     history.current = { past: [], future: [], group: null, at: 0 };
-    syncHistory();
-  }, [value, syncHistory]);
+  }, [value]);
 
   /** DOM → valor, y un paso más en el historial. `group` junta lo tecleado
    *  seguido; `boundary` (un espacio) abre paso nuevo, como en Word. */
@@ -420,11 +412,10 @@ export default function NoteEditor({
       h.group = group;
       h.at = now;
       present.current = { value: next, caret: caretOffset(element) };
-      syncHistory();
       emitted.current = next;
       onChangeRef.current(next);
     },
-    [syncHistory]
+    []
   );
 
   /** Botones encendidos según dónde esté el cursor, como en Word. */
@@ -480,11 +471,10 @@ export default function NoteEditor({
       setEmpty(isDomEmpty(element));
       if (document.activeElement !== element) element.focus();
       placeCaret(element, target.caret);
-      syncHistory();
       onChangeRef.current(target.value);
       refreshActive();
     },
-    [refreshActive, syncHistory]
+    [refreshActive]
   );
 
   // Deshacer desde el menú del clic derecho: también con el historial propio.
@@ -746,7 +736,3 @@ export default function NoteEditor({
   );
 }
 
-/** Pinta una anotación. Se conserva el nombre de siempre: hoy es `RichNoteView`. */
-export function NoteText({ text, className }: { text: string; className?: string }) {
-  return <RichNoteView text={text} className={className} />;
-}

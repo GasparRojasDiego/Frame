@@ -271,7 +271,6 @@ function HabitRowCells({ habit, isEditing, index, weekDates, weekOffset, isStrea
             <div key={dayIndex} className="h-[52px] border-b flex items-center justify-center">
                 <Checkbox
                     checked={isChecked}
-                    data-tour="habito-dia"
                     onCheckedChange={() => handleCheckboxChange(dayIndex)}
                     disabled={isDisabled}
                 />
@@ -393,12 +392,12 @@ export default function HabitsView({ weekOffset }: { weekOffset: number }) {
             <div className="group col-span-2 border-r border-b bg-card/50 flex items-center justify-center p-2 relative min-h-[48px]">
               <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <TooltipProvider><Tooltip><TooltipTrigger asChild>
-                    <Button variant={showArchived ? "secondary" : "ghost"} size="icon" className="text-muted-foreground h-7 w-7" onClick={() => setShowArchived(prev => !prev)} data-tour="habitos-archivados">
+                    <Button variant={showArchived ? "secondary" : "ghost"} size="icon" className="text-muted-foreground h-7 w-7" onClick={() => setShowArchived(prev => !prev)}>
                       <RefreshCcw className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger><TooltipContent><p>Ver archivados</p></TooltipContent></Tooltip></TooltipProvider>
                   <TooltipProvider><Tooltip><TooltipTrigger asChild>
-                    <Button variant={isArchiveMode ? "secondary" : "ghost"} size="icon" className="text-muted-foreground h-7 w-7" onClick={() => setIsArchiveMode(prev => !prev)} disabled={showArchived} data-tour="habitos-archivar">
+                    <Button variant={isArchiveMode ? "secondary" : "ghost"} size="icon" className="text-muted-foreground h-7 w-7" onClick={() => setIsArchiveMode(prev => !prev)} disabled={showArchived}>
                       <Archive className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger><TooltipContent><p>Archivar hábitos</p></TooltipContent></Tooltip></TooltipProvider>
@@ -414,7 +413,6 @@ export default function HabitsView({ weekOffset }: { weekOffset: number }) {
                         variant="ghost" 
                         size="icon" 
                         onClick={() => setIsEditing(!isEditing)}
-                        data-tour="habitos-editar"
                         className={cn(
                             'h-7 w-7', 
                             isEditing ? 'bg-accent text-primary' : 'text-muted-foreground',
@@ -480,7 +478,6 @@ export default function HabitsView({ weekOffset }: { weekOffset: number }) {
                                     <Button
                                         variant="ghost"
                                         onClick={() => { if (!isLimitReached) setIsAdding(true); }}
-                                        data-tour="habito-anadir"
                                         className="w-full h-full justify-center text-muted-foreground hover:text-foreground p-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                                         disabled={isLimitReached}
                                     >
@@ -518,7 +515,7 @@ export default function HabitsView({ weekOffset }: { weekOffset: number }) {
 
         {/* Lectura seria del tracker: cumplimiento, rachas, perfil semanal y
             qué hábito se está apagando. Autónoma (tiene su propio periodo). */}
-        {!showArchived && <div className="mt-16" data-tour="habitos-analisis"><HabitsInsights weekOffset={weekOffset} /></div>}
+        {!showArchived && <div className="mt-16"><HabitsInsights weekOffset={weekOffset} /></div>}
 
         <NewHabitDialog
           open={isAdding}

@@ -1085,7 +1085,7 @@ export default function CourseDetailsClient({ id }: { id: string }) {
       <Button size="icon" variant="ghost" className={ghostBtn} title={backLabel} onClick={handleBack}>
         <ArrowLeft className="h-4 w-4" />
       </Button>
-      <Button size="icon" variant="ghost" className={ghostBtn} title="Editar asignatura" data-tour="asig-editar" onClick={handleEditCourse}>
+      <Button size="icon" variant="ghost" className={ghostBtn} title="Editar asignatura" onClick={handleEditCourse}>
         <Pencil className="h-4 w-4" />
       </Button>
       <AlertDialog>
@@ -1094,7 +1094,7 @@ export default function CourseDetailsClient({ id }: { id: string }) {
             variant="ghost"
             size="icon"
             className={cn(ghostBtn, 'hover:border-red-500 hover:bg-red-500/10 hover:text-red-500')}
-            title="Eliminar asignatura" data-tour="asig-eliminar"
+            title="Eliminar asignatura"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -1116,7 +1116,7 @@ export default function CourseDetailsClient({ id }: { id: string }) {
         size="icon"
         variant="ghost"
         className={cn(ghostBtn, showArchived && 'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground')}
-        title="Archivados: tareas culminadas y recursos eliminados" data-tour="asig-archivados"
+        title="Archivados: tareas culminadas y recursos eliminados"
         onClick={() => setShowArchived((p) => !p)}
       >
         <Archive className="h-4 w-4" />
@@ -1351,7 +1351,7 @@ export default function CourseDetailsClient({ id }: { id: string }) {
         <TaskComposer className="lg:col-span-7" onCreate={handleAddTask} />
 
         {/* Tarjeta de nuevo RECURSO (antes "Nota"): siempre visible a la derecha */}
-        <Card className="lg:col-span-3" data-tour="asig-recurso">
+        <Card className="lg:col-span-3">
           <CardHeader className="flex flex-row items-center justify-between p-4 pb-3">
             <CardTitle className="text-base">Nuevo recurso</CardTitle>
             <Button

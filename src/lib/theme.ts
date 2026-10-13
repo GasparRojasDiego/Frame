@@ -30,7 +30,7 @@ function systemPrefersDark(): boolean {
   return window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
-export function applyTheme(pref: ThemePreference = getThemePreference()): void {
+function applyTheme(pref: ThemePreference = getThemePreference()): void {
   const dark = pref === 'dark' || (pref === 'system' && systemPrefersDark());
   document.documentElement.classList.toggle('dark', dark);
 }

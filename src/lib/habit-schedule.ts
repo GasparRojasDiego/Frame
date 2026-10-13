@@ -34,16 +34,12 @@ export const hasSchedule = (habit: Pick<Habit, 'days'>): boolean =>
   Array.isArray(habit.days) && habit.days.length > 0 && habit.days.length < 7;
 
 /** ¿Le toca este día de la semana (0 = domingo)? */
-export const scheduledOnWeekday = (habit: Pick<Habit, 'days'>, weekday: number): boolean =>
+const scheduledOnWeekday = (habit: Pick<Habit, 'days'>, weekday: number): boolean =>
   !hasSchedule(habit) || (habit.days as number[]).includes(weekday);
 
 /** ¿Le toca esta fecha? */
 export const isScheduled = (habit: Pick<Habit, 'days'>, date: Date): boolean =>
   scheduledOnWeekday(habit, date.getDay());
-
-/** Lo mismo a partir de una clave «yyyy-MM-dd». */
-export const isScheduledKey = (habit: Pick<Habit, 'days'>, key: string): boolean =>
-  scheduledOnWeekday(habit, new Date(`${key}T12:00:00`).getDay());
 
 /** «Cada día», «Lunes, miércoles y viernes», «Solo los sábados». */
 export function describeSchedule(habit: Pick<Habit, 'days'>): string {

@@ -186,7 +186,7 @@ export interface GridItem {
   hint?: string;
 }
 
-export interface PlacedItem {
+interface PlacedItem {
   item: GridItem;
   /** Columnas (0 = lunes) que ocupa en ESTA semana. */
   from: number;
@@ -194,7 +194,7 @@ export interface PlacedItem {
   lane: number;
 }
 
-export interface WeekLayout {
+interface WeekLayout {
   placed: PlacedItem[];
   /** Elementos por columna (para «+N más» y las etiquetas accesibles). */
   counts: number[];
@@ -261,7 +261,7 @@ export interface Segment {
   continuesRight: boolean;
 }
 
-export interface WeekView {
+interface WeekView {
   segments: Segment[];
   /** Por columna: cuántos elementos quedan detrás de «+N más» (0 = ninguno)
    *  y en qué carril va ese indicador. */
@@ -310,7 +310,7 @@ export function viewWeek(layout: WeekLayout, maxLanes: number, week: string[]): 
 // ---------------------------------------------------------------------------
 
 /** Día local de la fecha de entrega de una tarea (null si no tiene o es inválida). */
-export function taskDay(task: Pick<Task, 'dueDate'>): string | null {
+function taskDay(task: Pick<Task, 'dueDate'>): string | null {
   if (!task.dueDate) return null;
   const due = new Date(task.dueDate);
   return Number.isNaN(due.getTime()) ? null : toKey(due);

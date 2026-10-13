@@ -19,13 +19,6 @@ export const IMPORTANCE_STYLE: Record<RecordingImportance, string> = {
   alta: 'bg-red-500/15 text-red-500 border-red-500/40',
 };
 
-/** El mismo color, apagado: la opción aún no elegida sigue viéndose de su tono. */
-export const IMPORTANCE_IDLE: Record<RecordingImportance, string> = {
-  baja: 'border-green-500/25 text-green-500/70 hover:bg-green-500/10',
-  media: 'border-amber-500/25 text-amber-500/70 hover:bg-amber-500/10',
-  alta: 'border-red-500/25 text-red-500/70 hover:bg-red-500/10',
-};
-
 export const IMPORTANCE_LABEL: Record<RecordingImportance, string> = {
   baja: 'Baja',
   media: 'Media',

@@ -76,7 +76,6 @@ function CourseCard({
 
   return (
     <Card
-      data-tour="asignatura-tarjeta"
       className="group cursor-pointer overflow-hidden transition-all hover:border-primary/60 hover:shadow-[0_0_20px_hsl(var(--primary)/0.15)]"
       onClick={onOpen}
     >
@@ -197,7 +196,6 @@ function SpaceCard({
 
   return (
     <Card
-      data-tour="coleccion-tarjeta"
       className="group cursor-pointer overflow-hidden transition-all hover:border-primary/60 hover:shadow-[0_0_20px_hsl(var(--primary)/0.15)]"
       onClick={onOpen}
     >

@@ -22,7 +22,6 @@ import {
   format,
   isWithinInterval,
   parseISO,
-  startOfDay,
   startOfISOWeek,
   startOfMonth,
   startOfYear,
@@ -43,7 +42,7 @@ import type { DocBlock, DocModel, DocTone } from '@/lib/report-doc';
 
 export type ReportScope = 'semana' | 'mes' | 'anio';
 
-export const SCOPE_LABEL: Record<ReportScope, string> = {
+const SCOPE_LABEL: Record<ReportScope, string> = {
   semana: 'Informe semanal',
   mes: 'Informe mensual',
   anio: 'Informe anual',
@@ -70,21 +69,21 @@ export function rangeLabel(scope: ReportScope, start: Date, end: Date): string {
   return `${format(start, "d 'de' MMMM", { locale: es })} — ${format(end, "d 'de' MMMM 'de' yyyy", { locale: es })}`;
 }
 
-export interface ReportBar {
+interface ReportBar {
   label: string;
   minutes: number;
   /** Meta del día, si la había (solo en las series por día). */
   goal?: number;
 }
 
-export interface ReportRow {
+interface ReportRow {
   name: string;
   minutes: number;
   percent: number;
   sessions: number;
 }
 
-export interface ReportSessionRow {
+interface ReportSessionRow {
   date: string;
   time: string;
   minutes: number;
@@ -95,7 +94,7 @@ export interface ReportSessionRow {
   notes: string;
 }
 
-export interface ReportData {
+interface ReportData {
   scope: ReportScope;
   periodLabel: string;
   generatedAt: string;
@@ -583,7 +582,7 @@ function taskFunnel(data: ReportData): DocBlock | null {
   };
 }
 
-export interface PerformanceDocOptions {
+interface PerformanceDocOptions {
   /** En modo síntesis se omiten las tablas de detalle largas. */
   brief?: boolean;
   /** Numeración de sección de partida (el informe general encadena varias). */
@@ -597,7 +596,7 @@ export interface PerformanceDocOptions {
  * Quien llama decide si los imprime, los guarda en Word o los encadena dentro
  * del informe general.
  */
-export function performanceBlocks(data: ReportData, options: PerformanceDocOptions = {}): DocBlock[] {
+function performanceBlocks(data: ReportData, options: PerformanceDocOptions = {}): DocBlock[] {
   const brief = options.brief ?? false;
   let index = options.startIndex ?? 1;
   const num = () => String(index++).padStart(2, '0');

@@ -1,11 +1,11 @@
 import { closeMusicDB, MUSIC_DB_NAME } from '@/lib/music-db';
-import { db as knowledgeDb } from '@/lib/knowledge-db';
 import { disconnectGoogle } from '@/lib/google/auth';
 import { FILE_HANDLES_DB_NAME } from '@/lib/file-handles';
 import { wipeProfileMedia } from '@/lib/profile-scope';
 
-/** Nombre heredado de la base Dexie del módulo Asignaturas
- *  (ver el constructor de `KnowledgeDatabase` en `@/lib/knowledge-db`). */
+/** Base del antiguo módulo Conocimiento (Aether KN): sin pantalla desde la
+ *  Fase 16 y sin código desde la 1.6.7. Sus datos siguen en el equipo de quien
+ *  la usó; borrar la cuenta también la elimina. */
 const KNOWLEDGE_DB_NAME = 'AetherDatabase_KN_V2';
 
 /** Rescate para `onblocked`: una conexión viva en otra ventana dejaría la
@@ -109,17 +109,6 @@ export async function wipeLocalAccountData(uid?: string): Promise<void> {
     disconnectGoogle();
   } catch {
     /* revocar tokens es un extra: nunca debe frenar el borrado */
-  }
-
-  try {
-    // Dexie cierra la conexión y borra la base en un solo paso.
-    await knowledgeDb.delete();
-  } catch {
-    try {
-      knowledgeDb.close();
-    } catch {
-      /* se intenta igualmente el borrado nativo */
-    }
   }
 
   // Sin cerrar la conexión del módulo, `deleteDatabase` quedaría bloqueado.

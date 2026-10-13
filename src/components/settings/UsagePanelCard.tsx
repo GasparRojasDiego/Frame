@@ -29,7 +29,6 @@ export default function UsagePanelButton({
         onOpen?.();
         router.push('/uso');
       }}
-      data-tour="panel-uso"
     >
       <BarChart3 className="h-4 w-4" />
       Panel de uso
