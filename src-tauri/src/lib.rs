@@ -474,6 +474,40 @@ const FULLSCREEN_GUARD_JS: &str = r#"
 })();
 "#;
 
+/// Enlaces que abren otra ventana (`target="_blank"`) en las páginas de Google
+/// (1.6.8). El plugin `opener` de Tauri inyecta en TODAS las páginas un script
+/// que los intercepta en `window`, hace `preventDefault()` y pide abrirlos por
+/// IPC; en una página remota esa llamada no está permitida y el enlace se
+/// anula sin más: así «Iniciar sesión» de Gmail y de Classroom no hacía nada
+/// (lo midió el `.exe` por CDP el 13-oct). Este script escucha antes, en
+/// `document`, y abre el enlace con `window.open`, que sí llega a
+/// `on_new_window`: el acceso de Google sigue en la página y lo demás va al
+/// navegador del sistema. Si la página ya atendió el clic, no hace nada.
+const NEW_WINDOW_LINKS_JS: &str = r#"
+(function () {
+  if (window.__frameNewWindowLinks) return;
+  window.__frameNewWindowLinks = true;
+  document.addEventListener('click', function (event) {
+    if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    var path = event.composedPath ? event.composedPath() : [event.target];
+    var link = null;
+    for (var i = 0; i < path.length; i++) {
+      var node = path[i];
+      if (node && node.nodeName && node.nodeName.toUpperCase() === 'A' && node.href) {
+        link = node;
+        break;
+      }
+    }
+    if (!link || link.hasAttribute('download')) return;
+    var target = (link.getAttribute('target') || '').toLowerCase();
+    if (!target || target === '_self' || target === '_top' || target === '_parent') return;
+    if (!/^https?:/i.test(link.href)) return;
+    event.preventDefault();
+    window.open(link.href, '_blank', 'noopener');
+  }, false);
+})();
+"#;
+
 /// Páginas de Google incrustadas. Cada perfil de Frame tiene su propia carpeta
 /// de datos (cookies y sesión de Google): en un equipo compartido nadie hereda
 /// el correo ni las clases de quien usó Frame antes (1.6.7).
@@ -626,11 +660,12 @@ async fn google_embed_update(
     let window = app
         .get_window("main")
         .ok_or("Ventana principal no disponible.")?;
-    // Ventanas nuevas (1.6.8). Sin este manejador WebView2 las descarta en
+    // Ventanas nuevas (1.6.8). Sin este manejador wry las descarta en
     // silencio, y «Iniciar sesión» de Gmail, Classroom o YouTube abre una:
     // desde la 1.6.7 cada perfil tiene su propia sesión de Google en estas
     // páginas y el botón no hacía nada. El inicio de sesión se abre aquí
-    // mismo; un enlace a otro sitio, en el navegador del sistema.
+    // mismo; un enlace a otro sitio, en el navegador del sistema. Los enlaces
+    // `_blank` llegan aquí gracias a NEW_WINDOW_LINKS_JS.
     let app_ = app.clone();
     let builder =
         tauri::webview::WebviewBuilder::new(label, tauri::WebviewUrl::External(url.parse().unwrap()))
@@ -638,6 +673,8 @@ async fn google_embed_update(
             .data_directory(embed_data_dir(&app, &profile)?)
             // El reproductor vive a veces en un iframe: hay que parchear todos.
             .initialization_script_for_all_frames(FULLSCREEN_GUARD_JS)
+            // Los enlaces a otra ventana, hacia `on_new_window` (ver arriba).
+            .initialization_script_for_all_frames(NEW_WINDOW_LINKS_JS)
             .on_new_window(move |requested, _features| {
                 let target = unwrap_google_redirect(requested);
                 if stays_in_embed(&target, home) {
