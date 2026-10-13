@@ -12,7 +12,7 @@
 // ============================================================
 
 import type { CalendarDayColor, LocalCalendarEvent, Task } from '@/types';
-import { EVENT_COLOR_ROWS, eventDisplay } from '@/lib/calendar-events';
+import { EVENT_COLOR_ROWS, eventDisplay, normalizeKind } from '@/lib/calendar-events';
 import { getLang, tr } from '@/lib/i18n';
 import { describeReminder, reminderFromTask } from '@/components/tasks/ReminderEditor';
 
@@ -197,6 +197,46 @@ export const remindLabel = (minutes: number | undefined): string | null => {
   if (minutes === undefined || minutes === null) return null;
   return REMIND_OPTIONS.find((option) => option.minutes === minutes)?.label ?? tr('{minutes} min antes', { minutes });
 };
+
+/** Cuándo es el evento, visto desde `today` (el texto de su recordatorio). */
+export function eventWhenLabel(event: LocalCalendarEvent, today: string): string {
+  const last = eventEnd(event);
+  if (last !== event.date) return tr('Del {rangeLabel}', { rangeLabel: rangeLabel({ start: event.date, end: last }) });
+  const day = event.date === today ? tr('Hoy') : event.date === addDays(today, 1) ? tr('Mañana') : shortDayLabel(event.date);
+  return event.time ? tr('{day} a las {time}', { day, time: event.time }) : day;
+}
+
+/**
+ * Los avisos del recordatorio de un evento (1.6.8, el mismo de las tareas) en
+ * `day`: el primero a su hora y, si se repite, uno cada tantos minutos hasta
+ * que acaba el día; el último día del evento, solo hasta su hora. Vacío si ese
+ * día no avisa (no es uno de sus días de la semana, el evento ya pasó o, en un
+ * «Recordatorio», aún no empezó). Cada aviso lleva su clave (`r#id#día#tramo`)
+ * para darse una sola vez; la usan el reloj de la app y, en Android, las
+ * alarmas del sistema.
+ */
+export function eventReminderSlots(event: LocalCalendarEvent, day: string): { mark: string; at: number }[] {
+  if (event.reminderEnabled !== true || !event.reminderTime) return [];
+  const last = eventEnd(event);
+  if (day > last || (normalizeKind(event.kind) === 'recordatorio' && day < event.date)) return [];
+  const date = fromKey(day);
+  const days = event.reminderDays ?? [];
+  if (days.length > 0 && !days.includes(date.getDay())) return [];
+  const timeOf = (time: string | undefined): number | null => {
+    const [h, m] = (time ?? '').split(':').map(Number);
+    return Number.isFinite(h) && Number.isFinite(m) ? new Date(date.getFullYear(), date.getMonth(), date.getDate(), h, m).getTime() : null;
+  };
+  const start = timeOf(event.reminderTime);
+  if (start === null) return [];
+  const end = (day === last ? timeOf(event.time) : null) ?? new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1).getTime() - 1;
+  const repeat = Math.max(0, event.reminderRepeatMinutes ?? 0) * 60_000;
+  const slots: { mark: string; at: number }[] = [];
+  for (let slot = 0, at = start; at <= end; slot++, at += repeat) {
+    slots.push({ mark: `r#${event.id}#${day}#${slot}`, at });
+    if (repeat === 0) break;
+  }
+  return slots;
+}
 
 // ---------------------------------------------------------------------------
 // Elementos de la cuadrícula y su reparto en carriles

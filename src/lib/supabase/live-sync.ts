@@ -222,7 +222,12 @@ export function startLiveSync(uid: string): () => void {
 
   // --- 4. Red de seguridad ---
   const onVisible = () => {
-    if (document.visibilityState !== 'visible') return;
+    if (document.visibilityState !== 'visible') {
+      // A segundo plano: lo pendiente sale ya, sin esperar a la pausa (Android
+      // puede congelar la app en cuanto deja de verse).
+      if (pendingSince !== null || dirty.size > 0) schedule(0);
+      return;
+    }
     // Android duerme el canal con la app en segundo plano: al volver, de nuevo.
     if (!channelReady && channel && supabase) {
       void supabase.removeChannel(channel).catch(() => undefined);
