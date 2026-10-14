@@ -98,6 +98,8 @@ $manifest = @"
   <Resources>
     <Resource Language="es-PE" />
     <Resource Language="es" />
+    <Resource Language="en-US" />
+    <Resource Language="en" />
   </Resources>
   <Applications>
     <Application Id="Frame" Executable="frame.exe" EntryPoint="Windows.FullTrustApplication">
