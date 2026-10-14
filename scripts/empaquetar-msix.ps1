@@ -88,7 +88,7 @@ $manifest = @"
   IgnorableNamespaces="uap rescap">
   <Identity Name="$IdentityName" Publisher="$Publisher" Version="$msixVersion" ProcessorArchitecture="x64" />
   <Properties>
-    <DisplayName>Frame</DisplayName>
+    <DisplayName>Frame Estudio</DisplayName>
     <PublisherDisplayName>$PublisherDisplayName</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
@@ -104,7 +104,7 @@ $manifest = @"
   <Applications>
     <Application Id="Frame" Executable="frame.exe" EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
-        DisplayName="Frame"
+        DisplayName="Frame Estudio"
         Description="$description"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
