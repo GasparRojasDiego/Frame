@@ -31,7 +31,7 @@ import {
 } from '@/lib/updater';
 import { APP_VERSION } from '@/lib/version';
 import { cn } from '@/lib/utils';
-import { tr } from '@/lib/i18n';
+import { listText, tr } from '@/lib/i18n';
 
 // ============================================================
 // Recuadro de actualización (desde la 1.6.2).
@@ -70,10 +70,8 @@ function busyMessage(studying: boolean, music: boolean, recording: boolean, down
   if (studying) parts.push([tr('termines tu sesión de estudio'), tr('termina tu sesión de estudio')]);
   if (recording) parts.push([tr('termines y guardes la grabación'), tr('termina y guarda la grabación')]);
   if (music) parts.push([tr('pauses la música'), tr('pausa la música')]);
-  const list = (items: string[]) =>
-    items.length > 1 ? `${items.slice(0, -1).join(', ')} y ${items[items.length - 1]}` : items[0] ?? '';
-  const wait = list(parts.map(([w]) => w));
-  const ask = list(parts.map(([, a]) => a));
+  const wait = listText(parts.map(([w]) => w));
+  const ask = listText(parts.map(([, a]) => a));
   const cut = parts.length > 1 ? tr('las cortaría') : tr('la cortaría');
   return downloading
     ? tr('Al terminar la descarga esperará a que {wait}: el reinicio {cut}.', { wait, cut })

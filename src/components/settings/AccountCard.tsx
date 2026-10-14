@@ -3,7 +3,6 @@ import { Link2, LoaderCircle, LogOut, Settings, ShieldAlert, Trash2 } from 'luci
 import GuestLinkDialog from '@/components/auth/GuestLinkDialog';
 import NotionImportDialog from '@/components/extensions/NotionImportDialog';
 import { NotionLogo } from '@/components/extensions/ExtensionIcons';
-import UsagePanelButton from '@/components/settings/UsagePanelCard';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,8 +53,9 @@ interface DeleteOutcome {
 
 /**
  * Rueda de la cuenta (Ajustes) y su menú pequeño, anclado a ella: vincular
- * (solo invitados), cerrar sesión, importar de Notion, eliminar la cuenta y,
- * solo para el responsable de Frame, el panel de uso.
+ * (solo invitados), cerrar sesión, importar de Notion y eliminar la cuenta.
+ * (El panel de uso del responsable salió de la app en la 1.7.0: es la
+ * página aparte de métricas, `metricas/`.)
  *
  * Sustituye al antiguo recuadro «Ajustes de cuenta» (de ahí el nombre del
  * archivo): eran cuatro opciones metidas en un recuadro a pantalla completa.
@@ -269,7 +269,6 @@ export default function AccountMenu({ userProfile }: { userProfile: UserProfile 
               {isCloud ? tr('Eliminar cuenta') : tr('Eliminar mis datos')}
             </Button>
 
-            <UsagePanelButton userProfile={userProfile} onOpen={() => setMenuOpen(false)} />
           </div>
         </PopoverContent>
       </Popover>

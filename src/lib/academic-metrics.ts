@@ -32,6 +32,8 @@ import type {
 } from '@/types';
 import { sessionSeconds } from '@/lib/duration';
 import { tr } from '@/lib/i18n';
+import { isScheduled } from '@/lib/habit-schedule';
+import { localDayKey } from '@/lib/dates';
 
 /** getDay() (0 = domingo) → clave de StudyGoals. Mismo orden que Enfoque. */
 export const GOAL_DAY_KEYS: (keyof StudyGoals)[] = [
@@ -189,7 +191,8 @@ interface PeriodMetrics {
 
 export interface MetricsOptions {
   studyGoals: StudyGoals;
-  activeHabitCount: number;
+  /** Los hábitos activos: sus días y su alta deciden qué marcas eran posibles. */
+  activeHabits: Pick<Habit, 'days' | 'createdAt'>[];
   performances: DailyPerformance[];
 }
 
@@ -197,10 +200,11 @@ export function computeMetrics(
   index: DayIndex,
   start: Date,
   end: Date,
-  { studyGoals, activeHabitCount, performances }: MetricsOptions
+  { studyGoals, activeHabits, performances }: MetricsOptions
 ): PeriodMetrics {
   const days = eachDayOfInterval({ start, end });
   const today = startOfToday();
+  const habitSince = activeHabits.map((habit) => (habit.createdAt ? localDayKey(habit.createdAt) : ''));
 
   let minutes = 0;
   let sessions = 0;
@@ -209,6 +213,7 @@ export function computeMetrics(
   let tasksWithDue = 0;
   let tasksOnTime = 0;
   let habitChecks = 0;
+  let habitPossible = 0;
   let goalMinutes = 0;
   let activeDays = 0;
   let daysMeetingGoal = 0;
@@ -227,6 +232,11 @@ export function computeMetrics(
     if (isElapsed) {
       elapsedDays += 1;
       goalMinutes += goal;
+      // Solo lo que tocaba ese día y desde el alta de cada hábito: un hábito de
+      // lunes, miércoles y viernes cumplido entero daba un 43 % (13-oct-2026).
+      activeHabits.forEach((habit, i) => {
+        if (isScheduled(habit, d) && !(habitSince[i] && k < habitSince[i])) habitPossible += 1;
+      });
     }
 
     const b = index.get(k);
@@ -268,9 +278,7 @@ export function computeMetrics(
     goalMinutes > 0 ? Math.min(100, (minutes / goalMinutes) * 100) : minutes > 0 ? 100 : 0;
   const punctuality = tasksWithDue > 0 ? (tasksOnTime / tasksWithDue) * 100 : null;
   const habitConsistency =
-    activeHabitCount > 0
-      ? Math.min(100, (habitChecks / (activeHabitCount * elapsedDays)) * 100)
-      : null;
+    activeHabits.length > 0 && habitPossible > 0 ? Math.min(100, (habitChecks / habitPossible) * 100) : null;
 
   // Media ponderada renormalizada sobre los sub-indicadores disponibles:
   // así la efectividad sigue siendo comparable aunque falten datos.

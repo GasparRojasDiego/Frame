@@ -35,6 +35,8 @@ import HabitRings from '@/components/habits/HabitRings';
 import { isScheduled } from '@/lib/habit-schedule';
 import { dateLocale, tr } from '@/lib/i18n';
 import { dayInitials, dayName } from '@/lib/day-names';
+import { localDayKey } from '@/lib/dates';
+import { useTodayKey } from '@/hooks/use-today';
 
 // ============================================================
 // Cumplimiento de hábitos.
@@ -58,7 +60,34 @@ type Scope = 'week' | 'month';
 
 const HEATMAP_WEEKS = 12;
 
-const dayKey = (date: Date) => format(date, 'yyyy-MM-dd');
+/** Cada hábito con sus marcas en un Set y su día de alta, listos para los bucles. */
+interface Prepared {
+  habit: Habit;
+  marks: Set<string>;
+  since: string;
+}
+
+const prepare = (habits: Habit[]): Prepared[] =>
+  habits.map((habit) => ({ habit, marks: new Set(habit.completedOn ?? []), since: habit.createdAt ? localDayKey(habit.createdAt) : '' }));
+
+/**
+ * Lo que tocaba un día y lo que se cumplió. Solo cuenta lo programado y desde
+ * el alta de cada hábito (como los anillos): antes, crear un hábito hoy volvía
+ * fallados todos los días anteriores y hundía la racha y el récord. Una marca
+ * en un día programado cuenta siempre, aunque sea anterior al alta.
+ */
+function tally(prepared: Prepared[], day: Date, key = localDayKey(day)): { due: number; done: number } {
+  let due = 0;
+  let done = 0;
+  for (const { habit, marks, since } of prepared) {
+    if (!isScheduled(habit, day)) continue;
+    const marked = marks.has(key);
+    if (!marked && since && key < since) continue;
+    due += 1;
+    if (marked) done += 1;
+  }
+  return { due, done };
+}
 
 interface PeriodStats {
   days: Date[];
@@ -71,7 +100,7 @@ interface PeriodStats {
   series: { date: Date; done: number }[];
 }
 
-function computePeriod(habits: Habit[], days: Date[]): PeriodStats {
+function computePeriod(prepared: Prepared[], days: Date[]): PeriodStats {
   // Solo cuenta lo que tocaba: un hábito de «solo los sábados» no suma
   // cinco fallos cada semana.
   let possible = 0;
@@ -81,14 +110,11 @@ function computePeriod(habits: Habit[], days: Date[]): PeriodStats {
   const series: { date: Date; done: number }[] = [];
 
   for (const day of days) {
-    const key = dayKey(day);
-    const due = habits.filter((habit) => isScheduled(habit, day));
-    let dayCount = 0;
-    for (const habit of due) if (habit.completedOn?.includes(key)) dayCount += 1;
-    possible += due.length;
+    const { due, done: dayCount } = tally(prepared, day);
+    possible += due;
     done += dayCount;
     if (dayCount > 0) activeDays += 1;
-    if (due.length > 0 && dayCount === due.length) perfectDays += 1;
+    if (due > 0 && dayCount === due) perfectDays += 1;
     series.push({ date: day, done: dayCount });
   }
 
@@ -103,20 +129,19 @@ function computePeriod(habits: Habit[], days: Date[]): PeriodStats {
   };
 }
 
-function perfectStreaks(habits: Habit[], today: Date): { current: number; best: number } {
-  if (habits.length === 0) return { current: 0, best: 0 };
-  const all = new Set<string>();
-  for (const habit of habits) for (const d of habit.completedOn ?? []) all.add(d);
-  if (all.size === 0) return { current: 0, best: 0 };
+function perfectStreaks(prepared: Prepared[], today: Date): { current: number; best: number } {
+  if (prepared.length === 0) return { current: 0, best: 0 };
+  let firstKey = '';
+  for (const { marks } of prepared) for (const d of marks) if (!firstKey || d < firstKey) firstKey = d;
+  if (!firstKey) return { current: 0, best: 0 };
 
-  const first = new Date(`${[...all].sort()[0]}T00:00:00`);
+  const first = new Date(`${firstKey}T00:00:00`);
   // Un día es perfecto si se cumplió todo lo que tocaba. Un día sin nada
   // programado no es perfecto ni fallido: se salta sin cortar la racha.
   const verdict = (day: Date): 'perfect' | 'broken' | 'skip' => {
-    const key = dayKey(day);
-    const due = habits.filter((h) => isScheduled(h, day));
-    if (due.length === 0) return 'skip';
-    return due.every((h) => h.completedOn?.includes(key)) ? 'perfect' : 'broken';
+    const { due, done } = tally(prepared, day);
+    if (due === 0) return 'skip';
+    return done === due ? 'perfect' : 'broken';
   };
 
   let best = 0;
@@ -399,8 +424,12 @@ export default function HabitsInsights({ weekOffset = 0 }: { weekOffset?: number
   const [scope, setScope] = useState<Scope>('week');
   const [offset, setOffset] = useState(0);
 
-  const today = startOfToday();
-  const active = useMemo(() => (habits ?? []).filter((h) => !h.isArchived), [habits]);
+  // Una fecha estable mientras no cambie el día: con `startOfToday()` en cada
+  // pintado ningún cálculo de abajo se reutilizaba (≈25 ms por pintado).
+  const todayKey = useTodayKey();
+  const today = useMemo(() => startOfToday(), [todayKey]);
+  const activeHabits = useMemo(() => (habits ?? []).filter((h) => !h.isArchived), [habits]);
+  const active = useMemo(() => prepare(activeHabits), [activeHabits]);
 
   const buildDays = useMemo(
     () =>
@@ -435,10 +464,9 @@ export default function HabitsInsights({ weekOffset = 0 }: { weekOffset?: number
     const possible = Array(7).fill(0);
     for (const day of current.days) {
       const index = (day.getDay() + 6) % 7;
-      const key = dayKey(day);
-      const due = active.filter((habit) => isScheduled(habit, day));
-      possible[index] += due.length;
-      for (const habit of due) if (habit.completedOn?.includes(key)) done[index] += 1;
+      const counts = tally(active, day);
+      possible[index] += counts.due;
+      done[index] += counts.done;
     }
     return dayInitials().map((initial, index) => ({
       initial,
@@ -468,25 +496,32 @@ export default function HabitsInsights({ weekOffset = 0 }: { weekOffset?: number
     while (!isAfter(cursor, end)) {
       const week = Array.from({ length: 7 }, (_, i) => {
         const day = addDays(cursor, i);
-        const key = dayKey(day);
-        const due = active.filter((h) => isScheduled(h, day));
-        const done = due.filter((h) => h.completedOn?.includes(key)).length;
+        const key = localDayKey(day);
+        const { due, done } = tally(active, day, key);
         return {
           date: day,
           done,
-          due: due.length,
-          ratio: due.length > 0 ? done / due.length : 0,
+          due,
+          ratio: due > 0 ? done / due : 0,
           future: isAfter(day, today),
-          isToday: key === dayKey(today),
+          isToday: key === todayKey,
         };
       });
       weeks.push(week);
       cursor = addDays(cursor, 7);
     }
     return weeks;
-  }, [active, today]);
+  }, [active, today, todayKey]);
 
   const streaks = useMemo(() => perfectStreaks(active, today), [active, today]);
+
+  // La semana de los anillos es la que se navega arriba, junto a la tabla.
+  // Memorizada (y antes de la salida temprana): un arreglo nuevo en cada
+  // pintado anulaba la memoria de los anillos.
+  const ringWeek = useMemo(() => {
+    const monday = startOfWeek(addWeeks(today, weekOffset), { weekStartsOn: 1 });
+    return Array.from({ length: 7 }, (_, i) => addDays(monday, i));
+  }, [today, weekOffset]);
 
   if (active.length === 0) {
     return (
@@ -502,12 +537,6 @@ export default function HabitsInsights({ weekOffset = 0 }: { weekOffset?: number
       </section>
     );
   }
-
-  // La semana de los anillos es la que se navega arriba, junto a la tabla.
-  const ringWeek = (() => {
-    const monday = startOfWeek(addWeeks(today, weekOffset), { weekStartsOn: 1 });
-    return Array.from({ length: 7 }, (_, i) => addDays(monday, i));
-  })();
 
   return (
     <section className="space-y-6">
@@ -599,7 +628,7 @@ export default function HabitsInsights({ weekOffset = 0 }: { weekOffset?: number
       </div>
 
       {/* ---------- Mañana, tarde y noche: la semana en anillos ---------- */}
-      <HabitRings habits={active} weekDates={ringWeek} />
+      <HabitRings habits={activeHabits} weekDates={ringWeek} />
 
       {/* ---------- Semana tipo y mapa de constancia, a medias ---------- */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -680,7 +709,7 @@ export default function HabitsInsights({ weekOffset = 0 }: { weekOffset?: number
             {heatmap.map((week, weekIndex) => (
               <div key={weekIndex} className="flex flex-col gap-1">
                 {week.map((day) => (
-                  <Tooltip key={dayKey(day.date)}>
+                  <Tooltip key={localDayKey(day.date)}>
                     <TooltipTrigger asChild>
                       <div
                         className={cn(

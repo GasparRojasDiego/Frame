@@ -19,7 +19,8 @@ import {
 import { cn } from '@/lib/utils';
 import { isRichNoteEmpty } from '@/lib/rich-note';
 import { Button } from '@/components/ui/button';
-import { PeruClock, PeruFlag } from './MiniTimerCard';
+import { PeruClock, PeruFlag, PERU_CLOCK_KEY } from './PeruClock';
+import { formatHMS as formatTime } from '@/lib/duration';
 import NoteEditor from './NoteEditor';
 import { tr } from '@/lib/i18n';
 
@@ -50,21 +51,10 @@ interface MiniState {
   anchorAt?: number;
 }
 
-const PERU_CLOCK_KEY = 'miniTimerShowPeruClock';
 /** La ventana principal guarda aquí el último tamaño elegido; ambas
  *  ventanas comparten origen, así que la maqueta correcta se pinta desde
  *  el primer fotograma, sin esperar al primer 'mini-timer-state'. */
 const SIZE_KEY = 'miniTimerSize';
-
-function formatTime(seconds: number) {
-  const t = Math.max(0, Math.round(seconds || 0));
-  const h = Math.floor(t / 3600);
-  const m = Math.floor((t % 3600) / 60);
-  const s = t % 60;
-  const mm = String(m).padStart(2, '0');
-  const ss = String(s).padStart(2, '0');
-  return h > 0 ? `${String(h).padStart(2, '0')}:${mm}:${ss}` : `${mm}:${ss}`;
-}
 
 /** El reloj AHORA, extrapolado desde el último estado recibido. */
 function liveSeconds(state: MiniState): number {

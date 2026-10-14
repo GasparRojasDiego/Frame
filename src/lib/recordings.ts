@@ -7,7 +7,7 @@
  */
 
 import type { RecordingImportance, RecordingKind } from '@/types';
-import { tr } from '@/lib/i18n';
+import { tr, trc } from '@/lib/i18n';
 
 /**
  * Color de cada grado de importancia, el mismo en la lista de grabaciones,
@@ -21,9 +21,9 @@ export const IMPORTANCE_STYLE: Record<RecordingImportance, string> = {
 };
 
 export const IMPORTANCE_LABEL: Record<RecordingImportance, string> = {
-  get baja() { return tr('Baja'); },
-  get media() { return tr('Media'); },
-  get alta() { return tr('Alta'); },
+  get baja() { return trc('importancia', 'Baja'); },
+  get media() { return trc('importancia', 'Media'); },
+  get alta() { return trc('importancia', 'Alta'); },
 };
 
 /** Punto de color de cada importancia (en los desplegables). */

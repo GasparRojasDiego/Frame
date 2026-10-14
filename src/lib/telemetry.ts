@@ -322,6 +322,18 @@ function buildDays(snapshot: TelemetrySnapshot): DayRow[] {
 }
 
 /**
+ * ¿Toca ya el informe? Se mira ANTES de armar la instantánea: armarla lee y
+ * recorre todas las sesiones y tareas, y casi siempre no tocaba (1.7.0).
+ */
+export function telemetryDue(uid: string): boolean {
+  try {
+    return Date.now() - Number(localStorage.getItem(`telemetryLastSync_${uid}`) ?? '0') >= SYNC_INTERVAL_MS;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Sincroniza la instantánea del usuario. Devuelve true si el envío ocurrió.
  * Con `force` se salta el acelerador (útil justo tras el registro).
  */
@@ -438,6 +450,8 @@ const queueKey = (uid: string) => `telemetryQueue_${uid}`;
 
 let flushTimer: number | null = null;
 let lastFlushAt = 0;
+/** Fallos seguidos al enviar: la espera crece (15 s, 30 s, 1 min… hasta 30 min). */
+let flushFailures = 0;
 let flushing = false;
 let errorsSent = 0;
 
@@ -552,7 +566,12 @@ export function pruneTelemetryStamps() {
 
 function scheduleFlush() {
   if (flushTimer !== null) return;
-  const wait = Math.max(1_000, FLUSH_GAP_MS - (Date.now() - lastFlushAt));
+  // Con fallos seguidos (base en solo lectura, sin red real…) no se insiste
+  // cada 15 s desde miles de equipos a la vez: se espera cada vez más.
+  const wait =
+    flushFailures > 0
+      ? Math.min(30 * 60_000, FLUSH_GAP_MS * 2 ** (flushFailures - 1)) * (0.75 + Math.random() * 0.5)
+      : Math.max(1_000, FLUSH_GAP_MS - (Date.now() - lastFlushAt));
   flushTimer = window.setTimeout(() => {
     flushTimer = null;
     void flushEvents();
@@ -573,8 +592,19 @@ export async function flushEvents(): Promise<number> {
     let queue = readQueue(uid);
     while (queue.length > 0) {
       const batch = queue.slice(0, BATCH_SIZE);
-      const { error } = await supabase.from('telemetry_events').insert(batch);
-      if (error) break;
+      const { error, status } = await supabase.from('telemetry_events').insert(batch);
+      if (error) {
+        // Un lote que el servidor rechaza por su contenido no se arregla
+        // reintentando: se descarta para no bloquear la cola para siempre.
+        if (status >= 400 && status < 500 && status !== 401 && status !== 408 && status !== 429) {
+          queue = queue.slice(batch.length);
+          writeQueue(uid, queue);
+          continue;
+        }
+        flushFailures += 1;
+        break;
+      }
+      flushFailures = 0;
       sent += batch.length;
       queue = queue.slice(batch.length);
       writeQueue(uid, queue);
@@ -583,6 +613,7 @@ export async function flushEvents(): Promise<number> {
     // Quedó algo (fallo a mitad): se reintenta más tarde.
     if (queue.length > 0) scheduleFlush();
   } catch {
+    flushFailures += 1;
     scheduleFlush();
   } finally {
     flushing = false;

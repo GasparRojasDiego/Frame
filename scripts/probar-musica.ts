@@ -10,6 +10,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { readAudioTags } from '../src/lib/audio-tags.ts';
 import { foldName, resolveSongName } from '../src/lib/song-names.ts';
+import { companionFinder } from '../src/lib/music-match.ts';
 
 const known = new Set(['Shakira', 'Bad Bunny', 'Queen', 'Soda Stereo'].map(foldName));
 
@@ -168,6 +169,64 @@ for (const test of synthetic) {
 }
 console.log(`Etiquetas ID3/APE a mano: ${synthetic.length - syntheticFailed}/${synthetic.length} correctas`);
 failed += syntheticFailed;
+
+// ---- Letras y portadas en subcarpetas (1.7.0) ----
+// [ruta del audio, letra esperada, portada esperada, portada de carpeta esperada]
+const tree = [
+  // Lo que pidió Diego: canciones arriba, «Portadas/» y «Letras/» al lado.
+  '01 - Canción.mp3',
+  'Shakira - Antología.flac',
+  'Otra.m4a',
+  'De Música Ligera - Soda Stereo.mp3',
+  'Sin nada.ogg',
+  'Portadas/canción.JPG',
+  'Portadas/Shakira - Antología.png',
+  'Portadas/cover.jpg',
+  'Letras/cancion.lrc',
+  'Letras/Shakira - Antología.lrc',
+  'Letras/Shakira - Otra.lrc',
+  'Letras/De Música Ligera.lrc',
+  // Un álbum en dos discos con nombres repetidos.
+  'Álbum/CD1/01 - Intro.mp3',
+  'Álbum/CD2/01 - Intro.mp3',
+  'Álbum/CD1/Letras/Intro.lrc',
+  'Álbum/CD2/Letras/Intro.lrc',
+  'Álbum/folder.jpg',
+  // Nombres en NFD (macOS) y una portada .webp suelta por canción en la misma carpeta.
+  'Mac/Cafe\u0301 con leche.mp3'.normalize('NFD'),
+  'Mac/Café con leche.webp',
+  'Mac/Café con leche.txt',
+].map((rel) => ({ rel, name: rel.split('/').pop()! }));
+const expectations: [string, string | undefined, string | undefined, string | undefined][] = [
+  ['01 - Canción.mp3', 'Letras/cancion.lrc', 'Portadas/canción.JPG', 'Portadas/cover.jpg'],
+  ['Shakira - Antología.flac', 'Letras/Shakira - Antología.lrc', 'Portadas/Shakira - Antología.png', 'Portadas/cover.jpg'],
+  ['Otra.m4a', 'Letras/Shakira - Otra.lrc', undefined, 'Portadas/cover.jpg'],
+  ['De Música Ligera - Soda Stereo.mp3', 'Letras/De Música Ligera.lrc', undefined, 'Portadas/cover.jpg'],
+  ['Sin nada.ogg', undefined, undefined, 'Portadas/cover.jpg'],
+  ['Álbum/CD1/01 - Intro.mp3', 'Álbum/CD1/Letras/Intro.lrc', undefined, 'Álbum/folder.jpg'],
+  ['Álbum/CD2/01 - Intro.mp3', 'Álbum/CD2/Letras/Intro.lrc', undefined, 'Álbum/folder.jpg'],
+];
+const find = companionFinder(tree);
+let matchFailed = 0;
+for (const [rel, lrc, cover, folderCover] of expectations) {
+  const audio = tree.find((file) => file.rel === rel)!;
+  const got = find(audio);
+  const same = got.lrc?.rel === lrc && got.cover?.rel === cover && got.folderCover?.rel === folderCover;
+  if (!same) {
+    matchFailed++;
+    console.log(`✗ ${rel}\n    esperado: ${lrc ?? '—'} · ${cover ?? '—'} · ${folderCover ?? '—'}\n    obtenido: ${got.lrc?.rel ?? '—'} · ${got.cover?.rel ?? '—'} · ${got.folderCover?.rel ?? '—'}`);
+  }
+}
+{
+  const mac = tree.find((file) => file.rel.startsWith('Mac/') && file.rel.endsWith('.mp3'))!;
+  const got = find(mac);
+  if (got.cover?.rel !== 'Mac/Café con leche.webp' || got.txt?.rel !== 'Mac/Café con leche.txt') {
+    matchFailed++;
+    console.log(`✗ nombre NFD: ${got.cover?.rel ?? '—'} · ${got.txt?.rel ?? '—'}`);
+  }
+}
+console.log(`Letras y portadas en subcarpetas: ${expectations.length + 1 - matchFailed}/${expectations.length + 1} correctas`);
+failed += matchFailed;
 
 const folder = process.argv[2];
 if (folder) {

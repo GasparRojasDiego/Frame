@@ -1,4 +1,3 @@
-import type { ExtensionId } from '@/lib/extensions/registry';
 import { cn } from '@/lib/utils';
 
 /** Logotipo de Notion (silueta oficial, Simple Icons, CC0). */
@@ -11,16 +10,16 @@ export function NotionLogo({ className }: { className?: string }) {
 }
 
 /** Icono de cada extensión, en su baldosa (Notion: la N negra sobre blanco, como la marca). */
-export function ExtensionIcon({ className, small }: { id: ExtensionId; className?: string; small?: boolean }) {
+export function ExtensionIcon({ className }: { className?: string }) {
   return (
     <span
       className={cn(
         'flex shrink-0 items-center justify-center rounded-lg bg-white text-black ring-1 ring-black/10',
-        small ? 'h-5 w-5 rounded-md' : 'h-9 w-9',
+        'h-9 w-9',
         className
       )}
     >
-      <NotionLogo className={small ? 'h-3.5 w-3.5' : 'h-5 w-5'} />
+      <NotionLogo className="h-5 w-5" />
     </span>
   );
 }

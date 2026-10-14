@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Navigate } from 'react-router-dom';
 import { formatDistanceToNowStrict, parseISO } from 'date-fns';
 import {
   Activity,
@@ -46,14 +45,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useCourse } from '@/context/CourseContext';
-import { useReportExport } from '@/hooks/use-report-export';
 import { useToast } from '@/hooks/use-toast';
-import type { ReportFormat } from '@/lib/report-export';
-import { getSupabase, isSupabaseConfigured } from '@/lib/supabase/client';
-import { isFrameOwner } from '@/lib/owner';
 import { cn } from '@/lib/utils';
-import { dateLocale, decimalText, tr } from '@/lib/i18n';
+import { useExport, type ReportFormat } from '@m/lib/export';
+import { supabase } from '@m/lib/supabase';
+import { CACHE_KEY } from '@m/lib/cache';
+import { dateLocale, decimalText, tr } from '@m/lib/i18n';
 import {
   adoptionOf,
   byCity,
@@ -83,7 +80,7 @@ import {
   type Range,
   type UserDetail,
   type UsageSnapshot,
-} from '@/lib/usage-model';
+} from '@m/lib/usage-model';
 import {
   axisTick,
   bucketLabel,
@@ -112,13 +109,15 @@ import {
   tooltipStyle,
   WeekHeat,
   weekdayShort,
-} from '@/components/uso/UsageBits';
-import WorldMap from '@/components/uso/WorldMap';
-import StudentsTab from '@/components/uso/StudentsTab';
-import type { Continent } from '@/lib/world-map';
+} from '@m/components/UsageBits';
+import WorldMap from '@m/components/WorldMap';
+import StudentsTab from '@m/components/StudentsTab';
+import type { Continent } from '@m/lib/world-map';
 
 // ============================================================
-// Panel de uso — solo para el responsable de Frame (1.6.9, a fondo).
+// Panel de uso — solo para el responsable de Frame (1.6.9, a fondo; fuera de
+// la app desde la 1.7.0: vive en la página de métricas, tras Google y el
+// código del autenticador).
 //
 // Pedido de Diego (13-oct-2026): con un público grande, reunir todo lo útil
 // para acreditar que Frame sirve de verdad y su impacto en varias
@@ -127,7 +126,9 @@ import type { Continent } from '@/lib/world-map';
 //
 //   · El servidor calcula una FOTO del panel como mucho cada 6 h (o 12 o 24,
 //     a elegir; o al pulsar «Actualizar ahora»): `usage_snapshot`, migración
-//     0012. Este dispositivo guarda la última y la muestra al instante.
+//     0012; desde la 0013 se recalcula sola cada 6 h. Esta pestaña guarda la
+//     última (en sessionStorage: se borra al cerrarla) y la muestra al
+//     instante; al volver a pedirla, el servidor solo la manda si cambió.
 //   · El plazo (de un día a un año, o el que se elija) y la agrupación (día,
 //     tres días, semana o mes) se calculan aquí, sin volver a preguntar
 //     (usage-model.ts). Igual el filtro por continente o país del mapa, que
@@ -136,12 +137,10 @@ import type { Continent } from '@/lib/world-map';
 //     semanas, su actividad reciente) se pide solo al abrirla.
 //   · «Reporte»: todo esto en Word, PDF o Markdown (usage-report.ts).
 //
-// La cuenta del responsable no cuenta en ninguna cifra. Para el resto, la
-// ruta no existe: redirige a Inicio (y el servidor responde «permiso
-// denegado» a cualquier otra cuenta).
+// La cuenta del responsable no cuenta en ninguna cifra. A cualquier otra
+// cuenta el servidor le responde «permiso denegado».
 // ============================================================
 
-const CACHE_KEY = 'usagePanelSnapshot_v1';
 const HOURS_KEY = 'usagePanelHours';
 const HOURS_OPTIONS = [6, 12, 24] as const;
 type Hours = (typeof HOURS_OPTIONS)[number];
@@ -167,7 +166,7 @@ const GROUPING_LABEL: Record<Grouping, () => string> = {
 
 function readCache(): UsageSnapshot | null {
   try {
-    const raw = localStorage.getItem(CACHE_KEY);
+    const raw = sessionStorage.getItem(CACHE_KEY);
     const parsed = raw ? (JSON.parse(raw) as UsageSnapshot) : null;
     return parsed?.v === 1 ? parsed : null;
   } catch {
@@ -176,9 +175,16 @@ function readCache(): UsageSnapshot | null {
 }
 
 function readHours(): Hours {
-  const value = Number(localStorage.getItem(HOURS_KEY));
-  return (HOURS_OPTIONS as readonly number[]).includes(value) ? (value as Hours) : 6;
+  try {
+    const value = Number(localStorage.getItem(HOURS_KEY));
+    return (HOURS_OPTIONS as readonly number[]).includes(value) ? (value as Hours) : 6;
+  } catch {
+    return 6;
+  }
 }
+
+// El servidor sin la migración 0013 no conoce `known`: se pide sin él.
+let serverKnowsKnown = true;
 
 const ago = (iso: string) => {
   try {
@@ -196,7 +202,7 @@ const dayFromInput = (value: string, snapshot: UsageSnapshot): number | null => 
 
 function UsagePanel() {
   const { toast } = useToast();
-  const { run, busy } = useReportExport();
+  const { run, busy } = useExport();
   const [snapshot, setSnapshot] = useState<UsageSnapshot | null>(readCache);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -211,30 +217,32 @@ function UsagePanel() {
   const details = useRef(new Map<string, UserDetail>());
 
   const load = useCallback(async (force: boolean, maxAge: Hours) => {
-    const supabase = getSupabase();
-    if (!supabase) {
-      setError(tr('Supabase no está configurado.'));
-      return;
-    }
     setLoading(true);
     setError(null);
-    const { data, error: rpcError } = await supabase.rpc('usage_snapshot', { max_age_hours: maxAge, force });
+    const known = !force && serverKnowsKnown ? readCache()?.generated_at ?? null : null;
+    let { data, error: rpcError } = await supabase.rpc('usage_snapshot', known ? { max_age_hours: maxAge, force, known } : { max_age_hours: maxAge, force });
+    if (rpcError?.code === 'PGRST202' && known) {
+      serverKnowsKnown = false;
+      ({ data, error: rpcError } = await supabase.rpc('usage_snapshot', { max_age_hours: maxAge, force }));
+    }
     setLoading(false);
     if (rpcError) {
       setError(
         rpcError.code === '42501'
-          ? tr('Solo la cuenta del responsable de Frame puede ver este panel. Inicia sesión con ella.')
+          ? tr('Esta cuenta no puede ver las métricas de Frame.')
           : netError(rpcError.message)
       );
       return;
     }
+    // La misma foto que ya está en pantalla: nada que bajar ni repintar.
+    if ((data as { same?: boolean } | null)?.same) return;
     const next = data as UsageSnapshot;
     setSnapshot(next);
     if (force) details.current.clear();
     try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify(next));
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify(next));
     } catch {
-      /* sin espacio: se mostrará al cargar, como antes */
+      /* sin espacio: se volverá a pedir entera la próxima vez */
     }
   }, []);
 
@@ -270,8 +278,6 @@ function UsagePanel() {
   const loadDetail = useCallback(async (id: string): Promise<UserDetail> => {
     const cached = details.current.get(id);
     if (cached) return cached;
-    const supabase = getSupabase();
-    if (!supabase) throw new Error(tr('Supabase no está configurado.'));
     const { data, error: rpcError } = await supabase.rpc('usage_user_detail', { targets: [id] });
     if (rpcError) throw new Error(rpcError.message);
     const detail = (data as Record<string, UserDetail>)[id];
@@ -283,8 +289,6 @@ function UsagePanel() {
   /** El Reporte: pide el detalle de todos (por tandas de 200) y arma el documento. */
   const downloadReport = async (format: ReportFormat) => {
     if (!snapshot || !range) return;
-    const supabase = getSupabase();
-    if (!supabase) return;
     setPreparing(true);
     try {
       const missing = users.map((user) => user.id).filter((id) => !details.current.has(id));
@@ -294,13 +298,12 @@ function UsagePanel() {
         for (const [id, detail] of Object.entries(data as Record<string, UserDetail>)) details.current.set(id, detail);
       }
       const { data: impact } = await supabase.rpc('impact_overview');
-      const { buildUsageReport } = await import('@/lib/usage-report');
+      const { buildUsageReport } = await import('@m/lib/usage-report');
       const scope = country ? countryName(country) : continent ? CONTINENT_LABEL[continent]() : null;
       await run(
         () => buildUsageReport({ snapshot, users, range, grouping: groupingNow, details: details.current, impact: impact ?? null, scope }),
         tr('Frame - Reporte de uso - {today}', { today: isoOfDay(snapshot.today) }),
-        format,
-        'reporte-de-uso'
+        format
       );
     } catch (reason) {
       toast({ variant: 'destructive', title: tr('No se pudo preparar el reporte'), description: netError(reason instanceof Error ? reason.message : String(reason)) });
@@ -364,7 +367,11 @@ function UsagePanel() {
                   className={cn('text-xs', option === hours && 'text-primary')}
                   onSelect={() => {
                     setHours(option);
-                    localStorage.setItem(HOURS_KEY, String(option));
+                    try {
+                      localStorage.setItem(HOURS_KEY, String(option));
+                    } catch {
+                      /* vale para esta visita */
+                    }
                   }}
                 >
                   {tr('Cada {hours} horas', { hours: option })}
@@ -972,8 +979,4 @@ function QualityTab({ snapshot, users }: { snapshot: UsageSnapshot; users: Usage
   );
 }
 
-export default function UsagePage() {
-  const { userProfile } = useCourse();
-  if (!(isFrameOwner(userProfile) && isSupabaseConfigured)) return <Navigate to="/" replace />;
-  return <UsagePanel />;
-}
+export default UsagePanel;

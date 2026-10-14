@@ -57,6 +57,6 @@ export function describeSchedule(habit: Pick<Habit, 'days'>): string {
   const days = WEEK_ORDER.filter((day) => (habit.days as number[]).includes(day));
   if (days.length === 1) return tr('Solo los {p}', { p: WEEKDAY_PLURAL[days[0]] });
   const names = days.map((day) => WEEKDAY_NAME[day]);
-  const text = `${names.slice(0, -1).join(', ')} y ${names[names.length - 1]}`;
+  const text = tr('{list} y {last}', { list: names.slice(0, -1).join(', '), last: names[names.length - 1] });
   return text.charAt(0).toUpperCase() + text.slice(1);
 }

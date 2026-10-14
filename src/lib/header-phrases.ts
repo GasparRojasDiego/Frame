@@ -206,7 +206,7 @@ export function buildHeaderPhrases(data: PhraseData): HeaderPhrase[] {
         : tr('{habitsDoneToday} de {length} hábitos de hoy hechos', { habitsDoneToday, length: habitsToday.length })
     );
   }
-  push(tr('racha'), streak >= 2 && tr('Llevas {streak} días de racha', { streak }));
+  push('racha', streak >= 2 && tr('Llevas {streak} días de racha', { streak }));
 
   // 3. Esta semana (sin repetir lo que ya dijo «hoy», p. ej. un lunes).
   push('estudio-semana', weekMin - todayMin >= 1 && tr('Esta semana llevas {spanLabel} de estudio', { spanLabel: spanLabel(weekMin) }));

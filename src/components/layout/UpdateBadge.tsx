@@ -18,10 +18,18 @@ export function useUpdateState(): UpdateState {
   return useSyncExternalStore(subscribeUpdate, getUpdateState, getUpdateState);
 }
 
-/** ¿Hay una versión nueva lista para instalar? (el testigo existe solo entonces) */
-export function useUpdateAvailable(): boolean {
-  const { phase, version } = useUpdateState();
+const isAvailable = () => {
+  const { phase, version } = getUpdateState();
   return !(phase === 'idle' || phase === 'checking' || !version);
+};
+
+/**
+ * ¿Hay una versión nueva lista para instalar? (el testigo existe solo entonces)
+ * Un sí o un no, no el estado entero: durante la descarga el estado cambia
+ * diez veces por segundo y repintaba la barra lateral y la campana en vano.
+ */
+export function useUpdateAvailable(): boolean {
+  return useSyncExternalStore(subscribeUpdate, isAvailable, isAvailable);
 }
 
 /** Radio del anillo de avance, en unidades del viewBox (24). */
@@ -29,8 +37,8 @@ const RING_R = 10.5;
 const RING_C = 2 * Math.PI * RING_R;
 
 export default function UpdateBadge({ collapsed = false }: { collapsed?: boolean }) {
-  const available = useUpdateAvailable();
   const { phase, version, progress } = useUpdateState();
+  const available = !(phase === 'idle' || phase === 'checking' || !version);
   if (!available || !version) return null;
 
   const working = phase === 'downloading' || phase === 'verifying' || phase === 'installing';
@@ -45,7 +53,7 @@ export default function UpdateBadge({ collapsed = false }: { collapsed?: boolean
       aria-label={tr('Actualizar Frame a la versión {version}', { version })}
       title={
         downloading
-          ? `Descargando Frame ${version}: ${percent}%`
+          ? tr('Descargando Frame {version}: {percent}%', { version, percent })
           : working
             ? tr('Actualizando…')
             : phase === 'ready'

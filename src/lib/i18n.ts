@@ -13,8 +13,8 @@ import { enUS, es } from 'date-fns/locale';
 // Variables con nombre: `tr('Hoy llevas {total}', { total })`. El orden de
 // las palabras cambia entre idiomas; las llaves, no.
 //
-// El diccionario inglés solo se carga si hace falta: quien usa Frame en
-// español no lo descarga nunca. Cambiar de idioma repinta la interfaz al
+// El diccionario inglés solo se carga si hace falta: en español, solo cuando
+// algo se guarda en los dos idiomas (`inBothLangs`, el historial de avisos). Cambiar de idioma repinta la interfaz al
 // instante (ver `LangRoot` en main.tsx) sin recargarla: el temporizador y la
 // música siguen como estaban. Las ventanas auxiliares (mini temporizador,
 // vistazo al horario) se enteran por el evento `storage`.
@@ -48,7 +48,9 @@ const listeners = new Set<() => void>();
 const notify = () => listeners.forEach((listener) => listener());
 
 async function loadDictionary(lang: Lang): Promise<void> {
-  if (lang === 'en' && !english) english = (await import('./i18n-en')).default;
+  // Sin prototipo: una clave que llegue de datos («constructor», «toString»)
+  // no debe devolver una función de Object en vez de un texto.
+  if (lang === 'en' && !english) english = Object.assign(Object.create(null) as Record<string, string>, (await import('./i18n-en')).default);
 }
 
 /** Los títulos de las ventanas y de los selectores de archivos los pone el
@@ -93,7 +95,9 @@ if (typeof window !== 'undefined') {
     if (event.key !== LANG_STORAGE_KEY) return;
     const next = readStored();
     if (next === current) return;
-    void loadDictionary(next).then(() => apply(next));
+    void loadDictionary(next)
+      .then(() => apply(next))
+      .catch(() => undefined);
   });
 }
 
@@ -176,6 +180,12 @@ export function errorText(error: unknown): string {
     if (pattern !== undefined) return fill(pattern, { e: raw.slice(colon + 2) });
   }
   return raw;
+}
+
+/** «a, b y c» / «a, b and c»: una lista en el idioma de la interfaz. */
+export function listText(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? '';
+  return tr('{list} y {last}', { list: items.slice(0, -1).join(', '), last: items[items.length - 1] });
 }
 
 /** Locale de date-fns para el idioma actual. SOLO para dar formato a fechas:

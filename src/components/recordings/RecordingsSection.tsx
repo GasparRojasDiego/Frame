@@ -13,6 +13,7 @@ import {
   GraduationCap,
   Clock,
   LoaderCircle,
+  ChevronDown,
 } from 'lucide-react';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { Card } from '@/components/ui/card';
@@ -22,6 +23,7 @@ import { Slider } from '@/components/ui/slider';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -37,7 +39,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import SubjectPicker from '@/components/courses/SubjectPicker';
 import { useCourse } from '@/context/CourseContext';
 import { getRecordingAudio } from '@/lib/music-db';
@@ -350,18 +351,22 @@ function RecordingDetailsDialog({
                   </Button>
                   <div className="flex items-center justify-end gap-2">
                     <Gauge className="h-4 w-4 text-muted-foreground" />
-                    <Select value={String(speed)} onValueChange={(v) => setSpeed(Number(v))}>
-                      <SelectTrigger className="h-8 w-[76px] bg-card text-xs" aria-label={tr('Velocidad')}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
+                    {/* Un menú, no un Select de Radix: era su único uso (−20 KB). */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="h-8 w-[76px] justify-between bg-card px-3 text-xs font-normal" aria-label={tr('Velocidad')}>
+                          x{speed}
+                          <ChevronDown className="h-3.5 w-3.5 opacity-50" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="min-w-[5.5rem]">
                         {SPEEDS.map((s) => (
-                          <SelectItem key={s} value={String(s)}>
+                          <DropdownMenuCheckboxItem key={s} checked={s === speed} onCheckedChange={() => setSpeed(s)} className="text-xs">
                             x{s}
-                          </SelectItem>
+                          </DropdownMenuCheckboxItem>
                         ))}
-                      </SelectContent>
-                    </Select>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               </>

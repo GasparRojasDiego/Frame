@@ -28,7 +28,9 @@ export default defineConfig({
     port: 9002,
     strictPort: true,
   },
-  envPrefix: ['VITE_', 'TAURI_'],
+  // Solo las variables públicas de Tauri (TAURI_ENV_*): con «TAURI_» bastaría
+  // citar la clave de firma en el código para meterla en el paquete (1.7.0).
+  envPrefix: ['VITE_', 'TAURI_ENV_'],
   build: {
     // Webview2 (Windows) es Chromium moderno: target alto = bundles más pequeños.
     target: 'chrome120',

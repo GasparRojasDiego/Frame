@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Image from '@/lib/image';
 import {
   BookOpen,
@@ -116,6 +116,8 @@ export function SidebarContent({
     newPlaylistName: newPlName,
     setNewPlaylistName: setNewPlName,
     mergePlaylistSongs,
+    playlists,
+    updatePlaylist,
   } = useCourse();
 
   // State for the new playlist dialog
@@ -131,16 +133,32 @@ export function SidebarContent({
    * pulsación del "+" ya deja la playlist guardada: si el usuario cierra el
    * diálogo a medias, no pierde lo que llevaba añadido.
    */
+  // El nombre con que se creó al añadir la primera canción: las siguientes van
+  // a ESA playlist aunque el nombre se siga editando (antes, «Mi» y luego
+  // «Mi mezcla» dejaban dos playlists). El nombre final se aplica al cerrar.
+  const createdAs = useRef<string | null>(null);
+  const latest = useRef({ name: newPlName, playlists, updatePlaylist });
+  latest.current = { name: newPlName, playlists, updatePlaylist };
+
   const handleAddSongToNewPlaylist = (songId: string) => {
     const name = newPlName.trim();
     if (!name || selectedSongIds.includes(songId)) return;
-    mergePlaylistSongs(name, [songId]);
+    const target = createdAs.current ?? name;
+    mergePlaylistSongs(target, [songId]);
+    createdAs.current = target;
     setSelectedSongIds((prev) => [...prev, songId]);
   };
 
   // Reset playlist form state when dialog closes
   useEffect(() => {
     if (!isCreatePlaylistOpen) {
+      const created = createdAs.current;
+      const finalName = latest.current.name.trim();
+      if (created && finalName && finalName.toLowerCase() !== created.toLowerCase()) {
+        const playlist = latest.current.playlists.find((p) => p.name.trim().toLowerCase() === created.toLowerCase());
+        if (playlist) latest.current.updatePlaylist(playlist.id, { name: finalName });
+      }
+      createdAs.current = null;
       setNewPlName('');
       setSelectedSongIds([]);
       setPlaylistSongSearch('');

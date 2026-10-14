@@ -1,6 +1,9 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { renderDocHtml, renderDocMarkdown, renderDocxBlobPacked, type DocModel } from '@/lib/report-doc';
 import { tr } from '@/lib/i18n';
+import { blobToBase64, browserDownload } from '@/lib/file-save';
+
+export { folderOf } from '@/lib/file-save';
 
 // ============================================================
 // Salida de los informes: un solo camino para los cuatro.
@@ -29,28 +32,6 @@ interface ExportResult {
   path: string | null;
   /** El PDF depende del diálogo de impresión: no hay archivo que abrir. */
   viaPrintDialog: boolean;
-}
-
-/** Base64 sin pasar por FileReader: el informe cabe de sobra en memoria. */
-export async function blobToBase64(blob: Blob): Promise<string> {
-  const buffer = new Uint8Array(await blob.arrayBuffer());
-  let binary = '';
-  const CHUNK = 0x8000; // trocear evita reventar la pila en apply()
-  for (let i = 0; i < buffer.length; i += CHUNK) {
-    binary += String.fromCharCode(...buffer.subarray(i, i + CHUNK));
-  }
-  return btoa(binary);
-}
-
-export function browserDownload(blob: Blob, fileName: string): void {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
 /**
@@ -118,16 +99,6 @@ export async function exportReport(
 
   browserDownload(blob, fileName);
   return { fileName, path: null, viaPrintDialog: false };
-}
-
-/** Nombre de la carpeta donde quedó el archivo. No siempre es Descargas: si
- *  el equipo no la tiene, el núcleo nativo cae a Documentos. */
-export function folderOf(path: string): string {
-  const parts = path.split(/[\\/]/).filter(Boolean);
-  const folder = parts.length >= 2 ? parts[parts.length - 2] : '';
-  if (/^downloads$/i.test(folder)) return tr('Descargas');
-  if (/^documents$/i.test(folder)) return tr('Documentos');
-  return folder || tr('tu equipo');
 }
 
 /** Abre el archivo con el programa que el sistema tenga asociado. */

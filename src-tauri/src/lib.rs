@@ -312,12 +312,27 @@ fn hexval(b: Option<&u8>) -> Option<u8> {
     }
 }
 
-/// Intercambio/refresh de tokens contra el endpoint de Google, hecho en el
-/// proceso nativo para evitar restricciones CORS del webview.
+/// Un solo cliente HTTP para todo el núcleo (1.7.0): con plazos (una conexión
+/// muda ya no deja la petición colgada para siempre), el proxy del sistema
+/// (colegios y empresas lo configuran en Windows; antes solo se leían las
+/// variables de entorno) y la versión real en el agente.
+fn http_client() -> &'static reqwest::Client {
+    static CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
+    CLIENT.get_or_init(|| {
+        reqwest::Client::builder()
+            .connect_timeout(std::time::Duration::from_secs(10))
+            .timeout(std::time::Duration::from_secs(25))
+            .user_agent(concat!("Frame/", env!("CARGO_PKG_VERSION"), " (VT Asvent)"))
+            .build()
+            .unwrap_or_else(|_| reqwest::Client::new())
+    })
+}
+
+/// Intercambio de tokens contra el endpoint de Google, hecho en el proceso
+/// nativo para evitar restricciones CORS del webview.
 #[tauri::command]
 async fn google_token_request(form: HashMap<String, String>) -> Result<serde_json::Value, String> {
-    let client = reqwest::Client::new();
-    let resp = client
+    let resp = http_client()
         .post("https://oauth2.googleapis.com/token")
         .form(&form)
         .send()
@@ -357,9 +372,8 @@ fn checked_https(url: &str, hosts: &[&str]) -> Result<tauri::Url, String> {
 #[tauri::command]
 async fn http_get_text(url: String) -> Result<String, String> {
     let url = checked_https(&url, &TEXT_HOSTS)?;
-    let resp = reqwest::Client::new()
+    let resp = http_client()
         .get(url)
-        .header("User-Agent", "Frame/1.6 (VT Asvent)")
         .header("Accept-Language", ui("es", "en"))
         .send()
         .await
@@ -375,9 +389,8 @@ async fn http_get_text(url: String) -> Result<String, String> {
 async fn http_get_data_url(url: String) -> Result<String, String> {
     use base64::Engine;
     let url = checked_https(&url, &["i.ytimg.com"])?;
-    let resp = reqwest::Client::new()
+    let resp = http_client()
         .get(url)
-        .header("User-Agent", "Frame/1.6 (VT Asvent)")
         .send()
         .await
         .map_err(|e| e.to_string())?;
@@ -1113,6 +1126,35 @@ fn is_inside(dir: &std::path::Path, path: &std::path::Path) -> bool {
     }
 }
 
+/// Marca de «descargado de Internet» (Mark of the Web, 1.7.0): un adjunto
+/// puede venir de cualquier parte; con la marca, Windows y Office lo tratan con
+/// cautela (SmartScreen, Vista protegida), como a cualquier descarga.
+fn mark_from_internet(path: &std::path::Path) {
+    #[cfg(windows)]
+    {
+        let mut stream = path.as_os_str().to_owned();
+        stream.push(":Zone.Identifier");
+        let _ = std::fs::write(std::path::PathBuf::from(stream), "[ZoneTransfer]\r\nZoneId=3\r\n");
+    }
+    #[cfg(not(windows))]
+    let _ = path;
+}
+
+/// ¿Es un archivo que Frame dejó en el equipo? Descargas, Documentos (las
+/// grabaciones y el plan B de Descargas) y los datos de la app. Una ruta de
+/// red (\\equipo\carpeta) se rechaza antes de tocar el disco: solo
+/// comprobar si existe ya hace que Windows se identifique ante ese equipo.
+fn own_file(app: &tauri::AppHandle, path: &std::path::Path) -> bool {
+    let raw = path.to_string_lossy();
+    if raw.starts_with("\\\\") || raw.starts_with("//") {
+        return false;
+    }
+    [app.path().download_dir().ok(), app.path().document_dir().ok(), app.path().app_data_dir().ok()]
+        .iter()
+        .flatten()
+        .any(|dir| is_inside(dir, path))
+}
+
 /// Guarda un adjunto de nota (Word, Excel, PDF…) en la carpeta temporal y lo
 /// abre con la aplicación predeterminada del sistema, sin que el usuario
 /// tenga que descargarlo de nuevo.
@@ -1137,6 +1179,7 @@ fn open_note_file(file_name: String, data_base64: String) -> Result<(), String> 
     }
 
     std::fs::write(&path, &bytes).map_err(|e| e.to_string())?;
+    mark_from_internet(&path);
     tauri_plugin_opener::open_path(path.to_string_lossy().to_string(), None::<&str>)
         .map_err(|e| e.to_string())?;
     Ok(())
@@ -1151,6 +1194,7 @@ fn save_in_downloads(
     data_base64: &str,
     allowed: Option<&[&str]>,
     fallback: &str,
+    mark: bool,
 ) -> Result<String, String> {
     use base64::Engine;
     let bytes = base64::engine::general_purpose::STANDARD
@@ -1191,6 +1235,9 @@ fn save_in_downloads(
     }
 
     std::fs::write(&path, &bytes).map_err(|e| e.to_string())?;
+    if mark {
+        mark_from_internet(&path);
+    }
     Ok(path.to_string_lossy().to_string())
 }
 
@@ -1208,7 +1255,7 @@ fn save_report_file(
 ) -> Result<String, String> {
     // «.md»: el Reporte del Panel de uso también sale en Markdown (1.6.9).
     const REPORT_EXTENSIONS: &[&str] = &[".docx", ".pdf", ".md", ".html", ".txt", ".csv"];
-    save_in_downloads(&app_handle, &file_name, &data_base64, Some(REPORT_EXTENSIONS), "Informe.docx")
+    save_in_downloads(&app_handle, &file_name, &data_base64, Some(REPORT_EXTENSIONS), "Informe.docx", false)
 }
 
 /// Copia en Descargas de un adjunto o del archivo de una anotación (1.6.7).
@@ -1221,7 +1268,7 @@ fn save_file_copy(
     file_name: String,
     data_base64: String,
 ) -> Result<String, String> {
-    save_in_downloads(&app_handle, &file_name, &data_base64, None, "Archivo")
+    save_in_downloads(&app_handle, &file_name, &data_base64, None, "Archivo", true)
 }
 
 // ============================================================
@@ -1250,7 +1297,7 @@ struct PickedSource {
 
 static PICKED: std::sync::Mutex<Option<std::collections::HashSet<std::path::PathBuf>>> = std::sync::Mutex::new(None);
 
-const AUDIO_EXTENSIONS: [&str; 10] = ["mp3", "m4a", "aac", "ogg", "oga", "opus", "flac", "wav", "webm", "weba"];
+const AUDIO_EXTENSIONS: [&str; 11] = ["mp3", "m4a", "m4b", "aac", "ogg", "oga", "opus", "flac", "wav", "webm", "weba"];
 /// Audio que el motor de Frame (WebView2) no reproduce. Se recoge igual, sin
 /// leerlo nunca, para decirle al usuario cuántos quedaron fuera y por qué en
 /// vez de ignorarlos en silencio.
@@ -1260,7 +1307,7 @@ const UNSUPPORTED_AUDIO_EXTENSIONS: [&str; 15] = [
 /// En una carpeta, además del audio: letras (.lrc, o .txt con el mismo nombre
 /// que la canción), portadas y el índice de una exportación de Frame
 /// (frame-musica.json).
-const COMPANION_EXTENSIONS: [&str; 8] = ["lrc", "txt", "jpg", "jpeg", "png", "webp", "bmp", "json"];
+const COMPANION_EXTENSIONS: [&str; 11] = ["lrc", "txt", "jpg", "jpeg", "jpe", "jfif", "png", "webp", "bmp", "gif", "json"];
 
 fn is_music_extension(ext: &str) -> bool {
     AUDIO_EXTENSIONS.contains(&ext) || UNSUPPORTED_AUDIO_EXTENSIONS.contains(&ext) || COMPANION_EXTENSIONS.contains(&ext)
@@ -1283,6 +1330,12 @@ fn walk_music(root: &std::path::Path, dir: &std::path::Path, out: &mut Vec<Picke
         let path = entry.path();
         let Ok(meta) = entry.metadata() else { continue };
         if meta.is_dir() {
+            // Papelera, carpetas de sistema y ocultas: nada que importar, y
+            // recorrerlas gastaba el tope de archivos.
+            let name = entry.file_name().to_string_lossy().to_lowercase();
+            if name.starts_with('.') || name.starts_with('$') || name == "system volume information" {
+                continue;
+            }
             walk_music(root, &path, out, depth + 1);
         } else if meta.is_file() {
             if is_music_extension(&extension_of(&path)) {
@@ -1396,9 +1449,10 @@ fn music_pick_release() {
 
 /// Abre un archivo del equipo con el programa que el sistema tenga asociado.
 #[tauri::command]
-fn open_local_file(path: String) -> Result<(), String> {
+fn open_local_file(app_handle: tauri::AppHandle, path: String) -> Result<(), String> {
     let p = std::path::PathBuf::from(&path);
-    if !p.exists() {
+    // Solo lo que Frame guardó (informes, grabaciones): no cualquier ruta.
+    if !own_file(&app_handle, &p) || !p.exists() {
         return Err("El archivo ya no está en el disco.".into());
     }
     if is_executable(&p) {
@@ -1514,7 +1568,7 @@ fn rename_recording_file(
 #[tauri::command]
 fn reveal_recording(app_handle: tauri::AppHandle, path: String) -> Result<(), String> {
     let p = std::path::PathBuf::from(&path);
-    if p.exists() {
+    if own_file(&app_handle, &p) && p.exists() {
         // La vía de la shell de Windows (SHOpenFolderAndSelectItems) abre la
         // carpeta EXACTA con el archivo ya seleccionado.
         if tauri_plugin_opener::reveal_item_in_dir(&p).is_ok() {

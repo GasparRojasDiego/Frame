@@ -54,6 +54,9 @@ const MAX_PAYLOAD_CHARS = 180_000;
 /** Un mensaje más viejo que esto se ignora (repetición de uno capturado). */
 const MAX_AGE_MS = 5 * 60_000;
 
+/** Vectores ya recibidos (los legítimos nunca se repiten): fuera las repeticiones. */
+const seenIvs = new Map<string, number>();
+
 const scoped = new Set<string>(SCOPED_KEYS);
 
 // ------------------------------------------------------------
@@ -233,6 +236,10 @@ export async function openDelta(uid: string, sealed: unknown): Promise<DeltaChan
     );
     const parsed = JSON.parse(new TextDecoder().decode(plain)) as { u?: unknown; sent?: unknown; changes?: unknown };
     if (parsed.u !== uid || typeof parsed.sent !== 'number' || Date.now() - parsed.sent > MAX_AGE_MS) return null;
+    const now = Date.now();
+    for (const [iv, at] of seenIvs) if (now - at > MAX_AGE_MS) seenIvs.delete(iv);
+    if (seenIvs.has(message.iv)) return [];
+    seenIvs.set(message.iv, now);
     return Array.isArray(parsed.changes) ? parsed.changes.filter(isChange) : null;
   } catch {
     return null;

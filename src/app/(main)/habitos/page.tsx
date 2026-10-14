@@ -4,12 +4,15 @@ import { Button } from '@/components/ui/button';
 import { startOfWeek, endOfWeek, format, addWeeks } from 'date-fns';
 import HabitsView from '@/app/(main)/tareas/HabitsView';
 import { dateLocale, tr } from '@/lib/i18n';
+import { useTodayKey } from '@/hooks/use-today';
 
 // Interfaz propia del Registro de hábitos (antes era una pestaña de Tareas).
 // La tabla es semanal; la semana se elige con la flecha de la esquina
 // superior derecha, que también mueve los anillos de mañana, tarde y noche.
 export default function HabitosPage() {
   const [weekOffset, setWeekOffset] = useState(0);
+  // Repinta al cambiar el día, como la tabla de debajo.
+  useTodayKey();
 
   const today = addWeeks(new Date(), weekOffset);
   const weekStart = startOfWeek(today, { weekStartsOn: 1 });

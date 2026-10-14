@@ -2,9 +2,9 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { dateLocale, getLang, tr } from '@/lib/i18n';
-import { dateOfDay, type FeatureKey, type Level } from '@/lib/usage-model';
-import type { Continent } from '@/lib/world-map';
+import { dateLocale, getLang, tr } from '@m/lib/i18n';
+import { dateOfDay, type FeatureKey, type Level } from '@m/lib/usage-model';
+import type { Continent } from '@m/lib/world-map';
 
 // ============================================================
 // Piezas del Panel de uso (1.6.9): cifras, listas con barras, repartos en

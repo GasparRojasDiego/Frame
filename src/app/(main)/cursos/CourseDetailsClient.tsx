@@ -85,6 +85,7 @@ import { EchoHeader } from '@/components/shared/EchoWord';
 
 
 import { dateLocale, errorText, tr } from '@/lib/i18n';
+import { parseIsoSafe } from '@/lib/dates';
 
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -758,8 +759,8 @@ export default function CourseDetailsClient({ id }: { id: string }) {
 
   useEffect(() => {
     const foundCourse = courses.find(c => c.id === id);
+    setCourse(foundCourse);
     if (foundCourse) {
-      setCourse(foundCourse);
       const courseTasks = allTasks.filter(t => t.courseId === id).sort((a,b) => (a.order || 0) - (b.order || 0));
       setTasks(courseTasks);
       const courseNotes = getNotesForCourse(id).sort((a,b) => (a.order || 0) - (b.order || 0));
@@ -1064,7 +1065,7 @@ export default function CourseDetailsClient({ id }: { id: string }) {
     return (
       <div className="text-center py-16">
         <p className="text-lg text-muted-foreground">{tr('Asignatura no encontrada. Puede que haya sido eliminada.')}</p>
-        <Button onClick={() => router.push('/cursos')} className="mt-4">{tr('Volver a Asignaturas')}</Button>
+        <Button onClick={() => router.push('/knowledge')} className="mt-4">{tr('Volver a Asignaturas')}</Button>
       </div>
     );
   }
@@ -1332,7 +1333,10 @@ export default function CourseDetailsClient({ id }: { id: string }) {
                         </div>
                         <p className="mt-2 border-t border-border/60 pl-1.5 pt-2 text-[10px] text-muted-foreground/90">
                           {tr('Archivado el')}{' '}
-                          {format(parseISO(n.archivedAt), tr('d \'de\' MMMM yyyy, h:mm a'), { locale: dateLocale() })}
+                          {(() => {
+                            const archived = parseIsoSafe(n.archivedAt);
+                            return archived ? format(archived, tr('d \'de\' MMMM yyyy, h:mm a'), { locale: dateLocale() }) : '—';
+                          })()}
                         </p>
                       </Card>
                     ))}

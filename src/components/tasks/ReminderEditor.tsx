@@ -3,7 +3,7 @@ import { Switch } from '@/components/ui/switch';
 import { WheelColumn } from '@/components/ui/wheel-picker';
 import { cn } from '@/lib/utils';
 import type { Task } from '@/types';
-import { tr } from '@/lib/i18n';
+import { listText, tr } from '@/lib/i18n';
 import { dayInitial } from '@/lib/day-names';
 
 // ============================================================
@@ -81,7 +81,7 @@ export function describeReminder(config: ReminderConfig): string {
       ? tr('Todos los días')
       : chosen.length === 1
         ? tr('Los {p}', { p: chosen[0] })
-        : `${chosen.slice(0, -1).join(', ')} y ${chosen[chosen.length - 1]}`;
+        : listText(chosen);
   const repeat = REPEATS.find((r) => r.minutes === config.repeatMinutes);
   const repeatText = config.repeatMinutes > 0 ? tr(' · se repite cada {p}', { p: repeat?.label ?? `${config.repeatMinutes} min` }) : '';
   const text = tr('{daysText} a las {time}{repeatText}', { daysText, time: config.time, repeatText });

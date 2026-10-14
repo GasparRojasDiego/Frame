@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // ============================================================
-// Genera src/lib/world-map.ts: el mapa del mundo del Panel de uso (1.6.9).
+// Genera metricas/src/lib/world-map.ts: el mapa del mundo del Panel de uso
+// (1.6.9; desde la 1.7.0, en la página de métricas, fuera de la app).
 //
 // Los contornos (Natural Earth 1:110m, de `world-atlas`) se proyectan UNA vez
 // aquí (Equal Earth) y se guardan como trazos SVG ya hechos: la app no carga
@@ -117,5 +118,5 @@ export const WORLD_SHAPES: Record<string, string> = ${JSON.stringify(Object.from
 /** Continente de cada código ISO de dos letras. */
 export const CONTINENT_OF: Record<string, Continent> = ${JSON.stringify(Object.fromEntries(allCodes.map((code) => [code, continentOf(code)])))};
 `;
-fs.writeFileSync(path.join(root, 'src', 'lib', 'world-map.ts'), out);
+fs.writeFileSync(path.join(root, 'metricas', 'src', 'lib', 'world-map.ts'), out);
 console.log(`${shapes.size} países · ${(out.length / 1024).toFixed(0)} KB`);

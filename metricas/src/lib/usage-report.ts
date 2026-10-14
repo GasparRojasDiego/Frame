@@ -1,7 +1,7 @@
 import { format, parseISO } from 'date-fns';
 import type { DocBlock, DocCell, DocHeatCell, DocModel, DocTone } from '@/lib/report-doc';
-import { buildImpactDoc, type ImpactData } from '@/lib/impact-report';
-import { dateLocale, decimalText, tr } from '@/lib/i18n';
+import { buildImpactDoc, type ImpactData } from '@m/lib/impact-report';
+import { dateLocale, decimalText, tr } from '@m/lib/i18n';
 import {
   activeDaysIn,
   activityOf,
@@ -38,7 +38,7 @@ import {
   type SnapUser,
   type UserDetail,
   type UsageSnapshot,
-} from '@/lib/usage-model';
+} from '@m/lib/usage-model';
 import {
   bucketLabel,
   CONTINENT_LABEL,
@@ -58,8 +58,8 @@ import {
   PLATFORM_LABEL,
   SCREEN_LABEL,
   weekdayShort,
-} from '@/components/uso/UsageBits';
-import type { Continent } from '@/lib/world-map';
+} from '@m/components/UsageBits';
+import type { Continent } from '@m/lib/world-map';
 
 // ============================================================
 // Reporte del Panel de uso (1.6.9): todo lo que el panel recoge, en un

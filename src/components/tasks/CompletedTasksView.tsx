@@ -31,6 +31,7 @@ import { sessionSeconds, formatMinutes } from '@/lib/duration';
 import { DIFFICULTY_META, DifficultyBars, TASK_KIND_META } from '@/components/tasks/task-badges';
 import { dateLocale, tr } from '@/lib/i18n';
 import { difficultyLabel, priorityLabel, taskKindLabel } from '@/lib/enum-labels';
+import { parseIsoSafe } from '@/lib/dates';
 
 // ============================================================
 // Registro de tareas culminadas.
@@ -57,9 +58,11 @@ export function minutesByTask(sessions: StudySession[]): Map<string, number> {
 
 /** Puntualidad de la entrega comparando la fecha límite con el archivado. */
 function punctuality(task: ArchivedTask): { label: string; tone: string } | null {
-  if (!task.dueDate) return null;
-  try {
-    const days = differenceInCalendarDays(parseISO(task.archivedAt), parseISO(task.dueDate));
+  const done = parseIsoSafe(task.archivedAt);
+  const due = parseIsoSafe(task.dueDate);
+  if (!done || !due) return null;
+  {
+    const days = differenceInCalendarDays(done, due);
     if (days <= 0) {
       const early = Math.abs(days);
       return {
@@ -76,8 +79,6 @@ function punctuality(task: ArchivedTask): { label: string; tone: string } | null
       label: days === 1 ? tr('1 día de retraso') : tr('{days} días de retraso', { days }),
       tone: 'border-rose-500/50 bg-rose-500/10 text-rose-600 dark:text-rose-400',
     };
-  } catch {
-    return null;
   }
 }
 
@@ -85,13 +86,8 @@ export function CompletedTaskCard({ task, studiedMinutes }: { task: ArchivedTask
   const kind = task.kind ?? 'Tarea';
   const KindIcon = TASK_KIND_META[kind]?.icon ?? TASK_KIND_META.Tarea.icon;
   const onTime = punctuality(task);
-  const archived = (() => {
-    try {
-      return parseISO(task.archivedAt);
-    } catch {
-      return null;
-    }
-  })();
+  const archived = parseIsoSafe(task.archivedAt);
+  const dueDate = parseIsoSafe(task.dueDate);
 
   return (
     <Card className="group relative overflow-hidden border-border/70 bg-card/70 p-3.5 shadow-sm transition-colors hover:border-primary/40">
@@ -171,10 +167,10 @@ export function CompletedTaskCard({ task, studiedMinutes }: { task: ArchivedTask
           {tr('Culminada el')}{' '}
           {archived ? format(archived, tr('d \'de\' MMMM yyyy, h:mm a'), { locale: dateLocale() }) : '—'}
         </span>
-        {task.dueDate && (
+        {dueDate && (
           <span className="flex items-center gap-1">
             <Clock3 className="h-3 w-3" />
-            {tr('Fecha de entrega:')}{' '}{format(parseISO(task.dueDate), tr('d \'de\' MMMM yyyy'), { locale: dateLocale() })}
+            {tr('Fecha de entrega:')}{' '}{format(dueDate, tr('d \'de\' MMMM yyyy'), { locale: dateLocale() })}
           </span>
         )}
       </div>

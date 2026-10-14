@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EchoHeader } from '@/components/shared/EchoWord';
 import { cn } from '@/lib/utils';
-import { dateLocale, decimalText, tr } from '@/lib/i18n';
+import { dateLocale, decimalText, tr } from '@m/lib/i18n';
 import {
   activityOf,
   continentOf,
@@ -27,7 +27,7 @@ import {
   type SnapUser,
   type UserDetail,
   type UsageSnapshot,
-} from '@/lib/usage-model';
+} from '@m/lib/usage-model';
 import {
   axisTick,
   CONTINENT_LABEL,
@@ -49,7 +49,7 @@ import {
   SCREEN_LABEL,
   tooltipStyle,
   WeekHeat,
-} from '@/components/uso/UsageBits';
+} from '@m/components/UsageBits';
 
 // ============================================================
 // Estudiantes (Panel de uso, 1.6.9): una tarjeta por estudiante, con

@@ -1,4 +1,4 @@
-import { intlLocale, tr } from '@/lib/i18n';
+import { getLang, intlLocale, tr } from '@/lib/i18n';
 
 // ============================================================
 // Documento de informe: UN modelo, dos formatos.
@@ -194,7 +194,7 @@ const DELTA_MARK: Record<'up' | 'down' | 'flat', string> = { up: '▲', down: '�
 export function renderDocHtml(doc: DocModel): string {
   const body = doc.blocks.map(htmlBlock).join('\n');
 
-  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${escapeHtml(doc.title)}</title>
+  return `<!doctype html><html lang="${getLang()}"><head><meta charset="utf-8"><title>${escapeHtml(doc.title)}</title>
 <style>
   @page { size: A4; margin: 15mm 13mm; }
   * { box-sizing: border-box; }
@@ -1039,13 +1039,8 @@ function docxParts(doc: DocModel, generatedAt: Date): { name: string; data: Uint
   ].map((part) => ({ name: part.name, data: utf8(part.text) }));
 }
 
-/** Documento .docx listo para descargar. Word lo abre como documento nativo. */
-export function renderDocxBlob(doc: DocModel, generatedAt: Date = new Date()): Blob {
-  return zipStore(docxParts(doc, generatedAt), generatedAt);
-}
-
 /**
- * El mismo .docx, comprimido (1.6.9). El Reporte del Panel de uso, con una
+ * El .docx, comprimido (1.6.9). Word lo abre como documento nativo. El Reporte del Panel de uso, con una
  * ficha por estudiante, pasaba de 13 MB sin comprimir; el XML se reduce unas
  * treinta veces. Sin `CompressionStream` (motores viejos) sale sin comprimir.
  */
@@ -1165,7 +1160,7 @@ function zipStore(entries: { name: string; data: Uint8Array<ArrayBuffer>; packed
 //    figuras de color pasan a tablas con su cifra (y una barra de bloques).
 // ------------------------------------------------------------
 
-const mdCell = (value: string) => String(value ?? '').replace(/\|/g, '\|').replace(/\s*\n\s*/g, ' ');
+const mdCell = (value: string) => String(value ?? '').replace(/\|/g, '\\|').replace(/\s*\n\s*/g, ' ');
 const mdBar = (percent: number) => '█'.repeat(Math.round(clampPct(percent) / 10)) || '·';
 const HEAT_MARK = ['·', '░', '▒', '▓', '█'];
 

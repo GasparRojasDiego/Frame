@@ -4,7 +4,7 @@
 // texto español (terms.ts). Al cambiar uno, se cambia el otro.
 // ============================================================
 
-import { TERMS_VERSION } from './terms';
+import { TERMS_VERSION } from './versions.ts';
 
 export function termsDocumentEn({ appVersion, effectiveDate }: { appVersion: string; effectiveDate: string }): string {
   return `# Frame Terms and Conditions of Use

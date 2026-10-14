@@ -1,10 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ChevronDown, ChevronRight, ListMusic } from 'lucide-react';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
 import { useCourse } from '@/context/CourseContext';
 import { cn } from '@/lib/utils';
 import { PlaylistItem } from './PlaylistItem';
@@ -162,8 +157,8 @@ export function PlaylistList({ collapsed = false }: { collapsed?: boolean }) {
   }
 
   return (
-    <Collapsible open={isPlaylistsOpen} onOpenChange={setPlaylistsOpen} className="mt-4">
-      <CollapsibleTrigger className="w-full">
+    <div className="mt-4">
+      <button type="button" className="w-full" aria-expanded={isPlaylistsOpen} onClick={() => setPlaylistsOpen((open) => !open)}>
         <div
           className={cn(
             'flex items-center justify-between w-full p-2 text-xs font-semibold rounded-md border border-primary bg-primary/20 text-primary',
@@ -179,12 +174,12 @@ export function PlaylistList({ collapsed = false }: { collapsed?: boolean }) {
             <ChevronRight className="h-4 w-4" />
           )}
         </div>
-      </CollapsibleTrigger>
-      <CollapsibleContent>
+      </button>
+      {isPlaylistsOpen && (
         <div className="flex flex-col gap-1 mt-4" title={tr('Mantén pulsada una playlist para moverla')}>
           {items}
         </div>
-      </CollapsibleContent>
-    </Collapsible>
+      )}
+    </div>
   );
 }

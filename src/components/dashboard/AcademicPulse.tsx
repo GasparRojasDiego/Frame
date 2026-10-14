@@ -24,6 +24,7 @@ import { formatMinutes } from '@/lib/duration';
 import { EchoTileHeader } from '@/components/shared/EchoWord';
 import { dateLocale, tr } from '@/lib/i18n';
 import { dayInitial, fromSunday } from '@/lib/day-names';
+import { useTodayKey } from '@/hooks/use-today';
 
 /** Iniciales de los 7 días en el orden de la semana ISO (lunes primero). */
 
@@ -36,8 +37,27 @@ interface DayColumn {
   isFuture: boolean;
 }
 
+function DeltaBadge({ value, unit }: { value: number; unit: string }) {
+  const rounded = Math.round(value);
+  const Icon = rounded > 0 ? ArrowUpRight : rounded < 0 ? ArrowDownRight : ArrowRight;
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
+        rounded > 0 && 'bg-green-500/15 text-green-500',
+        rounded < 0 && 'bg-red-500/15 text-red-400',
+        rounded === 0 && 'bg-secondary text-muted-foreground'
+      )}
+    >
+      <Icon className="h-3 w-3" />
+      {rounded === 0 ? tr('igual') : `${Math.abs(rounded)}${unit}`}
+    </span>
+  );
+}
+
 export default function AcademicPulse() {
   const { studySessions, archivedTasks, studyGoals } = useCourse();
+  const todayKey = useTodayKey();
 
   const metrics = useMemo(() => {
     const today = startOfToday();
@@ -96,7 +116,7 @@ export default function AcademicPulse() {
       prevTasksDone: previous.tasksDone,
       goalWeek,
     };
-  }, [studySessions, archivedTasks, studyGoals]);
+  }, [studySessions, archivedTasks, studyGoals, todayKey]);
 
   const maxColumn = Math.max(
     1,
@@ -113,24 +133,6 @@ export default function AcademicPulse() {
     tr('d \'de\' MMMM'),
     { locale: dateLocale() }
   )}`;
-
-  const DeltaBadge = ({ value, unit }: { value: number; unit: string }) => {
-    const rounded = Math.round(value);
-    const Icon = rounded > 0 ? ArrowUpRight : rounded < 0 ? ArrowDownRight : ArrowRight;
-    return (
-      <span
-        className={cn(
-          'inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
-          rounded > 0 && 'bg-green-500/15 text-green-500',
-          rounded < 0 && 'bg-red-500/15 text-red-400',
-          rounded === 0 && 'bg-secondary text-muted-foreground'
-        )}
-      >
-        <Icon className="h-3 w-3" />
-        {rounded === 0 ? tr('igual') : `${Math.abs(rounded)}${unit}`}
-      </span>
-    );
-  };
 
   return (
     <section className="space-y-3">

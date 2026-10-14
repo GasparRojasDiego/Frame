@@ -1,0 +1,22 @@
+/* Poppins de la app (solo el juego latino: basta para el español). */
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../../public/fonts/poppins-2-pxiEyp8kv8JHgFVrJJfecg.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../../public/fonts/poppins-5-pxiByp8kv8JHgFVrLEj6Z1xlFQ.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../../public/fonts/poppins-8-pxiByp8kv8JHgFVrLCz7Z1xlFQ.woff2') format('woff2');
+}

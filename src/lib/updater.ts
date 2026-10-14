@@ -673,12 +673,13 @@ export function formatDuration(ms: number): string {
   return rest === 0 ? `${minutes} min` : `${minutes} min ${rest} s`;
 }
 
-/** Sondeo: 20 s tras arrancar y luego cada 30 minutos. SOLO MIRA Y AVISA;
- *  ninguna de las dos llamadas instala nada. */
+/** Sondeo: unos 20 s tras arrancar y luego cada 6 h (con un margen al azar:
+ *  miles de equipos no deben preguntar a GitHub a la vez; cada 30 min eran
+ *  ~50 consultas al día por equipo). SOLO MIRA Y AVISA; nada se instala solo. */
 export function startUpdaterLoop(): () => void {
   if (!isTauri() || IS_STORE_BUILD) return () => {};
-  const first = setTimeout(() => void checkForUpdates({ silent: true }), 20000);
-  const interval = setInterval(() => void checkForUpdates({ silent: true }), 30 * 60 * 1000);
+  const first = setTimeout(() => void checkForUpdates({ silent: true }), 20_000 + Math.floor(Math.random() * 40_000));
+  const interval = setInterval(() => void checkForUpdates({ silent: true }), 6 * 60 * 60 * 1000 + Math.floor(Math.random() * 30 * 60 * 1000));
   return () => {
     clearTimeout(first);
     clearInterval(interval);

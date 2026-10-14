@@ -113,7 +113,7 @@ export async function signInWithGoogle(): Promise<{ error: string | null }> {
     provider: 'google',
     options: {
       redirectTo: siteUrl,
-      queryParams: { access_type: 'offline', prompt: 'consent', hl: getLang() },
+      queryParams: { prompt: 'select_account', hl: getLang() },
     },
   });
 

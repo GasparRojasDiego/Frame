@@ -12,6 +12,7 @@ import {
 } from '@/lib/lyrics';
 import { addSongFileToDB } from '@/lib/music-db';
 import { foldName, resolveSongName } from '@/lib/song-names';
+import { AUDIO_EXTENSIONS, baseName, companionFinder, dirName } from '@/lib/music-match';
 import type { Song } from '@/types';
 import { decimalText, tr } from '@/lib/i18n';
 import { UNKNOWN_ARTIST } from '@/lib/enum-labels';
@@ -28,14 +29,20 @@ import { UNKNOWN_ARTIST } from '@/lib/enum-labels';
 //   · Nombres: etiquetas limpias o, si faltan o son basura, el nombre del
 //     archivo leído con cabeza (song-names.ts), ayudado por los artistas que
 //     ya hay en la biblioteca.
-//   · Portada: la incrustada; si no, una imagen con el mismo nombre que la
-//     canción; si no, la de su carpeta («cover», «folder», «front»…).
-//   · Letra: un .lrc con el mismo nombre, la sincronizada de las etiquetas,
-//     la de texto de las etiquetas o un .txt con el mismo nombre; con tiempos
-//     gana a sin tiempos. Los textos se leen en UTF-8, UTF-16 o Windows-1252.
+//   · Portada: la incrustada; si no, una imagen con el nombre de la canción
+//     (en su carpeta o en una «Portadas», «Covers»… cercana); si no, la de su
+//     carpeta («cover», «folder», «front»…) o la de una carpeta superior.
+//   · Letra: un .lrc con su nombre (en su carpeta o en una «Letras»,
+//     «Lyrics»… cercana; ver music-match.ts), la sincronizada de las
+//     etiquetas, la de texto de las etiquetas o un .txt con su nombre; con
+//     tiempos gana a sin tiempos. Los textos se leen en UTF-8, UTF-16 o
+//     Windows-1252.
 //   · Duración real de cada canción (para los totales de las playlists).
 //   · Sin duplicados: ni por nombre de archivo ni por ser la misma canción
-//     (título, artista y duración) con otro nombre.
+//     (título, artista y duración) con otro nombre. Dos canciones distintas
+//     con el mismo nombre en carpetas distintas («CD1/01 - Intro.mp3» y
+//     «CD2/01 - Intro.mp3») entran las dos: la segunda lleva su carpeta en el
+//     nombre (antes se perdía sin aviso).
 //
 // Una carpeta creada por «Exportar música» de versiones anteriores de Frame
 // trae su índice (frame-musica.json): de él salen el orden, los nombres, las
@@ -83,11 +90,10 @@ interface Manifest {
   playlists?: { name: string; songIds: string[] }[];
 }
 
-const AUDIO_EXTENSIONS = /\.(mp3|m4a|aac|ogg|oga|opus|flac|wav|webm|weba)$/i;
-const IMAGE_EXTENSIONS = /\.(jpe?g|png|webp|bmp)$/i;
 const AUDIO_MIME: Record<string, string> = {
   mp3: 'audio/mpeg',
   m4a: 'audio/mp4',
+  m4b: 'audio/mp4',
   aac: 'audio/aac',
   ogg: 'audio/ogg',
   oga: 'audio/ogg',
@@ -115,30 +121,14 @@ const UNSUPPORTED_FORMATS: Record<string, string> = {
   mid: 'MIDI',
   midi: 'MIDI',
 };
-/**
- * Imágenes que valen como portada de toda una carpeta, de la más fiable a la
- * menos (las de Windows Media Player incluidas).
- */
-const FOLDER_COVERS = [
-  /^cover$/i,
-  /^folder$/i,
-  /^front$/i,
-  /^(portada|car[aá]tula)$/i,
-  /^album$/i,
-  /^albumart(?:_\{.+\}_large|large)?$/i,
-  /^albumart(?:_\{.+\}_small|small)$/i,
-];
 /** El «001 - » con que numeraba sus archivos «Exportar música». */
 const EXPORT_NUMBER_PREFIX = /^\s*\d{2,4}\s+-\s+/;
 /** Por encima, la canción no se lee entera de una vez y no se importa. */
 const MAX_AUDIO_BYTES = 1024 * 1024 * 1024;
 
 const extensionOf = (name: string) => /\.([a-z0-9]+)$/i.exec(name)?.[1]?.toLowerCase() ?? '';
-const baseName = (name: string) => name.replace(/\.[a-z0-9]+$/i, '');
-const dirName = (path: string) => (path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '');
 const joinPath = (dir: string, path: string) => (dir ? `${dir}/${path}` : path);
 const withoutExportNumber = (name: string) => name.replace(EXPORT_NUMBER_PREFIX, '').trim() || name;
-const sameFileKey = (file: PickedFile) => joinPath(dirName(file.rel), baseName(file.name)).toLowerCase();
 
 // ------------------------------------------------------------
 // Explorador y lectura
@@ -160,7 +150,7 @@ const readText = async (file: PickedFile): Promise<string> =>
 async function imageFileDataUrl(file: PickedFile): Promise<string> {
   if (file.size > 12 * 1024 * 1024) return '';
   const ext = extensionOf(file.name);
-  const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : ext === 'bmp' ? 'image/bmp' : 'image/jpeg';
+  const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : ext === 'bmp' ? 'image/bmp' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
   const blob = new Blob([await readBytes(file)], { type: mime });
   const dataUrl = await new Promise<string>((resolve) => {
     const reader = new FileReader();
@@ -206,29 +196,6 @@ export interface MusicImportPlan {
   lyricFiles: number;
 }
 
-/** La mejor portada de cada carpeta, por su nombre o por ser la única imagen. */
-function folderCovers(files: PickedFile[], audioKeys: Set<string>): Map<string, PickedFile> {
-  const best = new Map<string, { file: PickedFile; rank: number }>();
-  const loose = new Map<string, PickedFile[]>();
-  for (const file of files) {
-    if (!IMAGE_EXTENSIONS.test(file.name)) continue;
-    const dir = dirName(file.rel);
-    const rank = FOLDER_COVERS.findIndex((pattern) => pattern.test(baseName(file.name)));
-    if (rank >= 0) {
-      const current = best.get(dir);
-      if (!current || rank < current.rank) best.set(dir, { file, rank });
-    } else if (!audioKeys.has(sameFileKey(file))) {
-      // Ni se llama «cover» ni es la portada de una canción concreta.
-      loose.set(dir, [...(loose.get(dir) ?? []), file]);
-    }
-  }
-  const result = new Map<string, PickedFile>();
-  for (const [dir, { file }] of best) result.set(dir, file);
-  // Una carpeta con una sola imagen suelta: casi siempre, la del álbum.
-  for (const [dir, images] of loose) if (!result.has(dir) && images.length === 1) result.set(dir, images[0]);
-  return result;
-}
-
 export async function planMusicImport(source: PickedSource, library: Song[]): Promise<MusicImportPlan> {
   const byRel = new Map(source.files.map((file) => [file.rel, file]));
   const byName = new Map<string, PickedFile>();
@@ -267,30 +234,9 @@ export async function planMusicImport(source: PickedSource, library: Song[]): Pr
     }
   }
 
-  // Compañeros de cada audio: .lrc, .txt e imagen con su mismo nombre.
-  const lrcByKey = new Map<string, PickedFile>();
-  const txtByKey = new Map<string, PickedFile>();
-  const coverByKey = new Map<string, PickedFile>();
-  const coverByBase = new Map<string, PickedFile>();
-  for (const file of source.files) {
-    if (/\.lrc$/i.test(file.name)) lrcByKey.set(sameFileKey(file), file);
-    else if (/\.txt$/i.test(file.name)) txtByKey.set(sameFileKey(file), file);
-    else if (IMAGE_EXTENSIONS.test(file.name)) {
-      coverByKey.set(sameFileKey(file), file);
-      if (!coverByBase.has(baseName(file.name).toLowerCase())) coverByBase.set(baseName(file.name).toLowerCase(), file);
-    }
-  }
-  const audioKeys = new Set(source.files.filter((file) => AUDIO_EXTENSIONS.test(file.name)).map(sameFileKey));
-  const coverOfFolder = folderCovers(source.files, audioKeys);
-  const companions = (audio: PickedFile) => {
-    const key = sameFileKey(audio);
-    return {
-      lrc: lrcByKey.get(key),
-      txt: txtByKey.get(key),
-      cover: coverByKey.get(key) ?? coverByBase.get(baseName(audio.name).toLowerCase()),
-      folderCover: coverOfFolder.get(dirName(audio.rel)),
-    };
-  };
+  // Compañeros de cada audio: su .lrc, su .txt, su portada y la de su carpeta,
+  // estén en su carpeta o en subcarpetas de letras y portadas (music-match.ts).
+  const companions = companionFinder(source.files);
 
   /** Audios ya cubiertos por el índice: el resto entra por sus etiquetas. */
   const covered = new Set<string>();
@@ -345,14 +291,28 @@ export async function planMusicImport(source: PickedSource, library: Song[]): Pr
     .filter((file) => AUDIO_EXTENSIONS.test(file.name) && !covered.has(file.rel))
     .sort((a, b) => a.rel.localeCompare(b.rel, 'es', { numeric: true, sensitivity: 'base' }));
   for (const audio of audioFiles) {
-    const cleanName = withoutExportNumber(audio.name);
-    const known = byFileName.get(audio.name.toLowerCase()) ?? byFileName.get(cleanName.toLowerCase());
+    const plain = withoutExportNumber(audio.name);
+    let cleanName = plain;
+    // Otro audio de lo elegido ya se llama así (otro disco u otro álbum): este
+    // lleva su carpeta en el nombre. La biblioteca no admite dos con el mismo
+    // nombre de archivo, y al volver a importar la misma carpeta se reconoce igual.
+    const repeated = taken.has(plain.toLowerCase());
+    if (repeated) {
+      const folder = dirName(audio.rel).split('/').pop();
+      if (folder) cleanName = `${baseName(plain)} (${folder})${plain.slice(baseName(plain).length)}`;
+    }
+    const known = repeated
+      ? byFileName.get(cleanName.toLowerCase())
+      : byFileName.get(audio.name.toLowerCase()) ?? byFileName.get(cleanName.toLowerCase());
+    const fresh = !taken.has(cleanName.toLowerCase());
+    taken.add(plain.toLowerCase());
+    taken.add(cleanName.toLowerCase());
     if (known) {
       plan.existing.set(audio.rel, known.id);
       continue;
     }
-    if (taken.has(cleanName.toLowerCase())) continue;
-    taken.add(cleanName.toLowerCase());
+    if (!fresh) continue;
+
     const near = companions(audio);
     plan.entries.push({
       song: {

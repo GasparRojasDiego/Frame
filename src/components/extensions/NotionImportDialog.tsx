@@ -19,7 +19,6 @@ import {
   type NotionTable,
 } from '@/lib/extensions/notion-import';
 // Solo por su limpieza de lo guardado hasta la 1.6.1.
-import '@/lib/extensions/registry';
 import { DEFAULT_EVENT_COLOR } from '@/lib/calendar-events';
 import { cn } from '@/lib/utils';
 import { dateLocale, tr } from '@/lib/i18n';
@@ -221,7 +220,7 @@ export default function NotionImportDialog({
         <EchoHeader word={tr('Notion')} className="mb-0">
           <DialogHeader className="items-center">
             <div className="flex items-center justify-center gap-2.5">
-              <ExtensionIcon id="notion" className="h-8 w-8" />
+              <ExtensionIcon className="h-8 w-8" />
               <DialogTitle className="text-xl font-bold text-primary">{tr('Importar de Notion')}</DialogTitle>
             </div>
             <DialogDescription className="text-center text-xs">{tr('Tus tareas y fechas, de una base de datos de Notion a Frame.')}</DialogDescription>

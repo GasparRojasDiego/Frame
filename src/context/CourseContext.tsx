@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo, useRef } from 'react';
 import { usePathname } from '@/lib/navigation';
 import type {
   Course,
@@ -21,7 +21,6 @@ import type {
   StreakGoal,
   InterruptedSession,
   RepeatMode,
-  TaskSortMode,
   Habit,
   HabitPhase,
 } from '@/types';
@@ -34,7 +33,7 @@ import {
   deleteRecordingAudio
 } from '@/lib/music-db';
 import { toast } from '@/hooks/use-toast';
-import { syncTelemetry, trackEvent } from '@/lib/telemetry';
+import { syncTelemetry, telemetryDue, trackEvent } from '@/lib/telemetry';
 import { CLOUD_APPLIED_EVENT } from '@/lib/supabase/sync';
 import { timerClock, useTimerTime } from '@/lib/timer-clock';
 import { COVER_HEAVY_CHARS, idle, shrinkCover } from '@/lib/cover-shrink';
@@ -181,8 +180,6 @@ interface CourseContextType {
   setTimerTime: React.Dispatch<React.SetStateAction<number>>;
   isTimerActive: boolean;
   setIsTimerActive: React.Dispatch<React.SetStateAction<boolean>>;
-  isTimerPaused: boolean;
-  setIsTimerPaused: React.Dispatch<React.SetStateAction<boolean>>;
   sessionStartTime: number;
   setSessionStartTime: React.Dispatch<React.SetStateAction<number>>;
   timerMode: TimerMode;
@@ -214,7 +211,6 @@ interface CourseContextType {
   archivedNotes: ArchivedNote[];
   /** Elimina PERMANENTEMENTE todo el archivo de una asignatura
    *  (incluidos los adjuntos de IndexedDB de los recursos). */
-  purgeCourseArchive: (courseId: string) => void;
   /** Elimina una tarea SIN archivarla (para tareas vencidas descartadas). */
   removeTask: (id: string) => void;
   /** Reparte los minutos de una sesión entre las tareas avanzadas: el %
@@ -241,7 +237,6 @@ interface CourseContextType {
   dailyPerformances: DailyPerformance[];
   studyGoals: StudyGoals;
   streakGoal: StreakGoal;
-  completedTasksCount: number;
   completedTasksByCourse: Record<string, number>;
 
 
@@ -302,7 +297,6 @@ interface CourseContextType {
   
   // Playlist State and methods
   playlists: Playlist[];
-  addPlaylist: (name: string, songIds: string[]) => void;
   /** Fusiona canciones en la playlist con ese nombre (la crea si no existe). */
   mergePlaylistSongs: (name: string, songIds: string[]) => void;
   updatePlaylist: (id: string, updates: Partial<Playlist>) => void;
@@ -318,14 +312,11 @@ interface CourseContextType {
   spaces: Space[];
   addSpace: (name: string, courseIds: string[]) => void;
   updateSpace: (id: string, updates: Partial<Space>) => void;
-  deleteSpace: (id: string) => void;
 
   // Music State and methods
   songs: Song[];
   areSongsLoading: boolean;
   addSongs: (newSongs: Song[]) => Promise<void>;
-  updateSong: (id: string, updates: Partial<Song>) => Promise<void>;
-  batchUpdateSongs: (updates: { id: string; picture: string }[]) => Promise<void>;
   deleteSong: (id: string) => Promise<void>;
   toggleSongFavorite: (id: string) => Promise<void>;
   currentSong: Song | null;
@@ -347,8 +338,6 @@ interface CourseContextType {
   selectionMode: SelectionMode;
   setSelectionMode: (mode: SelectionMode) => void;
   hasInteracted: boolean;
-  taskSortMode: TaskSortMode;
-  setTaskSortMode: (mode: TaskSortMode) => void;
   isPlayerVisible: boolean;
   setPlayerVisible: (isVisible: boolean) => void;
 
@@ -398,7 +387,6 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     return null;
   });
   const [isTimerActive, setIsTimerActive] = useState(false);
-  const [isTimerPaused, setIsTimerPaused] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState(0);
   const [timerMode, setTimerMode] = useState<TimerMode>('focus');
 
@@ -488,7 +476,6 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
   const [selectionMode, setSelectionModeState] = useState<SelectionMode>('rendimiento');
   const [completedTasksCount, setCompletedTasksCount] = useState(0);
   const [completedTasksByCourse, setCompletedTasksByCourse] = useState<Record<string, number>>({});
-  const [taskSortMode, setTaskSortModeState] = useState<TaskSortMode>('custom');
 
   const [hasInteracted, setHasInteracted] = useState(false);
   const [isPlayerVisible, setPlayerVisibleState] = useState(true);
@@ -541,22 +528,30 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
 
   // --- Undo State ---
   const [lastUndoableAction, setLastUndoableAction] = useState<{ undo: () => void; commit: () => void; } | null>(null);
+  // La misma acción, legible fuera de React (al llegar cambios de la nube).
+  const pendingActionRef = useRef<{ undo: () => void; commit: () => void } | null>(null);
 
   // Registra una acción deshacible confirmando ANTES la anterior pendiente.
   // Sin esto, encadenar borrados (p. ej. varias canciones seguidas) cancelaba
   // el commit del anterior: la canción nunca se borraba de IndexedDB y
-  // "resucitaba" al reabrir la app.
+  // "resucitaba" al reabrir la app. Fuera del actualizador de estado: React
+  // puede repetirlo, y el commit sumaba dos veces la tarea culminada.
   const pushUndoableAction = useCallback(
     (action: { undo: () => void; commit: () => void }) => {
-      setLastUndoableAction((prev) => {
-        if (prev) {
-          try { prev.commit(); } catch (e) { console.error('commit of pending action failed', e); }
-        }
-        return action;
-      });
+      const prev = pendingActionRef.current;
+      if (prev) {
+        try { prev.commit(); } catch (e) { console.error('commit of pending action failed', e); }
+      }
+      pendingActionRef.current = action;
+      setLastUndoableAction(action);
     },
     []
   );
+
+  const clearUndoableAction = useCallback(() => {
+    pendingActionRef.current = null;
+    setLastUndoableAction(null);
+  }, []);
 
   
   const storageKeys = useMemo(() => {
@@ -688,15 +683,25 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     setLocalEvents(getArrayFromLocalStorage(storageKeys.localEvents));
     setDayColorsState(getArrayFromLocalStorage(storageKeys.dayColors));
     setRecordings(getArrayFromLocalStorage(storageKeys.recordings));
-    setTaskSortModeState(getFromLocalStorage(storageKeys.taskSortMode, 'custom'));
     setSessionNotes(getArrayFromLocalStorage(storageKeys.sessionNotes));
     setPlayerVisibleState(getFromLocalStorage(storageKeys.isPlayerVisible, true));
   }, [storageKeys]);
 
   useEffect(() => {
-    window.addEventListener(CLOUD_APPLIED_EVENT, loadBusinessState);
-    return () => window.removeEventListener(CLOUD_APPLIED_EVENT, loadBusinessState);
-  }, [loadBusinessState]);
+    // Un borrado aún deshacible (7 s) solo está en memoria: se confirma antes
+    // de releer el disco, o lo releído lo resucitaba y el siguiente guardado
+    // lo devolvía a la nube (y una tarea culminada quedaba duplicada).
+    const onCloud = () => {
+      const pending = pendingActionRef.current;
+      if (pending) {
+        try { pending.commit(); } catch (e) { console.error('commit of pending action failed', e); }
+        clearUndoableAction();
+      }
+      loadBusinessState();
+    };
+    window.addEventListener(CLOUD_APPLIED_EVENT, onCloud);
+    return () => window.removeEventListener(CLOUD_APPLIED_EVENT, onCloud);
+  }, [loadBusinessState, clearUndoableAction]);
 
   /**
    * Reduce las portadas que se guardaron a tamaño completo (ver
@@ -1029,7 +1034,6 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     setTimerTime(session.timerTime ?? 0);
     setSessionStartTime(session.sessionStartTime ?? 0);
     setIsTimerActive(false);
-    setIsTimerPaused(true);
     // Se retomó: ninguna huella debe sobrevivir, o al siguiente arranque
     // volvería a ofrecerse rescatar una sesión que ya está en el reloj.
     if (userProfile) clearRecoverableSession(userProfile.id);
@@ -1052,23 +1056,23 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
         e.preventDefault();
         if (lastUndoableAction) {
           lastUndoableAction.undo();
-          setLastUndoableAction(null); // Prevent re-undoing and committing
+          clearUndoableAction(); // Prevent re-undoing and committing
         }
       }
     };
     window.addEventListener('keydown', handleUndo);
     return () => window.removeEventListener('keydown', handleUndo);
-  }, [lastUndoableAction]);
+  }, [lastUndoableAction, clearUndoableAction]);
 
   useEffect(() => {
     if (lastUndoableAction) {
       const timer = setTimeout(() => {
         lastUndoableAction.commit();
-        setLastUndoableAction(null);
+        clearUndoableAction();
       }, UNDO_TIMEOUT);
       return () => clearTimeout(timer);
     }
-  }, [lastUndoableAction]);
+  }, [lastUndoableAction, clearUndoableAction]);
 
   // Si la app se cierra dentro de la ventana de deshacer, el borrado
   // pendiente se confirma igual (si no, la canción "resucitaría" al reabrir).
@@ -1089,6 +1093,7 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     }
 
     const sync = () => {
+      if (!telemetryDue(userProfile.id)) return;
       void syncTelemetry({
         userId: userProfile.id,
         studySessions: getArrayFromLocalStorage<StudySession>(storageKeys.studySessions),
@@ -1116,7 +1121,6 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
 
   const resetTimerState = useCallback(() => {
     setIsTimerActive(false);
-    setIsTimerPaused(false);
     setSessionStartTime(0);
     setTimerTime(timerMode === 'focus' ? MIN_TIME : 0);
     setAutoFinishPending(false);
@@ -1167,7 +1171,6 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
       if (remaining === 0 && !finished) {
         finished = true;
         setIsTimerActive(false);
-        setIsTimerPaused(true);
         setAutoFinishPending(true);
         void notify({ text: () => ({ title: tr('Sesión terminada'), body: tr('Tu sesión de estudio ha terminado.') }), kind: 'sesion', route: '/temporizador' });
         // Con la vista flotante, Frame suele estar detrás de otras apps: al
@@ -1277,7 +1280,6 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
           if (s.timerMode === 'focus' && timerClock.get() === 0) return;
           const next = !s.isTimerActive;
           setIsTimerActive(next);
-          setIsTimerPaused(!next);
           if (next && s.sessionStartTime === 0) {
             setSessionStartTime(s.timerMode === 'focus' ? timerClock.get() : 1);
           }
@@ -1293,7 +1295,6 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
         case 'close': {
           if (s.isTimerActive) {
             setIsTimerActive(false);
-            setIsTimerPaused(true);
           }
           setMiniTimerView('hidden');
           break;
@@ -1309,7 +1310,6 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
           const nextMode: TimerMode = s.timerMode === 'focus' ? 'stopwatch' : 'focus';
           setTimerMode(nextMode);
           setIsTimerActive(false);
-          setIsTimerPaused(false);
           setTimerTime(0);
           break;
         }
@@ -1953,25 +1953,6 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     }
   }, [storageKeys]);
 
-  // Purga PERMANENTE del archivo de una asignatura: elimina sus tareas y
-  // recursos archivados, incluidos los adjuntos guardados en IndexedDB.
-  const purgeCourseArchive = useCallback((courseId: string) => {
-    if (!storageKeys) return;
-    const notesToPurge = archivedNotes.filter(n => n.courseId === courseId);
-    purgeTaskFiles(archivedTasks.filter(t => t.courseId === courseId));
-    const newArchivedTasks = archivedTasks.filter(t => t.courseId !== courseId);
-    const newArchivedNotes = archivedNotes.filter(n => n.courseId !== courseId);
-
-    setArchivedTasks(newArchivedTasks);
-    setArchivedNotes(newArchivedNotes);
-    setInLocalStorage(storageKeys.archivedTasks, newArchivedTasks);
-    setInLocalStorage(storageKeys.archivedNotes, newArchivedNotes);
-    notesToPurge.forEach(n => {
-      if (n.kind === 'file') void deleteImage(`noteFile_${n.id}`);
-    });
-    toast({ title: tr('Archivo vaciado'), description: tr('Los archivados de la asignatura se eliminaron definitivamente.') });
-  }, [storageKeys, archivedTasks, archivedNotes]);
-  
   const updateNotesOrder = useCallback((orderedNotes: Note[]) => {
     if (!storageKeys) return;
      const newOrderedNotes = orderedNotes.map((note, index) => ({
@@ -2255,12 +2236,6 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     updateStreakGoal({ mode });
   }, [storageKeys, updateStreakGoal]);
   
-  const setTaskSortMode = useCallback((mode: TaskSortMode) => {
-    if (!storageKeys) return;
-    setTaskSortModeState(mode);
-    setInLocalStorage(storageKeys.taskSortMode, mode);
-  }, [storageKeys]);
-
   const setPlayerVisible = useCallback((isVisible: boolean) => {
     if (!storageKeys) return;
     setPlayerVisibleState(isVisible);
@@ -2288,25 +2263,6 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
       return updated;
     });
   }, [storageKeys]);
-
-  const addPlaylist = useCallback((name: string, songIds: string[]) => {
-    if (!storageKeys) return;
-    const trimmedName = name.trim();
-    if (playlists.some(playlist => playlist.name.toLowerCase() === trimmedName.toLowerCase())) {
-      toast({
-        variant: "destructive",
-        title: tr('Playlist duplicada'),
-        description: tr('Ya existe una playlist con este nombre.'),
-      });
-      return;
-    }
-    const newPlaylist: Playlist = { id: crypto.randomUUID(), name: trimmedName, songIds, order: nextOrder(playlists) };
-    setPlaylists(prev => {
-        const updated = [...prev, newPlaylist];
-        setInLocalStorage(storageKeys.playlists, updated);
-        return updated;
-    });
-  }, [storageKeys, playlists]);
 
   const updatePlaylist = useCallback((id: string, updates: Partial<Playlist>) => {
     if (!storageKeys) return;
@@ -2469,27 +2425,6 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     });
   }, [storageKeys, spaces]);
 
-  const deleteSpace = useCallback((id: string) => {
-    if (!storageKeys) return;
-    
-    // Find the space to get its name for the toast message before it's deleted.
-    const spaceName = spaces.find(s => s.id === id)?.name || tr('Colección');
-    
-    // Create the new list of spaces without the one being deleted.
-    const updatedSpaces = spaces.filter(s => s.id !== id);
-    
-    // Update the state immediately for the UI.
-    setSpaces(updatedSpaces);
-    
-    // Persist the change directly to localStorage.
-    setInLocalStorage(storageKeys.spaces, updatedSpaces);
-    // La portada de la colección no debe quedarse huérfana en el equipo.
-    void deleteImage(`spaceImage_${id}`);
-
-    // Show a simple confirmation toast, since undo is no longer an option.
-    toast({ title: tr('Colección eliminada'), description: tr('«{spaceName}» se eliminó. Sus asignaturas siguen en Asignaturas.', { spaceName }) });
-  }, [storageKeys, spaces]);
-
   const addSongs = useCallback(async (newSongs: Song[]) => {
     if (newSongs.length === 0) return;
 
@@ -2537,76 +2472,6 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
       return updatedSongs;
     });
   }, [playingContext]);
-
-  const updateSong = useCallback(async (id: string, updates: Partial<Song>) => {
-    const base = songsRef.current.find(s => s.id === id);
-    if (!base) return;
-    const updatedSong: Song = { ...base, ...updates };
-    songsRef.current = songsRef.current.map(s => (s.id === id ? updatedSong : s));
-
-    setSongs(prev => prev.map(s => (s.id === id ? { ...s, ...updates } : s)));
-    setPlaybackQueue(prev => prev.map(s => (s.id === id ? { ...s, ...updates } : s)));
-    setCurrentSong(prev => (prev?.id === id ? { ...prev, ...updates } : prev));
-
-    try {
-      await saveSongMetadata(updatedSong);
-      toast({ title: tr('Canción actualizada'), description: tr('La portada de "{title}" ha sido cambiada.', { title: updatedSong.title }) });
-    } catch (e) {
-      console.error('No se pudo guardar la canción', id, e);
-      toast({ variant: 'destructive', title: tr('No se pudo guardar el cambio'), description: tr('El disco del equipo rechazó la escritura.') });
-    }
-  }, []);
-
-  const batchUpdateSongs = useCallback(async (updates: { id: string; picture: string }[]) => {
-    if (updates.length === 0 || !storageKeys) return;
-
-    // Un solo mapa y una sola pasada (antes se recorría la biblioteca entera
-    // por CADA portada: con 900 canciones, 810.000 comparaciones por lote).
-    const pictureById = new Map(updates.map(u => [u.id, u.picture]));
-    const ids = songsRef.current.filter(s => pictureById.has(s.id)).map(s => s.id);
-    if (ids.length === 0) return;
-
-    // Cada canción se lee JUSTO antes de guardarla: el lote tarda, y guardar
-    // la versión del principio pisaba un favorito marcado entretanto.
-    for (const id of ids) {
-        const live = songsRef.current.find(s => s.id === id);
-        if (!live) continue; // se borró mientras corría el lote
-        try {
-          await saveSongMetadata({ ...live, picture: pictureById.get(id)! });
-        } catch (e) {
-          console.error('No se pudo guardar la portada de', live.fileName, e);
-          pictureById.delete(id);
-        }
-    }
-
-    // Actualización FUNCIONAL: imponer la lista del principio borraba del
-    // estado las canciones que llegaron mientras corría el lote.
-    setSongs(prev => prev.map(s => (pictureById.has(s.id) ? { ...s, picture: pictureById.get(s.id)! } : s)));
-    
-    // Update current song if it was part of the batch
-    if(currentSong) {
-        const currentSongUpdate = updates.find(u => u.id === currentSong.id);
-        if (currentSongUpdate) {
-            setCurrentSong(prev => prev ? { ...prev, picture: currentSongUpdate.picture } : null);
-        }
-    }
-
-    // Update playback queue
-    setPlaybackQueue(prevQueue => {
-        const queueMap = new Map(updates.map(u => [u.id, u.picture]));
-        return prevQueue.map(s => {
-            if (queueMap.has(s.id)) {
-                return { ...s, picture: queueMap.get(s.id)! };
-            }
-            return s;
-        });
-    });
-
-    toast({
-        title: tr('Actualización completa'),
-        description: tr('{size} portadas de canciones fueron actualizadas.', { size: pictureById.size }),
-    });
-  }, [currentSong, storageKeys]);
 
   const deleteSong = useCallback(async (id: string) => {
     if (!storageKeys) return;
@@ -2791,8 +2656,6 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     setTimerTime,
     isTimerActive,
     setIsTimerActive,
-    isTimerPaused,
-    setIsTimerPaused,
     sessionStartTime,
     setSessionStartTime,
     timerMode,
@@ -2808,7 +2671,6 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     dailyPerformances,
     studyGoals,
     streakGoal,
-    completedTasksCount,
     completedTasksByCourse,
     archivedTasks,
     incompleteTasks,
@@ -2817,7 +2679,6 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     deleteIncompleteTask,
     updateIncompleteTask,
     archivedNotes,
-    purgeCourseArchive,
     removeTask,
     applySessionProgressToTasks,
     localEvents,
@@ -2858,7 +2719,6 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     getNotesForCourse,
     // Playlists
     playlists,
-    addPlaylist,
     mergePlaylistSongs,
     updatePlaylist,
     deletePlaylist,
@@ -2871,13 +2731,10 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     spaces,
     addSpace,
     updateSpace,
-    deleteSpace,
     // Music
     songs,
     areSongsLoading,
     addSongs,
-    updateSong,
-    batchUpdateSongs,
     deleteSong,
     toggleSongFavorite,
     currentSong,
@@ -2896,8 +2753,6 @@ export function CourseProvider({ children, userProfile }: { children: ReactNode,
     selectionMode,
     setSelectionMode,
     hasInteracted,
-    taskSortMode,
-    setTaskSortMode,
     isPlayerVisible,
     setPlayerVisible,
     // Mini temporizador flotante

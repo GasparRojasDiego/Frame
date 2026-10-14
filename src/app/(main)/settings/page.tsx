@@ -18,6 +18,7 @@ import {
   Monitor,
   CalendarDays,
   Copy,
+  LoaderCircle,
 } from 'lucide-react';
 import { accountCode } from '@/lib/account-code';
 import RealNameRow from '@/components/settings/RealNameRow';
@@ -34,19 +35,14 @@ import ProfileStats from '@/components/settings/ProfileStats';
 import ReportCenter from '@/components/settings/ReportCenter';
 import { APP_VERSION, BUILD_DATE } from '@/lib/version';
 import LegalDocument from '@/components/settings/LegalDocument';
-import { INFO_VERSION, infoDocument } from '@/lib/legal/info';
-import { TERMS_VERSION, termsDocument } from '@/lib/legal/terms';
-import { SUPPORT_VERSION, supportDocument } from '@/lib/legal/support';
-import { infoDocumentEn } from '@/lib/legal/info-en';
-import { termsDocumentEn } from '@/lib/legal/terms-en';
-import { supportDocumentEn } from '@/lib/legal/support-en';
+import { INFO_VERSION, SUPPORT_VERSION, TERMS_VERSION } from '@/lib/legal/versions';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 import { updateUsername } from '@/lib/supabase/auth';
 import StreakStatusCard from '@/components/settings/StreakStatusCard';
 import EchoWord from '@/components/shared/EchoWord';
 
 
-import { dateLocale, getLang, setLang, tr, useLang, type Lang } from '@/lib/i18n';
+import { dateLocale, setLang, tr, useLang, type Lang } from '@/lib/i18n';
 import { usernameLabel } from '@/lib/enum-labels';
 
 const daysOfWeek: { key: keyof StudyGoals; label: string }[] = [
@@ -130,6 +126,28 @@ function ThemeSelector() {
       </div>
     </div>
   );
+}
+
+/** El documento legal se carga al abrir su recuadro (y solo en el idioma de la interfaz). */
+function LegalBody({ load }: { load: () => Promise<string> }) {
+  const [markdown, setMarkdown] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void load()
+      .then((text) => alive && setMarkdown(text))
+      .catch(() => alive && setMarkdown(tr('No se pudo abrir el documento.')));
+    return () => {
+      alive = false;
+    };
+  }, [load]);
+  if (markdown === null) {
+    return (
+      <div className="flex h-40 items-center justify-center">
+        <LoaderCircle className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+  return <LegalDocument markdown={markdown} />;
 }
 
 export default function SettingsPage() {
@@ -320,8 +338,9 @@ export default function SettingsPage() {
   // Los tres documentos de la app, con los datos de esta instalación ya
   // interpolados (versión, identificador y fecha de la compilación). En
   // inglés, su traducción (el español es el que manda: cláusula 29).
+  const lang = useLang();
   const LEGAL_DIALOGS = useMemo(() => {
-    const english = getLang() === 'en';
+    const english = lang === 'en';
     const appVersion = APP_VERSION;
     const installId = accountCode(userProfile?.id) ?? tr('sin identificador');
     const stamp = format(parseISO(BUILD_DATE), tr('d \'de\' MMMM \'de\' yyyy'), { locale: dateLocale() });
@@ -332,24 +351,34 @@ export default function SettingsPage() {
         label: tr('Información del sistema'),
         title: tr('Información y novedades'),
         subtitle: tr('Frame {appVersion} · documento versión {INFO_VERSION}', { appVersion, INFO_VERSION }),
-        markdown: (english ? infoDocumentEn : infoDocument)({ appVersion, installId, releaseDate: stamp }),
+        load: async () =>
+          english
+            ? (await import('@/lib/legal/info-en')).infoDocumentEn({ appVersion, installId, releaseDate: stamp })
+            : (await import('@/lib/legal/info')).infoDocument({ appVersion, installId, releaseDate: stamp }),
       },
       {
         key: 'terms',
         label: tr('Términos de servicio'),
         title: tr('Términos, condiciones y privacidad'),
         subtitle: tr('Versión {TERMS_VERSION} · Legislación peruana · Ley N.º 29733 y Ley N.º 29571', { TERMS_VERSION }),
-        markdown: (english ? termsDocumentEn : termsDocument)({ appVersion, effectiveDate: stamp }),
+        load: async () =>
+          english
+            ? (await import('@/lib/legal/terms-en')).termsDocumentEn({ appVersion, effectiveDate: stamp })
+            : (await import('@/lib/legal/terms')).termsDocument({ appVersion, effectiveDate: stamp }),
       },
       {
         key: 'support',
         label: tr('Reportar un error'),
         title: tr('Soporte y reporte de errores'),
         subtitle: tr('Versión {SUPPORT_VERSION} · Incluye el puerto seguro para vulnerabilidades', { SUPPORT_VERSION }),
-        markdown: (english ? supportDocumentEn : supportDocument)({ appVersion, installId, effectiveDate: stamp }),
+        load: async () =>
+          english
+            ? (await import('@/lib/legal/support-en')).supportDocumentEn({ appVersion, installId, effectiveDate: stamp })
+            : (await import('@/lib/legal/support')).supportDocument({ appVersion, installId, effectiveDate: stamp }),
       },
     ];
-  }, [userProfile]);
+    // El idioma también: al cambiarlo en Ajustes, los documentos cambian con él.
+  }, [userProfile, lang]);
 
 
   return (
@@ -566,7 +595,7 @@ export default function SettingsPage() {
             {/* Expediente completo: sustituye a las tres cifras sueltas
                 (tiempo, tareas y favoritas) que había antes. */}
             <div className="pt-12">
-                <ProfileStats userProfile={userProfile} />
+                <ProfileStats />
             </div>
 
             {/* Izquierda: modo de medición, meta de racha y, debajo, «Tu racha».
@@ -658,7 +687,7 @@ export default function SettingsPage() {
             titular puede rellenar se ven resaltados en vez de colarse.
             ------------------------------------------------------------------ */}
         <div className="flex flex-wrap items-center justify-center gap-2 text-center text-xs text-muted-foreground">
-          {LEGAL_DIALOGS.map(({ key, label, title, subtitle, markdown }, index) => (
+          {LEGAL_DIALOGS.map(({ key, label, title, subtitle, load }, index) => (
             <React.Fragment key={key}>
               {index > 0 && <span className="text-muted-foreground">·</span>}
               <Dialog>
@@ -683,7 +712,7 @@ export default function SettingsPage() {
                       de páginas y aquí hace falta una barra VISIBLE que diga
                       cuánto queda por leer. */}
                   <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-                    <LegalDocument markdown={markdown} />
+                    <LegalBody load={load} />
                   </div>
                 </DialogContent>
               </Dialog>

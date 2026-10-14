@@ -57,6 +57,7 @@ import {
 import { useCourse } from '@/context/CourseContext';
 import { dateLocale, tr } from '@/lib/i18n';
 import { difficultyLabel, priorityLabel, taskKindLabel } from '@/lib/enum-labels';
+import { parseIsoSafe } from '@/lib/dates';
 
 // ============================================================
 // Tarjeta de pendiente.
@@ -247,7 +248,7 @@ export const TaskCard = ({
   const KindIcon = TASK_KIND_META[shownKind].icon;
   const shownDifficulty = isEditing ? editedDifficulty : task.difficulty;
   const shownEstimate = isEditing ? editedEstimate : (task.estimatedMinutes ?? 0);
-  const shownDue = isEditing ? (editedDueDate ?? null) : task.dueDate ? parseISO(task.dueDate) : null;
+  const shownDue = isEditing ? (editedDueDate ?? null) : parseIsoSafe(task.dueDate);
   const due = shownDue ? describeDueDate(shownDue) : null;
   const shownReminder = isEditing ? editedReminder : reminderFromTask(task);
 

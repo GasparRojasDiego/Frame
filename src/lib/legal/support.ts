@@ -7,7 +7,9 @@
 // vulnerabilidad de buena fe.
 // ============================================================
 
-export const SUPPORT_VERSION = '3.2';
+import { SUPPORT_VERSION } from './versions.ts';
+
+export { SUPPORT_VERSION };
 
 export function supportDocument({
   appVersion,

@@ -50,7 +50,6 @@ export default function TimerDisplay({ onSessionComplete, disabled = false }: Ti
     setTimerTime,
     isTimerActive: isActive,
     setIsTimerActive,
-    setIsTimerPaused,
     sessionStartTime,
     setSessionStartTime,
     resetTimerState,
@@ -150,10 +149,8 @@ export default function TimerDisplay({ onSessionComplete, disabled = false }: Ti
     
     // If we are pausing, set the global pause state
     if (!newIsActive) {
-      setIsTimerPaused(true);
     } else {
       // If we are starting or resuming, unset the global pause state
-      setIsTimerPaused(false);
     }
   };
   

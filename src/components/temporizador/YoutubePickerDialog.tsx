@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { ArrowLeft, Clock3, LoaderCircle, Plus, Video } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -40,8 +40,11 @@ export default function YoutubePickerDialog({
   const [info, setInfo] = useState<YoutubeVideoInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const request = useRef(0);
+
   useEffect(() => {
     if (!open) {
+      request.current += 1;
       setInfo(null);
       setError(null);
       setLoading(false);
@@ -49,6 +52,8 @@ export default function YoutubePickerDialog({
   }, [open]);
 
   const inspect = async () => {
+    const ticket = ++request.current;
+    const current = () => ticket === request.current;
     setLoading(true);
     setInfo(null);
     setError(null);
@@ -56,14 +61,15 @@ export default function YoutubePickerDialog({
       const url = await invoke<string>('youtube_embed_current_url');
       const id = youtubeIdFromUrl(url);
       if (!id) {
-        setError(tr('Abre primero el vídeo que quieres guardar: esta página no es un vídeo.'));
+        if (current()) setError(tr('Abre primero el vídeo que quieres guardar: esta página no es un vídeo.'));
         return;
       }
-      setInfo(await readYoutubeVideo(id));
+      const video = await readYoutubeVideo(id);
+      if (current()) setInfo(video);
     } catch (e) {
-      setError(cleanError(e) || tr('No se pudo leer el vídeo.'));
+      if (current()) setError(cleanError(e) || tr('No se pudo leer el vídeo.'));
     } finally {
-      setLoading(false);
+      if (current()) setLoading(false);
     }
   };
 

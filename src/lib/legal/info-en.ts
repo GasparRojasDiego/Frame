@@ -4,7 +4,7 @@
 // cambia el otro.
 // ============================================================
 
-import { TERMS_VERSION } from './terms';
+import { TERMS_VERSION } from './versions.ts';
 
 export function infoDocumentEn({
   appVersion,
@@ -142,6 +142,8 @@ Support is offered for the current stable version and the one immediately before
 ## 8 · Version history
 
 **${appVersion} — ${releaseDate}**
+
+*1.7.0:* **importing music with subfolders**: each song finds its lyrics (.lrc or .txt) and its cover even if they are in other folders (“Lyrics”, “Covers”…), with names that don’t match letter by letter (“01 - Song” and “song.lrc”, with or without accents, “Artist - Title”); songs with the same name in different folders (CD1 and CD2) are no longer lost; also .m4b, .jfif and .gif · habit consistency only counts the days each habit is due and since you created it, and creating a new one no longer sinks your streak or record · the same streak on Home and in Settings · a damaged date coming from another device no longer prevents Frame from opening · a deletion you can still undo no longer reappears when changes arrive from another device · less traffic with the cloud (checks spaced out, images uploaded reduced) and update checks every 6 hours · Frame no longer stores Google tokens on the computer · copies of attachments marked as downloaded from the Internet · Focus’s floating window opens faster · a lighter Frame: less code, and legal texts that load when you open them · the usage panel for the person responsible leaves the app.
 
 *1.6.9:* the **gallery images** you give subjects, collections and playlists finally appear on your other devices (they arrived but weren’t drawn) · **the heart on songs** travels between your devices too, by title and artist · Frame keeps whatever a newer version adds to your backup, even if it doesn’t use it · an in-depth **Usage panel** for the person responsible for Frame: world map, continents, countries and cities, a card per student with their details, periods from one day to a year or of your choice, the hours when people study, which features are used, cohort retention and a **Report** in Word, PDF or Markdown · Terms and Privacy Policy 5.1: the usage profile that is sent (approximate city, time zone, languages, device type, study hours and how many items you have in each feature, never their content).
 

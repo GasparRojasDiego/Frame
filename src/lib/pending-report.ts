@@ -351,9 +351,10 @@ export function buildPendingReport(
     pieces.push('. ');
     if (overdue.length > 0) {
       pieces.push(
-        `${overdue.length} ${overdue.length === 1 ? tr('está vencida') : tr('están vencidas')} y ${
-          dueToday.length > 0 ? tr('{length} {p} hoy', { length: dueToday.length, p: dueToday.length === 1 ? tr('vence') : tr('vencen') }) : tr('ninguna vence hoy')
-        }. `
+        `${tr('{list} y {last}', {
+          list: `${overdue.length} ${overdue.length === 1 ? tr('está vencida') : tr('están vencidas')}`,
+          last: dueToday.length > 0 ? tr('{length} {p} hoy', { length: dueToday.length, p: dueToday.length === 1 ? tr('vence') : tr('vencen') }) : tr('ninguna vence hoy'),
+        })}. `
       );
     } else if (dueToday.length > 0) {
       pieces.push(tr('Ninguna está vencida; {length} {p} hoy. ', { length: dueToday.length, p: dueToday.length === 1 ? tr('vence') : tr('vencen') }));
@@ -412,18 +413,18 @@ export function buildPendingReport(
     kind: 'stacked',
     caption: tr('Reparto por importancia'),
     items: [
-      { label: tr('Alta'), percent: high, value: String(high), tone: 'danger' },
-      { label: tr('Media'), percent: medium, value: String(medium), tone: 'warn' },
-      { label: tr('Baja'), percent: low, value: String(low), tone: 'muted' },
+      { label: priorityLabel('Alta'), percent: high, value: String(high), tone: 'danger' },
+      { label: priorityLabel('Media'), percent: medium, value: String(medium), tone: 'warn' },
+      { label: priorityLabel('Baja'), percent: low, value: String(low), tone: 'muted' },
     ],
   });
   blocks.push({
     kind: 'stacked',
     caption: tr('Reparto por dificultad'),
     items: [
-      { label: tr('Difícil'), percent: hard, value: String(hard), tone: 'danger' },
-      { label: tr('Media'), percent: mediumHard, value: String(mediumHard), tone: 'warn' },
-      { label: tr('Fácil'), percent: easy, value: String(easy), tone: 'ok' },
+      { label: difficultyLabel('Difícil'), percent: hard, value: String(hard), tone: 'danger' },
+      { label: difficultyLabel('Media'), percent: mediumHard, value: String(mediumHard), tone: 'warn' },
+      { label: difficultyLabel('Fácil'), percent: easy, value: String(easy), tone: 'ok' },
     ],
   });
 
@@ -492,7 +493,7 @@ export function buildPendingReport(
         note: [
           row.courseName,
           deadlineLabel(row.daysLeft).text,
-          row.task.priority !== 'Baja' ? tr('importancia {p}', { p: row.task.priority.toLowerCase() }) : null,
+          row.task.priority !== 'Baja' ? tr('importancia {p}', { p: priorityLabel(row.task.priority).toLowerCase() }) : null,
           row.estimated > 0 ? hm(row.estimated) : null,
         ]
           .filter(Boolean)
@@ -544,7 +545,7 @@ export function buildPendingReport(
         `${spaceRows.length} ${spaceRows.length === 1 ? tr('pendiente') : tr('pendientes')}`,
         `${spaceCourses.length} ${spaceCourses.length === 1 ? tr('asignatura') : tr('asignaturas')}`,
         spaceOverdue > 0 ? tr('{spaceOverdue} vencidas', { spaceOverdue }) : null,
-        spaceEstimated > 0 ? `${hm(spaceEstimated)} estimados` : null,
+        spaceEstimated > 0 ? tr('{hm} estimados', { hm: hm(spaceEstimated) }) : null,
       ]
         .filter(Boolean)
         .join('  ·  '),
@@ -603,7 +604,7 @@ export function buildPendingReport(
       note: [
         `${monthRows.length} ${monthRows.length === 1 ? tr('entrega') : tr('entregas')}`,
         monthOverdue > 0 ? tr('{monthOverdue} vencidas', { monthOverdue }) : null,
-        monthEstimated > 0 ? `${hm(monthEstimated)} estimados` : null,
+        monthEstimated > 0 ? tr('{hm} estimados', { hm: hm(monthEstimated) }) : null,
       ]
         .filter(Boolean)
         .join('  ·  '),

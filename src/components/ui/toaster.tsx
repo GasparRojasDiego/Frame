@@ -1,4 +1,4 @@
-import { useToast } from "@/hooks/use-toast";
+import { useToastList } from "@/hooks/use-toast";
 import {
   Toast,
   ToastClose,
@@ -10,7 +10,7 @@ import {
 import { tr } from '@/lib/i18n';
 
 export function Toaster() {
-  const { toasts } = useToast()
+  const { toasts } = useToastList()
 
   return (
     // Lo que anuncia el lector de pantalla: Radix lo trae en inglés fijo.

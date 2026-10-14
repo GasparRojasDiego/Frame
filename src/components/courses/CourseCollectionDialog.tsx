@@ -104,7 +104,7 @@ export default function CourseCollectionDialog({
             {tr('Todavía no hay colecciones. Créala desde «Añadir» y podrás traer aquí esta asignatura.')}
           </p>
         ) : (
-          <ScrollArea className="max-h-[300px] pr-2">
+          <ScrollArea className="pr-2 [&>[data-radix-scroll-area-viewport]]:max-h-[300px]">
             <div className="space-y-1">
               <button
                 type="button"

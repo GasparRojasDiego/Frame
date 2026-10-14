@@ -1,13 +1,15 @@
 import { useMemo } from 'react';
-import { eachDayOfInterval, format, parseISO, startOfToday, subDays } from 'date-fns';
+import { eachDayOfInterval, format, startOfToday, subDays } from 'date-fns';
 import { Flame, Target, Trophy } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useCourse } from '@/context/CourseContext';
 import { cn } from '@/lib/utils';
 import { sessionSeconds, formatMinutes } from '@/lib/duration';
-import type { DailyPerformance } from '@/types';
 import { EchoTileHeader } from '@/components/shared/EchoWord';
 import { dateLocale, tr } from '@/lib/i18n';
+import { localDayKey } from '@/lib/dates';
+import { currentStreak, streakJudge } from '@/lib/streak';
+import { useTodayKey } from '@/hooks/use-today';
 
 // ============================================================
 // Estado de la racha, junto a la meta que la define.
@@ -17,61 +19,46 @@ import { dateLocale, tr } from '@/lib/i18n';
 // racha viva, la mejor histórica y los últimos 14 días de un vistazo.
 // ============================================================
 
-const GRADE_ORDER: DailyPerformance['grade'][] = ['C', 'B', 'A', 'AD'];
-
 /** Días hacia atrás que dibuja la tira. */
 const STRIP_DAYS = 14;
 
 export default function StreakStatusCard() {
-  const { studySessions, dailyPerformances, streakGoal, selectionMode } = useCourse();
+  const { studySessions, dailyPerformances, streakGoal, studyGoals } = useCourse();
+  // Al cambiar el día, la tira y la racha se recalculan solas.
+  const todayKey = useTodayKey();
 
   const data = useMemo(() => {
     const today = startOfToday();
+    // La misma regla que Inicio y la barra superior (lib/streak.ts).
+    const streakData = {
+      now: new Date(),
+      streakGoal,
+      studySessions: studySessions ?? [],
+      dailyPerformances: dailyPerformances ?? [],
+      studyGoals,
+    };
+    const met = streakJudge(streakData);
+    const current = currentStreak(streakData);
 
-    // Minutos y calificación por día, en una sola pasada.
+    // Minutos por día, para el detalle de la tira.
     const minutesByDay = new Map<string, number>();
     for (const session of studySessions ?? []) {
-      try {
-        const key = format(parseISO(session.startTime), 'yyyy-MM-dd');
-        minutesByDay.set(key, (minutesByDay.get(key) ?? 0) + sessionSeconds(session) / 60);
-      } catch {
-        /* fecha corrupta: se ignora */
-      }
-    }
-    const gradeByDay = new Map<string, DailyPerformance['grade']>();
-    for (const p of dailyPerformances ?? []) gradeByDay.set(p.id, p.grade);
-
-    /** ¿Ese día cumplió la meta vigente? */
-    const met = (key: string): boolean => {
-      if (selectionMode === 'rendimiento') {
-        const grade = gradeByDay.get(key);
-        if (!grade) return false;
-        return GRADE_ORDER.indexOf(grade) >= GRADE_ORDER.indexOf(streakGoal.grade);
-      }
-      return (minutesByDay.get(key) ?? 0) >= (streakGoal.minutes || 0);
-    };
-
-    // Racha viva: se cuenta hacia atrás desde hoy. Que hoy aún no esté
-    // cumplido no rompe la racha — el día no ha terminado.
-    let current = 0;
-    for (let i = 0; i < 400; i++) {
-      const key = format(subDays(today, i), 'yyyy-MM-dd');
-      if (met(key)) current += 1;
-      else if (i > 0) break;
+      const key = localDayKey(session.startTime);
+      if (key) minutesByDay.set(key, (minutesByDay.get(key) ?? 0) + sessionSeconds(session) / 60);
     }
 
     // Mejor racha histórica sobre todos los días con actividad registrada.
-    const keys = new Set<string>([...minutesByDay.keys(), ...gradeByDay.keys()]);
+    let firstKey = '';
+    for (const key of minutesByDay.keys()) if (!firstKey || key < firstKey) firstKey = key;
+    for (const p of dailyPerformances ?? []) if (p.date && (!firstKey || p.date < firstKey)) firstKey = p.date;
     let best = 0;
     let run = 0;
-    if (keys.size > 0) {
-      const sorted = [...keys].sort();
-      const first = parseISO(`${sorted[0]}T00:00:00`);
-      for (const day of eachDayOfInterval({ start: first, end: today })) {
-        if (met(format(day, 'yyyy-MM-dd'))) {
+    if (firstKey && firstKey <= todayKey) {
+      for (const day of eachDayOfInterval({ start: new Date(`${firstKey}T00:00:00`), end: today })) {
+        if (met(localDayKey(day))) {
           run += 1;
           best = Math.max(best, run);
-        } else {
+        } else if (localDayKey(day) !== todayKey) {
           run = 0;
         }
       }
@@ -79,7 +66,7 @@ export default function StreakStatusCard() {
 
     const strip = eachDayOfInterval({ start: subDays(today, STRIP_DAYS - 1), end: today }).map(
       (day) => {
-        const key = format(day, 'yyyy-MM-dd');
+        const key = localDayKey(day);
         return {
           key,
           label: format(day, tr('EEEEE'), { locale: dateLocale() }),
@@ -90,11 +77,11 @@ export default function StreakStatusCard() {
       }
     );
 
-    return { current, best, strip };
-  }, [studySessions, dailyPerformances, streakGoal, selectionMode]);
+    return { current, best: Math.max(best, current), strip };
+  }, [studySessions, dailyPerformances, streakGoal, studyGoals, todayKey]);
 
   const goalLabel =
-    selectionMode === 'rendimiento'
+    streakGoal.mode === 'rendimiento'
       ? tr('calificación {grade} o mejor', { grade: streakGoal.grade })
       : tr('{minutes} de estudio', { minutes: formatMinutes(streakGoal.minutes || 0) });
 

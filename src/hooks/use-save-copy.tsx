@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { ToastAction } from '@/components/ui/toast';
 import { useToast } from '@/hooks/use-toast';
-import { blobToBase64, browserDownload, folderOf } from '@/lib/report-export';
+import { blobToBase64, browserDownload, folderOf } from '@/lib/file-save';
 import { errorText, tr } from '@/lib/i18n';
 
 // ============================================================

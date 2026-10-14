@@ -99,7 +99,7 @@ const SEPARATOR = /\s+[-–—~]+\s+|\s*[–—]\s*|\s+-{2,}\s+/;
  * Un número sin cero delante y sin signo detrás («7 Rings», «99 Problems») es
  * parte del título y no se toca.
  */
-const TRACK_PREFIX =
+export const TRACK_PREFIX =
   /^\s*(?:(?:cd|disc|disco)\s*\d{1,2}\s*[-_.]?\s*)?(?:(?:track|pista)\s*\d{1,3}\s*[-_.):]?\s*|\d{1,2}\s*[-_.]\s*\d{1,3}(?:\s*[-_.)]\s*|\s+)|0\d{1,2}(?:\s*[-_.)]\s*|\s+)|\d{1,3}\s*(?:[-_.)]|\s-\s)\s*)(?=\S)/i;
 
 function tidy(value: string): string {

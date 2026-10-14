@@ -38,7 +38,7 @@ import type {
 import { sessionSeconds } from '@/lib/duration';
 import { richNoteToLine } from '@/lib/rich-note';
 import type { DocBlock, DocModel, DocTone } from '@/lib/report-doc';
-import { dateLocale, tr } from '@/lib/i18n';
+import { dateLocale, decimalText, tr } from '@/lib/i18n';
 
 export type ReportScope = 'semana' | 'mes' | 'anio';
 
@@ -637,7 +637,7 @@ function performanceBlocks(data: ReportData, options: PerformanceDocOptions = {}
       { label: tr('Puntualidad'), value: punctuality, note: tr('entregas dentro de plazo') },
       {
         label: tr('Calificación media'),
-        value: data.gradeAverage !== null ? `${data.gradeAverage.toFixed(1)} / 20` : '—',
+        value: data.gradeAverage !== null ? `${decimalText(data.gradeAverage)} / 20` : '—',
         note:
           data.gradeAverage !== null
             ? tr('AD {AD} · A {A} · B {B} · C {C}', { AD: data.gradeCounts.AD, A: data.gradeCounts.A, B: data.gradeCounts.B, C: data.gradeCounts.C })
@@ -743,7 +743,7 @@ function performanceBlocks(data: ReportData, options: PerformanceDocOptions = {}
     });
     blocks.push({
       kind: 'paragraph',
-      text: tr('La calificación diaria se calcula sobre 20 a partir de la valoración de enfoque de cada sesión y del tiempo frente a la meta del día. La media del periodo es {p} sobre {graded} {p2}.', { p: data.gradeAverage.toFixed(1), graded, p2: graded === 1 ? tr('día calificado') : tr('días calificados') }),
+      text: tr('La calificación diaria se calcula sobre 20 a partir de la valoración de enfoque de cada sesión y del tiempo frente a la meta del día. La media del periodo es {p} sobre {graded} {p2}.', { p: decimalText(data.gradeAverage), graded, p2: graded === 1 ? tr('día calificado') : tr('días calificados') }),
       tone: 'muted',
     });
   }

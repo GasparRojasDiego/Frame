@@ -20,6 +20,13 @@ export function getSupabase(): SupabaseClient | null {
       flowType: 'pkce',
       storageKey: 'aether-auth',
     },
+    // Si el canal en vivo no puede conectar (servicio caído, o el tope de
+    // conexiones simultáneas del plan lleno), cada equipo reintenta cada vez más
+    // espaciado y al azar: 1 s, 2 s, 4 s… hasta 5 min. Por defecto insistía cada
+    // 10 s para siempre, todos a la vez.
+    realtime: {
+      reconnectAfterMs: (tries: number) => Math.min(300_000, 1000 * 2 ** Math.max(0, tries - 1)) * (0.5 + Math.random()),
+    },
   });
 
   return client;

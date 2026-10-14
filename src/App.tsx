@@ -21,7 +21,6 @@ const pages = {
   cursos: () => import('@/app/(main)/cursos/page'),
   knowledge: () => import('@/app/(main)/knowledge/page'),
   settings: () => import('@/app/(main)/settings/page'),
-  uso: () => import('@/app/(main)/uso/page'),
 };
 
 const TareasPage = lazy(pages.tareas);
@@ -36,7 +35,6 @@ const PlaylistsPage = lazy(pages.playlists);
 const CursosPage = lazy(pages.cursos);
 const KnowledgePage = lazy(pages.knowledge);
 const SettingsPage = lazy(pages.settings);
-const UsagePage = lazy(pages.uso);
 
 function usePrefetchPages() {
   useEffect(() => {
@@ -69,9 +67,6 @@ export default function App() {
           <Route path="/cursos" element={<CursosPage />} />
           <Route path="/knowledge" element={<KnowledgePage />} />
           <Route path="/settings" element={<SettingsPage />} />
-          {/* Panel de uso: solo existe para el responsable de Frame; para el
-              resto la propia página redirige a Inicio. */}
-          <Route path="/uso" element={<UsagePage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

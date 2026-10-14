@@ -371,7 +371,7 @@ export default function PlaylistDetailsClient({ id }: { id: string }) {
   const totalLabel = songsToShow.length === 0
     ? null
     : measuring
-      ? 'calculando…'
+      ? tr('calculando…')
       : totalSeconds > 0
         ? formatHoursMinutes(totalSeconds / 60)
         : null;

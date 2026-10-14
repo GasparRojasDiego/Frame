@@ -18,7 +18,9 @@
 // que solo el titular puede rellenar.
 // ============================================================
 
-export const TERMS_VERSION = '5.1';
+import { TERMS_VERSION } from './versions.ts';
+
+export { TERMS_VERSION };
 
 export function termsDocument({ appVersion, effectiveDate }: { appVersion: string; effectiveDate: string }): string {
   return `# Términos y Condiciones de Uso de Frame

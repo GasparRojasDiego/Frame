@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
-import { WORLD_SHAPES, WORLD_VIEWBOX } from '@/lib/world-map';
+import { WORLD_SHAPES, WORLD_VIEWBOX } from '@m/lib/world-map';
 import { cn } from '@/lib/utils';
-import { tr } from '@/lib/i18n';
-import { countryName } from '@/components/uso/UsageBits';
+import { tr } from '@m/lib/i18n';
+import { countryName } from '@m/components/UsageBits';
 
 // ============================================================
 // Mapa del mundo del Panel de uso (1.6.9): cada país se pinta más fuerte

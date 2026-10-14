@@ -13,9 +13,12 @@ import { EchoTileHeader } from '@/components/shared/EchoWord';
 import { cn } from '@/lib/utils';
 import { useCourse } from '@/context/CourseContext';
 import { sessionSeconds, formatMinutes, formatDurationLabel } from '@/lib/duration';
-import type { TaskDifficulty, UserProfile } from '@/types';
+import type { TaskDifficulty } from '@/types';
 import { tr } from '@/lib/i18n';
 import { dayInitial, fromSunday } from '@/lib/day-names';
+import { localDayKey } from '@/lib/dates';
+import { difficultyLabel } from '@/lib/enum-labels';
+import { useTodayKey } from '@/hooks/use-today';
 
 // ============================================================
 // Expediente del usuario, en collage: las piezas NO miden todas lo mismo —
@@ -79,8 +82,9 @@ const SectionTitle = ({
   </EchoTileHeader>
 );
 
-export default function ProfileStats({ userProfile }: { userProfile: UserProfile | null }) {
+export default function ProfileStats() {
   const { studySessions, archivedTasks } = useCourse();
+  const todayKey = useTodayKey();
 
   const stats = useMemo(() => {
     const sessions = studySessions ?? [];
@@ -95,9 +99,8 @@ export default function ProfileStats({ userProfile }: { userProfile: UserProfile
     for (const session of sessions) {
       // Día LOCAL: cortar la cadena ISO da el día en UTC y en Perú lo estudiado
       // de noche caía en el día siguiente (la barra de hoy salía vacía).
-      const started = new Date(session.startTime);
-      if (Number.isNaN(started.getTime())) continue;
-      const key = `${started.getFullYear()}-${String(started.getMonth() + 1).padStart(2, '0')}-${String(started.getDate()).padStart(2, '0')}`;
+      const key = localDayKey(session.startTime);
+      if (!key) continue;
       minutesByDay.set(key, (minutesByDay.get(key) ?? 0) + sessionSeconds(session) / 60);
     }
 
@@ -105,7 +108,7 @@ export default function ProfileStats({ userProfile }: { userProfile: UserProfile
     const strip = Array.from({ length: 21 }, (_, index) => {
       const day = new Date(today);
       day.setDate(day.getDate() - (20 - index));
-      const key = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+      const key = localDayKey(day);
       return {
         key,
         minutes: minutesByDay.get(key) ?? 0,
@@ -183,7 +186,7 @@ export default function ProfileStats({ userProfile }: { userProfile: UserProfile
       byDifficulty,
       punctuality: withDue > 0 ? onTime / withDue : null,
     };
-  }, [studySessions, archivedTasks]);
+  }, [studySessions, archivedTasks, todayKey]);
 
   const stripMax = Math.max(30, ...stats.strip.map((d) => d.minutes));
   const difficultyData = DIFFICULTY_ORDER.map((level) => ({
@@ -337,7 +340,7 @@ export default function ProfileStats({ userProfile }: { userProfile: UserProfile
                         className="h-2 w-2 shrink-0 rounded-full"
                         style={{ backgroundColor: DIFFICULTY_HEX[level] }}
                       />
-                      <span className="flex-1 text-muted-foreground">{level}</span>
+                      <span className="flex-1 text-muted-foreground">{difficultyLabel(level)}</span>
                       <span className="font-semibold tabular-nums text-foreground">
                         {stats.byDifficulty.get(level) ?? 0}
                       </span>

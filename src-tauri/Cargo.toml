@@ -1,6 +1,6 @@
 [package]
 name = "frame"
-version = "1.6.9"
+version = "1.7.0"
 description = "Sistema Operativo de Productividad"
 authors = ["VT Asvent <vt.asvent@gmail.com>"]
 edition = "2021"
@@ -23,7 +23,8 @@ tauri-plugin-process = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # La misma versión que usa el actualizador: una sola copia en el binario.
-reqwest = { version = "0.13", default-features = false, features = ["json", "form", "rustls-no-provider"] }
+# `system-proxy`: el proxy configurado en Windows (colegios, empresas), 1.7.0.
+reqwest = { version = "0.13", default-features = false, features = ["json", "form", "rustls-no-provider", "system-proxy"] }
 # Proveedor criptográfico de rustls: el `ring` que el actualizador ya trae.
 rustls = { version = "0.23", default-features = false, features = ["ring"] }
 base64 = "0.22"

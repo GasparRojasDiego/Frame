@@ -29,19 +29,10 @@ const CLIENT_SECRET = import.meta.env.VITE_GOOGLE_CLIENT_SECRET as string | unde
 export const isGoogleConfigured = Boolean(CLIENT_ID);
 
 // Ámbitos: solo la identidad (ver la cabecera).
-const SCOPES = {
-  identity: ['openid', 'email', 'profile'],
-} as const;
+const IDENTITY_SCOPES = ['openid', 'email', 'profile'];
 
-type IntegrationKey = keyof typeof SCOPES;
-
-interface StoredTokens {
+interface GoogleTokens {
   accessToken: string;
-  refreshToken?: string;
-  /** epoch ms en el que expira accessToken */
-  expiresAt: number;
-  /** ámbitos concedidos (space-separated, como los devuelve Google) */
-  scope: string;
   idToken?: string;
 }
 
@@ -54,122 +45,27 @@ interface GoogleIdentity {
   picture?: string;
 }
 
-interface GoogleAccount {
-  identity: GoogleIdentity;
-  tokens: StoredTokens;
-}
-
-const ACCOUNTS_KEY = 'googleAccounts';
-/** mapa integración → sub de la cuenta que la atiende */
-const BINDINGS_KEY = 'googleIntegrationAccounts';
-/** identidad principal (la usada para iniciar sesión en Frame) */
-const IDENTITY_KEY = 'googleIdentity';
-/** clave legada (una sola cuenta) — se migra automáticamente */
-const LEGACY_TOKENS_KEY = 'googleTokens';
-
-// --- Persistencia (localStorage, POR PERFIL de Frame) ---
+// --- Nada de Google se guarda en el equipo (1.7.0) ---
 //
-// Estas claves eran globales («un solo usuario por máquina»). En un equipo
-// compartido, el segundo estudiante heredaba las cuentas de Google del primero:
-// `hasScopes('gmail')` daba verdadero y veía su bandeja y sus clases de
-// Classroom. Ahora cada clave lleva el id del perfil activo.
+// Hasta la 1.6.9 se guardaban el token de acceso, el de renovación y el
+// id_token de cada cuenta en localStorage, en claro, sin que nada los leyera:
+// eran restos de la vinculación de Gmail y Classroom por API (retirada en la
+// 1.6.7). Con el de renovación —y el secreto de cliente, que va en la app—
+// cualquiera con acceso al perfil del equipo podía volver a entrar en la
+// cuenta de Frame. Ahora el token solo vive en memoria durante el acceso, y al
+// arrancar y al salir se borra lo que dejaron las versiones anteriores.
+const STORED_PREFIXES = ['googleAccounts', 'googleIntegrationAccounts', 'googleIdentity', 'googleTokens'];
 
-/** Sufijo del perfil activo ('' mientras aún no hay perfil, p. ej. en pleno
- *  acceso con Google: lo escrito entonces se adopta al primer uso con perfil). */
-function profileSuffix(): string {
+/** Borra cualquier token o cuenta de Google guardada (de cualquier perfil). */
+export function disconnectGoogle() {
   try {
-    const id = (JSON.parse(localStorage.getItem('userProfile') ?? 'null') as { id?: string } | null)?.id;
-    return id ? `_${id}` : '';
-  } catch {
-    return '';
-  }
-}
-
-function scoped(base: string): string {
-  const suffix = profileSuffix();
-  if (!suffix) return base;
-  const key = base + suffix;
-  try {
-    // Lo que quedó en la clave global (versión anterior, o el acceso con Google
-    // que ocurre antes de existir el perfil) pasa al perfil que lo está usando.
-    const pending = localStorage.getItem(base);
-    if (pending !== null) {
-      const current = localStorage.getItem(key);
-      let merged = pending;
-      if (current !== null && base !== IDENTITY_KEY) {
-        try {
-          merged = JSON.stringify({ ...(JSON.parse(current) as object), ...(JSON.parse(pending) as object) });
-        } catch {
-          merged = pending;
-        }
-      }
-      localStorage.setItem(key, merged);
-      localStorage.removeItem(base);
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key && STORED_PREFIXES.some((prefix) => key === prefix || key.startsWith(`${prefix}_`))) localStorage.removeItem(key);
     }
   } catch {
-    /* sin almacenamiento: se trabaja con lo que haya */
+    /* sin almacenamiento: no hay nada que borrar */
   }
-  return key;
-}
-
-function readJSON<T>(key: string): T | null {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : null;
-  } catch {
-    return null;
-  }
-}
-
-function loadAccounts(): Record<string, GoogleAccount> {
-  migrateLegacyTokens();
-  return readJSON<Record<string, GoogleAccount>>(scoped(ACCOUNTS_KEY)) ?? {};
-}
-
-function saveAccounts(accounts: Record<string, GoogleAccount>) {
-  localStorage.setItem(scoped(ACCOUNTS_KEY), JSON.stringify(accounts));
-}
-
-function loadBindings(): Partial<Record<IntegrationKey, string>> {
-  return readJSON<Partial<Record<IntegrationKey, string>>>(scoped(BINDINGS_KEY)) ?? {};
-}
-
-function saveBindings(bindings: Partial<Record<IntegrationKey, string>>) {
-  localStorage.setItem(scoped(BINDINGS_KEY), JSON.stringify(bindings));
-}
-
-function loadGoogleIdentity(): GoogleIdentity | null {
-  return readJSON<GoogleIdentity>(scoped(IDENTITY_KEY));
-}
-
-/** Migra el formato viejo (tokens únicos) al modelo por-cuenta. */
-function migrateLegacyTokens() {
-  const legacy = readJSON<StoredTokens>(LEGACY_TOKENS_KEY);
-  if (!legacy) return;
-  localStorage.removeItem(LEGACY_TOKENS_KEY);
-
-  const identity = loadGoogleIdentity();
-  if (!identity) return; // sin identidad no sabemos de quién eran los tokens
-
-  const accounts = readJSON<Record<string, GoogleAccount>>(scoped(ACCOUNTS_KEY)) ?? {};
-  accounts[identity.sub] = { identity, tokens: legacy };
-  saveAccounts(accounts);
-
-  const granted = new Set(legacy.scope.split(' '));
-  const bindings = loadBindings();
-  (Object.keys(SCOPES) as IntegrationKey[]).forEach((key) => {
-    if (SCOPES[key].every((s) => granted.has(s))) bindings[key] = identity.sub;
-  });
-  bindings.identity = identity.sub;
-  saveBindings(bindings);
-}
-
-export function disconnectGoogle() {
-  for (const base of [ACCOUNTS_KEY, BINDINGS_KEY, IDENTITY_KEY]) {
-    localStorage.removeItem(scoped(base));
-    localStorage.removeItem(base);
-  }
-  localStorage.removeItem(LEGACY_TOKENS_KEY);
 }
 
 // --- PKCE ---
@@ -193,11 +89,7 @@ async function pkcePair() {
 
 interface AuthorizeOptions {
   scopes: string[];
-  /**
-   * Pantallas a forzar: 'consent' garantiza refresh_token; 'select_account'
-   * muestra el selector de cuentas de Google; pueden combinarse
-   * ('select_account consent').
-   */
+  /** 'select_account' muestra el selector de cuentas de Google. */
   prompt?: string;
   loginHint?: string;
 }
@@ -210,7 +102,7 @@ class AuthCancelled extends Error {
   }
 }
 
-async function authorize({ scopes, prompt, loginHint }: AuthorizeOptions): Promise<StoredTokens> {
+async function authorize({ scopes, prompt, loginHint }: AuthorizeOptions): Promise<GoogleTokens> {
   if (!isTauri()) {
     throw new Error(tr('Las integraciones de Google requieren la app de escritorio Frame.'));
   }
@@ -235,8 +127,6 @@ async function authorize({ scopes, prompt, loginHint }: AuthorizeOptions): Promi
       code_challenge: challenge,
       code_challenge_method: 'S256',
       state,
-      access_type: 'offline',
-      include_granted_scopes: 'true',
       // La pantalla de Google, en el idioma de Frame (no en el de Windows).
       hl: getLang(),
     });
@@ -314,13 +204,7 @@ async function authorize({ scopes, prompt, loginHint }: AuthorizeOptions): Promi
 
     const json = await invoke<any>('google_token_request', { form });
 
-    return {
-      accessToken: json.access_token,
-      refreshToken: json.refresh_token,
-      expiresAt: Date.now() + (json.expires_in ?? 3600) * 1000 - 60_000,
-      scope: json.scope ?? scopes.join(' '),
-      idToken: json.id_token,
-    };
+    return { accessToken: json.access_token, idToken: json.id_token };
   }
   throw new Error(lastError || tr('No se pudo iniciar la escucha OAuth local.'));
 }
@@ -343,39 +227,11 @@ async function fetchIdentity(accessToken: string): Promise<GoogleIdentity> {
 }
 
 /**
- * Guarda los tokens bajo su cuenta. Google solo devuelve refresh_token la
- * primera vez (o con prompt=consent): si no llega uno nuevo se conserva el
- * anterior de ESA MISMA cuenta — clave de la sincronización duradera.
- */
-function saveAccount(identity: GoogleIdentity, tokens: StoredTokens): GoogleAccount {
-  const accounts = loadAccounts();
-  const prev = accounts[identity.sub];
-  const merged: StoredTokens = {
-    ...tokens,
-    refreshToken: tokens.refreshToken || prev?.tokens.refreshToken,
-  };
-  const account: GoogleAccount = { identity, tokens: merged };
-  accounts[identity.sub] = account;
-  saveAccounts(accounts);
-  return account;
-}
-
-/**
- * Inicio de sesión con Google (identidad principal). Devuelve el perfil.
- * Guarda tokens + identidad; el id_token queda disponible para Supabase.
+ * Inicio de sesión con Google. Devuelve el perfil y el id_token para abrir la
+ * sesión de Supabase; nada se guarda en el equipo.
  */
 export async function googleSignIn(): Promise<GoogleIdentity & { idToken?: string }> {
-  const tokens = await authorize({
-    scopes: [...SCOPES.identity],
-    prompt: 'select_account consent',
-  });
-
+  const tokens = await authorize({ scopes: IDENTITY_SCOPES, prompt: 'select_account' });
   const identity = await fetchIdentity(tokens.accessToken);
-  saveAccount(identity, tokens);
-
-  const bindings = loadBindings();
-  bindings.identity = identity.sub;
-  saveBindings(bindings);
-  localStorage.setItem(scoped(IDENTITY_KEY), JSON.stringify(identity));
   return { ...identity, idToken: tokens.idToken };
 }

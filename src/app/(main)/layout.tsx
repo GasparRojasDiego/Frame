@@ -1,4 +1,4 @@
-import React, { useEffect, useState, ReactNode, useCallback, useRef } from 'react';
+import React, { lazy, Suspense, useEffect, useState, ReactNode, useCallback, useRef } from 'react';
 import Header from '@/components/layout/header';
 import Sidebar from '@/components/layout/sidebar';
 import { CourseProvider, useCourse } from '@/context/CourseContext';
@@ -18,7 +18,8 @@ import { clearRecoverableSession, readRecoverableSession } from '@/lib/session-r
 import { flushEvents, hookTelemetryFlushOnOnline, pruneTelemetryStamps, trackDaily, trackEvent } from '@/lib/telemetry';
 import { usePathname } from '@/lib/navigation';
 import { APP_VERSION } from '@/lib/version';
-import MiniTimerCard from '@/components/temporizador/MiniTimerCard';
+// Solo en el navegador (desarrollo): fuera del paquete de arranque de la app.
+const MiniTimerCard = lazy(() => import('@/components/temporizador/MiniTimerCard'));
 import AppCloseGuard from '@/components/layout/AppCloseGuard';
 import { findGuestToAdopt, rememberAdoptionAnswer } from '@/lib/guest-migration';
 import {
@@ -38,7 +39,7 @@ import InterfaceErrorBoundary from '@/components/layout/InterfaceErrorBoundary';
 import UpdateDialog from '@/components/layout/UpdateDialog';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 import { getActiveSession, onAuthChange, tidyName, updatePersonNames, updateUsername } from '@/lib/supabase/auth';
-import { pushToCloud, pullFromCloud } from '@/lib/supabase/sync';
+import { CLOUD_APPLIED_EVENT, pushToCloud, pullFromCloud } from '@/lib/supabase/sync';
 import { startLiveSync } from '@/lib/supabase/live-sync';
 import { startAccountSettings } from '@/lib/account-settings';
 import { startImageRefs } from '@/lib/image-refs';
@@ -62,6 +63,7 @@ import type { Session } from '@supabase/supabase-js';
 
 import { tr, useLang } from '@/lib/i18n';
 import { GUEST_NAME, usernameLabel } from '@/lib/enum-labels';
+import { disconnectGoogle } from '@/lib/google/auth';
 
 function AppLayout({ children, userProfile }: { children: ReactNode; userProfile: UserProfile | null }) {
     const { currentSong, isPlaying, isTimerActive, hasInteracted, isPlayerVisible, setPlayerVisible, isSidebarCollapsed } = useCourse();
@@ -274,7 +276,15 @@ function AppLayout({ children, userProfile }: { children: ReactNode; userProfile
 
 
             {/* Mini temporizador flotante: visible en cualquier interfaz */}
-            <MiniTimerCard />
+            {/* En la app de escritorio la vista flotante es una VENTANA NATIVA
+                (MiniTimerWindow); esta tarjeta solo se usa en el navegador
+                (desarrollo). Antes se montaba igual y se repintaba cada
+                segundo de la sesión para devolver nada. */}
+            {!isTauri() && (
+              <Suspense fallback={null}>
+                <MiniTimerCard />
+              </Suspense>
+            )}
 
             {/* Verificador de sincronización: se abre desde la campana (1.6.8). */}
             {userProfile && !userProfile.isGuest && <SyncIssuesDialog />}
@@ -428,6 +438,11 @@ function AppController({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     /** Usuario ya hidratado en este arranque: evita repetir el trabajo. */
     let hydratedUid: string | null = null;
+    // Mientras se restaura la sesión guardada, supabase-js emite SIGNED_IN con
+    // ella (`_recoverAndRefresh`, al iniciarse) antes de que `init` la hidrate:
+    // sin esta marca se hidrataba dos veces, con dos bajadas de la nube a la
+    // vez, y cada arranque contaba como inicio de sesión nuevo (13-oct-2026).
+    let booting = true;
     /** Traslado de invitado en marcha (evita hacerlo dos veces a la vez). */
     let guestLinkInFlight = false;
 
@@ -526,8 +541,19 @@ function AppController({ children }: { children: React.ReactNode }) {
       // (la del colegio) la espera no puede ser indefinida. Si se agota, se
       // entra con lo que hay en el equipo y el siguiente ciclo de
       // sincronización fusiona la nube (fusión a tres bandas: no pisa nada).
+      const pull = pullFromCloud(user.id);
       try {
-        await Promise.race([pullFromCloud(user.id), new Promise((resolve) => setTimeout(resolve, 12_000))]);
+        const first = await Promise.race([pull, new Promise<null>((resolve) => setTimeout(() => resolve(null), 12_000))]);
+        // La bajada tardó más que la espera y la app ya se montó con lo del
+        // disco: cuando termine, que relea lo fusionado. Si no, su siguiente
+        // guardado pisaría lo que llegó de la nube.
+        if (first === null) {
+          void pull
+            .then((result) => {
+              if (result.applied) window.dispatchEvent(new Event(CLOUD_APPLIED_EVENT));
+            })
+            .catch(() => undefined);
+        }
       } catch (e) {
         console.error('pullFromCloud failed', e);
       }
@@ -650,6 +676,9 @@ function AppController({ children }: { children: React.ReactNode }) {
     };
 
     const init = async () => {
+      // Lo que las versiones anteriores dejaron guardado de Google (tokens en
+      // claro que ya nada usa) se borra en cada arranque (1.7.0).
+      disconnectGoogle();
       if (isSupabaseConfigured) {
         try {
           const session = await getActiveSession();
@@ -664,7 +693,9 @@ function AppController({ children }: { children: React.ReactNode }) {
       loadProfile(); // Fallback: perfil local / invitado
     };
 
-    init();
+    void init().finally(() => {
+      booting = false;
+    });
 
     // Listen for custom event to reload profile
     window.addEventListener('profileUpdated', loadProfile);
@@ -677,7 +708,7 @@ function AppController({ children }: { children: React.ReactNode }) {
             // completa con la nube, recargar todo el estado desde disco, releer
             // todas las canciones de IndexedDB y reiniciar la cola de música.
             // Solo se hidrata cuando de verdad entra un usuario distinto.
-            if (session.user.id === hydratedUid) return;
+            if (booting || session.user.id === hydratedUid) return;
             void hydrateFromSession(session, true);
           } else if (event === 'SIGNED_OUT') {
             // ¿Lo pidió el usuario? Si no (la nube cerró la sesión por su

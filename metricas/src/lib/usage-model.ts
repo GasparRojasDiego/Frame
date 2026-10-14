@@ -12,7 +12,7 @@
 // Los días son números desde el 1-ene-2024, en la hora de Perú (`dn`).
 // ============================================================
 
-import { CONTINENT_OF, type Continent } from '@/lib/world-map';
+import { CONTINENT_OF, type Continent } from '@m/lib/world-map';
 
 /** [día, minutos, sesiones, tareas, a tiempo, con plazo, alta prioridad, hábitos hechos, hábitos posibles, enfoque] */
 export type DayRow = [number, number, number, number, number, number, number, number, number, number | null];

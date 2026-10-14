@@ -42,10 +42,8 @@ export function setThemePreference(pref: ThemePreference): void {
     /* sin persistencia, pero el tema igual se aplica en esta sesión */
   }
   applyTheme(pref);
-  window.dispatchEvent(new Event('frameThemeChanged'));
   // La ventana flotante de Enfoque es otra ventana con su propio contexto de
-  // JavaScript: el evento de arriba no la alcanza. Se le avisa aparte, o se
-  // quedaría en el tema con el que nació.
+  // JavaScript: se le avisa aparte, o se quedaría en el tema con el que nació.
   void broadcastTheme(pref);
 }
 

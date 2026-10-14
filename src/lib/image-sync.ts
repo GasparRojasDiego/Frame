@@ -65,9 +65,16 @@ import { tr } from '@/lib/i18n';
 
 const BUCKET = 'user-images';
 const MANIFEST_KEY = 'syncedImages';
-/** Por encima de esto, la imagen se reduce antes de subirla (límite del bucket: 5 MB). */
-const MAX_UPLOAD_BYTES = 3.5 * 1024 * 1024;
+/**
+ * Por encima de esto, la imagen se reduce antes de subirla (2000 px, JPEG).
+ * Era 3,5 MB: una foto del horario de 3 MB subía entera y con el Storage
+ * gratuito (1 GB) cabían unos cientos de cuentas; además cada dispositivo la
+ * bajaba entera (1.7.0). El original del equipo no se toca.
+ */
+const MAX_UPLOAD_BYTES = 500 * 1024;
+/** Reintento tras un fallo: 2 min, 4, 8… hasta 1 h (con el Storage lleno no se insiste cada 2 min). */
 const RETRY_MS = 2 * 60 * 1000;
+const RETRY_MAX_MS = 60 * 60 * 1000;
 
 /** ¿Esta imagen es de las que viajan? (clave lógica, la del índice y la nube) */
 function isSyncedImageKey(key: string): boolean {
@@ -183,9 +190,14 @@ async function shrinkForUpload(blob: Blob): Promise<Blob> {
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(img.naturalWidth * scale);
     canvas.height = Math.round(img.naturalHeight * scale);
-    canvas.getContext('2d')?.drawImage(img, 0, 0, canvas.width, canvas.height);
-    const out = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85));
-    return out ?? blob;
+    const context = canvas.getContext('2d');
+    if (!context) return blob;
+    // JPEG no tiene transparencia: sin fondo, un PNG transparente salía negro.
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const out = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.82));
+    return out && out.size < blob.size ? out : blob;
   } finally {
     URL.revokeObjectURL(url);
   }
@@ -395,6 +407,7 @@ export function startImageSync(uid: string): () => void {
   const postponedTries = new Map<string, number>();
   let timer: number | null = null;
   let retryTimer: number | null = null;
+  let failures = 0;
 
   const run = async () => {
     if (stopped) return;
@@ -414,13 +427,15 @@ export function startImageSync(uid: string): () => void {
           schedule(4000);
         }
       }
+      failures = ok ? 0 : failures + 1;
       if (!ok && !stopped) {
         if (retryTimer !== null) window.clearTimeout(retryTimer);
+        const wait = Math.min(RETRY_MAX_MS, RETRY_MS * 2 ** (failures - 1)) * (0.75 + Math.random() * 0.5);
         retryTimer = window.setTimeout(() => {
           retryTimer = null;
           pendingAll = true;
           schedule(0);
-        }, RETRY_MS);
+        }, wait);
       }
     } finally {
       running = false;

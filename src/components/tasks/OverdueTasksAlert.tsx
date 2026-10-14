@@ -85,7 +85,7 @@ export default function OverdueTasksAlert() {
           </DialogHeader>
         </EchoHeader>
 
-        <ScrollArea className="max-h-[340px]">
+        <ScrollArea className="[&>[data-radix-scroll-area-viewport]]:max-h-[340px]">
           <div className="space-y-3 pr-3">
             {overdue.map((task, i) => (
               <div key={task.id}>

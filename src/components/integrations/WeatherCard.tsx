@@ -89,6 +89,14 @@ function placeFullLabel(p: WeatherPlace): string {
 }
 
 // Tarjeta de clima del Inicio (Open-Meteo, sin clave de API, con caché offline).
+// Inicio se monta en cada visita: sin esto, cada vuelta pedía el pronóstico
+// otra vez y buscaba la ubicación (GPS y luego ipapi.co, que tiene cuota
+// diaria por IP: un colegio entero detrás de una sola IP la agotaba). Ahora,
+// la ubicación una vez por sesión y el pronóstico como mucho cada 30 min.
+let locatedThisSession = false;
+let lastForecast: { key: string; at: number } | null = null;
+const FORECAST_FRESH_MS = 30 * 60 * 1000;
+
 export default function WeatherCard() {
   const { toast } = useToast();
   const [place, setPlace] = useState<WeatherPlace | null>(() => loadWeatherPlace());
@@ -135,15 +143,15 @@ export default function WeatherCard() {
     const onPlace = () => {
       if (ownSave.current) return;
       const next = loadWeatherPlace();
+      // El pronóstico lo pide el efecto de las coordenadas (si cambiaron).
       setPlace((prev) => {
         if (!next || (prev && prev.latitude === next.latitude && prev.longitude === next.longitude && prev.name === next.name)) return prev;
-        void refresh(next);
         return next;
       });
     };
     window.addEventListener(WEATHER_PLACE_EVENT, onPlace);
     return () => window.removeEventListener(WEATHER_PLACE_EVENT, onPlace);
-  }, [refresh]);
+  }, []);
 
   // Ubicación automática al montar: GPS de alta precisión → IP → manual.
   // Solo se salta si el usuario fijó una ciudad a mano (place sin `auto`).
@@ -151,6 +159,8 @@ export default function WeatherCard() {
     const current = loadWeatherPlace();
     if (current && !current.auto) return;
     if (!navigator.onLine) return; // offline: se queda lo guardado
+    if (locatedThisSession && current) return;
+    locatedThisSession = true;
     setIsLocating(true);
     void locatePlace().then((detected) => {
       setIsLocating(false);
@@ -212,7 +222,11 @@ export default function WeatherCard() {
   useEffect(() => {
     const current = placeRef.current;
     if (!current) return;
-    void refresh(current);
+    const fresh = lastForecast?.key === placeKey && Date.now() - lastForecast.at < FORECAST_FRESH_MS;
+    if (!fresh && placeKey) {
+      lastForecast = { key: placeKey, at: Date.now() };
+      void refresh(current);
+    }
     const interval = setInterval(() => {
       const p = placeRef.current;
       if (p) void refresh(p);

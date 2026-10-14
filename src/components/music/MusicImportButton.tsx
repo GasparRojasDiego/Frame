@@ -62,7 +62,7 @@ export default function MusicImportButton({ variant = 'button' }: { variant?: 'b
       if (next.entries.length === 0) {
         void releasePickedMusic();
         setStage('idle');
-        const formats = [...new Set(next.unsupported.map((file) => file.format))].join(', ');
+        const formats = formatsOf(next.unsupported);
         toast({
           title: next.existing.size > 0 ? tr('Ya tienes esas canciones') : tr('No hay canciones que Frame pueda reproducir'),
           description:
@@ -88,17 +88,31 @@ export default function MusicImportButton({ variant = 'button' }: { variant?: 'b
     stopRef.current = false;
     setStage('importing');
     setProgress({ done: 0, total: plan.entries.length, title: '' });
-    const result = await storeImportedSongs(
-      plan,
-      songs,
-      (done, total, title) => setProgress({ done, total, title }),
-      (batch) => addSongs(batch),
-      () => stopRef.current
-    );
-    for (const playlist of plan.playlists) mergePlaylistSongs(playlist.name, playlist.songIds);
-    setOutcome(result);
-    setStage('done');
+    // Si guardar falla (disco lleno), el recuadro vuelve a «confirmar»: antes
+    // se quedaba en «importando» para siempre y no había forma de cerrarlo.
+    try {
+      const result = await storeImportedSongs(
+        plan,
+        songs,
+        (done, total, title) => setProgress({ done, total, title }),
+        (batch) => addSongs(batch),
+        () => stopRef.current
+      );
+      for (const playlist of plan.playlists) mergePlaylistSongs(playlist.name, playlist.songIds);
+      setOutcome(result);
+      setStage('done');
+    } catch (error) {
+      setStage('confirm');
+      toast({
+        variant: 'destructive',
+        title: tr('La importación se detuvo'),
+        description: tr('{error} Vuelve a intentarlo: lo ya importado no se repite.', { error: errorText(error) }),
+        duration: 12000,
+      });
+    }
   };
+
+  const formatsOf = (list: { format: string }[]) => [...new Set(list.map((file) => file.format))].join(', ');
 
   const percent = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
 
@@ -185,8 +199,8 @@ export default function MusicImportButton({ variant = 'button' }: { variant?: 'b
               {plan.unsupported.length > 0 && (
                 <p className="text-muted-foreground">
                   {plan.unsupported.length === 1
-                    ? tr('1 archivo queda fuera: está en {formats}, que Frame no reproduce.', { formats: [...new Set(plan.unsupported.map((file) => file.format))].join(', ') })
-                    : tr('{count} archivos quedan fuera: están en {formats}, que Frame no reproduce.', { count: plan.unsupported.length, formats: [...new Set(plan.unsupported.map((file) => file.format))].join(', ') })}
+                    ? tr('1 archivo queda fuera: está en {formats}, que Frame no reproduce.', { formats: formatsOf(plan.unsupported) })
+                    : tr('{count} archivos quedan fuera: están en {formats}, que Frame no reproduce.', { count: plan.unsupported.length, formats: formatsOf(plan.unsupported) })}
                 </p>
               )}
               <p className="text-xs text-muted-foreground">

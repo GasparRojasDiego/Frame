@@ -33,7 +33,11 @@ import { SYNC_NOW_EVENT } from '@/lib/sync-check';
 //      los dispositivos con versiones anteriores, que solo entienden el aviso,
 //      sincronizan como siempre.
 //   3. RED DE SEGURIDAD. Al volver Frame al frente, al recuperar la conexión y
-//      cada 30 s con Frame a la vista (una sonda de pocos bytes).
+//      con una sonda de pocos bytes: cada 30 s solo mientras el canal no está
+//      abierto; con él abierto, cada 5 min (15 oculta), porque los cambios ya
+//      llegan por él. Con fallos seguidos, cada vez más espaciada (1.7.0: con
+//      miles de equipos abiertos, la sonda de 30 s sola eran decenas de
+//      millones de peticiones al mes).
 //
 // Todo esto lo ejercita scripts/probar-sincronizacion.mjs con dos y tres
 // dispositivos simulados (y uno con la 1.6.7).
@@ -45,10 +49,20 @@ const LOCAL_DEBOUNCE_MS = 600;
 const LOCAL_MAX_WAIT_MS = 3000;
 const REMOTE_DELAY_MS = 150;
 const PROBE_MS = 30_000;
+/** Con el canal abierto la sonda es solo la red de seguridad. */
+const PROBE_READY_MS = 5 * 60_000;
+const PROBE_READY_HIDDEN_MS = 15 * 60_000;
+const PROBE_MAX_MS = 10 * 60_000;
+/** Avisos de fuera que se atienden al momento por minuto; el resto, al final. */
+const NUDGE_BURST = 20;
+const NUDGE_WINDOW_MS = 60_000;
+/** Volver a crear el canal a mano, como mucho una vez por minuto. */
+const RECONNECT_GAP_MS = 60_000;
 
 export function startLiveSync(uid: string): () => void {
   let stopped = false;
   let timer: number | null = null;
+  let timerAt = 0;
   let deltaTimer: number | null = null;
   /** Primer cambio aún sin sincronizar / sin anunciar (para las esperas máximas). */
   let pendingSince: number | null = null;
@@ -60,6 +74,10 @@ export function startLiveSync(uid: string): () => void {
   const dirty = new Set<string>();
   let announced: Announced | null = announcedFromSync(uid);
   const me = deviceId();
+  let failures = 0;
+  let lastRunAt = Date.now();
+  let lastOkAt = 0;
+  const nudgeTimes: number[] = [];
 
   const run = async () => {
     if (stopped) return;
@@ -69,12 +87,15 @@ export function startLiveSync(uid: string): () => void {
     }
     running = true;
     pendingSince = null;
+    lastRunAt = Date.now();
     // Lo pendiente de anunciar, antes: así la sincronización ve cuándo se hizo
     // cada cambio y el otro dispositivo recibe la misma marca por el canal.
     flushLocal();
     try {
       const result = await pushToCloud(uid);
       if (result.ok) {
+        failures = 0;
+        lastOkAt = Date.now();
         // Lo que la nube ya tiene cuenta como anunciado; y si la cuenta aún no
         // tiene clave para los cambios al instante, se crea (viaja en el
         // siguiente ciclo).
@@ -89,8 +110,9 @@ export function startLiveSync(uid: string): () => void {
         const payload = { at: Date.now(), from: me, u: result.remoteAt, p: result.print };
         void channel.send({ type: 'broadcast', event: 'changed', payload }).catch(() => undefined);
       }
+      if (!result.ok) failures += 1;
     } catch {
-      /* el siguiente disparo lo reintenta */
+      failures += 1; // el siguiente disparo lo reintenta
     } finally {
       running = false;
       if (again && !stopped) {
@@ -109,10 +131,35 @@ export function startLiveSync(uid: string): () => void {
       delay = Math.min(delay, Math.max(0, pendingSince + LOCAL_MAX_WAIT_MS - now));
     }
     if (timer !== null) window.clearTimeout(timer);
+    timerAt = Date.now() + delay;
     timer = window.setTimeout(() => {
       timer = null;
       void run();
     }, delay);
+  };
+
+  /** Sin retrasar lo ya programado antes (a diferencia de `schedule`, que pospone). */
+  const scheduleBy = (delay: number) => {
+    if (timer !== null && timerAt <= Date.now() + delay) return;
+    schedule(delay);
+  };
+
+  /**
+   * Un aviso de fuera («hay cambios», o un cambio que no se pudo leer). El
+   * canal de la cuenta es público para quien sepa su nombre: alguien podría
+   * mandar avisos sin parar. Hasta 20 por minuto se atienden al momento (el
+   * uso real, incluso con versiones anteriores, queda muy por debajo); los
+   * demás se juntan en una sola sincronización al final del minuto.
+   */
+  const remoteNudge = () => {
+    const now = Date.now();
+    while (nudgeTimes.length > 0 && now - nudgeTimes[0] > NUDGE_WINDOW_MS) nudgeTimes.shift();
+    if (nudgeTimes.length < NUDGE_BURST) {
+      nudgeTimes.push(now);
+      scheduleBy(REMOTE_DELAY_MS);
+      return;
+    }
+    scheduleBy(nudgeTimes[0] + NUDGE_WINDOW_MS - now);
   };
 
   // --- 1. Al instante: los cambios, cifrados, por el canal ---
@@ -144,7 +191,7 @@ export function startLiveSync(uid: string): () => void {
     const changes = await openDelta(uid, payload);
     if (!changes) {
       // No se pudo leer (otra clave, aún sin la de la cuenta): que llegue por la nube.
-      schedule(REMOTE_DELAY_MS);
+      remoteNudge();
       return;
     }
     if (changes.length === 0) return;
@@ -195,6 +242,8 @@ export function startLiveSync(uid: string): () => void {
 
   // --- 3. El canal de la cuenta (Realtime Broadcast) ---
   const supabase = getSupabase();
+  let subscribedOnce = false;
+  let lastConnectAt = 0;
   const connect = () => {
     if (!supabase || stopped) return;
     try {
@@ -205,15 +254,21 @@ export function startLiveSync(uid: string): () => void {
         if (payload?.from === me) return;
         // Lo que escribió ya llegó entero por el canal: nada que bajar.
         if (!running && typeof payload?.u === 'string' && typeof payload.p === 'string' && adoptRemoteWrite(uid, payload.u, payload.p)) return;
-        schedule(REMOTE_DELAY_MS);
+        remoteNudge();
       });
       next.on('broadcast', { event: 'delta' }, (message) => void receiveDelta(message.payload));
       next.subscribe((status) => {
         channelReady = status === 'SUBSCRIBED';
         // Al (re)conectar se pone al día: pudo perderse un aviso mientras tanto.
-        if (channelReady) schedule(REMOTE_DELAY_MS);
+        // Tras una caída del servicio todos vuelven a la vez: un azar de hasta
+        // 3 s reparte las sincronizaciones en vez de llegar todas juntas.
+        if (channelReady) {
+          scheduleBy(subscribedOnce ? REMOTE_DELAY_MS + Math.floor(Math.random() * 3000) : REMOTE_DELAY_MS);
+          subscribedOnce = true;
+        }
       });
       channel = next;
+      lastConnectAt = Date.now();
     } catch {
       channel = null;
     }
@@ -228,26 +283,38 @@ export function startLiveSync(uid: string): () => void {
       if (pendingSince !== null || dirty.size > 0) schedule(0);
       return;
     }
-    // Android duerme el canal con la app en segundo plano: al volver, de nuevo.
-    if (!channelReady && channel && supabase) {
+    // Android duerme el canal con la app en segundo plano: al volver, de nuevo
+    // (como mucho una vez por minuto: Realtime también reconecta por su cuenta).
+    if (!channelReady && channel && supabase && Date.now() - lastConnectAt > RECONNECT_GAP_MS) {
       void supabase.removeChannel(channel).catch(() => undefined);
       channel = null;
       connect();
     }
     schedule(200);
   };
+  // En Windows la ventana recibe el foco a cada rato (al cambiar de ventana):
+  // con el canal abierto y una sincronización buena hace menos de 20 s, nada.
+  const onFocus = () => {
+    if (channelReady && Date.now() - lastOkAt < 20_000) return;
+    onVisible();
+  };
   const onOnline = () => schedule(200);
   // «Sincronizar ahora» del verificador de sincronización.
   const onNow = () => schedule(0);
   document.addEventListener('visibilitychange', onVisible);
-  window.addEventListener('focus', onVisible);
+  window.addEventListener('focus', onFocus);
   window.addEventListener('online', onOnline);
   window.addEventListener(SYNC_NOW_EVENT, onNow);
-  let tick = 0;
+  const probeEvery = () => {
+    const visible = document.visibilityState === 'visible';
+    // Sin canal: visible cada 30 s, oculta cada 2 min (Android congela lo de fondo).
+    const base = channelReady ? (visible ? PROBE_READY_MS : PROBE_READY_HIDDEN_MS) : visible ? PROBE_MS : 4 * PROBE_MS;
+    // Con fallos seguidos (sesión caducada, base en solo lectura…), cada vez más
+    // espaciada; un éxito, la conexión o volver a la ventana lo devuelven al ritmo normal.
+    return failures > 0 ? Math.max(base, Math.min(PROBE_MAX_MS, PROBE_MS * 2 ** failures)) : base;
+  };
   const interval = window.setInterval(() => {
-    tick += 1;
-    // Visible: cada 30 s. Oculta: cada 2 min (Android congela lo de fondo).
-    if (document.visibilityState === 'visible' || tick % 4 === 0) schedule(0);
+    if (Date.now() - lastRunAt >= probeEvery() - 1000) schedule(0);
   }, PROBE_MS);
 
   // Primera puesta al día al arrancar.
@@ -259,7 +326,7 @@ export function startLiveSync(uid: string): () => void {
     if (deltaTimer !== null) window.clearTimeout(deltaTimer);
     window.clearInterval(interval);
     document.removeEventListener('visibilitychange', onVisible);
-    window.removeEventListener('focus', onVisible);
+    window.removeEventListener('focus', onFocus);
     window.removeEventListener('online', onOnline);
     window.removeEventListener(SYNC_NOW_EVENT, onNow);
     if (proto.setItem === patchedSet) proto.setItem = originalSet;

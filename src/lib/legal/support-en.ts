@@ -3,7 +3,7 @@
 // español (support.ts) es el que manda; este lo traduce fielmente.
 // ============================================================
 
-import { SUPPORT_VERSION } from './support';
+import { SUPPORT_VERSION } from './versions.ts';
 
 export function supportDocumentEn({
   appVersion,

@@ -1,6 +1,6 @@
 import { format, parseISO } from 'date-fns';
 import type { DocBlock, DocCell, DocModel } from '@/lib/report-doc';
-import { dateLocale, decimalText, tr } from '@/lib/i18n';
+import { dateLocale, decimalText, tr } from '@m/lib/i18n';
 
 // ============================================================
 // Informe de impacto (panel del responsable).

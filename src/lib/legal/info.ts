@@ -10,9 +10,9 @@
 // otros documentos.
 // ============================================================
 
-import { TERMS_VERSION } from './terms';
+import { INFO_VERSION, TERMS_VERSION } from './versions.ts';
 
-export const INFO_VERSION = '5.1';
+export { INFO_VERSION };
 
 export function infoDocument({
   appVersion,
@@ -150,6 +150,8 @@ Se ofrece soporte para la versión estable vigente y para la inmediatamente ante
 ## 8 · Historial de versiones
 
 **${appVersion} — ${releaseDate}**
+
+*1.7.0:* **importar música con subcarpetas**: cada canción encuentra su letra (.lrc o .txt) y su portada aunque estén en otras carpetas («Letras», «Portadas», «Covers»…), con nombres que no coinciden letra a letra («01 - Canción» y «canción.lrc», con o sin tildes, «Artista - Título»); las canciones con el mismo nombre en carpetas distintas (CD1 y CD2) ya no se pierden; también .m4b, .jfif y .gif · la constancia de hábitos cuenta solo los días que toca cada hábito y desde que lo creaste, y crear uno nuevo ya no hunde la racha ni el récord · la misma racha en Inicio y en Ajustes · una fecha dañada que llegue de otro dispositivo ya no impide abrir Frame · un borrado que aún puedes deshacer ya no reaparece al llegar cambios de otro dispositivo · menos tráfico con la nube (comprobaciones más espaciadas, imágenes que se suben reducidas) y avisos de actualización cada 6 horas · Frame ya no guarda tokens de Google en el equipo · copias de adjuntos marcadas como descargadas de Internet · la ventana flotante de Enfoque abre más rápido · Frame más ligera: menos código y textos legales que se cargan al abrirlos · el panel de uso del responsable sale de la app.
 
 *1.6.9:* las **imágenes de la galería** que pones a asignaturas, colecciones y playlists por fin aparecen en tus otros dispositivos (llegaban, pero no se dibujaban) · **el corazón de las canciones** también viaja entre tus dispositivos, por su título y artista · Frame guarda lo que una versión más nueva añada a tu respaldo, aunque no lo use · **Panel de uso** a fondo para el responsable de Frame: mapa del mundo, continentes, países y ciudades, una tarjeta por estudiante con su detalle, plazos de un día a un año o a elegir, en qué horas se estudia, qué funciones se usan, retención por cohortes y un **Reporte** en Word, PDF o Markdown · Términos y Política de privacidad 5.1: el perfil de uso que se envía (ciudad aproximada, zona horaria, idiomas, tipo de equipo, horas de estudio y cuántos elementos tienes de cada función, nunca su contenido).
 

@@ -64,6 +64,7 @@ import {
 import { dateLocale, tr } from '@/lib/i18n';
 import { dayInitial, dayInitials, fromSunday } from '@/lib/day-names';
 import { priorityLabel } from '@/lib/enum-labels';
+import { useTodayKey } from '@/hooks/use-today';
 
 const otherSubjects = () => tr('Otras');
 const HEAT_LEVELS = ['bg-muted', 'bg-primary/25', 'bg-primary/45', 'bg-primary/70', 'bg-primary'];
@@ -232,7 +233,8 @@ export default function AcademicAnalytics() {
     [studySessions, archivedTasks, activeHabits]
   );
 
-  const { start, end } = useMemo(() => periodRange(scope, offset), [scope, offset]);
+  const todayKey = useTodayKey();
+  const { start, end } = useMemo(() => periodRange(scope, offset), [scope, offset, todayKey]);
 
   const periodLabel = useMemo(() => {
     if (scope === 'month') return capitalize(format(start, tr('MMMM yyyy'), { locale: dateLocale() }));
@@ -248,10 +250,10 @@ export default function AcademicAnalytics() {
   const options: MetricsOptions = useMemo(
     () => ({
       studyGoals,
-      activeHabitCount: activeHabits.length,
+      activeHabits,
       performances: dailyPerformances,
     }),
-    [studyGoals, activeHabits.length, dailyPerformances]
+    [studyGoals, activeHabits, dailyPerformances]
   );
 
   const current = useMemo(
@@ -274,7 +276,7 @@ export default function AcademicAnalytics() {
       scope === 'week'
         ? periodDays.map((d) => ({ name: dayInitial(fromSunday(d.getDay())), days: [d] }))
         : eachWeekOfInterval({ start, end }, { weekStartsOn: 1 }).map((w) => ({
-            name: `S${getISOWeek(w)}`,
+            name: tr('S{week}', { week: getISOWeek(w) }),
             days: eachDayOfInterval({ start: startOfISOWeek(w), end: endOfISOWeek(w) }).filter(
               (d) => d >= start && d <= end
             ),
@@ -305,7 +307,7 @@ export default function AcademicAnalytics() {
       return {
         name:
           scope === 'week'
-            ? `S${getISOWeek(range.start)}`
+            ? tr('S{week}', { week: getISOWeek(range.start) })
             : capitalize(format(range.start, tr('MMM'), { locale: dateLocale() })),
         Horas: Math.round((metrics.minutes / 60) * 10) / 10,
         Efectividad: metrics.effectiveness,

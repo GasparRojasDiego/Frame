@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { format, parseISO, startOfDay, differenceInCalendarDays } from 'date-fns';
+import React, { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { format, startOfDay, differenceInCalendarDays } from 'date-fns';
 import {
   AlertTriangle,
   Bell,
@@ -49,6 +49,7 @@ import { signInAgain, useConnectionState } from '@/lib/connection-status';
 import { BELL_PING_EVENT } from '@/components/layout/ConnectionNotice';
 import { dateLocale, inBothLangs, tr, useLang } from '@/lib/i18n';
 import { openSyncIssues, useSyncIssues } from '@/lib/sync-check';
+import { parseIsoSafe } from '@/lib/dates';
 
 interface AppNotification {
   id: string;
@@ -100,10 +101,9 @@ export default function NotificationCenter() {
     return () => window.removeEventListener(BELL_PING_EVENT, onPing);
   }, []);
 
-  // Estado del actualizador: vive fuera de React, así que hay que suscribirse.
-  const [, forceRender] = useState(0);
-  useEffect(() => subscribeUpdate(() => forceRender((n) => n + 1)), []);
-  const update = getUpdateState();
+  // Estado del actualizador: vive fuera de React. Solo importa la versión (el
+  // avance de la descarga cambia diez veces por segundo y no se pinta aquí).
+  const updateVersion = useSyncExternalStore(subscribeUpdate, () => getUpdateState().version, () => getUpdateState().version);
   const [seenMap, setSeenMap] = useState<Record<string, string>>({});
   // Verificador de sincronización (1.6.8): lo que no está igual en los dispositivos.
   const syncIssues = useSyncIssues();
@@ -162,24 +162,22 @@ export default function NotificationCenter() {
       // Versión nueva publicada: va la PRIMERA, por delante de las tareas.
       // Pulsarla no instala: abre el recuadro de actualización, que es donde se
       // ve el peso, el tiempo estimado y se confirma.
-      if (update.version) {
+      if (updateVersion) {
         items.push({
-          id: `actualizacion-${update.version}`,
+          id: `actualizacion-${updateVersion}`,
           kind: 'actualizacion',
-          title: tr('Frame {version} disponible', { version: update.version }),
+          title: tr('Frame {version} disponible', { version: updateVersion }),
           detail: tr('Pulsa para ver el peso y el tiempo estimado'),
         });
       }
 
       for (const task of tasks) {
         if (!task.dueDate || (task.progress ?? 0) >= 100) continue;
-        let due: Date;
-        try {
-          due = startOfDay(parseISO(task.dueDate));
-        } catch {
-          continue;
-        }
+        const parsed = parseIsoSafe(task.dueDate);
+        if (!parsed) continue;
+        const due = startOfDay(parsed);
         const diff = differenceInCalendarDays(due, today);
+        if (diff > 3) continue;
         const when = format(due, tr('d \'de\' MMMM'), { locale: dateLocale() });
         const base = { taskId: task.id, courseId: task.courseId, detail: `${courseName(task.courseId)} · ${when}` };
         if (diff < 0) {
@@ -215,7 +213,7 @@ export default function NotificationCenter() {
         Object.entries(both).map(([code, list]) => [code, { title: list![index].title, detail: list![index].detail }])
       ),
     }));
-  }, [tasks, courses, update.version, connection, userProfile, lang, syncIssues]);
+  }, [tasks, courses, updateVersion, connection, userProfile, lang, syncIssues]);
 
   // Lo vigente se anota en el registro (con la hora en que apareció); lo que
   // ya pasó sigue en el registro como historial.

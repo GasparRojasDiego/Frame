@@ -274,24 +274,36 @@ function toast({ ...props }: Toast) {
   }
 }
 
+const dismissToast = (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId })
+const actions = { toast, dismiss: dismissToast }
+
+/**
+ * Para lanzar avisos. Sin estado (1.7.0): antes cada uno de los ~25
+ * componentes que lo usan se suscribía a la lista y se repintaba con cada
+ * aviso (tres veces: al salir, al cerrarse y al retirarse), barra lateral y
+ * reproductor incluidos. Solo el que los pinta necesita la lista.
+ */
 function useToast() {
+  return actions
+}
+
+/** La lista de avisos en pantalla: solo para quien los pinta (toaster.tsx). */
+function useToastList() {
   const [state, setState] = React.useState<State>(memoryState)
 
   React.useEffect(() => {
     listeners.push(setState)
+    // Lo que se lanzó entre el primer pintado y la suscripción.
+    setState(memoryState)
     return () => {
       const index = listeners.indexOf(setState)
       if (index > -1) {
         listeners.splice(index, 1)
       }
     }
-  }, [state])
+  }, [])
 
-  return {
-    ...state,
-    toast,
-    dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
-  }
+  return state
 }
 
-export { useToast, toast }
+export { useToast, useToastList, toast }
