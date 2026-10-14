@@ -156,7 +156,7 @@ A efectos de estos Términos, los siguientes términos tienen el significado que
 - eliminación de la Cuenta por el propio Usuario, conforme a la Política de Privacidad;
 - supresión manual, por el Usuario o por terceros con acceso al dispositivo, de los directorios de datos de la Aplicación.
 
-**9.3. Alcance de la Copia de Seguridad en la Nube.** Con Cuenta activa y conexión disponible, la Aplicación replica el **Estado Académico**, comprensivo de asignaturas, colecciones, tareas y su avance, sesiones de estudio con sus anotaciones, calificaciones, hábitos, eventos y recordatorios del calendario local con los colores de sus casillas, anotaciones guardadas sin asignatura, horarios importados, metas y configuración.
+**9.3. Alcance de la Copia de Seguridad en la Nube.** Con Cuenta activa y conexión disponible, la Aplicación replica el **Estado Académico**, comprensivo de asignaturas, colecciones, tareas y su avance, sesiones de estudio con sus anotaciones, calificaciones, hábitos, eventos y recordatorios del calendario local con los colores de sus casillas, anotaciones guardadas sin asignatura, metas y configuración.
 
 **9.4. Exclusiones expresas de la Copia de Seguridad en la Nube.** **No se replican, en ningún caso y por razón de su tamaño: los archivos de música con sus portadas y letras, las grabaciones de voz ni los adjuntos.** Tampoco se replican las imágenes que el Usuario sube por su cuenta a playlists, asignaturas y colecciones, que permanecen en el dispositivo donde se añadieron. Para conservarlos, el Usuario debe guardar copia de esos archivos por sus propios medios. La foto de perfil y la imagen del horario se guardan en una carpeta privada de la Cuenta para que aparezcan en los demás dispositivos del Usuario; de las imágenes que el Usuario elige en la galería de Frame solo se replica una referencia (cuál es y su encuadre). Las imágenes de playlists, asignaturas y colecciones que versiones anteriores de la Aplicación ya guardaron en esa carpeta se conservan allí únicamente para restaurarlas en los dispositivos del Usuario y se suprimen al eliminar la Cuenta, conforme a la Política de Privacidad.
 
@@ -168,7 +168,7 @@ A efectos de estos Términos, los siguientes términos tienen el significado que
 
 ### Cláusula 10. Servicios de Terceros
 
-**10.1.** La Aplicación integra Servicios de Terceros, en particular los servicios de Google LLC —Gmail, YouTube, Classroom y Drive— y la infraestructura de **Supabase**.
+**10.1.** La Aplicación integra Servicios de Terceros, en particular los servicios de Google LLC —Gmail, YouTube y Classroom— y la infraestructura de **Supabase**.
 
 **10.2.** El uso de dichos servicios se rige por los términos y políticas de sus respectivos titulares, que el Usuario acepta directamente con ellos. El Proveedor no es parte de esa relación.
 
@@ -389,7 +389,7 @@ Si tenemos conocimiento de que se han recogido datos de un menor de catorce año
 
 **6.2.** Los servidores se ubican en Estados Unidos de América (región de Amazon Web Services us-west-2, Oregón). Ello supone un **flujo transfronterizo de datos personales**, del que quedas informado y respecto del cual se han adoptado las garantías exigidas por la normativa peruana. La relación actualizada de encargados y subencargados figura en el Anexo B.
 
-**6.3.** Cuando utilizas las interfaces de Gmail, YouTube, Classroom o Drive, **interactúas directamente con Google LLC** conforme a su propia política de privacidad. En esa relación Google es responsable del tratamiento y el Proveedor no interviene.
+**6.3.** Cuando utilizas las interfaces de Gmail, YouTube o Classroom, **interactúas directamente con Google LLC** conforme a su propia política de privacidad. En esa relación Google es responsable del tratamiento y el Proveedor no interviene.
 
 **6.4. Compromiso de uso limitado.** El uso que la Aplicación hace de la información recibida de las API de Google se ajusta a la *Google API Services User Data Policy*, incluidos sus requisitos de uso limitado. En particular, esos datos **se emplean únicamente para proveer o mejorar las funciones visibles al usuario, no se transfieren a terceros salvo para prestar esas funciones o por exigencia legal, no se usan con fines publicitarios y no se someten a lectura humana** salvo consentimiento expreso, requerimiento legal o razones de seguridad.
 
@@ -509,7 +509,7 @@ Frame incorpora componentes de software libre y abierto, entre ellos el marco de
 
 **F.2.** La Aplicación emplea almacenamiento local en el dispositivo para conservar tu sesión, tus preferencias de interfaz y el estado de la aplicación. Es imprescindible para su funcionamiento.
 
-**F.3.** Las interfaces de Gmail, YouTube, Classroom y Drive se muestran mediante componentes web incrustados que cargan directamente los servicios de Google. **Google puede instalar sus propias cookies y tecnologías de seguimiento en el contexto de esos componentes**, conforme a su política de privacidad, sobre la que el Proveedor no tiene control ni visibilidad.
+**F.3.** Las interfaces de Gmail, YouTube y Classroom se muestran mediante componentes web incrustados que cargan directamente los servicios de Google. **Google puede instalar sus propias cookies y tecnologías de seguimiento en el contexto de esos componentes**, conforme a su política de privacidad, sobre la que el Proveedor no tiene control ni visibilidad.
 
 **F.4.** Cerrar sesión en Google desde esas interfaces elimina la sesión persistente correspondiente.`;
 }

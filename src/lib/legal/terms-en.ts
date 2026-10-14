@@ -142,7 +142,7 @@ For the purposes of these Terms, the following terms have the meaning assigned t
 - deletion of the Account by the User, in accordance with the Privacy Policy;
 - manual deletion, by the User or by third parties with access to the device, of the Application’s data directories.
 
-**9.3. Scope of the Cloud Backup.** With an active Account and an available connection, the Application replicates the **Academic State**, comprising subjects, collections, tasks and their progress, study sessions with their notes, grades, habits, local calendar events and reminders with the colors of their cells, notes saved without a subject, imported schedules, goals and settings.
+**9.3. Scope of the Cloud Backup.** With an active Account and an available connection, the Application replicates the **Academic State**, comprising subjects, collections, tasks and their progress, study sessions with their notes, grades, habits, local calendar events and reminders with the colors of their cells, notes saved without a subject, goals and settings.
 
 **9.4. Express exclusions from the Cloud Backup.** **The following are not replicated, under any circumstances and because of their size: music files with their covers and lyrics, voice recordings and attachments.** Nor are the images that the User uploads on their own to playlists, subjects and collections, which remain on the device where they were added. To keep them, the User must save a copy of those files by their own means. The profile picture and the schedule image are saved in a private folder of the Account so that they appear on the User’s other devices; of the images the User picks from Frame’s gallery, only a reference (which one it is and its crop) is replicated. The images of playlists, subjects and collections that earlier versions of the Application already saved in that folder are kept there solely to restore them on the User’s devices and are deleted when the Account is deleted, in accordance with the Privacy Policy.
 
@@ -154,7 +154,7 @@ For the purposes of these Terms, the following terms have the meaning assigned t
 
 ### Clause 10. Third-Party Services
 
-**10.1.** The Application integrates Third-Party Services, in particular the services of Google LLC —Gmail, YouTube, Classroom and Drive— and the infrastructure of **Supabase**.
+**10.1.** The Application integrates Third-Party Services, in particular the services of Google LLC —Gmail, YouTube and Classroom— and the infrastructure of **Supabase**.
 
 **10.2.** The use of those services is governed by the terms and policies of their respective owners, which the User accepts directly with them. The Provider is not a party to that relationship.
 
@@ -375,7 +375,7 @@ If we become aware that data from a minor under fourteen has been collected with
 
 **6.2.** The servers are located in the United States of America (Amazon Web Services region us-west-2, Oregon). This involves a **cross-border flow of personal data**, of which you are hereby informed and for which the safeguards required by Peruvian regulations have been adopted. The updated list of processors and sub-processors appears in Annex B.
 
-**6.3.** When you use the Gmail, YouTube, Classroom or Drive interfaces, **you interact directly with Google LLC** under its own privacy policy. In that relationship Google is the data controller and the Provider doesn’t take part.
+**6.3.** When you use the Gmail, YouTube or Classroom interfaces, **you interact directly with Google LLC** under its own privacy policy. In that relationship Google is the data controller and the Provider doesn’t take part.
 
 **6.4. Limited use commitment.** The Application’s use of information received from Google APIs complies with the *Google API Services User Data Policy*, including its limited use requirements. In particular, that data **is used only to provide or improve user-facing features, isn’t transferred to third parties except to provide those features or when required by law, isn’t used for advertising and isn’t read by humans** except with express consent, a legal requirement or for security reasons.
 
@@ -495,7 +495,7 @@ Frame incorporates free and open-source software components, among them the desk
 
 **F.2.** The Application uses local storage on the device to keep your session, your interface preferences and the state of the application. It’s essential for it to work.
 
-**F.3.** The Gmail, YouTube, Classroom and Drive interfaces are shown through embedded web components that load Google’s services directly. **Google may install its own cookies and tracking technologies in the context of those components**, in accordance with its privacy policy, over which the Provider has no control or visibility.
+**F.3.** The Gmail, YouTube and Classroom interfaces are shown through embedded web components that load Google’s services directly. **Google may install its own cookies and tracking technologies in the context of those components**, in accordance with its privacy policy, over which the Provider has no control or visibility.
 
 **F.4.** Signing out of Google from those interfaces removes the corresponding persistent session.`;
 }
