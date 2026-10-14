@@ -33,11 +33,20 @@ import { SYNC_NOW_EVENT } from '@/lib/sync-check';
 //      los dispositivos con versiones anteriores, que solo entienden el aviso,
 //      sincronizan como siempre.
 //   3. RED DE SEGURIDAD. Al volver Frame al frente, al recuperar la conexión y
-//      con una sonda de pocos bytes: cada 30 s solo mientras el canal no está
-//      abierto; con él abierto, cada 5 min (15 oculta), porque los cambios ya
-//      llegan por él. Con fallos seguidos, cada vez más espaciada (1.7.0: con
-//      miles de equipos abiertos, la sonda de 30 s sola eran decenas de
+//      con una sonda de pocos bytes: cada 30 s mientras el canal no está
+//      abierto; con él abierto, cada minuto (5 min oculta), porque los cambios
+//      ya llegan por él. Con fallos seguidos, cada vez más espaciada (1.7.0:
+//      con miles de equipos abiertos, la sonda de 30 s sola eran decenas de
 //      millones de peticiones al mes).
+//
+// 1.7.2: el aviso de «hay cambios» y los cambios que no caben por el canal
+// (cerrado o aún sin abrir) salen por HTTP (`httpSend`, la misma difusión de
+// Realtime pero por petición). Lo que Diego vio el 13-oct: tocar el corazón
+// en el celular y bloquearlo en el acto cerraba su canal antes de avisar, la
+// laptop solo se enteraba con la sonda de 5 min y parecía que «no se
+// sincronizaba». Ahora el aviso llega aunque el canal del que escribe esté
+// caído; si el caído es el del que recibe, Realtime lo reconecta en ~30 s y
+// la sonda del minuto lo cubre.
 //
 // Todo esto lo ejercita scripts/probar-sincronizacion.mjs con dos y tres
 // dispositivos simulados (y uno con la 1.6.7).
@@ -49,9 +58,10 @@ const LOCAL_DEBOUNCE_MS = 600;
 const LOCAL_MAX_WAIT_MS = 3000;
 const REMOTE_DELAY_MS = 150;
 const PROBE_MS = 30_000;
-/** Con el canal abierto la sonda es solo la red de seguridad. */
-const PROBE_READY_MS = 5 * 60_000;
-const PROBE_READY_HIDDEN_MS = 15 * 60_000;
+/** Con el canal abierto la sonda es solo la red de seguridad (un aviso
+ *  perdido tarda como mucho esto en notarse). */
+const PROBE_READY_MS = 60_000;
+const PROBE_READY_HIDDEN_MS = 5 * 60_000;
 const PROBE_MAX_MS = 10 * 60_000;
 /** Avisos de fuera que se atienden al momento por minuto; el resto, al final. */
 const NUDGE_BURST = 20;
@@ -105,10 +115,11 @@ export function startLiveSync(uid: string): () => void {
       // Llegó algo de otro dispositivo: la interfaz viva relee el disco.
       if (result.applied) window.dispatchEvent(new Event(CLOUD_APPLIED_EVENT));
       // Subimos algo nuevo: que los otros dispositivos lo traigan ya (o que
-      // comprueben con la huella que ya lo tienen).
-      if (result.ok && result.wrote && channel && channelReady) {
-        const payload = { at: Date.now(), from: me, u: result.remoteAt, p: result.print };
-        void channel.send({ type: 'broadcast', event: 'changed', payload }).catch(() => undefined);
+      // comprueben con la huella que ya lo tienen). Siempre por HTTP: un canal
+      // que se cree abierto puede estar muerto (el celular tras la pantalla
+      // apagada) y el aviso se perdería sin ruido.
+      if (result.ok && result.wrote && channel) {
+        void broadcast('changed', { at: Date.now(), from: me, u: result.remoteAt, p: result.print }, true);
       }
       if (!result.ok) failures += 1;
     } catch {
@@ -162,12 +173,26 @@ export function startLiveSync(uid: string): () => void {
     scheduleBy(nudgeTimes[0] + NUDGE_WINDOW_MS - now);
   };
 
+  /**
+   * Un mensaje a los otros dispositivos: por el canal si está abierto, y si
+   * no (o si se pide `viaHttp`), por la difusión HTTP de Realtime, que no
+   * depende del estado del canal de este dispositivo.
+   */
+  const broadcast = async (event: 'changed' | 'delta', payload: object, viaHttp = false) => {
+    if (!channel || stopped) return;
+    try {
+      if (!viaHttp && channelReady) await channel.send({ type: 'broadcast', event, payload });
+      else if (typeof channel.httpSend === 'function') await channel.httpSend(event, payload);
+      else await channel.send({ type: 'broadcast', event, payload });
+    } catch {
+      /* sin red o difusión caída: la sonda y el siguiente aviso lo cubren */
+    }
+  };
+
   // --- 1. Al instante: los cambios, cifrados, por el canal ---
   const sendDelta = async (changes: DeltaChange[]) => {
     const sealed = await sealDelta(uid, changes);
-    if (sealed && channel && channelReady && !stopped) {
-      void channel.send({ type: 'broadcast', event: 'delta', payload: sealed }).catch(() => undefined);
-    }
+    if (sealed) void broadcast('delta', sealed);
   };
 
   /**
@@ -184,7 +209,7 @@ export function startLiveSync(uid: string): () => void {
     const keys = [...dirty];
     dirty.clear();
     const changes = noteLocalEdits(uid, computeDelta(uid, keys, announced, new Date().toISOString()));
-    if (changes.length > 0 && channel && channelReady) void sendDelta(changes);
+    if (changes.length > 0 && channel) void sendDelta(changes);
   };
 
   const receiveDelta = async (payload: unknown) => {

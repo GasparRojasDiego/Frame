@@ -1403,6 +1403,7 @@ const EN: Record<string, string> = {
   "Panorama del periodo": "Overview of the period",
   "para confirmar": "to confirm",
   "Para mover un elemento, pulsa la barra espaciadora o Intro, muévelo con las flechas y vuelve a pulsar la barra espaciadora o Intro para soltarlo. Escape cancela.": "To move an item, press the space bar or Enter, move it with the arrow keys and press the space bar or Enter again to drop it. Escape cancels.",
+  "Para seguir usando Frame hace falta actualizar.": "To keep using Frame you need to update.",
   "Parcialmente nublado": "Partly cloudy",
   "París": "Paris",
   "París desde el balcón": "Paris from the balcony",

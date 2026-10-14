@@ -153,6 +153,15 @@ async function syncOnce(uid: string): Promise<SyncResult> {
       }
     }
 
+    // Mientras se sondeaba pudo llegar (y aplicarse) un cambio de otro
+    // dispositivo por el canal: `localData` es de antes, pero la contabilidad
+    // ya lo cuenta. Construir el estado con los dos desfasados RESUCITABA lo
+    // que el otro acababa de borrar (y lapidaba lo que acababa de añadir): el
+    // registro ya no estaba en la foto de referencia y lo local lo tenía, así
+    // que parecía nuevo (lo encontró la prueba del corazón, 14-oct). Con lo
+    // local cambiado, la vuelta empieza de nuevo con datos frescos.
+    if (printOfLocal(uid) !== localPrint) continue;
+
     // --- Solo subir: la nube sigue como la dejamos, así que lo local con sus
     //     marcas nuevas ES la fusión. No hace falta bajar nada. ---
     if (remoteUnchanged && cursor) {
@@ -188,6 +197,8 @@ async function syncOnce(uid: string): Promise<SyncResult> {
       .maybeSingle<RemoteRow>();
     if (readError) return { ok: false, applied: false, error: readError.message };
 
+    // Lo mismo tras la lectura: datos y contabilidad del mismo instante.
+    if (printOfLocal(uid) !== localPrint) continue;
     const local = withForeign(uid, buildLocalState(uid, localData, now));
     const remote = row ? normalizeRemote(row.data, row.updated_at) : null;
     const merged: SyncState = remote ? mergeStates(local, remote, now) : local;

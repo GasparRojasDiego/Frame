@@ -232,18 +232,30 @@ const bus = {
       },
       async send(message) {
         if (dev.offline || !channel.joined) return 'error';
-        const text = JSON.stringify(message.payload ?? null);
-        bus.sent[message.event] = (bus.sent[message.event] ?? 0) + 1;
-        bus.bytes += text.length;
-        for (const other of bus.channels) {
-          if (other === channel || other.dev === dev || other.topic !== topic || !other.joined) continue;
-          later(() => bus.deliver(other, message.event, JSON.parse(text)));
-        }
-        return 'ok';
+        return bus.spread(channel, message.event, message.payload);
+      },
+      // Difusión por HTTP (1.7.2): llega a los demás aunque este canal esté
+      // cerrado; solo hace falta red.
+      async httpSend(event, payload) {
+        await sleep(latency());
+        if (dev.offline) throw new Error('TypeError: Failed to fetch');
+        bus.spread(channel, event, payload);
+        return { success: true };
       },
     };
     bus.channels.add(channel);
     return channel;
+  },
+  /** Reparte un mensaje a los demás canales abiertos del mismo tema. */
+  spread(channel, event, payload) {
+    const text = JSON.stringify(payload ?? null);
+    bus.sent[event] = (bus.sent[event] ?? 0) + 1;
+    bus.bytes += text.length;
+    for (const other of bus.channels) {
+      if (other === channel || other.dev === channel.dev || other.topic !== channel.topic || !other.joined) continue;
+      later(() => bus.deliver(other, event, JSON.parse(text)));
+    }
+    return 'ok';
   },
   deliver(channel, event, payload) {
     if (!bus.channels.has(channel) || !channel.joined || channel.dev.offline) return;
@@ -563,7 +575,7 @@ async function twoDevices() {
   traffic('tráfico', m);
   check(m.by.every((name) => name === 'laptop') && m.writes === 1, `una sola escritura y de quien hizo el cambio (${m.by.join(', ') || 'ninguna'})`);
   check(m.reads === 0, `la tablet no baja el respaldo: ya lo tenía todo por el canal (${m.reads} lecturas)`);
-  check(differences(laptop, tablet).length === 0, 'los dos tienen lo mismo');
+  check(differences(laptop, tablet).length === 0, `los dos tienen lo mismo${differences(laptop, tablet).length ? ` (difieren: ${differences(laptop, tablet).join(', ')})` : ''}`);
 
   // --- 2b. Un cambio justo mientras se sube el anterior ---
   console.log('\n 2b. Un cambio llega justo mientras se sube el anterior');
@@ -617,7 +629,7 @@ async function twoDevices() {
   traffic('tráfico', m);
   check(m.writes <= 4, `la nube recibe pocas escrituras (${m.writes}), no una por cambio`);
   check(worstLag <= 800, `durante la ráfaga la tablet nunca va más de 0,8 s por detrás (${worstLag} ms)`);
-  check(differences(laptop, tablet).length === 0, 'los dos tienen lo mismo');
+  check(differences(laptop, tablet).length === 0, `los dos tienen lo mismo${differences(laptop, tablet).length ? ` (difieren: ${differences(laptop, tablet).join(', ')})` : ''}`);
 
   // --- 4. Registros distintos a la vez ---
   console.log('\n 4. Cada uno cambia una tarea distinta, a la vez');
@@ -627,7 +639,7 @@ async function twoDevices() {
   check(await settle(), 'se calma');
   traffic('tráfico', since(before));
   check(find(laptop, 'tasks', 't3')?.title === 'Ensayo (borrador)' && find(tablet, 'tasks', 't2')?.title === 'Leer el capítulo 4 y resumir', 'se conservan los dos cambios');
-  check(differences(laptop, tablet).length === 0, 'los dos tienen lo mismo');
+  check(differences(laptop, tablet).length === 0, `los dos tienen lo mismo${differences(laptop, tablet).length ? ` (difieren: ${differences(laptop, tablet).join(', ')})` : ''}`);
 
   // --- 5. El mismo registro casi a la vez ---
   console.log('\n 5. Los dos cambian la MISMA tarea casi a la vez');
@@ -727,7 +739,7 @@ async function twoDevices() {
   timing('ajustes → laptop', await until(() => laptop.frame.get('appSettings')?.lang === 'en'));
   check(await settle(), 'se calma');
   traffic('tráfico', since(before));
-  check(differences(laptop, tablet).length === 0, 'los dos tienen lo mismo');
+  check(differences(laptop, tablet).length === 0, `los dos tienen lo mismo${differences(laptop, tablet).length ? ` (difieren: ${differences(laptop, tablet).join(', ')})` : ''}`);
 
   // --- 10. Mensaje ajeno en el canal ---
   console.log('\n10. Un mensaje que no es de la cuenta llega al canal');
@@ -752,7 +764,7 @@ async function twoDevices() {
   timing('al volver al frente → tablet al día', await until(() => find(tablet, 'habits', 'h1')?.log?.length === 2));
   check(await settle(), 'se calma');
   traffic('tráfico', since(before));
-  check(differences(laptop, tablet).length === 0, 'los dos tienen lo mismo');
+  check(differences(laptop, tablet).length === 0, `los dos tienen lo mismo${differences(laptop, tablet).length ? ` (difieren: ${differences(laptop, tablet).join(', ')})` : ''}`);
 
   // --- 12. Quietos: nada viaja ---
   console.log('\n12. Diez segundos sin tocar nada');
@@ -836,7 +848,7 @@ async function clockSkew() {
     [laptop, tablet].every((dev) => find(dev, 'tasks', 't1')?.title === 'Después en la tablet'),
     'gana la edición de la tablet aunque su reloj la haga «anterior» (la editó después de verla)'
   );
-  check(differences(laptop, tablet).length === 0, 'los dos tienen lo mismo');
+  check(differences(laptop, tablet).length === 0, `los dos tienen lo mismo${differences(laptop, tablet).length ? ` (difieren: ${differences(laptop, tablet).join(', ')})` : ''}`);
   shutdown();
 }
 
@@ -945,8 +957,123 @@ async function favorites() {
   timing('corazón quitado → tablet', await until(() => !has(tablet, alpha)));
   check(await settle(), 'se calma');
   traffic('tráfico', since(before));
-  check(differences(laptop, tablet).length === 0, 'los dos tienen lo mismo');
+  check(differences(laptop, tablet).length === 0, `los dos tienen lo mismo${differences(laptop, tablet).length ? ` (difieren: ${differences(laptop, tablet).join(', ')})` : ''}`);
+  if (differences(laptop, tablet).length > 0) {
+    const show = (dev) => `${dev.name}: ${JSON.stringify(dev.frame.get('songFavorites'))} marcas ${JSON.stringify(dev.frame.get('syncMeta')?.collections?.songFavorites ?? null)} base ${JSON.stringify(dev.frame.get('lastSyncedSnapshot')?.collections?.songFavorites ?? null)}`;
+    console.log(`    ${show(laptop)}\n    ${show(tablet)}\n    nube: ${JSON.stringify(cloud.row?.data?.data?.songFavorites)} marcas ${JSON.stringify(cloud.row?.data?.meta?.collections?.songFavorites)}`);
+  }
   check(has(tablet, beta) && !has(tablet, alpha), 'la tablet tiene el corazón nuevo y no el quitado');
+
+  // Lo que Diego vio el 13-oct (1.7.1): a veces el corazón puesto en la
+  // laptop no llegaba al celular, o al revés. Toques seguidos, relojes
+  // distintos, los dos a la vez y el celular dormido.
+  const toggle = (dev, key, on) =>
+    dev.frame.put(
+      'songFavorites',
+      on
+        ? [...(dev.frame.get('songFavorites') ?? []).filter((entry) => entry.id !== key), { id: key }]
+        : (dev.frame.get('songFavorites') ?? []).filter((entry) => entry.id !== key)
+    );
+  const same = (key, on) => [laptop, tablet].every((dev) => has(dev, key) === on);
+
+  console.log('\n 3. Tres toques seguidos en la laptop (poner, quitar, poner) en medio segundo');
+  const gamma = 'k:gamma\u001fgaby';
+  before = counters();
+  toggle(laptop, gamma, true);
+  await sleep(150);
+  toggle(laptop, gamma, false);
+  await sleep(150);
+  toggle(laptop, gamma, true);
+  timing('corazón → tablet', await until(() => has(tablet, gamma)));
+  check(await settle(), 'se calma');
+  traffic('tráfico', since(before));
+  check(same(gamma, true), 'los dos acaban con el corazón puesto');
+  check(differences(laptop, tablet).length === 0, `los dos tienen lo mismo${differences(laptop, tablet).length ? ` (difieren: ${differences(laptop, tablet).join(', ')})` : ''}`);
+
+  console.log('\n 4. Poner, quitar y poner en la laptop, esperando a que cada toque llegue');
+  before = counters();
+  toggle(laptop, gamma, false);
+  timing('quitado → tablet', await until(() => !has(tablet, gamma)));
+  toggle(laptop, gamma, true);
+  timing('puesto otra vez → tablet', await until(() => has(tablet, gamma)));
+  toggle(laptop, gamma, false);
+  timing('quitado otra vez → tablet', await until(() => !has(tablet, gamma)));
+  check(await settle(), 'se calma');
+  traffic('tráfico', since(before));
+  check(same(gamma, false), `los dos acaban sin el corazón (laptop ${has(laptop, gamma)}, tablet ${has(tablet, gamma)})`);
+
+  console.log('\n 5. La tablet lo quita y la laptop lo vuelve a poner en el acto');
+  const delta = 'k:delta\u001fdiego';
+  toggle(laptop, delta, true);
+  await until(() => has(tablet, delta));
+  check(await settle(), 'se calma');
+  before = counters();
+  toggle(tablet, delta, false);
+  await until(() => !has(laptop, delta));
+  toggle(laptop, delta, true);
+  timing('puesto de nuevo → tablet', await until(() => has(tablet, delta)));
+  check(await settle(), 'se calma');
+  traffic('tráfico', since(before));
+  check(same(delta, true), 'manda el último toque: los dos con el corazón');
+
+  console.log('\n 6. Los dos tocan el mismo corazón a la vez');
+  const epsilon = 'k:epsilon\u001felena';
+  toggle(laptop, epsilon, true);
+  await until(() => has(tablet, epsilon));
+  check(await settle(), 'se calma');
+  before = counters();
+  toggle(tablet, epsilon, false);
+  toggle(laptop, epsilon, false);
+  toggle(laptop, epsilon, true);
+  check(await settle(), 'se calma');
+  traffic('tráfico', since(before));
+  check(has(laptop, epsilon) === has(tablet, epsilon), `los dos acaban igual (${has(laptop, epsilon) ? 'con' : 'sin'} corazón)`);
+  check(differences(laptop, tablet).length === 0, `los dos tienen lo mismo${differences(laptop, tablet).length ? ` (difieren: ${differences(laptop, tablet).join(', ')})` : ''}`);
+
+  console.log('\n 7. Un celular con el reloj dos minutos atrasado quita lo que la laptop acaba de poner');
+  const phone = device('celular', 'actual', { clockOffset: -120_000 });
+  phone.frame.start();
+  check(await settle(), 'el celular entra y se calma');
+  const zeta = 'k:zeta\u001fzoe';
+  before = counters();
+  toggle(laptop, zeta, true);
+  await until(() => has(phone, zeta));
+  toggle(phone, zeta, false);
+  timing('quitado desde el celular → laptop', await until(() => !has(laptop, zeta)));
+  timing('… y → tablet', await until(() => !has(tablet, zeta)));
+  toggle(laptop, zeta, true);
+  timing('puesto de nuevo en la laptop → celular', await until(() => has(phone, zeta)));
+  check(await settle(), 'se calma');
+  traffic('tráfico', since(before));
+  check([laptop, tablet, phone].every((dev) => has(dev, zeta)), 'los tres acaban con el corazón');
+  check(differences(laptop, phone).length === 0 && differences(laptop, tablet).length === 0, 'los tres tienen lo mismo');
+
+  console.log('\n 8. El celular dormido mientras la laptop pone y quita');
+  const eta = 'k:eta\u001feva';
+  before = counters();
+  putToSleep(phone);
+  toggle(laptop, eta, true);
+  await until(() => has(tablet, eta));
+  toggle(laptop, zeta, false);
+  await until(() => !has(tablet, zeta));
+  check(await settle(), 'se calma sin el celular');
+  wakeUp(phone);
+  timing('al despertar, el corazón nuevo llega', await until(() => has(phone, eta)));
+  timing('… y el quitado se quita', await until(() => !has(phone, zeta)));
+  check(await settle(), 'se calma');
+  traffic('tráfico', since(before));
+  check(differences(laptop, phone).length === 0, 'laptop y celular tienen lo mismo');
+
+  console.log('\n 9. El celular toca y se duerme en el acto');
+  const theta = 'k:theta\u001ftomas';
+  before = counters();
+  toggle(phone, theta, true);
+  putToSleep(phone);
+  timing('el corazón del celular llega a la laptop', await until(() => has(laptop, theta), 20_000));
+  wakeUp(phone);
+  check(await settle(), 'se calma');
+  traffic('tráfico', since(before));
+  check([laptop, tablet, phone].every((dev) => has(dev, theta)), 'los tres acaban con el corazón');
   shutdown();
 }
 

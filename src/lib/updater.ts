@@ -59,6 +59,14 @@ export interface UpdateState {
   dialogOpen: boolean;
   /** Último fallo, para mostrarlo en el recuadro; null si no hubo. */
   error: string | null;
+  /**
+   * Actualización OBLIGATORIA (1.7.2): esta versión ya no se puede usar. El
+   * manifiesto publica en `frame.minimum` la versión mínima admitida (la
+   * publicación pone la recién publicada: todas las anteriores deben
+   * actualizar para seguir usando Frame). El recuadro se abre solo y no se
+   * puede cerrar hasta instalar.
+   */
+  required: boolean;
 }
 
 let state: UpdateState = {
@@ -71,7 +79,71 @@ let state: UpdateState = {
   stepStartedAt: null,
   dialogOpen: false,
   error: null,
+  required: false,
 };
+
+/**
+ * Lo último que se supo de la versión publicada (`frameUpdateKnown`): al
+ * arrancar, el testigo (o el recuadro obligatorio) se enciende con ello en el
+ * acto, sin esperar a la consulta. Un sondeo que diga «al día» lo borra.
+ */
+const KNOWN_KEY = 'frameUpdateKnown';
+
+interface KnownUpdate {
+  version: string;
+  size: number | null;
+  minimum: string | null;
+  at: number;
+}
+
+function rememberKnown(known: KnownUpdate | null): void {
+  try {
+    if (known) localStorage.setItem(KNOWN_KEY, JSON.stringify(known));
+    else localStorage.removeItem(KNOWN_KEY);
+  } catch {
+    /* sin almacenamiento: el siguiente sondeo lo vuelve a saber */
+  }
+}
+
+function readKnown(): KnownUpdate | null {
+  try {
+    const raw = JSON.parse(localStorage.getItem(KNOWN_KEY) ?? 'null') as Partial<KnownUpdate> | null;
+    if (!raw || typeof raw.version !== 'string' || !/^\d+(\.\d+){1,3}$/.test(raw.version)) return null;
+    return {
+      version: raw.version,
+      size: typeof raw.size === 'number' && raw.size > 0 ? raw.size : null,
+      minimum: typeof raw.minimum === 'string' && /^\d+(\.\d+){1,3}$/.test(raw.minimum) ? raw.minimum : null,
+      at: typeof raw.at === 'number' ? raw.at : 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** ¿`minimum` exige actualizar esta versión? */
+const requiredBy = (minimum: string | null): boolean => minimum !== null && isNewerVersion(minimum, APP_VERSION);
+
+/**
+ * Con una actualización obligatoria el recuadro se abre solo, salvo con una
+ * sesión de estudio, música o una grabación en marcha (no se puede instalar
+ * entonces, y cerrarlo sería imposible): se abre en cuanto se liberan.
+ */
+function openIfRequired(): void {
+  if (state.required && state.version && !state.dialogOpen && !busyGuard?.()) setState({ dialogOpen: true });
+}
+
+/** Al arrancar: lo que se supo la última vez, antes de volver a consultar. */
+function restoreKnown(): void {
+  const known = readKnown();
+  if (!known) return;
+  if (!isNewerVersion(known.version, APP_VERSION)) {
+    rememberKnown(null); // ya se instaló (o es esta misma)
+    return;
+  }
+  if (state.phase !== 'idle') return;
+  setState({ phase: 'available', version: known.version, size: known.size, required: requiredBy(known.minimum) });
+  openIfRequired();
+}
 
 /** Devuelve true si hay trabajo en curso que un reinicio interrumpiría (una
  *  sesión de estudio, música sonando, una grabación a medias). La registra el
@@ -116,7 +188,21 @@ export function openUpdateDialog(): void {
 }
 
 export function closeUpdateDialog(): void {
+  // Obligatoria y sin nada en marcha que lo impida: no se cierra.
+  if (state.required && !busyGuard?.()) return;
   setState({ dialogOpen: false });
+}
+
+/** ¿`candidate` es posterior a `current`? (1.7.2 > 1.7.1) */
+export function isNewerVersion(candidate: string, current: string): boolean {
+  const a = candidate.split('.').map((part) => parseInt(part, 10) || 0);
+  const b = current.split('.').map((part) => parseInt(part, 10) || 0);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const x = a[i] ?? 0;
+    const y = b[i] ?? 0;
+    if (x !== y) return x > y;
+  }
+  return false;
 }
 
 /** Versión ya anunciada: evita repetir el aviso en cada sondeo. */
@@ -146,7 +232,8 @@ async function runCheck(options?: { silent?: boolean }): Promise<void> {
 
     if (!update) {
       releasePending();
-      setState({ phase: 'idle', version: null, progress: null, size: null, dialogOpen: false });
+      rememberKnown(null);
+      setState({ phase: 'idle', version: null, progress: null, size: null, dialogOpen: false, required: false });
       if (!options?.silent) {
         toast({ title: tr('Frame está actualizado'), description: tr('Ya tienes la última versión.') });
       }
@@ -158,16 +245,21 @@ async function runCheck(options?: { silent?: boolean }): Promise<void> {
     pending = update;
     // El peso que ya se sabía solo vale si sigue siendo la misma versión.
     const manifest = manifestSize(update);
+    const minimum = manifestMinimum(update);
     const sameVersion = update.version === state.version;
+    const required = requiredBy(minimum);
     setState({
       phase: 'available',
       version: update.version,
       progress: null,
       size: manifest ?? (sameVersion ? state.size : null),
+      required,
       // Un sondeo que llega bien desmiente el fallo de conexión de antes; el
       // de la firma sigue en pie mientras la versión sea la misma.
       error: sameVersion && state.error === BAD_SIGNATURE ? state.error : null,
     });
+    rememberKnown({ version: update.version, size: manifest ?? state.size, minimum, at: Date.now() });
+    openIfRequired();
 
     // Aviso UNA vez por versión: en cada sondeo posterior el testigo del
     // sidebar sigue encendido, pero no se vuelve a interrumpir al usuario.
@@ -176,7 +268,9 @@ async function runCheck(options?: { silent?: boolean }): Promise<void> {
       localStorage.setItem(ANNOUNCED_KEY, update.version);
       toast({
         title: tr('Frame {version} disponible', { version: update.version }),
-        description: tr('Pulsa el icono de descarga junto a tu perfil para ver cuánto pesa y cuánto tarda.'),
+        description: required
+          ? tr('Para seguir usando Frame hace falta actualizar.')
+          : tr('Pulsa el icono de descarga junto a tu perfil para ver cuánto pesa y cuánto tarda.'),
       });
     }
   } catch (e) {
@@ -289,6 +383,12 @@ const positive = (value: unknown): number | null =>
 function manifestSize(update: Update): number | null {
   const frame = update.rawJson?.frame as { size?: unknown } | undefined;
   return positive(frame?.size);
+}
+
+/** Versión mínima admitida (`frame.minimum` del manifiesto); null si no la publica. */
+function manifestMinimum(update: Update): string | null {
+  const frame = update.rawJson?.frame as { minimum?: unknown } | undefined;
+  return typeof frame?.minimum === 'string' && /^\d+(\.\d+){1,3}$/.test(frame.minimum) ? frame.minimum : null;
 }
 
 /** Velocidad de partida, antes de medir nada en esta descarga. */
@@ -673,15 +773,39 @@ export function formatDuration(ms: number): string {
   return rest === 0 ? `${minutes} min` : `${minutes} min ${rest} s`;
 }
 
-/** Sondeo: unos 20 s tras arrancar y luego cada 6 h (con un margen al azar:
- *  miles de equipos no deben preguntar a GitHub a la vez; cada 30 min eran
- *  ~50 consultas al día por equipo). SOLO MIRA Y AVISA; nada se instala solo. */
+/** Entre dos sondeos por volver a la ventana o recuperar la red. */
+const RECHECK_GAP_MS = 10 * 60_000;
+
+/**
+ * Sondeo: lo último que se supo se enciende en el acto; se consulta al
+ * arrancar (a los 2 s), al volver Frame al frente o recuperar la red (como
+ * mucho cada 10 min) y cada 6 h (con un margen al azar: miles de equipos no
+ * deben preguntar a GitHub a la vez). La 1.7.0 esperaba de 20 a 60 s tras
+ * arrancar y, si Frame se cerraba antes, el aviso nunca llegaba a verse
+ * (Diego, 13-oct: la tablet). SOLO MIRA Y AVISA; nada se instala solo.
+ */
 export function startUpdaterLoop(): () => void {
   if (!isTauri() || IS_STORE_BUILD) return () => {};
-  const first = setTimeout(() => void checkForUpdates({ silent: true }), 20_000 + Math.floor(Math.random() * 40_000));
-  const interval = setInterval(() => void checkForUpdates({ silent: true }), 6 * 60 * 60 * 1000 + Math.floor(Math.random() * 30 * 60 * 1000));
+  restoreKnown();
+  let lastCheckAt = 0;
+  const run = () => {
+    lastCheckAt = Date.now();
+    void checkForUpdates({ silent: true });
+  };
+  const first = setTimeout(run, 2000);
+  const interval = setInterval(run, 6 * 60 * 60 * 1000 + Math.floor(Math.random() * 30 * 60 * 1000));
+  const onVisible = () => {
+    if (document.visibilityState === 'visible' && Date.now() - lastCheckAt > RECHECK_GAP_MS) run();
+  };
+  const onOnline = () => {
+    if (Date.now() - lastCheckAt > 30_000) run();
+  };
+  document.addEventListener('visibilitychange', onVisible);
+  window.addEventListener('online', onOnline);
   return () => {
     clearTimeout(first);
     clearInterval(interval);
+    document.removeEventListener('visibilitychange', onVisible);
+    window.removeEventListener('online', onOnline);
   };
 }

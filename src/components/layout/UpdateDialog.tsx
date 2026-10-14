@@ -23,6 +23,7 @@ import {
   formatBytes,
   formatDuration,
   formatSpeed,
+  openUpdateDialog,
   recordUpdateLanding,
   startUpdateInstall,
   UPDATE_STEPS,
@@ -100,7 +101,7 @@ export default function UpdateDialog() {
   const update = useUpdateState();
   const { isTimerActive, isPlaying } = useCourse();
   const recording = useSyncExternalStore(subscribeRecorderBusy, isRecorderBusy, isRecorderBusy);
-  const { phase, version, dialogOpen, error } = update;
+  const { phase, version, dialogOpen, error, required } = update;
   const [now, setNow] = useState(() => performance.now());
 
   // Primer arranque tras actualizar: aquí Frame ya se puede usar, así que es
@@ -120,6 +121,13 @@ export default function UpdateDialog() {
   const started = phase === 'downloading' || phase === 'verifying' || phase === 'ready' || phase === 'installing';
   const remaining = useSmoothCountdown(estimate.remainingMs, started && phase !== 'ready');
   const blocked = isTimerActive || isPlaying || recording;
+  // Obligatoria (1.7.2): el recuadro no se cierra hasta instalar. Con algo en
+  // marcha que impida instalar sí se puede cerrar (y se vuelve a abrir solo
+  // en cuanto se libera).
+  const locked = required && !blocked;
+  useEffect(() => {
+    if (required && !blocked && !dialogOpen) openUpdateDialog();
+  }, [required, blocked, dialogOpen]);
 
   const statusOf = (step: UpdateStep): StepStatus => {
     if (!started || !estimate.current) return 'pending';
@@ -134,13 +142,24 @@ export default function UpdateDialog() {
   const sizeLabel = `${estimate.sizeKnown ? '' : '≈ '}${formatBytes(estimate.size)}`;
 
   return (
-    <Dialog open={dialogOpen && !!version} onOpenChange={(open) => !open && closeUpdateDialog()}>
-      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
+    <Dialog open={dialogOpen && !!version} onOpenChange={(open) => !open && !locked && closeUpdateDialog()}>
+      <DialogContent
+        className="gap-0 overflow-hidden p-0 sm:max-w-md"
+        hideCloseButton={locked}
+        onEscapeKeyDown={(event) => { if (locked) event.preventDefault(); }}
+        onPointerDownOutside={(event) => { if (locked) event.preventDefault(); }}
+        onInteractOutside={(event) => { if (locked) event.preventDefault(); }}
+      >
         {/* Cabecera: «ACTUALIZAR» a la deriva detrás del título. */}
         <DialogHeader className="relative overflow-hidden bg-gradient-to-b from-primary/10 to-transparent px-6 pb-4 pt-6">
           <EchoWord word={tr('Actualizar')} />
           <DialogTitle className="relative text-center text-xl font-bold text-primary">Frame{' '}{version}</DialogTitle>
-          <DialogDescription className="relative text-center text-xs">{tr('Tienes la')}{' '}{APP_VERSION}</DialogDescription>
+          <DialogDescription className="relative text-center text-xs">
+            {tr('Tienes la')}{' '}{APP_VERSION}
+            {required && (
+              <span className="mt-1 block font-medium text-foreground">{tr('Para seguir usando Frame hace falta actualizar.')}</span>
+            )}
+          </DialogDescription>
         </DialogHeader>
         <div className="mx-6 border-t border-border/70" />
 
@@ -255,9 +274,11 @@ export default function UpdateDialog() {
         <div className="flex justify-end gap-2 px-6 py-4">
           {!started ? (
             <>
-              <Button variant="gris" onClick={closeUpdateDialog}>
-                {tr('Cancelar')}
-              </Button>
+              {!locked && (
+                <Button variant="gris" onClick={closeUpdateDialog}>
+                  {tr('Cancelar')}
+                </Button>
+              )}
               <Button onClick={() => void startUpdateInstall()} disabled={blocked}>
                 <Download />
                 {error ? tr('Reintentar') : tr('Actualizar ahora')}
@@ -265,9 +286,11 @@ export default function UpdateDialog() {
             </>
           ) : phase === 'ready' ? (
             <>
-              <Button variant="fantasma" onClick={closeUpdateDialog}>
-                {tr('Ocultar')}
-              </Button>
+              {!locked && (
+                <Button variant="fantasma" onClick={closeUpdateDialog}>
+                  {tr('Ocultar')}
+                </Button>
+              )}
               <Button onClick={() => void startUpdateInstall()} disabled={blocked}>
                 <PackageOpen />
                 {tr('Instalar ahora')}
@@ -277,6 +300,11 @@ export default function UpdateDialog() {
             <Button disabled>
               <LoaderCircle className="motion-safe:animate-spin" />
               {tr('Instalando…')}
+            </Button>
+          ) : locked ? (
+            <Button disabled>
+              <LoaderCircle className="motion-safe:animate-spin" />
+              {tr('Actualizando…')}
             </Button>
           ) : (
             // La descarga sigue aunque el recuadro se cierre; el anillo del

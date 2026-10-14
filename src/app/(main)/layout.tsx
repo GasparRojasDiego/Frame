@@ -446,7 +446,8 @@ function AppController({ children }: { children: React.ReactNode }) {
     /** Traslado de invitado en marcha (evita hacerlo dos veces a la vez). */
     let guestLinkInFlight = false;
 
-    const loadProfile = () => {
+    const loadProfile = (): UserProfile | null => {
+      let loaded: UserProfile | null = null;
       try {
         let storedProfileRaw = localStorage.getItem('userProfile');
         if (storedProfileRaw) {
@@ -497,6 +498,7 @@ function AppController({ children }: { children: React.ReactNode }) {
             prepareProfile(profile.id);
             setUserProfile(profile);
             setAuthStatus('authenticated');
+            loaded = profile;
           } else {
             setAuthStatus('needs-completion');
           }
@@ -517,9 +519,17 @@ function AppController({ children }: { children: React.ReactNode }) {
         }
         setAuthStatus('unauthenticated');
       }
+      return loaded;
     };
-    
-    const hydrateFromSession = async (session: Session, fresh = false) => {
+
+    /**
+     * `background` (1.7.2): la cuenta ya está pintada desde el equipo (la
+     * restauró `loadProfile` al arrancar); la nube se baja sin esperar y la
+     * interfaz relee lo fusionado cuando llega. Antes, cada arranque con
+     * cuenta esperaba a la sesión y a la bajada (hasta 12 s de pantalla de
+     * carga, y más con la red lenta: Diego medía ~20 s).
+     */
+    const hydrateFromSession = async (session: Session, fresh = false, background = false) => {
       const user = session.user;
       hydratedUid = user.id;
       // Sesión viva de nuevo: fuera el aviso de «vuelve a entrar».
@@ -543,7 +553,9 @@ function AppController({ children }: { children: React.ReactNode }) {
       // sincronización fusiona la nube (fusión a tres bandas: no pisa nada).
       const pull = pullFromCloud(user.id);
       try {
-        const first = await Promise.race([pull, new Promise<null>((resolve) => setTimeout(() => resolve(null), 12_000))]);
+        const first = background
+          ? null
+          : await Promise.race([pull, new Promise<null>((resolve) => setTimeout(() => resolve(null), 12_000))]);
         // La bajada tardó más que la espera y la app ya se montó con lo del
         // disco: cuando termine, que relea lo fusionado. Si no, su siguiente
         // guardado pisaría lo que llegó de la nube.
@@ -679,18 +691,20 @@ function AppController({ children }: { children: React.ReactNode }) {
       // Lo que las versiones anteriores dejaron guardado de Google (tokens en
       // claro que ya nada usa) se borra en cada arranque (1.7.0).
       disconnectGoogle();
-      if (isSupabaseConfigured) {
-        try {
-          const session = await getActiveSession();
-          if (session?.user) {
-            await hydrateFromSession(session);
-            return;
-          }
-        } catch (e) {
-          console.error('Supabase session check failed', e);
-        }
+      // Primero lo que hay en el equipo: Frame se pinta en el acto, con o sin
+      // red (1.7.2). La sesión de la nube se comprueba después, sin bloquear.
+      const stored = loadProfile();
+      if (!isSupabaseConfigured) return;
+      try {
+        const session = await getActiveSession();
+        if (!session?.user) return;
+        // La misma cuenta que ya está pintada: la nube, en segundo plano. Otra
+        // (o ninguna guardada): se hidrata como siempre.
+        const background = !!stored && !stored.isGuest && stored.id === session.user.id;
+        await hydrateFromSession(session, false, background);
+      } catch (e) {
+        console.error('Supabase session check failed', e);
       }
-      loadProfile(); // Fallback: perfil local / invitado
     };
 
     void init().finally(() => {
