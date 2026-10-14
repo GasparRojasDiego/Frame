@@ -28,8 +28,10 @@ keys/
 *.jks
 keystore.properties
 
-# La web vive en su propio repositorio (frame-app)
+# La web vive en su propio repositorio (frame-app); website-vt/ es su espejo
+# en vt-asvent/frame-app (scripts/espejo-web.ps1)
 website/
+website-vt/
 
 # Binarios de terceros de versiones antiguas y configuración local
 src-tauri/bin/

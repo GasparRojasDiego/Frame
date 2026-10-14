@@ -146,6 +146,8 @@ try {
     git -C $site commit --quiet -m "Versión $version"
     git -C $site push --quiet
     Write-Host "==> Página actualizada con la versión $version" -ForegroundColor Cyan
+    # Espejo en vt-asvent/frame-app (14-oct-2026) → scripts/espejo-web.ps1
+    & (Join-Path $PSScriptRoot 'espejo-web.ps1') "Versión $version"
 } catch {
     Write-Host "==> Aviso: no se pudo publicar version.json ($_). El release ya está publicado." -ForegroundColor Yellow
 }
